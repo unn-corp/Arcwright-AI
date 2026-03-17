@@ -1,0 +1,574 @@
+<workflow>
+  <critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
+  <critical>You MUST have already loaded and processed: {installed_path}/workflow.yaml</critical>
+  <critical>Communicate all responses in {communication_language} and generate all documents in {document_output_language}</critical>
+
+  <critical>🔥 CRITICAL MISSION: You are the ULTIMATE story context engine. Your output is a self-contained, implementation-ready story file that gives the dev agent EVERYTHING needed for flawless execution — no guessing, no re-reading artifacts. 🔥</critical>
+  <critical>COMMON LLM MISTAKES TO PREVENT: reinventing wheels, wrong libraries, wrong file locations, breaking regressions, ignoring UX, vague implementations, lying about completion, not learning from past work</critical>
+  <critical>🚨 PARALLEL RESEARCH IS MANDATORY: One sub-agent per artifact. Do NOT sequentially read artifacts yourself. Dispatch sub-agents with story context in the prompt and synthesize their reports.</critical>
+  <critical>❓ SAVE QUESTIONS: If you think of questions or clarifications during analysis, save them for the end after the complete story is written</critical>
+  <critical>🎯 ZERO USER INTERVENTION: Process is fully automated except for initial epic/story selection or genuine missing documents</critical>
+
+  <step n="0" goal="Load writing-skills">
+    <action>Invoke writing-skills before generating any story file output. Do not proceed to Step 1 until writing-skills is loaded.</action>
+  </step>
+
+  <step n="1" goal="Determine target story">
+    <check if="{{story_path}} is provided by user or user provided the epic and story number such as 2-4 or 1.6 or epic 1 story 5">
+      <action>Parse user-provided story path: extract epic_num, story_num, story_title from format like "1-2-user-auth"</action>
+      <action>Set {{epic_num}}, {{story_num}}, {{story_key}} from user input</action>
+      <action>GOTO step 2</action>
+    </check>
+
+    <action>Check if {{sprint_status}} file exists for auto discover</action>
+    <check if="sprint status file does NOT exist">
+      <output>🚫 No sprint status file found and no story specified</output>
+      <output>
+        **Required Options:**
+        1. Run `sprint-planning` to initialize sprint tracking (recommended)
+        2. Provide specific epic-story number to create (e.g., "1-2-user-auth")
+        3. Provide path to story documents if sprint status doesn't exist yet
+      </output>
+      <ask>Choose option [1], provide epic-story number, path to story docs, or [q] to quit:</ask>
+
+      <check if="user chooses 'q'">
+        <action>HALT - No work needed</action>
+      </check>
+
+      <check if="user chooses '1'">
+        <output>Run sprint-planning workflow first to create sprint-status.yaml</output>
+        <action>HALT - User needs to run sprint-planning</action>
+      </check>
+
+      <check if="user provides epic-story number">
+        <action>Parse user input: extract epic_num, story_num, story_title</action>
+        <action>Set {{epic_num}}, {{story_num}}, {{story_key}} from user input</action>
+        <action>GOTO step 2</action>
+      </check>
+    </check>
+
+    <!-- Auto-discover from sprint status -->
+    <check if="sprint status file exists and no user input provided">
+      <critical>MUST read COMPLETE {sprint_status} file from start to end to preserve order</critical>
+      <action>Load the FULL file: {{sprint_status}}</action>
+      <action>Read ALL lines from beginning to end - do not skip any content</action>
+      <action>Parse the development_status section completely</action>
+
+      <action>Find the FIRST story (by reading in order from top to bottom) where:
+        - Key matches pattern: number-number-name (e.g., "1-2-user-auth")
+        - NOT an epic key (epic-X) or retrospective (epic-X-retrospective)
+        - Status value equals "backlog"
+      </action>
+
+      <check if="no backlog story found">
+        <output>📋 No backlog stories found in sprint-status.yaml
+
+          All stories are either already created, in progress, or done.
+
+          **Options:**
+          1. Run sprint-planning to refresh story tracking
+          2. Load PM agent and run correct-course to add more stories
+          3. Check if current sprint is complete and run retrospective
+        </output>
+        <action>HALT</action>
+      </check>
+
+      <action>Extract from found story key (e.g., "1-2-user-authentication"):
+        - epic_num: first number before dash (e.g., "1")
+        - story_num: second number after first dash (e.g., "2")
+        - story_title: remainder after second dash (e.g., "user-authentication")
+      </action>
+      <action>Set {{story_id}} = "{{epic_num}}.{{story_num}}"</action>
+      <action>Store story_key for later use (e.g., "1-2-user-authentication")</action>
+
+      <!-- Mark epic as in-progress if this is first story -->
+      <action>Check if this is the first story in epic {{epic_num}} by looking for {{epic_num}}-1-* pattern</action>
+      <check if="this is first story in epic {{epic_num}}">
+        <action>Load {{sprint_status}} and check epic-{{epic_num}} status</action>
+        <action>If epic status is "backlog" → update to "in-progress"</action>
+        <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
+        <action>If epic status is "in-progress" → no change needed</action>
+        <check if="epic status is 'done'">
+          <output>🚫 ERROR: Cannot create story in completed epic. Epic {{epic_num}} is marked as 'done'.</output>
+          <action>HALT - Cannot proceed</action>
+        </check>
+        <output>📊 Epic {{epic_num}} status updated to in-progress</output>
+      </check>
+    </check>
+
+    <action>Store the found story_key for later use</action>
+  </step>
+
+  <step n="2" goal="Parallel artifact research — one sub-agent per artifact">
+    <critical>🔬 DISPATCH PARALLEL SUB-AGENTS — Do NOT read artifacts yourself. Each sub-agent receives the story context and returns a structured Research Report. All agents run simultaneously.</critical>
+
+    <action>Prepare shared story context to inject into every sub-agent prompt:
+      - story_key: {{story_key}}
+      - story_id: {{story_id}} (e.g., "2.4")
+      - epic_num: {{epic_num}}
+      - story_num: {{story_num}}
+      - story_title: {{story_title}}
+    </action>
+
+    <action>DISPATCH the following sub-agents in parallel. Each receives the story context above plus its specific artifact path. Each must return a concise Research Report (relevance-filtered, NOT raw content):</action>
+
+    <!-- Agent 1: Epics -->
+    <sub-agent id="epics-researcher" parallel="true">
+      <prompt>
+        You are a story context extractor. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
+
+        Read the COMPLETE epics file at: {epics_file}
+        If epics is sharded to a folder, read the index then load Epic {{epic_num}}'s file.
+
+        Extract ONLY content relevant to story {{story_key}}:
+        - User story statement (As a / I want / So that) for this story
+        - All acceptance criteria for this story (BDD-formatted)
+        - Technical requirements specific to this story
+        - Business context and value
+        - Dependencies on other stories/epics
+        - Cross-story context (other stories in this epic that might affect implementation)
+
+        Return a structured Research Report with these sections. Be specific, not vague.
+      </prompt>
+    </sub-agent>
+
+    <!-- Agent 2: PRD -->
+    <sub-agent id="prd-researcher" parallel="true">
+      <prompt>
+        You are a requirements extractor. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
+
+        Read the PRD at: {prd_file} (or sharded PRD folder at {input_file_patterns.prd.sharded} if no single file).
+
+        Extract ONLY requirements relevant to story {{story_key}}:
+        - Functional requirements this story must satisfy
+        - Non-functional requirements (performance, security, accessibility) relevant to this story's domain
+        - Constraints or out-of-scope items that bound this story
+        - Success metrics or KPIs for this story's feature
+
+        Return a structured Research Report. If PRD file does not exist, return: "PRD not found — skipping."
+      </prompt>
+    </sub-agent>
+
+    <!-- Agent 3: Architecture — research + guardrails in one pass -->
+    <sub-agent id="architecture-researcher" parallel="true">
+      <prompt>
+        You are an architecture analyst AND compliance guardrails writer — embodying Winston, System Architect. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
+
+        Read the architecture doc at: {architecture_file} (or sharded folder at {input_file_patterns.architecture.sharded}).
+
+        PART 1 — Research Report: Extract ONLY architecture content relevant to story {{story_key}}:
+        - Technical stack: languages, frameworks, library versions touching this story's domain
+        - Code structure: exact folder paths, naming conventions, file patterns for this story's feature area
+        - API patterns: endpoint conventions, request/response shapes, error handling patterns
+        - Database schemas: tables, columns, relationships, constraints this story will touch
+        - Auth/permission rules: which roles/decorators apply to this story's endpoints
+        - Performance requirements: caching strategies, query limits relevant to this story
+        - Testing standards: test framework, coverage expectations, test file naming for this story
+        - Deployment patterns: any env vars or config this story needs
+
+        Also flag: {{is_ui_story}} = true if story involves any frontend UI changes, false otherwise.
+
+        PART 2 — Architecture Compliance Notes (Winston guardrails): Based on Part 1, produce specific actionable rules the dev agent MUST follow. Be concrete, not vague. Include:
+        1. Exact file paths to create or modify (no guessing)
+        2. Specific patterns to use with precise names (decorator names, function signatures, import paths)
+        3. Patterns to AVOID with anti-pattern examples found in git/architecture
+        4. DB/schema rules: which tables, which migration pattern, exact column names
+        5. Auth/permission decorators required — exact decorator name and import path
+        6. Test file naming convention and location for this story
+        7. Environment variables or config keys this story requires
+
+        Return: structured Research Report (Part 1) followed by Architecture Compliance Notes (Part 2).
+      </prompt>
+    </sub-agent>
+
+    <!-- Agent 4: UX/UI -->
+    <sub-agent id="ux-researcher" parallel="true">
+      <prompt>
+        You are a UX requirements extractor. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
+
+        Read UX design docs at: {ux_file} (glob: {input_file_patterns.ux.sharded}).
+
+        If no UX docs exist: return "No UX docs found" and set is_ui_story: false.
+
+        Otherwise, extract ONLY UX content relevant to story {{story_key}}:
+        - User flows this story implements or modifies
+        - Specific screens, components, or interactions defined for this story
+        - Design tokens, spacing, typography requirements
+        - Responsive breakpoint requirements
+        - Accessibility requirements (ARIA, keyboard nav, WCAG level)
+        - Motion/animation requirements
+        - Error states and empty states the UI must handle
+
+        Set is_ui_story: true if any frontend/UI work is needed, false if pure backend.
+
+        Return a structured Research Report with is_ui_story clearly stated.
+      </prompt>
+    </sub-agent>
+
+    <!-- Agent 5: Previous story -->
+    <sub-agent id="previous-story-researcher" parallel="true">
+      <prompt>
+        You are a prior-work analyst. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
+
+        Check if story_num > 1. If story_num == 1, return "First story in epic — no prior story."
+
+        Otherwise: find the story file in {implementation_artifacts} for Epic {{epic_num}} with the highest story number less than {{story_num}}.
+        Load that story file completely.
+
+        Extract learnings relevant to story {{story_key}}:
+        - Dev Notes and architectural decisions established
+        - Code review feedback that was applied
+        - Files that were created/modified and their patterns
+        - Testing approaches that worked (and didn't)
+        - Problems encountered and solutions found
+        - Patterns/utilities established that current story can reuse
+
+        Return a structured Research Report of prior-story intelligence.
+      </prompt>
+    </sub-agent>
+
+    <!-- Agent 6: Git intelligence -->
+    <sub-agent id="git-researcher" parallel="true">
+      <prompt>
+        You are a git history analyst. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
+
+        Run: git log --oneline -5
+        For the 3 most directly relevant commits (based on {{story_title}} domain), run: git show --stat {commit-hash}
+
+        Extract:
+        - Files most recently modified in this story's feature area
+        - Libraries or imports added in recent commits
+        - Naming and folder conventions used in actual committed code
+        - Any recent architectural changes that would affect this story
+
+        Return a structured Research Report of git intelligence.
+      </prompt>
+    </sub-agent>
+
+    <!-- Agent 7: Project context -->
+    <sub-agent id="project-context-researcher" parallel="true">
+      <prompt>
+        You are a coding standards extractor. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
+
+        Read project-context.md at: {project_context} (glob search for **/project-context.md).
+
+        If not found: return "project-context.md not found — skipping."
+
+        Extract coding standards relevant to story {{story_key}}:
+        - Language-specific conventions (Python patterns, TypeScript rules)
+        - API response format standards
+        - Import/export conventions
+        - Error handling patterns
+        - Any explicit rules that apply to this story's domain
+
+        Return a structured Research Report.
+      </prompt>
+    </sub-agent>
+
+    <!-- Web research: CONDITIONAL — only dispatch if architecture-researcher or epics-researcher explicitly names specific external libraries/frameworks needing version verification. Runs in parallel with other Step 2 agents when triggered. -->
+    <note>After architecture-researcher and epics-researcher return, check their reports for explicit library/framework names. Only then dispatch web-researcher. If no specific libraries are mentioned, skip entirely.</note>
+    <sub-agent id="web-researcher" parallel="true" condition="architecture-researcher OR epics-researcher report explicitly names ≥1 external library or framework">
+      <prompt>
+        You are a library version researcher. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
+
+        You have been triggered because the research reports explicitly mentioned these libraries/frameworks:
+        {{libraries_from_research_reports}}
+
+        For each named library: look up latest stable version, key breaking changes since 2024, security advisories, current best practices and gotchas.
+
+        Return a structured Research Report: library name, current version, 2-3 key notes per library.
+        Do NOT speculate on unlisted libraries — only cover what was explicitly named in the research reports.
+      </prompt>
+    </sub-agent>
+
+    <check if="no libraries explicitly named in research reports">
+      <action>Skip web-researcher entirely. Set web_research_result = "Skipped — no specific external libraries identified in research reports."</action>
+    </check>
+
+    <action>Wait for ALL sub-agents to return their Research Reports</action>
+    <action>Collect all reports. Architect guardrails are embedded in architecture-researcher's Part 2 — use those directly as {{architect_guardrails}}</action>
+    <action>Extract {{is_ui_story}} flag from ux-researcher OR architecture-researcher report (either may set it)</action>
+    <action>Save all research reports to: {project-root}/_bmad-output/parallel/research-context-{{story_key}}.md (for dev-story reuse)</action>
+
+    <output>✅ **Parallel Research Complete**
+      8 research agents returned. Context saved for dev-story reuse.
+      is_ui_story: {{is_ui_story}}
+    </output>
+  </step>
+
+  <step n="3" goal="Create comprehensive story file">
+    <critical>📝 CREATE ULTIMATE STORY FILE — the dev agent's master implementation guide. Every section must be filled from research reports. No placeholders.</critical>
+
+    <action>Initialize from template.md: {default_output_file}</action>
+
+    <!-- Story header and foundation from epics report -->
+    <action>Write Story section: user story statement from epics-researcher report</action>
+    <action>Write Acceptance Criteria: ALL ACs from epics-researcher, BDD-formatted, numbered</action>
+    <action>Write Tasks/Subtasks: derive granular, ordered, atomic tasks from ACs. Each task must:
+      - Reference ≥1 AC by number (AC: #N)
+      - Be implementable in isolation
+      - Have 2-4 subtasks covering implementation + test
+    </action>
+
+    <!-- Dev Notes — the critical section -->
+    <action>Write Dev Notes section with ALL of the following subsections:</action>
+
+    <action>## Architecture & Technical Requirements
+      Source: architect_guardrails + architecture-researcher report
+      Include: exact file paths, patterns, decorators, DB rules, env vars</action>
+
+    <action>## Library & Framework Requirements
+      Source: web-researcher report
+      Include: library versions, breaking changes, specific APIs to use/avoid</action>
+
+    <action>## Project Coding Standards
+      Source: project-context-researcher report
+      Include: all relevant standards for this story's domain</action>
+
+    <action>## Previous Story Intelligence
+      Source: previous-story-researcher + git-researcher reports
+      Include: patterns to reuse, problems to avoid, files to be aware of</action>
+
+    <action>## References
+      Cite ALL technical details with source attribution: [Source: agent-name]</action>
+
+    <!-- UI/UX Notes — conditional -->
+    <action>## UX/UI Notes
+      If {{is_ui_story}} == false: write "Not applicable — backend story."
+      If {{is_ui_story}} == true: leave as placeholder for Sally's input in Step 5</action>
+
+    <!-- Research context metadata -->
+    <action>Add to story frontmatter or first comment block:
+      - story_key: {{story_key}}
+      - is_ui_story: {{is_ui_story}}
+      - research_context_file: _bmad-output/parallel/research-context-{{story_key}}.md
+      - skills_scanned: false
+    </action>
+
+    <action>Set story Status to: "draft" (will be updated to ready-for-dev after IR validation)</action>
+  </step>
+
+  <step n="5" goal="UX/UI Agent story input — conditional">
+    <check if="{{is_ui_story}} == true">
+      <critical>Spawn Sally (UX/UI agent) to review the draft story and add UX completeness to Dev Notes.</critical>
+
+      <sub-agent id="ux-story-reviewer" parallel="false">
+        <prompt>
+          You are Sally, Senior UI/UX Architect. You are reviewing a DRAFT story file for UX completeness.
+
+          Story file: {{story_file_content}}
+          UX Research Report: {{ux-researcher-report}}
+
+          Review the story's Tasks and Acceptance Criteria for UX completeness. Then WRITE the "## UX/UI Notes" section that will be inserted into this story's Dev Notes. Include:
+
+          1. Which specific screens or components this story must implement or modify
+          2. Design token requirements (colors, spacing, typography) for this story's UI
+          3. Responsive breakpoint requirements
+          4. Required ARIA labels, roles, and keyboard navigation
+          5. Motion/animation specifications if any
+          6. Error states, loading states, and empty states the UI must handle
+          7. Any UX patterns from the design system that MUST be followed
+          8. Anti-patterns to avoid (from design system or prior review feedback)
+
+          Output ONLY the content for the "## UX/UI Notes" section — nothing else.
+        </prompt>
+      </sub-agent>
+
+      <action>Insert Sally's output into the story file's "## UX/UI Notes" section</action>
+      <output>✅ UX/UI Notes added by Sally</output>
+    </check>
+
+    <check if="{{is_ui_story}} == false">
+      <output>ℹ️ Backend story — UX agent step skipped</output>
+    </check>
+  </step>
+
+  <step n="6" goal="4-Parallel IR Agent Validation — plan completeness review">
+    <critical>🔍 DISPATCH 4 PARALLEL IR AGENTS — each owns a different validation dimension. Synthesize into a single report when all return. This catches story gaps BEFORE dev begins.</critical>
+
+    <action>DISPATCH the following 4 IR sub-agents in parallel. Each receives the complete draft story file plus its specific research reports:</action>
+
+    <!-- IR Agent 1: Requirements Traceability -->
+    <sub-agent id="ir-requirements-traceability" parallel="true">
+      <prompt>
+        You are IR Agent 1: Requirements Traceability. Story: {{story_key}}.
+
+        You have:
+        - Draft story file: {{story_file_content}}
+        - Epics researcher report: {{epics-researcher-report}}
+        - PRD researcher report: {{prd-researcher-report}}
+
+        VALIDATE traceability:
+        1. Every AC in the epics for story {{story_id}} must appear in the story's Acceptance Criteria section — flag any missing
+        2. Every functional requirement in the PRD relevant to this story's domain must be covered by at least one AC — flag gaps
+        3. Every AC in the story must map to at least one Task — flag orphaned ACs
+        4. Every Task must cite an AC — flag uncited tasks
+
+        Return a structured report:
+        - Traceability matrix (AC-to-Task mapping)
+        - Missing requirements (list each)
+        - Orphaned ACs (list each)
+        - Uncited Tasks (list each)
+        - Overall traceability score: PASS / FAIL with reason
+      </prompt>
+    </sub-agent>
+
+    <!-- IR Agent 2: Architecture Alignment -->
+    <sub-agent id="ir-architecture-alignment" parallel="true">
+      <prompt>
+        You are IR Agent 2: Architecture Alignment Validation. Story: {{story_key}}.
+
+        You have:
+        - Draft story file: {{story_file_content}}
+        - Architecture researcher report: {{architecture-researcher-report}}
+        - Architect guardrails: {{architect_guardrails}}
+
+        VALIDATE architecture alignment:
+        1. All architecture constraints from guardrails are captured in Dev Notes — flag missing constraints
+        2. No pattern conflicts exist between Dev Notes and architecture doc — flag conflicts
+        3. File paths mentioned in Dev Notes are plausible given the project structure — flag implausible paths
+        4. Any story touching a DB model has migration notes — flag missing migration notes
+        5. Any story touching authenticated endpoints has correct decorator noted — flag missing auth notes
+
+        Return a structured report:
+        - Alignment score (0-100)
+        - Missing constraints (list each with severity)
+        - Pattern conflicts (list each)
+        - Implausible paths (list each)
+        - Overall: PASS / FAIL with reason
+      </prompt>
+    </sub-agent>
+
+    <!-- IR Agent 3: Story Quality Audit -->
+    <sub-agent id="ir-story-quality" parallel="true">
+      <prompt>
+        You are IR Agent 3: Story Quality Audit. Story: {{story_key}}.
+
+        You have:
+        - Draft story file: {{story_file_content}}
+
+        AUDIT story quality:
+        1. Are all Tasks atomic and unambiguous? (can a dev implement each in isolation?) — flag vague tasks
+        2. Does each Task map to ≥1 AC? — flag unmapped tasks
+        3. Does the user story statement follow "As a / I want / So that" format? — flag if not
+        4. Are Dev Notes actionable? (specific file paths, patterns) vs vague ("follow best practices")? — flag vague notes
+        5. Is `is_ui_story` metadata present and correct?
+        6. If is_ui_story=true: is "## UX/UI Notes" section populated?
+        7. Are all referenced source agents cited? ([Source: agent-name])
+        8. Does the story have a coherent Definition of Done inferable from the ACs?
+
+        Return a structured report:
+        - Quality findings (list each with severity: High/Med/Low)
+        - Vague tasks (list with suggested improvements)
+        - Missing mappings (list each)
+        - Overall: PASS / FAIL with reason
+      </prompt>
+    </sub-agent>
+
+    <!-- IR Agent 4: Dependency Graph and Risk Analysis -->
+    <sub-agent id="ir-dependency-risk" parallel="true">
+      <prompt>
+        You are IR Agent 4: Dependency Graph and Risk Analysis. Story: {{story_key}}.
+
+        You have:
+        - Draft story file: {{story_file_content}}
+        - Previous story researcher report: {{previous-story-researcher-report}}
+        - Git researcher report: {{git-researcher-report}}
+
+        ANALYZE dependencies and risks:
+        1. Does the story call out dependencies on other stories or epics — if not but dependencies exist (from epics report), flag missing dependency notes
+        2. Do any files this story will touch conflict with files in currently in-progress stories (from git researcher)?  — flag file conflicts
+        3. Does the story introduce external API calls, new dependencies, or migrations that carry risk? — flag with severity
+        4. Is a rollback strategy implied by the tasks, or is this a no-rollback-path change? — flag if latter without documentation
+        5. Does the story scope seem correct relative to what the epics say this story should accomplish? — flag if over/under-scoped
+
+        Return a structured report:
+        - Dependency map (story → dependencies)
+        - File conflict risks (list each)
+        - External risk flags (list each with severity)
+        - Scope assessment: ON SCOPE / OVER-SCOPED / UNDER-SCOPED with justification
+        - Overall: PASS / FAIL with reason
+      </prompt>
+    </sub-agent>
+
+    <action>Wait for ALL 4 IR agents to return their reports</action>
+
+    <action>Synthesize all 4 reports into a single story-ir-report.md:
+      - Overall status: PASS (all 4 pass) / FAIL (any fail)
+      - Total findings count across all agents
+      - Findings by severity (categorized)
+      - List every finding with its source agent
+    </action>
+
+    <action>Save synthesis to: {project-root}/_bmad-output/parallel/story-ir-report-{{story_key}}.md</action>
+
+    <output>📊 **IR Validation Complete — {{story_key}}**
+      Agents: Requirements Traceability | Architecture Alignment | Story Quality | Dependency Risk
+      Overall: {{ir_overall_status}}
+      Total findings: {{ir_finding_count}}
+    </output>
+  </step>
+
+  <step n="7" goal="Auto-fix story based on IR synthesis (min. 20 items)">
+    <critical>Using the IR synthesis report, auto-fix ALL findings in the story file. No user prompt. Minimum 20 items total across all IR agents.</critical>
+
+    <action>Collect all findings from story-ir-report-{{story_key}}.md</action>
+
+    <check if="total findings < 20">
+      <action>Supplement with a manual adversarial pass: re-read the story as a hostile reviewer. Find additional gaps until the total reaches 20.</action>
+    </check>
+
+    <action>Fix all findings in priority order (traceability gaps first, then architecture, then quality, then risk):
+      - Missing ACs: add them to Acceptance Criteria
+      - Orphaned ACs: create tasks that cover them
+      - Missing architecture constraints: add to Dev Notes
+      - Vague tasks: rewrite with specificity
+      - Missing UX notes: flag for Sally follow-up (if is_ui_story but Sally step was skipped)
+      - Scope issues: note in Dev Notes as a risk flag
+      - Dependency gaps: add dependency notes to Dev Notes
+    </action>
+
+    <action>After all fixes applied: re-run the quality check mentally (verify each finding was addressed)</action>
+    <action>Log all applied fixes in Dev Agent Record → Completion Notes: "✅ IR Auto-fix [finding-type]: [description]"</action>
+
+    <action>Run validation against: {installed_path}/checklist.md</action>
+    <action>Set story Status to: "ready-for-dev"</action>
+
+    <output>✅ **Story Auto-Fix Complete**
+      Fixed: {{fix_count}} findings
+      Story status: ready-for-dev
+    </output>
+  </step>
+
+  <step n="8" goal="Update sprint status and finalize">
+    <action>Save story document unconditionally to {default_output_file}</action>
+
+    <!-- Update sprint status -->
+    <check if="sprint status file exists">
+      <action>Load the FULL file: {{sprint_status}}</action>
+      <action>Find development_status key matching {{story_key}}</action>
+      <action>Verify current status is "backlog" (expected previous state)</action>
+      <action>Update development_status[{{story_key}}] = "ready-for-dev"</action>
+      <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
+    </check>
+
+    <output>**🎯 Story Ready — {{story_key}}**
+
+      Story ID: {{story_id}}
+      File: {{story_file}}
+      Status: ready-for-dev
+      Research Context: _bmad-output/parallel/research-context-{{story_key}}.md
+      IR Report: _bmad-output/parallel/story-ir-report-{{story_key}}.md
+      is_ui_story: {{is_ui_story}}
+      IR findings fixed: {{fix_count}}
+    </output>
+
+    <!-- Auto-handoff to dev-story -->
+    <critical>AUTO-HANDOFF: Immediately trigger dev-story workflow. Do NOT wait for user confirmation. Pass the story file path directly.</critical>
+    <action>Pass {{story_file}} path to dev-story workflow</action>
+    <action>Pass is_ui_story flag to dev-story workflow</action>
+    <action>Pass research_context_file path to dev-story workflow</action>
+    <action>Execute dev-story workflow: {project-root}/_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml</action>
+  </step>
+
+</workflow>

@@ -1,0 +1,493 @@
+<workflow>
+  <critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
+  <critical>You MUST have already loaded and processed: {installed_path}/workflow.yaml</critical>
+  <critical>Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}</critical>
+  <critical>Generate all documents in {document_output_language}</critical>
+  <critical>Only modify the story file in these areas: Tasks/Subtasks checkboxes, Dev Agent Record (Debug Log, Completion Notes), File List, Change Log, Status, Invoked Skills</critical>
+  <critical>Execute ALL steps in exact order; do NOT skip steps</critical>
+  <critical>Absolutely DO NOT stop because of "milestones", "significant progress", or "session boundaries". Continue in a single execution until story completion UNLESS a HALT condition is triggered or the USER gives other instruction.</critical>
+  <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 10 decides completion.</critical>
+
+  <step n="0" goal="Skills detection — scan for applicable skills before any implementation">
+    <critical>ALWAYS run skills detection FIRST. Skills patterns take precedence over generic approaches throughout implementation.</critical>
+
+    <action>Scan the following skill directories for available skills:
+      - {project-root}/_agents/skills/
+      - {project-root}/.agents/skills/
+      List all SKILL.md files found.
+    </action>
+
+    <action>Read the story file (once available from Step 1) and scan for keyword matches against skill names and descriptions</action>
+    <action>Load the full SKILL.md for every matching skill. Extract relevant patterns, conventions, and anti-patterns.</action>
+    <action>If story is a UI story (is_ui_story == true OR story title/ACs mention frontend/UI/component): ALWAYS load `ui-ux-pro-custom` skill if present</action>
+    <action>Store all extracted skill patterns as {{invoked_skills_context}}. This context is used throughout implementation and review phases.</action>
+    <action>If generating dev notes, completion summaries, or other written documentation artifacts as part of this story, also invoke writing-skills.</action>
+    <action>Log: "Invoked skills: [skill-name-1, skill-name-2, ...]" — or "No matching skills found" if none</action>
+
+    <output>🔧 **Skills Detection Complete**
+      Invoked: {{invoked_skills_list}}
+      Patterns loaded: {{skills_pattern_count}} rules
+    </output>
+  </step>
+
+  <step n="1" goal="Find and load story file with context reuse">
+    <check if="{{story_path}} is provided (passed from create-story auto-handoff or by user)">
+      <action>Use {{story_path}} directly</action>
+      <action>Read COMPLETE story file</action>
+      <action>Extract story_key from filename or metadata</action>
+      <action>Extract is_ui_story from story metadata</action>
+      <action>Extract research_context_file path from story metadata</action>
+      <action>GOTO anchor: context_load</action>
+    </check>
+
+    <check if="{{sprint_status}} file exists and no story_path provided">
+      <critical>MUST read COMPLETE sprint-status.yaml file from start to end to preserve order</critical>
+      <action>Load the FULL file: {{sprint_status}}</action>
+      <action>Read ALL lines from beginning to end - do not skip any content</action>
+      <action>Parse the development_status section completely to understand story order</action>
+
+      <action>Find the FIRST story (by reading in order from top to bottom) where:
+        - Key matches pattern: number-number-name (e.g., "1-2-user-auth")
+        - NOT an epic key (epic-X) or retrospective (epic-X-retrospective)
+        - Status value equals "ready-for-dev"
+      </action>
+
+      <check if="no ready-for-dev story found">
+        <output>📋 No ready-for-dev stories found in sprint-status.yaml
+
+          **What would you like to do?**
+          1. Run `create-story` to create next story from epics
+          2. Specify a particular story file to develop (provide full path)
+          3. Check {{sprint_status}} file to see current sprint status
+        </output>
+        <ask>Choose option [1], [2], or [3], or specify story file path:</ask>
+      </check>
+    </check>
+
+    <anchor id="context_load" />
+
+    <action>Read COMPLETE story file from discovered path</action>
+    <action>Parse sections: Story, Acceptance Criteria, Tasks/Subtasks, Dev Notes, Dev Agent Record, File List, Change Log, Status</action>
+    <action>Extract is_ui_story flag from story metadata (default: false if not present)</action>
+
+    <!-- Research context reuse -->
+    <check if="research_context_file exists at _bmad-output/parallel/research-context-{{story_key}}.md">
+      <action>Load research context file — this contains all parallel researcher reports from create-story</action>
+      <check if="file is older than 24h">
+        <output>⚠️ Research context is {{file_age}}h old — architecture/UX docs may have changed. Reload? [Yes/No]</output>
+        <ask>Reload research context?</ask>
+      </check>
+      <action>Use this as primary context; skip re-reading artifacts that are already covered</action>
+      <output>♻️ Reusing research context from create-story — skipping redundant artifact reads</output>
+    </check>
+
+    <check if="research_context_file does NOT exist">
+      <action>Load {project_context} for coding standards (if exists)</action>
+      <action>Extract developer guidance from Dev Notes: architecture requirements, previous learnings, technical specifications</action>
+      <output>📂 No cached research context — using Dev Notes as primary context</output>
+    </check>
+
+    <action>Identify first incomplete task (unchecked [ ]) in Tasks/Subtasks</action>
+    <action if="no incomplete tasks"><goto step="7">Finalization</goto></action>
+    <action if="story file inaccessible">HALT: "Cannot develop story without access to story file"</action>
+    <action if="incomplete task or subtask requirements ambiguous">ASK user to clarify or HALT</action>
+
+    <output>🚀 **Starting Implementation**
+      Story: {{story_key}}
+      Skills: {{invoked_skills_list}}
+      UI Story: {{is_ui_story}}
+      First incomplete task: {{first_task_description}}
+    </output>
+  </step>
+
+  <step n="2" goal="Mark story in-progress">
+    <check if="{{sprint_status}} file exists">
+      <action>Load the FULL file: {{sprint_status}}</action>
+      <action>Read all development_status entries to find {{story_key}}</action>
+      <action>Get current status value for development_status[{{story_key}}]</action>
+
+      <check if="current status == 'ready-for-dev'">
+        <action>Update the story in the sprint status report to = "in-progress"</action>
+        <output>🚀 Starting work on story {{story_key}} — status: ready-for-dev → in-progress</output>
+      </check>
+      <check if="current status == 'in-progress'">
+        <output>⏯️ Resuming work on story {{story_key}} — already in-progress</output>
+      </check>
+      <action>Store {{current_sprint_status}} for later use</action>
+    </check>
+    <check if="{{sprint_status}} file does NOT exist">
+      <output>ℹ️ No sprint status file — story progress tracked in story file only</output>
+      <action>Set {{current_sprint_status}} = "no-sprint-tracking"</action>
+    </check>
+  </step>
+
+  <step n="3" goal="Implement all tasks — red-green-refactor cycle (repeat per task until all done)">
+    <critical>FOLLOW THE STORY FILE TASKS/SUBTASKS SEQUENCE EXACTLY AS WRITTEN — NO DEVIATION</critical>
+    <critical>APPLY skill patterns from {{invoked_skills_context}} throughout — skills override generic approaches</critical>
+    <critical>DO NOT run full validation suite per task — complete all tasks first, then QA runs unified validation in Step 5</critical>
+
+    <action>Review the current task/subtask from the story file — this is your authoritative implementation guide</action>
+    <action>Cross-reference task with invoked skills context: does any skill provide a specific pattern for this task?</action>
+
+    <!-- RED PHASE -->
+    <action>Write FAILING tests first for the task/subtask functionality</action>
+    <action>Confirm tests fail before implementation — validates test correctness</action>
+
+    <!-- GREEN PHASE -->
+    <action>Implement MINIMAL code to make tests pass</action>
+    <action>Apply skill patterns from {{invoked_skills_context}} during implementation — not after</action>
+    <action>Run ONLY the new tests to confirm they pass (not full suite — that runs in Step 5)</action>
+    <action>Handle error conditions and edge cases as specified in task/subtask</action>
+
+    <!-- REFACTOR PHASE -->
+    <action>Improve code structure while keeping tests green</action>
+    <action>Ensure code follows architecture patterns from Dev Notes AND invoked skill patterns</action>
+    <action>Verify UI code (if is_ui_story) uses correct design tokens, dialog patterns, component structure</action>
+
+    <action>Document technical approach and decisions in Dev Agent Record → Implementation Plan</action>
+    <action>Update File List section with ALL new/modified files from this task</action>
+
+    <action if="new dependencies required beyond story specifications">HALT: "Additional dependencies need user approval"</action>
+    <action if="3 consecutive implementation failures occur">HALT and request guidance</action>
+    <action if="required configuration is missing">HALT: "Cannot proceed without necessary configuration files"</action>
+
+    <critical>NEVER implement anything not mapped to a specific task/subtask in the story file</critical>
+    <critical>After each task: move directly to the next uncompleted task. DO NOT pause. DO NOT ask for confirmation.</critical>
+    <critical>When ALL tasks have implementation + per-task tests: proceed to Step 4 (do NOT repeat this step)</critical>
+  </step>
+
+  <step n="4" goal="Update Invoked Skills section in story file">
+    <action>Write the ## Invoked Skills section in story file:
+      List all skills that were invoked, with a one-line note on how each was applied.
+    </action>
+    <action>Set skills_scanned: true in story metadata</action>
+    <output>📋 Invoked Skills section updated in story file</output>
+  </step>
+
+  <step n="5" goal="3-Parallel Review Phase — dispatch all reviewers simultaneously">
+    <critical>🔍 DISPATCH PARALLEL REVIEW AGENTS — all run simultaneously. Compile into a single report when all return. Do NOT start QA validation until review is complete.</critical>
+
+    <action>Collect: story file, git diff (git diff Production...HEAD), invoked skills context, architect guardrails from Dev Notes</action>
+
+    <!-- Reviewer 1: Dev Review -->
+    <sub-agent id="dev-code-reviewer" parallel="true">
+      <prompt>
+        You are Amelia, Senior Software Engineer performing a code review. Story: {{story_key}}.
+
+        You have:
+        - Story file: {{story_file_content}}
+        - Git diff: {{git_diff}}
+        - Invoked skills context: {{invoked_skills_context}}
+        - Architect guardrails: (from Dev Notes Architecture section)
+
+        Review the implementation for:
+        1. ALL acceptance criteria from the story — is each one fully satisfied by the code?
+        2. All Tasks/Subtasks — is each one actually implemented? (check for vague or partial implementations)
+        3. Skill pattern compliance — does code match the patterns from invoked skills? Flag deviations.
+        4. Architecture guardrail compliance — does code follow the Dev Notes constraints?
+        5. Test coverage — does every feature have a corresponding test that actually tests the behavior?
+        6. Error handling — are all error cases handled as specified in the story?
+        7. Code quality — no N+1 queries, no missing transactions, no hardcoded values that should be config
+
+        You MUST find at minimum 20 items. Rate each: 🔴 Critical / 🟡 Major / 🟢 Minor.
+
+        Return a structured Dev Review Report with numbered findings.
+      </prompt>
+    </sub-agent>
+
+    <!-- Reviewer 2: UX/UI Review — conditional -->
+    <check if="{{is_ui_story}} == true">
+      <sub-agent id="ux-code-reviewer" parallel="true">
+        <prompt>
+          You are Sally, Senior UI/UX Architect performing a UI code review. Story: {{story_key}}.
+
+          You have:
+          - Story file: {{story_file_content}} (especially ## UX/UI Notes section)
+          - Git diff: {{git_diff}}
+          - ui-ux-pro-custom skill output: {{invoked_skills_context}} (filter to ui-ux-pro-custom content)
+
+          Review the UI implementation for:
+          1. Design token compliance — are colors, spacing, typography using correct tokens (no hardcoded values)?
+          2. Dialog patterns — do any dialogs follow the flex-column WCAG 2.1 pattern?
+          3. Component structure — does the component hierarchy follow Atomic Design?
+          4. Responsive design — are all components mobile-first with correct breakpoints?
+          5. ARIA compliance — do all interactive elements have aria-label, aria-expanded, or ARIA roles?
+          6. Keyboard navigation — tabIndex and Enter/Space handling present where needed?
+          7. Hover states — no layout shift on hover?
+          8. UX Notes compliance — does implementation match the ## UX/UI Notes in the story?
+          9. Routing — navigation components using native routing primitives (not anchor tags)?
+
+          You MUST find at minimum 20 items. Rate each: 🔴 Critical / 🟡 Major / 🟢 Minor.
+
+          Return a structured UX Review Report with numbered findings.
+        </prompt>
+      </sub-agent>
+    </check>
+
+    <!-- Reviewer 3: Adversarial Review -->
+    <sub-agent id="adversarial-reviewer" parallel="true">
+      <prompt>
+        You are a hostile adversarial code reviewer. Your job is to find everything wrong with this implementation. Story: {{story_key}}.
+
+        You have:
+        - Story file: {{story_file_content}}
+        - Git diff: {{git_diff}}
+        - Research context (if available): {{research_context_summary}}
+        - invoked_skills_context: {{invoked_skills_context}}
+
+        You are looking for MINIMUM 50 items. Review against:
+
+        1. Story completeness — does the implementation actually deliver what the ACs say? Check each AC individually.
+        2. Planning artifact alignment — does the code reflect design decisions from architecture/PRD/epics?
+        3. Security — SQL injection, auth bypass, missing permission checks, exposed sensitive data
+        4. Performance — N+1 queries, missing indexes, synchronous calls that should be async
+        5. Race conditions — concurrent access to shared state without locks/transactions
+        6. Error handling — uncaught exceptions, unhandled promise rejections, missing rollback on failure
+        7. Test quality — tests that test the wrong thing, tests that always pass, missing edge case coverage
+        8. Code smells — God objects, duplicated code, magic numbers, hardcoded credentials/paths
+        9. Missing cleanup — orphaned assets, missing cascade deletes, stale data
+        10. Skill compliance — violations of patterns from invoked skills
+
+        Rate EVERY finding: 🔴 Critical / 🟡 Major / 🟢 Minor.
+        You MUST find minimum 50 items total.
+
+        Return a structured Adversarial Review Report with numbered findings.
+      </prompt>
+    </sub-agent>
+
+    <action>Wait for ALL review agents to return</action>
+
+    <action>Compile combined review report to _bmad-output/parallel/review-report-{{story_key}}.md:
+      - All findings from Dev, UX (if UI story), and Adversarial reviewers
+      - Total count by severity (🔴/🟡/🟢)
+      - Deduplicate findings that appear in multiple reports (keep highest severity)
+    </action>
+
+    <output>📊 **Parallel Review Complete — {{story_key}}**
+      Dev findings: {{dev_finding_count}}
+      UX findings: {{ux_finding_count}} ({{is_ui_story ? "UI story" : "skipped"}})
+      Adversarial findings: {{ar_finding_count}}
+      Combined total: {{total_finding_count}} (🔴 {{critical_count}} / 🟡 {{major_count}} / 🟢 {{minor_count}})
+    </output>
+  </step>
+
+  <step n="6" goal="QA Agent — validation, full test suite, and mark tasks complete">
+    <critical>The QA agent now owns all validation, test running, and task marking. Dev agent resumes in Step 7 for auto-fix. QA is the source of truth for what passes and fails.</critical>
+
+    <action>Invoke QA agent: {project-root}/_bmad/bmm/agents/qa.md (or equivalent QA workflow)</action>
+    <action>Pass to QA agent:
+      - Story file
+      - Combined review report from Step 5
+      - List of all test files created during implementation
+      - Git diff for scope
+      - Invoked skills context
+    </action>
+
+    <action>QA agent executes the following (all must complete before returning):</action>
+
+    <!-- QA owns validation and test running -->
+    <sub-agent id="qa-validation" parallel="false">
+      <prompt>
+        You are the QA agent. Story: {{story_key}}.
+
+        You have been handed the completed implementation and combined review report. Your job is to run all validation and testing, then produce a QA Report.
+
+        Execute in order:
+
+        1. RUN FULL TEST SUITE (all existing + all new tests):
+           - Determine test runner from project structure
+           - Run all tests — no skipping
+           - Record: total tests, passed, failed, skipped, coverage %
+           - If any tests FAIL: record exactly which tests and what the failures are
+
+        2. RUN LINTING AND TYPE CHECKS:
+           - Run configured linters (eslint, flake8, mypy, tsc, etc.)
+           - Record all lint errors and warnings
+
+        3. VALIDATE ACCEPTANCE CRITERIA (each AC individually):
+           - For each AC in the story: is it demonstrably satisfied by the code?
+           - Mark: ✅ Satisfied / ❌ Not satisfied / ⚠️ Partially satisfied
+           - For each ❌ or ⚠️: note specifically what is missing
+
+        4. VALIDATE TASK COMPLETION (each task individually):
+           - For each task in story: is implementation present AND tested?
+           - Mark: ✅ Complete / ❌ Incomplete / ⚠️ Partial
+           - Check: does each task have tests that actually run and pass?
+
+        5. MARK COMPLETED TASKS:
+           - For every task where: implementation is present AND tests pass AND AC is satisfied:
+             → Mark task checkbox [x] in the story file
+             → Mark all subtasks [x]
+           - For incomplete tasks: leave unchecked, note what's missing
+           - DO NOT mark a task complete if its tests fail or its AC is not satisfied
+
+        6. UPDATE STORY FILE:
+           - Update Completion Notes in Dev Agent Record with QA summary
+           - Confirm File List is complete
+
+        Return a structured QA Report including:
+        - Test results (pass/fail/skip counts, coverage)
+        - Lint results
+        - AC validation matrix (each AC: ✅/❌/⚠️)
+        - Task completion matrix (each task: ✅/❌/⚠️)
+        - Failing tests (list with error messages)
+        - Tasks marked complete vs remaining
+      </prompt>
+    </sub-agent>
+
+    <action>Receive QA Report</action>
+
+    <output>🧪 **QA Validation Complete — {{story_key}}**
+      Tests: {{passed_count}} passed / {{failed_count}} failed / {{skip_count}} skipped
+      Coverage: {{coverage_pct}}%
+      ACs satisfied: {{ac_satisfied_count}} / {{ac_total_count}}
+      Tasks marked complete: {{tasks_complete_count}} / {{tasks_total_count}}
+    </output>
+  </step>
+
+  <step n="7" goal="Dev agent auto-fix — HALT on criticals, auto-fix all others">
+    <critical>Dev agent takes back control. Check for HALT conditions first. If none: auto-fix all 🔴 non-critical, 🟡, and 🟢 findings plus any QA failures.</critical>
+
+    <!-- HALT conditions -->
+    <check if="any 🔴 Critical findings exist in combined review report">
+      <output>🛑 **HALT — Critical Findings Require User Decision**
+
+        🔴 Critical Issues Found:
+        {{list all critical findings with source agent}}
+
+        Options:
+        [1] Review and fix manually, then continue
+        [2] Downgrade to 🟡 Major and auto-fix (document risk)
+        [3] Skip this finding (document as known risk)
+        [4] Escalate via Correct Course workflow
+
+        For each finding, enter: [1/2/3/4] and finding number.
+      </output>
+      <action>HALT and wait for user decisions on all 🔴 findings</action>
+      <action>After user resolves all 🔴 findings: resume auto-fix of remaining 🟡/🟢</action>
+    </check>
+
+    <check if="architecture/dependency changes required by any finding">
+      <output>🛑 **HALT — Architecture/Dependency Change Required**
+        Finding: {{finding_description}}
+        This cannot be auto-fixed without user approval.
+      </output>
+      <action>HALT and wait for user decision</action>
+    </check>
+
+    <!-- Fix QA failures first (failing tests block everything) -->
+    <check if="QA report shows failing tests">
+      <action>Fix all failing tests before touching review findings — failing tests must pass first</action>
+      <action>After fixing: GOTO sub-step — re-run only the previously failing tests to confirm fix</action>
+    </check>
+
+    <!-- Auto-fix all 🟡/🟢 findings + QA incomplete items -->
+    <check if="no HALT conditions OR user has resolved all HALT findings">
+      <action>Process findings in severity order: 🟡 Major first, then 🟢 Minor</action>
+      <action>Also fix any QA-flagged incomplete tasks (ACs not satisfied, missing implementations)</action>
+      <action>For each finding:
+        1. Identify the specific file and location
+        2. Apply the fix
+        3. Log: "Auto-fix applied: [Finding #N] [severity] — [description]"
+        4. Every 10 fixes: run only affected tests (not full suite — QA will run final suite)
+        5. If tests break after a fix: revert that fix, log as "Auto-fix failed — needs manual review: [finding]"
+      </action>
+
+      <output>✅ **Auto-Fix Complete**
+        Fixed: {{fixed_count}} findings ({{major_fixed}} Major, {{minor_fixed}} Minor)
+        QA failures fixed: {{qa_fixes}}
+        Failed to auto-fix: {{failed_count}} (logged for manual review)
+      </output>
+    </check>
+
+    <!-- Trigger QA re-run after fixes -->
+    <action>After auto-fix completes: invoke QA agent again (abbreviated) to run full test suite and confirm all tasks are now marked complete</action>
+    <action>If tests still fail after auto-fix: HALT — "Auto-fix introduced or failed to resolve test failures — manual review required"</action>
+    <action>Confirm all tasks marked [x] in story file</action>
+  </step>
+
+  <step n="8" goal="Final Party Mode Review — all agents, auto-fix">
+    <critical>Run party mode with ALL available agents. Each finds minimum 20 NEW items (not already addressed). Auto-fix all non-critical findings using same loop as Step 7.</critical>
+
+    <action>Invoke party mode: {project-root}/_bmad/core/workflows/party-mode/workflow.md</action>
+    <action>Pass: story file, git diff, combined review report (so agents don't repeat fixed findings), invoked skills context</action>
+    <action>Instruct each party mode agent: "Find minimum 20 NEW items not already addressed in the prior review report."</action>
+
+    <action>After all party mode agents report: compile party mode report</action>
+
+    <check if="any 🔴 Critical party mode findings">
+      <output>🛑 **HALT — Critical Party Mode Findings**
+        {{list all critical findings}}
+        [1/2/3/4] choices as in Step 7
+      </output>
+      <action>HALT for user decisions</action>
+    </check>
+
+    <action>Auto-fix all 🟡/🟢 party mode findings using same pattern as Step 7</action>
+    <action>QA agent runs final test suite to confirm all passing</action>
+
+    <check if="review + party mode loop count >= 3 for this story">
+      <output>⚠️ Review loop limit reached for {{story_key}} — {{loop_count}} rounds completed.
+        Remaining unresolved 🔴 findings (if any): {{list}}
+        Options: [skip] to override with documented risk, [escalate] to trigger Correct Course
+      </output>
+      <action>HALT and wait for user decision</action>
+    </check>
+
+    <output>✅ **Final Party Mode Review Complete**
+      Party mode findings: {{pmr_finding_count}}
+      Auto-fixed: {{pmr_fixed_count}}
+      Test suite: PASSING
+    </output>
+  </step>
+
+  <step n="9" goal="Story completion, status update, and loop to next story">
+    <action>Verify ALL tasks and subtasks are marked [x] (re-scan the story document now)</action>
+    <action>Confirm File List includes every changed file</action>
+
+    <action>Validate definition-of-done checklist:
+      - All tasks/subtasks marked complete with [x] (confirmed by QA in Step 6)
+      - Implementation satisfies every Acceptance Criterion
+      - Full test suite passing (confirmed by QA re-run in Step 7)
+      - Code quality checks pass
+      - File List complete
+      - Dev Agent Record contains implementation and review notes
+      - Change Log includes summary
+      - ## Invoked Skills section populated
+    </action>
+
+    <action>Update story Status to: "done"</action>
+
+    <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">
+      <action>Load the FULL file: {sprint_status}</action>
+      <action>Find development_status key matching {{story_key}}</action>
+      <action>Update development_status[{{story_key}}] = "done"</action>
+      <action>Save file, preserving ALL comments and structure</action>
+      <output>✅ Story {{story_key}} marked done in sprint-status.yaml</output>
+    </check>
+
+    <output>🎉 **Story Complete — {{story_key}}**
+      Status: done
+      Files changed: {{file_count}}
+      Reviews completed: {{review_round_count}} rounds
+      Total findings addressed: {{total_findings_addressed}}
+    </output>
+
+    <!-- Loop to next story -->
+    <action>Check if more stories remain in the current epic with status "backlog" or "ready-for-dev"</action>
+
+    <check if="more stories remain in epic">
+      <output>🔄 **Looping to next story — passing session context for research reuse**</output>
+      <action>Auto-trigger create-story workflow for next backlog story:
+        - Pass current session_id for context reuse
+        - Pass research-context file path if reusable content exists
+      </action>
+    </check>
+
+    <check if="no more stories remain in epic AND all stories done">
+      <output>🏁 **Epic complete — all stories done**. Triggering Epic Retrospective.</output>
+      <action>Trigger retrospective workflow: {project-root}/_bmad/bmm/workflows/4-implementation/retrospective/workflow.yaml</action>
+    </check>
+  </step>
+
+</workflow>

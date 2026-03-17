@@ -1,0 +1,233 @@
+id: qa-automate
+name: QA Automate
+description: >
+  Playwright-first E2E test workflow. Builds a test plan from specs or diffs,
+  generates .spec.ts test files, authenticates via dev/user quick-login + Dev Kit,
+  runs tests via playwright-cli (MCP fallback), captures annotated screenshots,
+  and produces an HTML gallery report. Optionally promotes specs to tests/ for
+  permanent tracking.
+
+phases:
+  - id: phase-0
+    name: Auth Setup
+    auth_reference: |
+      ## Auth Reference
+      - Login page at localhost:3000 has TWO quick-login buttons: "Login as Dev" and "Login as User" — single click, no credentials needed
+      - Default to "Login as Dev" for most scenarios; use "Login as User" for user-perspective flows
+      - If quick-login buttons absent: fall back to manual credential login
+      - Dev Kit button (visible when logged in): (1) Emulate user — switch acting-as context, (2) Edit permissions — modify any user's permission flags, (3) Add money/XP — inject currency/XP to set preconditions
+      - Always configure preconditions via Dev Kit before scenarios requiring specific state
+      - Save auth state after login: playwright-cli state-save {feature-slug}/auth.json
+    description: >
+      Navigate to localhost:3000. Click "Login as Dev" (default) or "Login as User"
+      for user-perspective flows. If quick-login buttons are absent, fall back to
+      manual credential login (check config or prompt user).
+      After login: playwright-cli state-save _bmad-output/qa-tests/{feature-slug}/auth.json
+      Store auth state path as session variable auth_state_path.
+      Use Dev Kit (visible when logged in) to configure per-scenario preconditions:
+        - Emulate user: switch acting-as context
+        - Edit permissions: modify user permission flags
+        - Add money/XP: inject precondition values
+    outputs:
+      - _bmad-output/qa-tests/{feature-slug}/auth.json
+
+  - id: phase-1
+    name: Test Plan
+    description: >
+      Analyze plan files (PRDs, epics, stories) and/or recently edited code.
+      Derive feature-slug deterministically:
+        1. Take plan filename stem or story title
+        2. Lowercase, replace spaces/non-alphanumeric with hyphens
+        3. Truncate to 40 chars
+        4. Append - + first 4 hex chars of SHA-256 of full absolute path
+           Shell: echo -n "/full/path/to/file.md" | sha256sum | cut -c1-4
+        5. Example: user-profile-edit-a3f2
+      If no plan file: prompt user for a feature name to use as slug base.
+      Output test-plan.md using the schema below.
+    outputs:
+      - _bmad-output/qa-tests/{feature-slug}/test-plan.md
+    schema: |
+      # Test Plan: {feature-slug}
+      Generated: {ISO-8601 datetime}
+      Source: {plan file path or "manual"}
+      Auth strategy: {dev-login | user-login | state-file}
+      Auth state file: {absolute path to auth.json}
+
+      ## Scenarios
+      ### {n}. {Scenario Title}
+      - URL: {starting URL}
+      - Pre-conditions: {Dev Kit setup required, e.g. "set user XP to 500"}
+      - Steps: {numbered list}
+      - Expected outcome: {assertion}
+      - Screenshot triggers: {list of moments to capture}
+
+  - id: phase-2
+    name: Test File Generation
+    description: >
+      Write .spec.ts playwright test files into _bmad-output/qa-tests/{feature-slug}/tests/.
+      Each file must:
+        - Import from @playwright/test
+        - Use baseURL from playwright.config.ts (localhost:3000)
+        - Load auth state at test.use() block:
+            test.use({ storageState: '{absolute-project-root}/_bmad-output/qa-tests/{feature-slug}/auth.json' });
+        - Substitute {absolute-project-root} with resolved project root at generation time
+    outputs:
+      - _bmad-output/qa-tests/{feature-slug}/tests/*.spec.ts
+
+  - id: phase-3
+    name: Execution Preflight + Run
+    description: >
+      Preflight 1 (CLI binary): playwright-cli --version
+        - Exit 0 → playwright_tool=cli
+        - Fails → playwright_tool=mcp
+      Preflight 2 (App reachable): curl localhost:3000 with 3 retries, 3s apart, 10s timeout
+        - Unreachable → ABORT: "App not reachable at localhost:3000 — start Docker containers first."
+      Double-failure (CLI unavailable AND MCP unconfigured):
+        ABORT: "Neither playwright-cli nor playwright MCP is available.
+                Install playwright-cli or configure the playwright MCP server, then retry."
+      Run tests:
+        - playwright-cli mode: playwright-cli open localhost:3000, execute scenario steps, screenshot
+        - MCP fallback: browser_navigate, browser_click, browser_fill_form, browser_take_screenshot, browser_snapshot
+      Document playwright_tool used in report header.
+
+  - id: phase-4
+    name: Screenshots
+    description: >
+      For every screenshot taken, record a JSON entry and append to manifest.json.
+      Failure screenshots included with status: "failed" — do NOT block report.
+    outputs:
+      - _bmad-output/qa-tests/{feature-slug}/screenshots/{nn}-{step-name}.png
+      - _bmad-output/qa-tests/{feature-slug}/screenshots/manifest.json
+    manifest_entry_schema: |
+      {
+        "filename": "01-login-page.png",
+        "scenario": "{scenario title}",
+        "step": "{step description}",
+        "why": "{why this screenshot was taken}",
+        "shows": "{what is visible in the screenshot}",
+        "tests": "{what feature/assertion this screenshot proves}",
+        "status": "passed | failed",
+        "timestamp": "{ISO-8601}"
+      }
+
+  - id: phase-5
+    name: HTML Gallery Report
+    description: >
+      Read _bmad-output/qa-tests/{feature-slug}/screenshots/manifest.json.
+      Iterate over each entry; render one card per entry into the HTML template,
+      substituting all {placeholder} values from corresponding JSON fields.
+      Compute summary totals from manifest:
+        total = manifest.length
+        passed = count where status=passed
+        failed = count where status=failed
+        duration = last_timestamp minus first_timestamp
+      Card classes: passed entry → "card passed" + "badge pass", failed → "card failed" + "badge fail"
+      Write completed HTML to _bmad-output/qa-tests/{feature-slug}/report.html.
+    outputs:
+      - _bmad-output/qa-tests/{feature-slug}/report.html
+
+  - id: phase-6
+    name: Open Report
+    description: >
+      Detect platform:
+        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]] || command -v cmd.exe &>/dev/null
+          then PLATFORM=windows
+        elif [[ "$(uname)" == "Darwin" ]]
+          then PLATFORM=mac
+        else PLATFORM=linux
+        fi
+      Open using absolute path to report.html:
+        Windows: start "" "C:\absolute\path\to\report.html"
+        Mac:     open /absolute/path/to/report.html
+        Linux:   xdg-open /absolute/path/to/report.html
+      Always print absolute path to terminal regardless of platform.
+
+  - id: phase-7
+    name: Promote (optional)
+    description: >
+      Present user with list of generated .spec.ts files.
+      Ask: "Which test files would you like to promote to tests/ for permanent tracking?"
+      For each selected file, before copying:
+        - Check if file exists in tests/: if [ -f "tests/{filename}" ]
+        - If exists → prompt: "[O]verwrite / [R]ename with timestamp suffix
+          (e.g. auth-flow-20260309.spec.ts) / [S]kip this file" — default: Skip
+      On successful copy: "✅ Promoted {filename} to tests/"
+      NOTE: This write to {project-root}/tests/ is explicitly exempted from the
+      _bmad-output/qa-tests/ write constraint.
+      If user skips: session complete.
+
+html_template: |
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QA Report — {feature-slug}</title>
+    <style>
+      :root {
+        --pass: #22c55e; --fail: #ef4444; --bg: #0f0f11; --surface: #1a1a1f;
+        --border: #2a2a35; --text: #e2e2e8; --muted: #6b6b80; --accent: #7c3aed;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; padding: 2rem; }
+      .report-header { border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+      .report-header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+      .report-header .meta { color: var(--muted); font-size: 0.875rem; }
+      .summary { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+      .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.5rem; padding: 1rem 1.5rem; min-width: 140px; }
+      .summary-card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+      .summary-card .value { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+      .summary-card.pass .value { color: var(--pass); }
+      .summary-card.fail .value { color: var(--fail); }
+      .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+      .card.passed { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; overflow: hidden; }
+      .card.failed { background: var(--surface); border: 1px solid var(--fail); border-radius: 0.75rem; overflow: hidden; }
+      .card img { width: 100%; display: block; aspect-ratio: 16/10; object-fit: cover; }
+      .img-wrap { position: relative; }
+      .badge { position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+      .badge.pass { background: var(--pass); color: #000; }
+      .badge.fail { background: var(--fail); color: #fff; }
+      .card-body { padding: 1rem; }
+      .card-scenario { font-size: 0.7rem; color: var(--accent); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+      .card-step { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; }
+      .card-meta { display: flex; flex-direction: column; gap: 0.5rem; }
+      .card-meta-row { display: flex; gap: 0.5rem; font-size: 0.8rem; }
+      .card-meta-row .key { color: var(--muted); min-width: 52px; flex-shrink: 0; }
+      .card-meta-row .val { color: var(--text); }
+      .timestamp { font-size: 0.7rem; color: var(--muted); margin-top: 0.75rem; }
+    </style>
+  </head>
+  <body>
+    <div class="report-header">
+      <h1>QA Report — {feature-slug}</h1>
+      <div class="meta">Run: {timestamp} &nbsp;|&nbsp; Source: {plan-file} &nbsp;|&nbsp; Tool: {playwright_tool}</div>
+    </div>
+    <div class="summary">
+      <div class="summary-card"><div class="label">Total</div><div class="value">{total}</div></div>
+      <div class="summary-card pass"><div class="label">Passed</div><div class="value">{passed}</div></div>
+      <div class="summary-card fail"><div class="label">Failed</div><div class="value">{failed}</div></div>
+      <div class="summary-card"><div class="label">Duration</div><div class="value" style="font-size:1.2rem">{duration}</div></div>
+    </div>
+    <div class="gallery">
+      <!-- FOR EACH entry in manifest.json: render one card block below.
+           passed entry: class="card passed", badge class="badge pass", label="PASSED"
+           failed entry: class="card failed", badge class="badge fail",  label="FAILED" -->
+      <div class="card {passed|failed}">
+        <div class="img-wrap">
+          <img src="screenshots/{filename}" alt="{step}" loading="lazy" />
+          <span class="badge {pass|fail}">{PASSED|FAILED}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-scenario">{scenario}</div>
+          <div class="card-step">{step}</div>
+          <div class="card-meta">
+            <div class="card-meta-row"><span class="key">Why</span><span class="val">{why}</span></div>
+            <div class="card-meta-row"><span class="key">Shows</span><span class="val">{shows}</span></div>
+            <div class="card-meta-row"><span class="key">Tests</span><span class="val">{tests}</span></div>
+          </div>
+          <div class="timestamp">{timestamp}</div>
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>

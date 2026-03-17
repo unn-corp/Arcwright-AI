@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Master Orchestrator — Workflows Overview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1e1e2e; color: #e5e5e5; font-family: 'Segoe UI', system-ui, sans-serif; padding: 32px; }
+  h1 { font-size: 1.4rem; color: #a78bfa; margin-bottom: 4px; }
+  .meta { font-size: 0.75rem; color: #999; margin-bottom: 32px; font-family: monospace; }
+
+  .section-title { font-size: 1rem; color: #7dd3fc; margin: 24px 0 10px; font-weight: 600; border-bottom: 1px solid #2a2a3e; padding-bottom: 6px; }
+
+  /* Workflow row — always left to right */
+  .wf-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: nowrap;
+    margin-bottom: 10px;
+    overflow-x: auto;
+  }
+
+  /* Workflow node */
+  .wf {
+    flex-shrink: 0;
+    border-radius: 6px;
+    border: 2px solid;
+    padding: 9px 14px;
+    font-size: 0.76rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 160px;
+  }
+  .wf-name { font-weight: 700; color: #e5e5e5; font-size: 0.8rem; }
+  .wf-trigger { font-size: 0.66rem; color: #4a9eed; font-family: monospace; }
+  .wf-agent { font-size: 0.66rem; color: #ccc; }
+  .wf-skill { font-size: 0.64rem; color: #22c55e; }
+  .wf-out { font-size: 0.63rem; color: #fbbf24; font-family: monospace; margin-top: 2px; }
+
+  .wf-orch  { background: #2d1b69; border-color: #a78bfa; }
+  .wf-arch  { background: #1e3a5f; border-color: #4a9eed; }
+  .wf-ux    { background: #1a3040; border-color: #38bdf8; }
+  .wf-sec   { background: #2a1a1a; border-color: #f87171; }
+  .wf-loop  { background: #3d2a00; border-color: #fbbf24; }
+  .wf-user  { background: #1a4d2e; border-color: #22c55e; }
+  .wf-pm    { background: #252535; border-color: #7dd3fc; }
+  .wf-gate  { background: #2d1b69; border-color: #a78bfa; min-width: 110px; }
+
+  /* Arrow */
+  .arr {
+    width: 28px; height: 2px; background: #4a9eed;
+    position: relative; flex-shrink: 0;
+  }
+  .arr::after {
+    content: ''; position: absolute; right: -1px; top: -4px;
+    border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid #4a9eed;
+  }
+  .arr.purple { background: #a78bfa; }
+  .arr.purple::after { border-left-color: #a78bfa; }
+  .arr.green { background: #22c55e; }
+  .arr.green::after { border-left-color: #22c55e; }
+  .arr.yellow { background: #fbbf24; }
+  .arr.yellow::after { border-left-color: #fbbf24; }
+  .arr.amber { background: #f59e0b; }
+  .arr.amber::after { border-left-color: #f59e0b; }
+  .arr.red { background: #f87171; }
+  .arr.red::after { border-left-color: #f87171; }
+
+  /* Badge */
+  .badge {
+    display: inline-block; border-radius: 999px; padding: 2px 8px;
+    font-size: 0.62rem; font-family: monospace; border: 1px solid; margin-left: 6px;
+  }
+  .badge-loop { background: #3d2a00; border-color: #fbbf24; color: #fbbf24; }
+  .badge-pass { background: #1a4d2e; border-color: #22c55e; color: #22c55e; }
+  .badge-halt { background: #4a2020; border-color: #f87171; color: #f87171; }
+
+  /* Execution mode badges */
+  .mode-badge {
+    display: inline-block; border-radius: 3px; padding: 1px 6px;
+    font-size: 0.58rem; font-family: monospace; border: 1px solid; margin-top: 3px;
+    letter-spacing: 0.3px;
+  }
+  .mode-inprocess { background: #252525; border-color: #666; color: #bbb; }
+  .mode-splitpane { background: #2d1a4a; border-color: #a78bfa; color: #ddd4ff; }
+
+  /* Loop detail row */
+  .loop-row {
+    display: flex; align-items: center; gap: 0;
+    margin: 4px 0 4px 16px; flex-wrap: nowrap;
+  }
+  .loop-step {
+    background: #252525; border: 1px dashed #666; border-radius: 4px;
+    padding: 4px 10px; font-size: 0.68rem; color: #ccc; white-space: nowrap; flex-shrink: 0;
+  }
+  .loop-step.pass { background: #1a4d2e; border-color: #22c55e; color: #e5e5e5; }
+  .loop-step.halt { background: #4a2020; border-color: #f87171; color: #e5e5e5; }
+
+  .group-border {
+    border: 1px dashed #a78bfa; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; position: relative;
+  }
+  .group-label {
+    position: absolute; top: -11px; left: 12px; background: #1e1e2e;
+    padding: 2px 8px; font-size: 0.64rem; color: #a78bfa; font-weight: 600; letter-spacing: 0.4px;
+  }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; padding: 14px; border: 1px solid #2a2a3e; border-radius: 6px; font-size: 0.72rem; color: #aaa; }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .ls { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; flex-shrink: 0; }
+
+  /* Step context block */
+  .step-ctx {
+    margin-top: 4px; padding-top: 4px;
+    border-top: 1px dashed rgba(255,255,255,0.15);
+    font-size: 0.57rem; font-family: monospace; color: #aaa; line-height: 1.6;
+  }
+  .step-ctx span { color: #7dc47d; }
+  .step-ctx .ctx-in  { color: #7ab4f0; }
+  .step-ctx .ctx-out { color: #d4a86e; }
+  .step-ctx .ctx-sub { color: #c47ad4; }
+  .step-ctx .ctx-dim { color: #777; }
+
+  /* Sub-agent component */
+  .sa-wrap { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+  .sa-orch {
+    background: #2d1b69; border: 2px solid #a78bfa; border-radius: 6px;
+    padding: 10px 14px; font-size: 0.78rem; font-weight: 700;
+    color: #e5e5e5; text-align: center; flex-shrink: 0; min-width: 130px;
+  }
+  .sa-orch small { display: block; font-size: 0.62rem; font-weight: 400; color: #a78bfa; margin-top: 2px; }
+  .sa-box {
+    border: 1px dashed #a78bfa; border-radius: 6px;
+    padding: 10px 12px 10px 10px; display: flex; flex-direction: column; gap: 6px;
+    flex-shrink: 0;
+  }
+  .sa-title { font-size: 0.65rem; font-weight: 700; color: #a78bfa; text-align: center; letter-spacing: 0.6px; margin-bottom: 2px; }
+  .sa-row { display: flex; align-items: center; gap: 8px; }
+  .sa-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .sa-node {
+    border: 1.5px solid; border-radius: 4px;
+    padding: 5px 12px; font-size: 0.74rem; color: #e5e5e5;
+    min-width: 190px;
+  }
+  .sa-node.arch { background: #1e3a5f; border-color: #4a9eed; }
+  .sa-node.ux   { background: #1a3040; border-color: #38bdf8; }
+  .sa-node.sec  { background: #2a1a1a; border-color: #f87171; }
+
+  /* Review Track — diamond gate */
+  .rv-diamond {
+    width: 56px; height: 56px; background: #2d1b69; border: 2px solid #a78bfa;
+    transform: rotate(45deg); flex-shrink: 0; position: relative;
+  }
+  .rv-diamond-label {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 0.58rem; font-weight: 700; color: #a78bfa; text-align: center; white-space: nowrap;
+  }
+
+  /* ── 6-Track Grid ── */
+  .tracks-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+  }
+  .track-col {
+    display: flex; flex-direction: column; gap: 4px;
+    border: 1px solid; border-radius: 6px; overflow: hidden; flex-shrink: 0;
+  }
+  .track-header {
+    padding: 8px 10px 6px; font-weight: 700; font-size: 0.76rem;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .track-code { font-size: 1rem; font-weight: 900; font-family: monospace; }
+  .track-score { font-size: 0.6rem; font-family: monospace; opacity: 0.75; }
+  .track-trigger { font-size: 0.6rem; line-height: 1.4; opacity: 0.8; margin-top: 2px; }
+  .track-body { padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .track-step {
+    border-radius: 4px; padding: 5px 8px; font-size: 0.65rem; line-height: 1.4;
+    border: 1px solid;
+  }
+  .track-step .step-name { font-weight: 700; color: #f0f0f0; }
+  .track-step .step-agent { color: #ccc; font-size: 0.6rem; }
+  .track-step.step-gate { background: #2d1b69 !important; border-color: #a78bfa !important; }
+  .track-step.step-halt { background: #4a2020 !important; border-color: #f87171 !important; }
+  .track-step.step-ptm  { background: #1a4d2e !important; border-color: #22c55e !important; }
+  .track-step.step-loop { background: #2a1a00 !important; border-color: #fbbf24 !important; }
+  .track-step.step-scope { background: #1e2a1a !important; border-color: #86efac !important; font-size: 0.58rem; color: #86efac; }
+  .track-conn { text-align: center; font-size: 0.65rem; color: #888; line-height: 1; }
+
+  /* Track color themes */
+  .track-nano   { border-color: #2a5c35; }
+  .track-nano   .track-header { background: #1a3d24; color: #86efac; }
+  .track-nano   .track-body .track-step:not(.step-gate):not(.step-halt):not(.step-ptm) { background: #1a2e1e; border-color: #2a5c35; }
+
+  .track-small  { border-color: #1e3a5f; }
+  .track-small  .track-header { background: #162d4a; color: #93c5fd; }
+  .track-small  .track-body .track-step:not(.step-gate):not(.step-halt):not(.step-ptm) { background: #162436; border-color: #1e3a5f; }
+
+  .track-compact { border-color: #1a4040; }
+  .track-compact .track-header { background: #112a2a; color: #5eead4; }
+  .track-compact .track-body .track-step:not(.step-gate):not(.step-halt):not(.step-ptm) { background: #121e1e; border-color: #1a4040; }
+
+  .track-medium { border-color: #4a3a00; }
+  .track-medium .track-header { background: #332800; color: #fde68a; }
+  .track-medium .track-body .track-step:not(.step-gate):not(.step-halt):not(.step-ptm) { background: #241c00; border-color: #4a3a00; }
+
+  .track-extended { border-color: #4a2e00; }
+  .track-extended .track-header { background: #331f00; color: #fdba74; }
+  .track-extended .track-body .track-step:not(.step-gate):not(.step-halt):not(.step-ptm) { background: #241600; border-color: #4a2e00; }
+
+  .track-large  { border-color: #4a1a1a; }
+  .track-large  .track-header { background: #331010; color: #fca5a5; }
+  .track-large  .track-body .track-step:not(.step-gate):not(.step-halt):not(.step-ptm) { background: #241212; border-color: #4a1a1a; }
+
+  /* Quick-dev fix node after review gate findings */
+  .gate-fix-row { display: flex; align-items: center; gap: 0; margin: 3px 0; flex-shrink: 0; }
+  .gate-fix-label { font-size: 0.58rem; font-family: monospace; color: #f87171; white-space: nowrap; padding: 0 4px; }
+  .gate-fix-node {
+    background: #1e2a40; border: 1px dashed #4a9eed; border-radius: 4px;
+    padding: 4px 10px; font-size: 0.64rem; color: #ccc; flex-shrink: 0;
+  }
+  .gate-fix-node .fix-name { font-weight: 700; color: #93c5fd; }
+  /* Parallel badge */
+  .parallel-badge {
+    display: inline-block; background: #1a2a3a; border: 1px solid #4a9eed;
+    border-radius: 3px; padding: 1px 6px; font-size: 0.58rem; font-family: monospace;
+    color: #7dd3fc; margin-top: 2px; letter-spacing: 0.3px;
+  }
+  /* Review Track branch layout */
+  .rv-section { display: flex; flex-direction: column; gap: 10px; }
+  .rv-branch-connector {
+    width: 2px; background: #444; margin-left: 32px; height: 10px; flex-shrink: 0;
+  }
+  .rv-row-indent { margin-left: 48px; }
+  .rv-branch-label {
+    font-size: 0.64rem; font-family: monospace; font-weight: 700; padding: 2px 8px;
+    border-radius: 3px; flex-shrink: 0; white-space: nowrap; align-self: center;
+  }
+  .rv-branch-yes { background: #3d2a00; border: 1px solid #f59e0b; color: #f59e0b; }
+  .rv-branch-no  { background: #1a3a1a; border: 1px solid #22c55e; color: #22c55e; }
+</style>
+</head>
+<body>
+
+<h1>Master Orchestrator — Workflows Overview</h1>
+<p class="meta">All workflows + 6 Tracks + Review Track · left-to-right · tmux split-pane labeled · in-process fallback documented</p>
+
+<!-- ══════════ TMUX FALLBACK BANNER ══════════ -->
+<div style="background:#1a1a2a;border:1px solid #a78bfa;border-left:4px solid #a78bfa;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:0.75rem;line-height:1.6;">
+  <span style="color:#a78bfa;font-weight:700;font-family:monospace;">tmux mode detection</span>
+  <span style="color:#ccc;margin-left:10px;">When tmux is active (<code style="background:#2a2a3a;padding:1px 5px;border-radius:3px;color:#c4b5fd;">$TMUX</code> is set): split-pane agents spawn in new panes as shown.</span>
+  <br>
+  <span style="color:#fbbf24;font-weight:600;font-family:monospace;">▶ Fallback (no tmux):</span>
+  <span style="color:#ccc;margin-left:6px;">All <span style="background:#2d1a4a;border:1px solid #a78bfa;color:#ddd4ff;font-family:monospace;padding:1px 6px;border-radius:3px;font-size:0.68rem;">split-pane</span> steps automatically run <span style="background:#252525;border:1px solid #666;color:#bbb;font-family:monospace;padding:1px 6px;border-radius:3px;font-size:0.68rem;">in-process</span> instead — all agents share the same conversation context. Review gates already run in-process; quick-dev fix steps run sequentially in the same conversation.</span>
+</div>
+
+<!-- ══════════ 6 WORKFLOW TRACKS ══════════ -->
+<div class="section-title">6 Workflow Tracks — Master Orchestrator triage routes to one of these</div>
+<div style="font-size:0.7rem;color:#999;font-family:monospace;margin-bottom:8px;">
+  Complexity 0-1 → N · 2 → S · 3 → C · 4-5 → M · 6-7 → E · 8+ → L &nbsp;|&nbsp;
+  <span style="background:#252525;border:1px solid #555;color:#888;padding:1px 5px;border-radius:3px;">in-process</span> = same conversation &nbsp;
+  <span style="background:#2d1a4a;border:1px solid #a78bfa;color:#c4b5fd;padding:1px 5px;border-radius:3px;">split-pane</span> = new tmux pane (fallback: in-process)
+</div>
+
+<div class="tracks-grid">
+
+  <!-- ── NANO ── -->
+  <div class="track-col track-nano">
+    <div class="track-header">
+      <span class="track-code">[N] Nano</span>
+      <span class="track-score">score 0–1</span>
+      <span class="track-trigger">≤20 lines · 1-2 files · no spec · one-commit undo</span>
+    </div>
+    <div class="track-body">
+      <div class="track-step">
+        <div class="step-name">Quick Dev</div>
+        <div class="step-agent">quick-flow-solo-dev</div>
+        <div class="mode-badge mode-splitpane">split-pane ¹</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> task description · branch · session_id<br>
+          <span class="ctx-out">out:</span> code changes on branch
+        </div>
+      </div>
+      <div class="track-step step-scope">⚠ scope &gt;20 lines or new imports → HALT → upgrade to Small</div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">DRY+UV Gate</div>
+        <div class="step-agent">review agent · 2-sub-spec</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> branch · code diff · session_id<br>
+          <span class="ctx-sub">sub-1:</span> architect · DRY (clean-code-standards) <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV (ux-audit) <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → quick-dev <span class="ctx-dim">split-pane</span> fixes · re-audit in-process
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-halt">
+        <div class="step-name">⛔ USER APPROVAL</div>
+        <div class="step-agent">HALT — await [approve]</div>
+        <div class="step-ctx">
+          <span class="ctx-in">shows:</span> files changed · gate summary
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-ptm">
+        <div class="step-name">/prepare-to-merge</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> branch name
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SMALL ── -->
+  <div class="track-col track-small">
+    <div class="track-header">
+      <span class="track-code">[S] Small</span>
+      <span class="track-score">score 2</span>
+      <span class="track-trigger">2–4 files · quick fix · no schema · single-commit undo</span>
+    </div>
+    <div class="track-body">
+      <div class="track-step">
+        <div class="step-name">Quick Spec</div>
+        <div class="step-agent">quick-flow-solo-dev</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> task description · branch · session_id<br>
+          <span class="ctx-out">out:</span> planning/{slug}/quick-spec.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Quick Dev</div>
+        <div class="step-agent">quick-flow-solo-dev</div>
+        <div class="mode-badge mode-splitpane">split-pane ¹</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> quick-spec.md · branch · session_id<br>
+          <span class="ctx-out">out:</span> code changes on branch
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Review Gate</div>
+        <div class="step-agent">review agent · 3 in-process audits</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> artifact_path · branch · track:small · review_type:3-sub<br>
+          <span class="ctx-sub">sub-1:</span> architect · AR+DRY <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-3:</span> security · SR <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → quick-dev <span class="ctx-dim">split-pane</span> fixes · re-audit
+        </div>
+      </div>
+      <div class="track-conn">↓ 🔴→ quick-dev split-pane → re-audit</div>
+      <div class="track-step">
+        <div class="step-name">QA Tests (Playwright)</div>
+        <div class="step-agent">qa-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> branch · quick-spec.md · code changes<br>
+          <span class="ctx-out">out:</span> .spec.ts files (Playwright, not MCP)
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-halt">
+        <div class="step-name">⛔ USER APPROVAL</div>
+        <div class="step-agent">HALT — await [approve]</div>
+        <div class="step-ctx">
+          <span class="ctx-in">shows:</span> AR+DRY · UV · SR · QA summary
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-ptm">
+        <div class="step-name">/prepare-to-merge</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx"><span class="ctx-in">in:</span> branch name</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COMPACT ── -->
+  <div class="track-col track-compact">
+    <div class="track-header">
+      <span class="track-code">[C] Compact</span>
+      <span class="track-score">score 3</span>
+      <span class="track-trigger">4–8 files · light context needed · no UX design phase</span>
+    </div>
+    <div class="track-body">
+      <div class="track-step">
+        <div class="step-name">Quick Spec</div>
+        <div class="step-agent">quick-flow-solo-dev</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> task description · branch<br>
+          <span class="ctx-out">out:</span> planning/{slug}/quick-spec.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step" style="border-style:dashed;">
+        <div class="step-name">Quick Research <em style="font-size:0.58rem;color:#666;">(optional)</em></div>
+        <div class="step-agent">analyst-agent ×1</div>
+        <div class="mode-badge mode-inprocess">in-process · if needed</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> quick-spec.md · research type (codebase or API)<br>
+          <span class="ctx-out">out:</span> planning/{slug}/research-report.md<br>
+          <span class="ctx-dim">skip if QS is self-contained</span>
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Quick Dev</div>
+        <div class="step-agent">quick-flow-solo-dev</div>
+        <div class="mode-badge mode-splitpane">split-pane ¹</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> quick-spec.md · research-report.md (if run) · branch<br>
+          <span class="ctx-out">out:</span> code changes on branch
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Review Gate</div>
+        <div class="step-agent">review agent · 3 in-process audits</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> artifact_path · branch · track:compact · review_type:3-sub<br>
+          <span class="ctx-sub">sub-1:</span> architect · AR+DRY <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-3:</span> security · SR <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → quick-dev <span class="ctx-dim">split-pane</span> fixes · re-audit
+        </div>
+      </div>
+      <div class="track-conn">↓ 🔴→ quick-dev split-pane → re-audit</div>
+      <div class="track-step">
+        <div class="step-name">QA Tests (Playwright)</div>
+        <div class="step-agent">qa-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> branch · quick-spec.md · code changes<br>
+          <span class="ctx-out">out:</span> .spec.ts files
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-halt">
+        <div class="step-name">⛔ USER APPROVAL</div>
+        <div class="step-agent">HALT — await [approve]</div>
+        <div class="step-ctx"><span class="ctx-in">shows:</span> AR · UV · SR · QA summary</div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-ptm">
+        <div class="step-name">/prepare-to-merge</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx"><span class="ctx-in">in:</span> branch name</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MEDIUM ── -->
+  <div class="track-col track-medium">
+    <div class="track-header">
+      <span class="track-code">[M] Medium</span>
+      <span class="track-score">score 4–5</span>
+      <span class="track-trigger">6–12 files · full spec · UX involved · multi-step rollback</span>
+    </div>
+    <div class="track-body">
+      <div class="track-step">
+        <div class="step-name">Quick Spec</div>
+        <div class="step-agent">quick-flow-solo-dev</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> task description · branch<br>
+          <span class="ctx-out">out:</span> planning/{slug}/quick-spec.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Research (1–2 agents)</div>
+        <div class="step-agent">analyst-agent ×1-2</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> quick-spec.md · research type per agent<br>
+          <span class="ctx-dim">UI-heavy: codebase + design patterns · backend: 1 agent</span><br>
+          <span class="ctx-out">out:</span> planning/{slug}/research-*.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">UX Design</div>
+        <div class="step-agent">ux-designer-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> quick-spec.md · research reports<br>
+          <span class="ctx-out">out:</span> planning/{slug}/ux-design.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Review Gate 1 (spec + UX review)</div>
+        <div class="step-agent">review agent · 3 in-process audits</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> quick-spec.md · ux-design.md · research reports · review_type:3-sub<br>
+          <span class="ctx-sub">sub-1:</span> architect · AR+DRY <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV + styling-standards.md <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-3:</span> security · SR <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → quick-dev <span class="ctx-dim">split-pane</span> · re-audit in-process
+        </div>
+      </div>
+      <div class="track-conn">↓ 🔴→ back to QS</div>
+      <div class="track-step">
+        <div class="step-name">Quick Dev</div>
+        <div class="step-agent">quick-flow-solo-dev</div>
+        <div class="mode-badge mode-splitpane">split-pane ¹</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> quick-spec.md · ux-design.md · branch<br>
+          <span class="ctx-out">out:</span> code changes on branch
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Final Review Gate</div>
+        <div class="step-agent">review agent · 3 in-process audits</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> artifact_path (code diff) · quick-spec.md · ux-design.md · research reports · branch · review_type:3-sub<br>
+          <span class="ctx-sub">sub-1:</span> architect · AR+DRY · 1-pass max <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-3:</span> security · SR <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → quick-dev <span class="ctx-dim">split-pane</span> fixes · re-audit
+        </div>
+      </div>
+      <div class="track-conn">↓ 🔴→ quick-dev split-pane → re-audit</div>
+      <div class="track-step">
+        <div class="step-name">QA Tests (Playwright)</div>
+        <div class="step-agent">qa-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> branch · quick-spec.md · ux-design.md · code changes<br>
+          <span class="ctx-out">out:</span> .spec.ts files
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-halt">
+        <div class="step-name">⛔ USER APPROVAL</div>
+        <div class="step-agent">HALT — await [approve]</div>
+        <div class="step-ctx"><span class="ctx-in">shows:</span> gate-1 · gate-final · QA summary</div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-ptm">
+        <div class="step-name">/prepare-to-merge</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx"><span class="ctx-in">in:</span> branch name</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EXTENDED ── -->
+  <div class="track-col track-extended">
+    <div class="track-header">
+      <span class="track-code">[E] Extended</span>
+      <span class="track-score">score 6–7</span>
+      <span class="track-trigger">10–16 files · arch impact · PRD needed · no epic loop</span>
+    </div>
+    <div class="track-body">
+      <div class="track-step">
+        <div class="step-name">Quick Spec</div>
+        <div class="step-agent">quick-flow-solo-dev</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> task description · branch<br>
+          <span class="ctx-out">out:</span> planning/{slug}/quick-spec.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Research ×2 (always)</div>
+        <div class="step-agent">analyst-agent ×2</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">agent-1:</span> codebase exploration (files/patterns involved)<br>
+          <span class="ctx-in">agent-2:</span> domain/technical (external APIs, design patterns)<br>
+          <span class="ctx-out">out:</span> planning/{slug}/research-codebase.md · research-domain.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">PRD</div>
+        <div class="step-agent">pm-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> quick-spec.md · both research reports<br>
+          <span class="ctx-out">out:</span> planning/{slug}/prd.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">UX + Arch Notes + Sprint Plan</div>
+        <div class="step-agent">ux-designer-agent → architect-agent (sequential, same split-pane)</div>
+        <div class="mode-badge mode-splitpane">split-pane (sequential)</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> prd.md · research reports<br>
+          <span class="ctx-out">ux:</span> planning/{slug}/ux-design.md<br>
+          <span class="ctx-out">arch:</span> planning/{slug}/architecture-notes.md (≤5 bullets)<br>
+          <span class="ctx-out">sprint:</span> planning/{slug}/sprint-plan.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Review Gate 1 (plans review)</div>
+        <div class="step-agent">review agent · 3 in-process audits</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> prd.md · ux-design.md · architecture-notes.md · sprint-plan.md · review_type:3-sub<br>
+          <span class="ctx-dim">reviews all plans for coherence + feasibility vs PRD</span><br>
+          <span class="ctx-sub">sub-1:</span> architect · AR+DRY <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-3:</span> security · SR <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → back to UX+Arch+Sprint step
+        </div>
+      </div>
+      <div class="track-conn">↓ 🔴→ back to UX+Arch+Sprint</div>
+      <div class="track-step">
+        <div class="step-name">Dev</div>
+        <div class="step-agent">dev-agent (full impl.)</div>
+        <div class="mode-badge mode-splitpane">split-pane ¹</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> prd.md · ux-design.md · architecture-notes.md · sprint-plan.md · branch<br>
+          <span class="ctx-out">out:</span> full implementation on branch
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Review Gate 2 (code review)</div>
+        <div class="step-agent">review agent · 3 in-process audits</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> artifact_path · prd.md · ux-design.md · architecture-notes.md · sprint-plan.md · research reports · RG1 findings · branch · review_type:3-sub<br>
+          <span class="ctx-sub">sub-1:</span> architect · AR+DRY <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-3:</span> security · SR <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → quick-dev <span class="ctx-dim">split-pane</span> fixes · re-audit
+        </div>
+      </div>
+      <div class="track-conn">↓ 🔴→ quick-dev split-pane → re-audit</div>
+      <div class="track-step">
+        <div class="step-name">QA Tests (Playwright)</div>
+        <div class="step-agent">qa-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> branch · prd.md · ux-design.md · architecture-notes.md · sprint-plan.md · RG2 findings · code changes<br>
+          <span class="ctx-out">out:</span> .spec.ts files
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-halt">
+        <div class="step-name">⛔ USER APPROVAL</div>
+        <div class="step-agent">HALT — await [approve]</div>
+        <div class="step-ctx"><span class="ctx-in">shows:</span> PRD · UX · arch · gate-1 · gate-2 · QA summary</div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-ptm">
+        <div class="step-name">/prepare-to-merge</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx"><span class="ctx-in">in:</span> branch name</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LARGE ── -->
+  <div class="track-col track-large">
+    <div class="track-header">
+      <span class="track-code">[L] Large</span>
+      <span class="track-score">score 8+</span>
+      <span class="track-trigger">12+ files · new schema/service · epic decomposition</span>
+    </div>
+    <div class="track-body">
+      <div class="track-step">
+        <div class="step-name">Product Brief</div>
+        <div class="step-agent">pm-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> task description · branch · session_id<br>
+          <span class="ctx-out">out:</span> planning/{slug}/product-brief.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Research ×3 (parallel)</div>
+        <div class="step-agent">analyst-agent ×3 (MR · DR · TR)</div>
+        <div class="mode-badge mode-splitpane">split-pane ²</div>
+        <div class="step-ctx">
+          <span class="ctx-in">agent-1:</span> Market Research — user/competitive context<br>
+          <span class="ctx-in">agent-2:</span> Domain Research — industry/domain patterns<br>
+          <span class="ctx-in">agent-3:</span> Technical Research — external APIs, tech stack<br>
+          <span class="ctx-out">out:</span> planning/{slug}/research-{mr|dr|tr}.md (×3)
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Create PRD</div>
+        <div class="step-agent">pm-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> product-brief.md · all 3 research reports<br>
+          <span class="ctx-out">out:</span> planning/{slug}/prd.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Planning Gate (2-sub spec)</div>
+        <div class="step-agent">review agent · DRY+UV in-process</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> prd.md · product-brief.md · review_type:2-sub-spec<br>
+          <span class="ctx-sub">sub-1:</span> architect · DRY only <span class="ctx-dim">in-process · no AR yet</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → quick-dev <span class="ctx-dim">split-pane</span> · re-audit
+        </div>
+      </div>
+      <div class="track-conn">↓ spawn both panes simultaneously</div>
+      <div style="display:flex;gap:6px;align-self:stretch;">
+        <div class="track-step" style="flex:1;">
+          <div class="step-name">UX Design</div>
+          <div class="step-agent">ux-designer-agent</div>
+          <div class="mode-badge mode-splitpane">split-pane</div>
+          <div class="step-ctx">
+            <span class="ctx-in">in:</span> prd.md · research reports<br>
+            <span class="ctx-out">out:</span> planning/{slug}/ux-design.md
+          </div>
+        </div>
+        <div class="track-step" style="flex:1;">
+          <div class="step-name">Architecture Doc</div>
+          <div class="step-agent">architect-agent</div>
+          <div class="mode-badge mode-splitpane">split-pane</div>
+          <div class="step-ctx">
+            <span class="ctx-in">in:</span> prd.md · research reports<br>
+            <span class="ctx-out">out:</span> planning/{slug}/architecture.md
+          </div>
+        </div>
+      </div>
+      <div class="track-conn">↓ wait for both to report back</div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Design Gate (2-sub spec)</div>
+        <div class="step-agent">review agent · DRY+UV in-process</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> ux-design.md · architecture.md · review_type:2-sub-spec<br>
+          <span class="ctx-sub">sub-1:</span> architect · DRY <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → quick-dev <span class="ctx-dim">split-pane</span> · re-audit
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Epics &amp; Stories</div>
+        <div class="step-agent">sm-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> product-brief.md · prd.md · research-mr.md · research-dr.md · research-tr.md · ux-design.md · architecture.md · design-gate findings<br>
+          <span class="ctx-out">out:</span> stories/epic-{n}/story-{n}.md (per story)
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Impl. Readiness Check</div>
+        <div class="step-agent">architect-agent</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> prd.md · architecture.md · all story files<br>
+          <span class="ctx-out">out:</span> readiness verdict (blocks SP if not ready)
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step">
+        <div class="step-name">Sprint Plan</div>
+        <div class="step-agent">sm-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> epics · stories · IR verdict · prd.md · architecture.md · ux-design.md · research reports<br>
+          <span class="ctx-out">out:</span> planning/{slug}/sprint-plan.md
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-halt">
+        <div class="step-name">⛔ USER APPROVAL</div>
+        <div class="step-agent">HALT before epic loop</div>
+        <div class="step-ctx"><span class="ctx-in">shows:</span> sprint plan · story list · epic count</div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-loop">
+        <div class="step-name">─ Per-Story Loop ─</div>
+        <div class="step-agent" style="font-size:0.62rem;color:#ccc;">
+          <b>Create Story</b> (sm-agent): story file + planning artifacts → story-{n}.md<br>
+          <b>Dev Story</b> (dev-agent ¹): story file → code on branch<br>
+          <b>Review Gate</b> (review agent · 3-sub): code diff · review_type:3-sub → findings<br>
+          <b>QA</b> (qa-agent): story + code → .spec.ts · auto-loops up to 3×
+        </div>
+        <div class="step-ctx" style="margin-top:6px;">
+          <span class="ctx-dim">all steps split-pane · repeats per story · 3 gate iterations max then auto-escalate [CC]</span>
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-gate">
+        <div class="step-name">Final Review Gate</div>
+        <div class="step-agent">review agent · 3-sub · post-epic holistic review</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> full branch diff · product-brief.md · prd.md · ux-design.md · architecture.md · all epic artifacts · review_type:3-sub<br>
+          <span class="ctx-sub">sub-1:</span> architect · AR+DRY <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-2:</span> ux-designer · UV <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-sub">sub-3:</span> security · SR <span class="ctx-dim">in-process</span><br>
+          <span class="ctx-in">findings?</span> → route back to relevant story in epic loop
+        </div>
+      </div>
+      <div class="track-conn">↓ 🔴→ back to epic loop</div>
+      <div class="track-step">
+        <div class="step-name">Final QA (Playwright)</div>
+        <div class="step-agent">qa-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> branch · prd.md · ux-design.md · architecture.md · all epic acceptance criteria<br>
+          <span class="ctx-out">out:</span> full .spec.ts suite
+        </div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-halt">
+        <div class="step-name">⛔ USER APPROVAL</div>
+        <div class="step-agent">HALT after final gate + QA</div>
+        <div class="step-ctx"><span class="ctx-in">shows:</span> per-epic gates · final gate · QA summary</div>
+      </div>
+      <div class="track-conn">↓</div>
+      <div class="track-step step-ptm">
+        <div class="step-name">/prepare-to-merge</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div class="step-ctx"><span class="ctx-in">in:</span> branch name</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div style="font-size:0.62rem;color:#999;font-family:monospace;margin-top:6px;margin-bottom:4px;">
+  ¹ Dev agents (quick-flow-solo-dev, dev-agent) always launch split-pane — no track is exempt, per CLAUDE.md. &nbsp;
+  ² &gt;2 research agents = split-pane (parallel visibility).
+</div>
+
+<!-- ══════════ REVIEW TRACK ══════════ -->
+<div class="section-title">Review Track — [RV] standalone review workflow</div>
+
+<div class="rv-section">
+
+  <!-- Row 1: main flow through gate -->
+  <div class="wf-row" style="align-items:center;">
+    <div class="wf wf-user" style="min-width:90px;">
+      <div class="wf-name">[RV] Entry</div>
+      <div class="wf-trigger">standalone review</div>
+    </div>
+    <div class="arr purple"></div>
+
+    <div class="wf wf-pm" style="min-width:130px;">
+      <div class="wf-name">① Target Definition</div>
+      <div class="wf-agent">master-orchestrator</div>
+      <div class="mode-badge mode-inprocess">in-process</div>
+    </div>
+    <div class="arr purple"></div>
+
+    <!-- review agent + 3 sub-agents -->
+    <div class="sa-wrap">
+      <div class="sa-orch">review agent<small>in-process · coordinates</small></div>
+      <div class="arr purple"></div>
+      <div class="sa-box">
+        <div class="sa-title">② MULTI-LENS — 3 IN-PROCESS AUDITS</div>
+        <div class="sa-row"><div class="sa-dot" style="background:#4a9eed;"></div><div class="sa-node arch">architect agent · AR + DRY <span style="color:#bbb;font-size:0.64rem;">in-process</span></div></div>
+        <div class="sa-row"><div class="sa-dot" style="background:#38bdf8;"></div><div class="sa-node ux">ux-designer agent · UV (ux-audit) <span style="color:#bbb;font-size:0.64rem;">in-process</span></div></div>
+        <div class="sa-row"><div class="sa-dot" style="background:#f87171;"></div><div class="sa-node sec">security agent · SR (security-review + /sr) <span style="color:#bbb;font-size:0.64rem;">in-process</span></div></div>
+        <div style="font-size:0.62rem;color:#f87171;font-family:monospace;margin-top:4px;padding-top:4px;border-top:1px dashed #3a2a2a;">findings? → quick-dev <span style="color:#c4b5fd;">split-pane</span> fixes · re-audit in-process</div>
+      </div>
+    </div>
+    <div class="arr purple"></div>
+
+    <div class="wf wf-orch" style="min-width:140px;">
+      <div class="wf-name">③ Findings Synthesis</div>
+      <div class="wf-agent">review agent · in-process</div>
+      <div class="wf-trigger">after sub-agents close</div>
+    </div>
+    <div class="arr purple"></div>
+
+    <div class="wf wf-pm" style="min-width:120px;">
+      <div class="wf-name">④ Sort Artifacts</div>
+      <div class="wf-agent">review agent</div>
+      <div class="mode-badge mode-inprocess">in-process</div>
+    </div>
+    <div class="arr purple"></div>
+
+    <!-- Gate diamond -->
+    <div style="display:flex;align-items:center;flex-shrink:0;position:relative;">
+      <div class="rv-diamond">
+        <div class="rv-diamond-label">◇ Volume<br>Gate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Branch rows aligned after gate -->
+  <div style="display:flex;flex-direction:column;gap:8px;margin-left:840px;">
+
+    <!-- YES branch -->
+    <div class="wf-row" style="align-items:center;">
+      <div class="rv-branch-label rv-branch-yes">YES &gt;8 / 🔴 arch</div>
+      <div class="arr amber"></div>
+      <div class="wf wf-loop" style="min-width:120px;">
+        <div class="wf-name">⑤L Epics &amp; Stories</div>
+        <div class="wf-agent">sm-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+        <div class="step-ctx">
+          <span class="ctx-in">in:</span> synthesis report · findings · prd.md (if exists) · ux-design.md (if exists)<br>
+          <span class="ctx-out">out:</span> stories/epic-{n}/story-{n}.md
+        </div>
+      </div>
+      <div class="arr amber"></div>
+      <div class="wf wf-arch" style="min-width:110px;">
+        <div class="wf-name">⑥L IR Check</div>
+        <div class="wf-agent">architect-agent</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+      </div>
+      <div class="arr amber"></div>
+      <div class="wf wf-pm" style="min-width:120px;">
+        <div class="wf-name">⑦L Sprint Planning</div>
+        <div class="wf-agent">sm-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+      </div>
+      <div class="arr amber"></div>
+      <div class="wf wf-loop" style="min-width:130px;">
+        <div class="wf-name">⑧L Epic Dev Loop</div>
+        <div class="wf-agent">dev-agent per story</div>
+        <div class="mode-badge mode-splitpane">split-pane ¹</div>
+        <div style="font-size:0.58rem;color:#ccc;margin-top:2px;">review gate: 3 in-process<br>findings → quick-dev split-pane</div>
+      </div>
+      <div class="arr amber"></div>
+      <div class="wf wf-gate" style="min-width:130px;">
+        <div class="wf-name">⑨L Final Review Gate</div>
+        <div class="wf-agent">review agent · 3-sub</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+        <div style="font-size:0.58rem;color:#ccc;margin-top:2px;">🔴 → back to epic loop</div>
+      </div>
+      <div class="arr amber"></div>
+      <div class="wf wf-arch" style="min-width:115px;">
+        <div class="wf-name">⑩L QA Tests</div>
+        <div class="wf-agent">qa-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+      </div>
+      <div class="arr amber"></div>
+      <div class="wf wf-sec" style="min-width:120px;">
+        <div class="wf-name">⑪L USER APPROVAL</div>
+        <div class="wf-agent">🛑 HALT for approve</div>
+      </div>
+      <div class="arr amber"></div>
+      <div class="wf wf-pm" style="min-width:120px;">
+        <div class="wf-name">⑫L /prepare-to-merge</div>
+        <div class="wf-agent">master-orchestrator</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+      </div>
+      <div class="arr green"></div>
+      <div class="wf wf-user" style="min-width:100px;">
+        <div class="wf-name">✅ BRANCH READY</div>
+      </div>
+    </div>
+
+    <!-- NO branch -->
+    <div class="wf-row" style="align-items:center;">
+      <div class="rv-branch-label rv-branch-no">NO → small path</div>
+      <div class="arr green"></div>
+      <div class="wf wf-user" style="min-width:120px;">
+        <div class="wf-name">⑤S Quick Dev</div>
+        <div class="wf-agent">dev-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane ¹</div>
+      </div>
+      <div class="arr purple"></div>
+
+      <!-- review gate — in-process audits -->
+      <div class="sa-wrap">
+        <div class="sa-orch" style="min-width:110px;">⑥S Review Gate<small>in-process · coordinates</small></div>
+        <div class="arr purple"></div>
+        <div class="sa-box">
+          <div class="sa-title">3 IN-PROCESS AUDITS</div>
+          <div class="sa-row"><div class="sa-dot" style="background:#4a9eed;"></div><div class="sa-node arch" style="min-width:150px;font-size:0.66rem;">architect agent · AR+DRY <span style="color:#bbb;">in-process</span></div></div>
+          <div class="sa-row"><div class="sa-dot" style="background:#38bdf8;"></div><div class="sa-node ux" style="min-width:150px;font-size:0.66rem;">ux-designer agent · UV <span style="color:#bbb;">in-process</span></div></div>
+          <div class="sa-row"><div class="sa-dot" style="background:#f87171;"></div><div class="sa-node sec" style="min-width:150px;font-size:0.66rem;">security agent · SR <span style="color:#bbb;">in-process</span></div></div>
+          <div style="font-size:0.62rem;color:#f87171;font-family:monospace;margin-top:4px;padding-top:4px;border-top:1px dashed #3a2a2a;">findings? → quick-dev <span style="color:#c4b5fd;">split-pane</span> · re-audit</div>
+        </div>
+      </div>
+      <div class="arr green"></div>
+
+      <div class="wf wf-arch" style="min-width:110px;">
+        <div class="wf-name">⑦S QA Tests</div>
+        <div class="wf-agent">qa-agent</div>
+        <div class="mode-badge mode-splitpane">split-pane</div>
+      </div>
+      <div class="arr purple"></div>
+
+      <div class="wf wf-sec" style="min-width:130px;">
+        <div class="wf-name">⑧S USER APPROVAL</div>
+        <div class="wf-agent">🛑 HALT for review</div>
+        <div class="wf-trigger">🔴 → back to ⑤S</div>
+      </div>
+      <div class="arr green"></div>
+      <div class="wf wf-pm" style="min-width:130px;">
+        <div class="wf-name">⑨S /prepare-to-merge</div>
+        <div class="wf-agent">master-orchestrator</div>
+        <div class="mode-badge mode-inprocess">in-process</div>
+      </div>
+      <div class="arr green"></div>
+      <div class="wf wf-user" style="min-width:100px;">
+        <div class="wf-name">✅ BRANCH READY</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════ REVIEW GATE WORKFLOWS ══════════ -->
+<div class="section-title">Review Gate — 3 in-process audits · findings → quick-dev split-pane fix</div>
+
+<div class="group-border">
+  <div class="group-label">STANDARD CODE REVIEW GATE (3-sub) — all code tracks</div>
+  <div class="wf-row" style="align-items:center;">
+    <div class="wf wf-user" style="min-width:120px;">
+      <div class="wf-name">Entry point</div>
+      <div class="wf-trigger">any track · before QA</div>
+    </div>
+    <div class="arr purple"></div>
+    <div class="sa-wrap">
+      <div class="sa-orch">review agent<small>in-process · coordinates</small></div>
+      <div class="arr purple"></div>
+      <div class="sa-box">
+        <div class="sa-title">3 IN-PROCESS AUDITS (sequential, same conversation)</div>
+        <div class="sa-row"><div class="sa-dot" style="background:#4a9eed;"></div><div class="sa-node arch">architect agent · AR + DRY (clean-code-standards) <span style="color:#bbb;font-size:0.64rem;">in-process</span></div></div>
+        <div class="sa-row"><div class="sa-dot" style="background:#38bdf8;"></div><div class="sa-node ux">ux-designer agent · UV (ux-audit) <span style="color:#bbb;font-size:0.64rem;">in-process</span></div></div>
+        <div class="sa-row"><div class="sa-dot" style="background:#f87171;"></div><div class="sa-node sec">security agent · SR (security-review + /security-review) <span style="color:#bbb;font-size:0.64rem;">in-process</span></div></div>
+      </div>
+    </div>
+    <div class="arr purple"></div>
+    <div class="wf wf-orch" style="min-width:150px;">
+      <div class="wf-name">Consolidate verdicts</div>
+      <div class="wf-agent">review agent · in-process</div>
+      <div class="mode-badge mode-inprocess">in-process</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+      <div style="font-size:0.62rem;color:#f87171;font-family:monospace;padding:0 6px;">findings?</div>
+      <div class="arr red"></div>
+    </div>
+    <div class="wf wf-arch" style="min-width:140px;">
+      <div class="wf-name">quick-dev fixes</div>
+      <div class="wf-agent">quick-flow-solo-dev</div>
+      <div class="mode-badge mode-splitpane">split-pane</div>
+      <div class="wf-trigger">re-audit after fixes</div>
+    </div>
+  </div>
+</div>
+
+<div class="group-border">
+  <div class="group-label">SPEC-ONLY GATE (2-sub — Nano, Large planning/design) — no AR, no SR</div>
+  <div class="wf-row" style="align-items:center;">
+    <div class="wf wf-orch" style="min-width:120px;">
+      <div class="wf-name">review agent</div>
+      <div class="wf-trigger">spec gate · 2 in-process audits</div>
+      <div class="mode-badge mode-inprocess">in-process</div>
+    </div>
+    <div class="arr purple"></div>
+    <div class="sa-box">
+      <div class="sa-title">2 IN-PROCESS AUDITS (no AR, no SR — spec only)</div>
+      <div class="sa-row"><div class="sa-dot" style="background:#4a9eed;"></div><div class="sa-node arch">architect agent · DRY only (clean-code-standards) <span style="color:#bbb;font-size:0.64rem;">in-process</span></div></div>
+      <div class="sa-row"><div class="sa-dot" style="background:#38bdf8;"></div><div class="sa-node ux">ux-designer agent · UV (ux-audit) <span style="color:#bbb;font-size:0.64rem;">in-process</span></div></div>
+    </div>
+    <div class="arr purple"></div>
+    <div class="wf wf-orch">
+      <div class="wf-name">Consolidate</div>
+      <div class="wf-agent">review agent · in-process</div>
+      <div class="mode-badge mode-inprocess">in-process</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+      <div style="font-size:0.62rem;color:#f87171;font-family:monospace;padding:0 6px;">findings?</div>
+      <div class="arr red"></div>
+    </div>
+    <div class="wf wf-arch" style="min-width:130px;">
+      <div class="wf-name">quick-dev fixes</div>
+      <div class="wf-agent">quick-flow-solo-dev</div>
+      <div class="mode-badge mode-splitpane">split-pane</div>
+      <div class="wf-trigger">re-audit after fixes</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ REVIEW LOOP WORKFLOWS ══════════ -->
+<div class="section-title">Review Loop Workflows — autonomous N-pass with auto-fix</div>
+
+<div class="group-border">
+  <div class="group-label">LOOP PATTERN (same for DRYL, UVL, SRL)</div>
+
+  <div class="wf-row">
+    <div class="wf wf-loop"><div class="wf-name">Ask loop count<span class="badge badge-loop">1/2/3 default 2</span></div><div class="mode-badge mode-inprocess">in-process</div></div>
+    <div class="arr yellow"></div>
+    <div class="wf wf-arch"><div class="wf-name">Pass N — Review</div><div class="wf-agent">review agent + skill</div><div class="wf-out">{type}-findings-{id}-pass{N}.md</div><div class="mode-badge mode-inprocess">in-process</div></div>
+    <div class="arr"></div>
+    <div class="wf wf-arch"><div class="wf-name">dev-agent</div><div class="wf-agent">auto-fix 🔴/🟡</div><div class="mode-badge mode-inprocess">in-process</div></div>
+    <div class="arr yellow"></div>
+    <div class="wf wf-loop"><div class="wf-name">Pass N+1</div><div class="wf-agent">or exit</div></div>
+    <div class="arr green"></div>
+    <div class="wf wf-user"><div class="wf-name">🟢-only</div><div class="wf-agent">early exit ✅</div></div>
+    <div class="arr red"></div>
+    <div class="wf wf-sec"><div class="wf-name">max + 🔴</div><div class="wf-agent">🛑 HALT + escalate</div></div>
+  </div>
+
+  <div class="wf-row" style="margin-top:10px;">
+    <div class="wf wf-arch" style="min-width:140px;"><div class="wf-name">DRYL</div><div class="wf-trigger">[DRYL]</div><div class="wf-skill">clean-code-standards</div><div class="wf-agent">architect-agent</div></div>
+    <div class="arr yellow"></div>
+    <div class="wf wf-ux" style="min-width:140px;"><div class="wf-name">UVL</div><div class="wf-trigger">[UVL]</div><div class="wf-skill">ux-audit</div><div class="wf-agent">ux-designer-agent</div></div>
+    <div class="arr yellow"></div>
+    <div class="wf wf-sec" style="min-width:140px;"><div class="wf-name">SRL</div><div class="wf-trigger">[SRL]</div><div class="wf-skill">security-review + /sr</div><div class="wf-agent">security-agent</div></div>
+  </div>
+</div>
+
+<!-- ══════════ PLANNING WORKFLOWS ══════════ -->
+<div class="section-title">Planning Workflows — left to right through agents</div>
+
+<div class="wf-row">
+  <div class="wf wf-user"><div class="wf-name">Product Brief</div><div class="wf-trigger">bmad-bmm-create-product-brief</div><div class="wf-agent">pm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-user"><div class="wf-name">Create PRD</div><div class="wf-trigger">bmad-bmm-create-prd</div><div class="wf-agent">pm-agent</div><div class="wf-out">prd-{id}.md</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-user"><div class="wf-name">Validate PRD</div><div class="wf-trigger">bmad-bmm-validate-prd</div><div class="wf-agent">pm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-arch"><div class="wf-name">Create Architecture</div><div class="wf-trigger">bmad-bmm-create-architecture</div><div class="wf-agent">architect-agent</div><div class="wf-out">architecture-{id}.md</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-ux"><div class="wf-name">Create UX Design</div><div class="wf-trigger">bmad-bmm-create-ux-design</div><div class="wf-agent">ux-designer-agent</div><div class="wf-skill">ux-audit</div><div class="mode-badge mode-inprocess">in-process</div></div>
+</div>
+
+<!-- ══════════ SPRINT EXECUTION ══════════ -->
+<div class="section-title">Sprint Execution Workflows</div>
+
+<div class="wf-row">
+  <div class="wf wf-pm"><div class="wf-name">Create Epics + Stories</div><div class="wf-trigger">bmad-bmm-create-epics-and-stories</div><div class="wf-agent">sm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-pm"><div class="wf-name">Sprint Planning</div><div class="wf-trigger">bmad-bmm-sprint-planning</div><div class="wf-agent">sm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-user"><div class="wf-name">Dev Story</div><div class="wf-trigger">bmad-bmm-dev-story · [QD] ¹</div><div class="wf-agent">dev-agent</div><div class="mode-badge mode-splitpane">split-pane ¹</div></div>
+  <div class="arr purple"></div>
+  <div class="wf wf-orch"><div class="wf-name">Review Gate</div><div class="wf-agent">review agent</div><div class="wf-trigger">3 in-process audits</div><div class="mode-badge mode-inprocess">in-process</div><div class="wf-skill">findings → quick-dev split-pane</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-user"><div class="wf-name">QA / E2E Tests</div><div class="wf-trigger">bmad-bmm-qa-generate-e2e-tests</div><div class="wf-agent">qa-agent</div><div class="mode-badge mode-splitpane">split-pane</div></div>
+</div>
+
+<!-- ══════════ RESEARCH ══════════ -->
+<div class="section-title">Research Workflows</div>
+
+<div class="wf-row">
+  <div class="wf wf-arch"><div class="wf-name">Domain Research</div><div class="wf-trigger">bmad-bmm-domain-research</div><div class="wf-agent">analyst-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-arch"><div class="wf-name">Market Research</div><div class="wf-trigger">bmad-bmm-market-research</div><div class="wf-agent">analyst-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-arch"><div class="wf-name">Technical Research</div><div class="wf-trigger">bmad-bmm-technical-research</div><div class="wf-agent">analyst-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+</div>
+
+<!-- ══════════ SPRINT HEALTH ══════════ -->
+<div class="section-title">Sprint Health + Lifecycle</div>
+
+<div class="wf-row">
+  <div class="wf wf-pm"><div class="wf-name">Sprint Status</div><div class="wf-trigger">bmad-bmm-sprint-status</div><div class="wf-agent">sm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-pm"><div class="wf-name">Correct Course</div><div class="wf-trigger">bmad-bmm-correct-course</div><div class="wf-agent">sm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-pm"><div class="wf-name">Retrospective</div><div class="wf-trigger">bmad-bmm-retrospective</div><div class="wf-agent">sm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-arch"><div class="wf-name">Impl. Readiness Check</div><div class="wf-trigger">bmad-bmm-check-impl-readiness</div><div class="wf-agent">architect-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
+</div>
+
+<!-- ══════════ KRAKKEN MENU TRIGGERS ══════════ -->
+<div class="section-title">Orchestrator Menu Triggers — all left-to-right invocation paths</div>
+
+<div class="wf-row" style="flex-wrap:wrap;gap:8px;">
+  <div class="wf wf-user" style="min-width:80px;"><div class="wf-name">[N]</div><div class="wf-trigger">Nano track</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-user" style="min-width:80px;"><div class="wf-name">[QD]</div><div class="wf-trigger">Quick-Dev</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-user" style="min-width:80px;"><div class="wf-name">[F]</div><div class="wf-trigger">Feature</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-user" style="min-width:80px;"><div class="wf-name">[L]</div><div class="wf-trigger">Large</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-orch" style="min-width:80px;"><div class="wf-name">[RG]</div><div class="wf-trigger">Review Gate</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-orch" style="min-width:80px;"><div class="wf-name">[RV]</div><div class="wf-trigger">Review Track</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-user" style="min-width:80px;"><div class="wf-name">[BF]</div><div class="wf-trigger">Bugfix</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-arch" style="min-width:80px;"><div class="wf-name">[DRY]</div><div class="wf-trigger">DRY/SOLID</div></div>
+  <div class="arr yellow"></div>
+  <div class="wf wf-loop" style="min-width:80px;"><div class="wf-name">[DRYL]</div><div class="wf-trigger">DRY Loop</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-ux" style="min-width:80px;"><div class="wf-name">[UV]</div><div class="wf-trigger">UX Review</div></div>
+  <div class="arr yellow"></div>
+  <div class="wf wf-loop" style="min-width:80px;"><div class="wf-name">[UVL]</div><div class="wf-trigger">UV Loop</div></div>
+  <div class="arr"></div>
+  <div class="wf wf-sec" style="min-width:80px;"><div class="wf-name">[SR]</div><div class="wf-trigger">Security</div></div>
+  <div class="arr yellow"></div>
+  <div class="wf wf-loop" style="min-width:80px;"><div class="wf-name">[SRL]</div><div class="wf-trigger">SR Loop</div></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="ls" style="background:#2d1b69;border-color:#a78bfa;"></div>Review Agent / Gate</div>
+  <div class="legend-item"><div class="ls" style="background:#1e3a5f;border-color:#4a9eed;"></div>Architect / Dev</div>
+  <div class="legend-item"><div class="ls" style="background:#1a3040;border-color:#38bdf8;"></div>UX domain</div>
+  <div class="legend-item"><div class="ls" style="background:#2a1a1a;border-color:#f87171;"></div>Security domain</div>
+  <div class="legend-item"><div class="ls" style="background:#3d2a00;border-color:#fbbf24;"></div>Autonomous loop</div>
+  <div class="legend-item"><div class="ls" style="background:#1a4d2e;border-color:#22c55e;"></div>Planning / user</div>
+  <div class="legend-item"><div class="ls" style="background:#252535;border-color:#7dd3fc;"></div>Sprint management</div>
+  <div class="legend-item">
+    <span class="mode-badge mode-inprocess" style="margin-left:0;">in-process</span>
+    Single agent, same conversation
+  </div>
+  <div class="legend-item">
+    <span class="mode-badge mode-splitpane" style="margin-left:0;">split-pane</span>
+    New tmux pane spawned · closes on complete
+  </div>
+</div>
+
+</body>
+</html>
