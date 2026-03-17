@@ -1,7 +1,7 @@
 'use strict';
 /**
  * bmad-package/lib/installer.js
- * Core installer — copies src/ files into _bmad/ of the target project,
+ * Core installer — copies src/ files into _devo-bmad-custom/ of the target project,
  * tracks installed files in a manifest, removes orphaned files on update,
  * generates config.yaml, and writes IDE integration files for all supported platforms.
  */
@@ -17,7 +17,7 @@ const SRC_DIR = path.join(__dirname, '..', 'src');
 // Modules available in src/
 const AVAILABLE_MODULES = ['bmm', 'bmb', 'core', '_memory'];
 
-// Manifest file location (relative to _bmad/)
+// Manifest file location (relative to _devo-bmad-custom/)
 const MANIFEST_FILE = '_config/manifest.yaml';
 const FILES_MANIFEST_FILE = '_config/files-manifest.csv';
 
@@ -119,7 +119,7 @@ async function install(opts) {
   } = opts;
 
   const projectRoot = path.resolve(directory);
-  const bmadDir = path.join(projectRoot, '_bmad');
+  const bmadDir = path.join(projectRoot, '_devo-bmad-custom');
   const chalk = (await import('chalk')).default;
 
   // ── Detect existing installation ──────────────────────────────────────────
@@ -264,7 +264,7 @@ async function install(opts) {
       const config = buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder);
       await fs.ensureDir(path.dirname(configPath));
       await fs.writeFile(configPath, yaml.stringify(config), 'utf8');
-      console.log(chalk.green(`  ✓ config.yaml → _bmad/${mod}/`));
+      console.log(chalk.green(`  ✓ config.yaml → _devo-bmad-custom/${mod}/`));
     }
   }
 
@@ -293,7 +293,7 @@ async function install(opts) {
   await writeFilesManifest(bmadDir, newFileEntries);
 
   console.log(`\n${chalk.bold.green('✓ Done!')} ${installedCount} files ${isUpdate ? 'updated' : 'installed'}.`);
-  console.log(`  BMAD is ready at ${chalk.cyan('_bmad/')}\n`);
+  console.log(`  BMAD is ready at ${chalk.cyan('_devo-bmad-custom/')}\n`);
 
   // ── Open workflows overview in default browser ─────────────────────────────
   const overviewHtml = path.join(bmadDir, '_memory', 'master-orchestrator-sidecar', 'workflows-overview.html');
@@ -313,7 +313,7 @@ async function install(opts) {
 async function status(opts) {
   const { directory = process.cwd() } = opts;
   const projectRoot = path.resolve(directory);
-  const bmadDir = path.join(projectRoot, '_bmad');
+  const bmadDir = path.join(projectRoot, '_devo-bmad-custom');
   const chalk = (await import('chalk')).default;
 
   if (!await fs.pathExists(bmadDir)) {
@@ -520,11 +520,11 @@ function buildBmadRulesEntry(modules) {
     '',
     '## BMAD Method',
     '',
-    'BMAD agents, skills, and workflows are installed in `_bmad/`.',
+    'BMAD agents, skills, and workflows are installed in `_devo-bmad-custom/`.',
     'Key modules: ' + modules.join(', '),
     '',
     'To use an agent, load its `.md` file and follow its activation instructions.',
-    'Agent configs are in `_bmad/{module}/config.yaml`.',
+    'Agent configs are in `_devo-bmad-custom/{module}/config.yaml`.',
     'Skills are in `.agents/skills/` and `_bmad/_memory/skills/`.',
     '',
   ].join('\n');
@@ -576,7 +576,7 @@ function buildTmuxEntry() {
 async function writeClaudeAgentStubs(projectRoot, agentDir, chalk) {
   const agentsDest = path.join(projectRoot, agentDir);
   const bmadAgentsGlob = await glob('**/*.agent.md', {
-    cwd: path.join(projectRoot, '_bmad'),
+    cwd: path.join(projectRoot, '_devo-bmad-custom'),
     nodir: true,
   });
 
@@ -586,7 +586,7 @@ async function writeClaudeAgentStubs(projectRoot, agentDir, chalk) {
   let written = 0;
 
   for (const rel of bmadAgentsGlob) {
-    const agentPath = path.join(projectRoot, '_bmad', rel);
+    const agentPath = path.join(projectRoot, '_devo-bmad-custom', rel);
     const raw = await fs.readFile(agentPath, 'utf8');
 
     // Extract name + description from frontmatter if present
@@ -605,7 +605,7 @@ async function writeClaudeAgentStubs(projectRoot, agentDir, chalk) {
       'You must fully embody this agent\'s persona when activated.',
       '',
       `<agent-activation CRITICAL="TRUE">`,
-      `1. LOAD the full agent file from {project-root}/_bmad/${rel}`,
+      `1. LOAD the full agent file from {project-root}/_devo-bmad-custom/${rel}`,
       '2. READ its entire contents before responding.',
       '3. FOLLOW all activation instructions within it.',
       '</agent-activation>',

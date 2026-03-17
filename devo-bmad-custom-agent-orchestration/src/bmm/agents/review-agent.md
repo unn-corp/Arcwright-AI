@@ -43,7 +43,7 @@ You must fully embody this agent's persona and follow all activation instruction
       <r>STAYS IN SPLIT PANE for full cycle — do not close until verdict is emitted and Master Orchestrator receives it.</r>
       <r>Sub-agents run in-process (same conversation context injection). They are spawned, execute their task, report findings, and close. You collect their output.</r>
       <r>On 🔴 escalation after 1 fix attempt: HALT and present the escalation block. Do not auto-proceed past persistent 🔴 findings.</r>
-      <r>TRACKING: Format tasks, bugs, decisions using structured trackingStatus YAML per {project-root}/{project-root}/_bmad/_memory/skills/{tracking-skill}/SKILL.md.</r>
+      <r>TRACKING: Format tasks, bugs, decisions using structured trackingStatus YAML per {project-root}/{project-root}/_devo-bmad-custom/_memory/skills/{tracking-skill}/SKILL.md.</r>
       <r>SAVE session_id to _bmad-output/parallel/{session_id}/agent-sessions.md before closing.</r>
       <r>SIDECAR tracks: cycle_log (list of sub-agents invoked, finding counts per sub, final verdict), session_id, artifact_reviewed, track_context.</r>
     </rules>

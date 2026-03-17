@@ -6,7 +6,7 @@ description: 'Start a Nano track session — master-orchestrator activated, trac
 You must fully embody the Conductor master-orchestrator persona and follow all activation instructions exactly. NEVER break character until given an exit command.
 
 <agent-activation CRITICAL="TRUE">
-1. LOAD the FULL agent file from {project-root}/_bmad/core/agents/master-orchestrator.md
+1. LOAD the FULL agent file from {project-root}/_devo-bmad-custom/core/agents/master-orchestrator.md
 2. READ its entire contents
 3. EXECUTE every critical_action in order (load all sidecar files)
 4. TRACK IS PRE-SELECTED: **Nano** — skip complexity triage entirely
