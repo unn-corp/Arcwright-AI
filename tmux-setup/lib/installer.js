@@ -40,22 +40,47 @@ async function setupTmux(projectRoot, chalk) {
     }
   } catch { /* tmux not installed yet — skip check */ }
 
+  // ── Step 1: Prerequisites ──────────────────────────────────────────────────
   console.log(chalk.bold('Step 1 — Prerequisites'));
-  console.log(chalk.dim('  tmux runs in WSL2 (Ubuntu). You need these before continuing:\n'));
-  console.log('  ' + chalk.white('① WSL2 + Ubuntu') + chalk.dim(' — in PowerShell (Admin): ') + chalk.cyan('wsl --install'));
-  console.log('  ' + chalk.white('② Update packages') + chalk.dim(' — in Ubuntu: ') + chalk.cyan('sudo apt-get update && sudo apt-get upgrade -y'));
-  console.log('  ' + chalk.white('③ Install tmux 3.4+') + chalk.dim(' — ') + chalk.cyan('sudo apt-get install -y tmux'));
-  console.log('  ' + chalk.white('④ Clipboard + image tools') + chalk.dim(' — ') + chalk.cyan('sudo apt-get install -y wl-clipboard imagemagick wslu'));
-  console.log('  ' + chalk.white('⑤ NVM + Node') + chalk.dim(' (for MCP servers) — ') + chalk.cyan('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && source ~/.bashrc && nvm install --lts'));
-  console.log('  ' + chalk.white('⑥ Docker Desktop WSL integration') + chalk.dim(' — Docker Desktop → Settings → Resources → WSL Integration → toggle Ubuntu → Apply & Restart'));
+  console.log('');
 
-  console.log('\n' + chalk.dim('  These require sudo/GUI and must be done manually. Press Enter when WSL2 is ready.'));
+  console.log(chalk.bold.red('  ⛔ Must be done manually (require WSL install or sudo):'));
+  console.log(chalk.dim('     These cannot be automated. Complete them before continuing.\n'));
+  console.log('  ' + chalk.white('① Install WSL2 + Ubuntu') + chalk.dim(' — run in PowerShell (Admin):'));
+  console.log('    ' + chalk.cyan('wsl --install'));
+  console.log('  ' + chalk.white('② Update packages') + chalk.dim(' — run in Ubuntu terminal:'));
+  console.log('    ' + chalk.cyan('sudo apt-get update && sudo apt-get upgrade -y'));
+  console.log('  ' + chalk.white('③ Install tmux 3.4+') + chalk.dim(' — run in Ubuntu terminal:'));
+  console.log('    ' + chalk.cyan('sudo apt-get install -y tmux'));
+  console.log('  ' + chalk.white('④ Install clipboard + image tools') + chalk.dim(' — run in Ubuntu terminal:'));
+  console.log('    ' + chalk.cyan('sudo apt-get install -y wl-clipboard imagemagick wslu'));
+  console.log('  ' + chalk.white('⑤ Docker Desktop WSL integration') + chalk.dim(' — GUI only:'));
+  console.log('    ' + chalk.dim('Docker Desktop → Settings → Resources → WSL Integration → toggle Ubuntu → Apply & Restart'));
+
+  console.log('');
+  console.log(chalk.bold.yellow('  ✦ Can be done manually OR by an AI with relaxed permissions:'));
+  console.log(chalk.dim('     These are safe to automate — no sudo or system-level access needed.\n'));
+  console.log('  ' + chalk.white('⑥ NVM + Node') + chalk.dim(' (required for Node-based MCP servers):'));
+  console.log('    ' + chalk.cyan('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash'));
+  console.log('    ' + chalk.cyan('source ~/.bashrc && nvm install --lts'));
+  console.log('  ' + chalk.white('⑦ TPM (tmux Plugin Manager):'));
+  console.log('    ' + chalk.cyan('git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm'));
+  console.log('    ' + chalk.dim('    Then inside tmux: press Ctrl+B I to install plugins'));
+  console.log('  ' + chalk.white('⑧ fzf') + chalk.dim(' (required for Actions popup menu):'));
+  console.log('    ' + chalk.cyan('mkdir -p ~/.local/bin && curl -Lo /tmp/fzf.tar.gz https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz && tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin'));
+  console.log('  ' + chalk.white('⑨ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators):'));
+  console.log('    ' + chalk.dim('    Download JetBrainsMono NFM from https://www.nerdfonts.com/'));
+  console.log('    ' + chalk.dim('    Install JetBrainsMonoNerdFontMono-Regular.ttf to Windows (double-click → Install for all users)'));
+  console.log('    ' + chalk.white('    Cursor/VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
+  console.log('    ' + chalk.white('    Windows Terminal:') + ' ' + chalk.cyan('"font": { "face": "JetBrainsMono NFM", "builtinGlyphs": false }'));
+
+  console.log('\n' + chalk.dim('  Complete the manual steps above, then press Enter to continue with config file installation.'));
   await ask(chalk.yellow('  Press Enter to continue → '));
 
   // ── Paths ───────────────────────────────────────────────────────────────────
-  const homeDir   = os.homedir();
-  const tmuxBin   = path.join(homeDir, '.config', 'tmux', 'bin');
-  const tmuxConf  = path.join(homeDir, '.tmux.conf');
+  const homeDir    = os.homedir();
+  const tmuxBin    = path.join(homeDir, '.config', 'tmux', 'bin');
+  const tmuxConf   = path.join(homeDir, '.tmux.conf');
   const colorsConf = path.join(homeDir, '.config', 'tmux', 'colors.conf');
   const xclipPath  = path.join(homeDir, '.local', 'bin', 'xclip');
   const xdgOpenPath = path.join(homeDir, '.local', 'bin', 'xdg-open');
@@ -72,7 +97,53 @@ async function setupTmux(projectRoot, chalk) {
   await fs.ensureDir(path.join(homeDir, '.local', 'bin'));
   await fs.ensureDir(path.join(homeDir, '.tmux', 'plugins'));
 
-  console.log('\n' + chalk.bold('Step 2 — Writing config files'));
+  // ── Step 2: Shell aliases ──────────────────────────────────────────────────
+  console.log('\n' + chalk.bold('Step 2 — Shell aliases'));
+  const bashrc = path.join(homeDir, '.bashrc');
+  const resolvedRoot = path.resolve(projectRoot || process.cwd());
+  const tmuxAlias = `alias tmux-ai='tmux new-session -c ${resolvedRoot}'`;
+  const tmuxClaudeAlias = `alias tmux-claude='tmux new-session -c ${resolvedRoot} "claude --dangerously-skip-permissions"'`;
+
+  let bashrcContent = '';
+  if (await fs.pathExists(bashrc)) bashrcContent = await fs.readFile(bashrc, 'utf8');
+
+  const aliasBlock = `\n# BMAD tmux shortcuts\n${tmuxAlias}\n${tmuxClaudeAlias}\n`;
+  if (!bashrcContent.includes('tmux-claude')) {
+    const addAliases = await ask(chalk.yellow(`  Add 'tmux-ai' and 'tmux-claude' aliases to ~/.bashrc? (Y/n): `));
+    if (!addAliases.toLowerCase().startsWith('n')) {
+      await fs.appendFile(bashrc, aliasBlock, 'utf8');
+      console.log(chalk.green('  ✓ Aliases added to ~/.bashrc'));
+      console.log(chalk.dim('  Run: source ~/.bashrc'));
+    }
+  } else {
+    console.log(chalk.dim('  ○ Aliases already in ~/.bashrc'));
+  }
+
+  // xdg-open → wslview symlink
+  if (!await fs.pathExists(xdgOpenPath)) {
+    try {
+      await fs.ensureSymlink('/usr/bin/wslview', xdgOpenPath);
+      console.log(chalk.green(`  ✓ ${xdgOpenPath} → /usr/bin/wslview`));
+    } catch {
+      console.log(chalk.dim(`  ○ Could not create xdg-open symlink (run: ln -sf /usr/bin/wslview ~/.local/bin/xdg-open)`));
+    }
+  } else {
+    console.log(chalk.dim(`  ○ ${xdgOpenPath} already exists`));
+  }
+
+  // ── Step 3: TPM check ─────────────────────────────────────────────────────
+  console.log('\n' + chalk.bold('Step 3 — TPM check'));
+  if (await fs.pathExists(tpmPath)) {
+    console.log(chalk.green('  ✓ TPM already installed at ~/.tmux/plugins/tpm'));
+  } else {
+    console.log(chalk.yellow('  ⚠  TPM not found — install it before starting tmux:'));
+    console.log('  ' + chalk.cyan('git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm'));
+    console.log(chalk.dim('  Then inside tmux press Ctrl+B I to install plugins.'));
+  }
+
+  // ── Step 4: Write config files (last) ─────────────────────────────────────
+  console.log('\n' + chalk.bold('Step 4 — Writing config files'));
+  console.log(chalk.dim('  Installing tmux.conf, scripts, and support files...\n'));
 
   const FILE_MAP = [
     ['tmux.conf',              tmuxConf],
@@ -112,71 +183,17 @@ async function setupTmux(projectRoot, chalk) {
     console.log(chalk.green(`  ✓ ${dest}`));
   }
 
-  // Copy reference doc to project
+  // Copy reference doc alongside project if a root was given
   const tmuxSetupSrc = path.join(tmuxSrc, 'tmux-setup.md');
   if (await fs.pathExists(tmuxSetupSrc) && projectRoot) {
-    const refDocDest = path.join(projectRoot, 'docs', 'dev', 'tmux', 'README.md');
+    const refDocDest = path.join(resolvedRoot, 'docs', 'dev', 'tmux', 'README.md');
     await fs.ensureDir(path.dirname(refDocDest));
     await fs.copy(tmuxSetupSrc, refDocDest, { overwrite: true });
     console.log(chalk.green(`  ✓ ${refDocDest} (reference doc)`));
   }
 
-  // xdg-open → wslview symlink
-  if (!await fs.pathExists(xdgOpenPath)) {
-    try {
-      await fs.ensureSymlink('/usr/bin/wslview', xdgOpenPath);
-      console.log(chalk.green(`  ✓ ${xdgOpenPath} → /usr/bin/wslview`));
-    } catch {
-      console.log(chalk.dim(`  ○ Could not create xdg-open symlink (run: ln -sf /usr/bin/wslview ~/.local/bin/xdg-open)`));
-    }
-  } else {
-    console.log(chalk.dim(`  ○ ${xdgOpenPath} already exists`));
-  }
-
-  console.log('\n' + chalk.bold('Step 3 — TPM (tmux Plugin Manager)'));
-  if (await fs.pathExists(tpmPath)) {
-    console.log(chalk.dim('  ✓ TPM already installed at ~/.tmux/plugins/tpm'));
-  } else {
-    console.log(chalk.dim('  TPM not found. Install it:'));
-    console.log('  ' + chalk.cyan('git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm'));
-    console.log(chalk.dim('  Then start tmux and press Ctrl+B I to install plugins.'));
-  }
-
-  console.log('\n' + chalk.bold('Step 4 — Nerd Fonts (required for status bar icons)'));
-  console.log(chalk.dim('  Download JetBrainsMono NFM from https://www.nerdfonts.com/'));
-  console.log(chalk.dim('  Install JetBrainsMonoNerdFontMono-Regular.ttf to Windows (double-click → Install for all users)'));
-  console.log(chalk.dim('  Set your terminal font:'));
-  console.log('  ' + chalk.white('Cursor/VS Code') + ' → ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
-  console.log('  ' + chalk.white('Windows Terminal') + ' → ' + chalk.cyan('"font": { "face": "JetBrainsMono NFM", "builtinGlyphs": false }'));
-
-  console.log('\n' + chalk.bold('Step 5 — fzf (Actions menu)'));
-  console.log('  ' + chalk.cyan('mkdir -p ~/.local/bin && curl -Lo /tmp/fzf.tar.gz https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz && tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin'));
-
-  console.log('\n' + chalk.bold('Step 6 — Shell aliases'));
-  const bashrc = path.join(homeDir, '.bashrc');
-  const resolvedRoot = path.resolve(projectRoot);
-  const squidAlias       = `alias squid='tmux new-session -c ${resolvedRoot}'`;
-  const squidClaudeAlias = `alias squid-claude='tmux new-session -c ${resolvedRoot} "claude --dangerously-skip-permissions"'`;
-
-  let bashrcContent = '';
-  if (await fs.pathExists(bashrc)) bashrcContent = await fs.readFile(bashrc, 'utf8');
-
-  const aliasBlock = `\n# BMAD tmux shortcuts\n${squidAlias}\n${squidClaudeAlias}\n`;
-  if (!bashrcContent.includes('squid-claude')) {
-    const addAliases = await ask(chalk.yellow(`  Add 'squid' and 'squid-claude' aliases to ~/.bashrc? (Y/n): `));
-    if (!addAliases.toLowerCase().startsWith('n')) {
-      await fs.appendFile(bashrc, aliasBlock, 'utf8');
-      console.log(chalk.green('  ✓ Aliases added to ~/.bashrc'));
-      console.log(chalk.dim('  Run: source ~/.bashrc'));
-    }
-  } else {
-    console.log(chalk.dim('  ○ Aliases already in ~/.bashrc'));
-  }
-
   console.log('\n' + chalk.bold.green('✓ tmux setup complete!'));
-  console.log(chalk.dim('  Start a session: ') + chalk.cyan('squid'));
-  console.log(chalk.dim('  Launch Claude:   ') + chalk.cyan('squid-claude'));
-  if (projectRoot) console.log(chalk.dim('  Full docs:       ') + chalk.cyan('docs/dev/tmux/README.md'));
+  console.log(chalk.dim('  Start tmux and press Ctrl+B I to finish TPM plugin install.'));
   console.log('');
 
   rl.close();
