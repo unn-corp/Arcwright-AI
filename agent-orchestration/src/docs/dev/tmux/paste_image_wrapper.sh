@@ -45,6 +45,17 @@ if [ -n "$IMAGE_TYPE" ]; then
             || mv "$RAWFILE" "$PNGFILE"
     fi
 
+    # WSLg Wayland bridge sometimes lists image types but writes 0 bytes.
+    # Fall back to PowerShell (Windows clipboard API) when wl-paste produces empty output.
+    if [ ! -s "$PNGFILE" ]; then
+        WINPATH=$(wslpath -w "$PNGFILE" 2>/dev/null)
+        powershell.exe -NoProfile -Command "
+            Add-Type -AssemblyName System.Windows.Forms
+            \$img = [System.Windows.Forms.Clipboard]::GetImage()
+            if (\$img -ne \$null) { \$img.Save('$WINPATH') }
+        " 2>/dev/null
+    fi
+
     [ -s "$PNGFILE" ] || exit 1
     send_path "@$PNGFILE"
     /usr/bin/wl-copy --type image/png < "$PNGFILE" 2>/dev/null || true
