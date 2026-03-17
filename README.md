@@ -72,6 +72,29 @@ npx @devo-bmad-custom/squidhub status     # check addon status
 
 ---
 
+### `@devo-bmad-custom/tmux` — tmux Setup Package
+
+Standalone tmux configuration suite for AI agent workflows. No BMAD install required — works with any project.
+
+Installs `~/.tmux.conf`, status bar scripts, pane title sync (Claude Code integration), clipboard tools, and shell aliases. Requires tmux 3.4+ and WSL2.
+
+**Install:**
+```bash
+npx @devo-bmad-custom/tmux
+```
+
+**What gets installed:**
+- `~/.tmux.conf` — Catppuccin Mocha theme, Powerline status bar, mouse support, Ctrl+V paste fix (`paste-buffer -p`)
+- `~/.config/tmux/bin/` — status bar scripts (CPU, RAM, Claude usage), pane title sync, clipboard, float terminal, actions popup
+- `~/.local/bin/xclip` — clipboard bridge for WSL2
+- `~/.bashrc` aliases — `squid` (open tmux session) and `squid-claude` (open tmux + launch Claude)
+- TPM install instructions + fzf setup (for actions menu)
+- Nerd Font guidance (JetBrainsMono NFM for Powerline separators)
+
+**Requirements:** tmux 3.4+ · WSL2 (Ubuntu) · `wl-clipboard` · `wslu` · Node 20+
+
+---
+
 ## Workflow Tracks
 
 After installing, use `/bmad-track-*` slash commands in Claude Code to start a pre-routed workflow session. The orchestrator activates, skips complexity triage, and goes straight to task intake for the chosen track:
@@ -129,14 +152,18 @@ devo-custom-bmad/
 │       ├── _memory/        # sidecar memory and skills
 │       ├── .agents/skills/ # 24 bundled skills
 │       └── .claude/commands/ # bmad-track-* slash commands
-└── squidhub-addon/         # @devo-bmad-custom/squidhub package
-    ├── bin/bmad-squidhub.js
+├── squidhub-addon/         # @devo-bmad-custom/squidhub package
+│   ├── bin/bmad-squidhub.js
+│   ├── lib/
+│   └── src/
+│       ├── squidhub/       # Squidhub module config
+│       ├── _memory/squid-master-sidecar/
+│       ├── bmm/agents/review-agent.md
+│       └── .claude/commands/ # squid-master track commands
+└── tmux-setup/             # @devo-bmad-custom/tmux package
+    ├── bin/bmad-tmux.js
     ├── lib/
-    └── src/
-        ├── squidhub/       # Squidhub module config
-        ├── _memory/squid-master-sidecar/
-        ├── bmm/agents/review-agent.md
-        └── .claude/commands/ # squid-master track commands
+    └── src/tmux/           # tmux.conf, scripts, colors, setup doc
 ```
 
 ---
