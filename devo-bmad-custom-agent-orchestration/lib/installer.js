@@ -426,6 +426,9 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk) {
       await fs.writeFile(rootClaudePath, `${bmadEntry}${tmuxEntry}`, 'utf8');
       console.log(chalk.green('  ✓ CLAUDE.md created'));
     }
+
+    // Write global ~/.claude/CLAUDE.md — applies BMAD + tmux rules to every project
+    await writeGlobalClaudeMd(bmadEntry, tmuxEntry, chalk);
   }
 
   // Create _bmad-output/ folder (output artifacts land here)
@@ -567,6 +570,36 @@ function buildTmuxEntry() {
     'Always append `Enter` to every `tmux send-keys` call.',
     '',
   ].join('\n');
+}
+
+/**
+ * Write / merge ~/.claude/CLAUDE.md (global) with BMAD + tmux sections.
+ * This file is loaded by Claude Code for every project automatically.
+ */
+async function writeGlobalClaudeMd(bmadEntry, tmuxEntry, chalk) {
+  const os = require('os');
+  const globalClaudeDir = path.join(os.homedir(), '.claude');
+  const globalClaudePath = path.join(globalClaudeDir, 'CLAUDE.md');
+  const GLOBAL_BMAD_MARKER = '## BMAD Method';
+
+  await fs.ensureDir(globalClaudeDir);
+
+  if (await fs.pathExists(globalClaudePath)) {
+    const existing = await fs.readFile(globalClaudePath, 'utf8');
+    let updated = existing;
+    let changed = false;
+    if (!existing.includes(GLOBAL_BMAD_MARKER)) { updated += bmadEntry; changed = true; }
+    if (!existing.includes('## Agent Spawning (tmux-aware)')) { updated += tmuxEntry; changed = true; }
+    if (changed) {
+      await fs.writeFile(globalClaudePath, updated, 'utf8');
+      console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated'));
+    } else {
+      console.log(chalk.gray('  ○ ~/.claude/CLAUDE.md (global) already up to date'));
+    }
+  } else {
+    await fs.writeFile(globalClaudePath, `${bmadEntry}${tmuxEntry}`, 'utf8');
+    console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) created'));
+  }
 }
 
 /**

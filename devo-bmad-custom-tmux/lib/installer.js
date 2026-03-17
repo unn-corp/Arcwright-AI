@@ -192,11 +192,77 @@ async function setupTmux(projectRoot, chalk) {
     console.log(chalk.green(`  ✓ ${refDocDest} (reference doc)`));
   }
 
+  // Write / merge global ~/.claude/CLAUDE.md with tmux-aware agent spawning rules
+  await writeGlobalClaudeMd(chalk);
+
   console.log('\n' + chalk.bold.green('✓ tmux setup complete!'));
   console.log(chalk.dim('  Start tmux and press Ctrl+B I to finish TPM plugin install.'));
   console.log('');
 
   rl.close();
+}
+
+/**
+ * Write / merge ~/.claude/CLAUDE.md with tmux-aware agent spawning section.
+ * This file is loaded by Claude Code for every project automatically.
+ */
+async function writeGlobalClaudeMd(chalk) {
+  const os = require('os');
+  const globalClaudeDir = path.join(os.homedir(), '.claude');
+  const globalClaudePath = path.join(globalClaudeDir, 'CLAUDE.md');
+  const TMUX_MARKER = '## Agent Spawning (tmux-aware)';
+
+  const tmuxSection = [
+    '',
+    '## Agent Spawning (tmux-aware)',
+    '',
+    'When spawning sub-agents, check whether tmux is active (`$TMUX` environment variable is set).',
+    '',
+    '| Situation | Method |',
+    '|-----------|--------|',
+    '| Task is fully autonomous — no user input or monitoring needed | **In-process** (Agent tool) |',
+    '| Task benefits from user observation, may need clarification, or user said "spawn" / "open agent" | **Split pane** — new tmux pane running `claude` |',
+    '',
+    '**How to open a split-pane agent when tmux is active:**',
+    '```bash',
+    '# Vertical split (side by side) — preferred for longer tasks',
+    'tmux split-window -h -c "#{pane_current_path}" "claude --dangerously-skip-permissions \'<task>\'"',
+    '# Horizontal split (top/bottom) — preferred for monitoring',
+    'tmux split-window -v -c "#{pane_current_path}" "claude --dangerously-skip-permissions \'<task>\'"',
+    '```',
+    '',
+    '**Pane close sequence (mandatory):**',
+    '```bash',
+    '# 1. Send /exit first — lets Claude finish and save state',
+    'tmux send-keys -t <pane_id> "/exit" Enter',
+    '# 2. Then kill the pane',
+    'tmux kill-pane -t <pane_id>',
+    '```',
+    '',
+    '**Multi-pane layout:** Before first split, decide master position (left/right/top/bottom).',
+    'Panes 2–4 stack opposite master. Panes 5+ surround on perpendicular axis.',
+    '',
+    '**Agent orchestration:** Coordinate agents via session files at',
+    '`.agents/orchestration/session-YYYYMMDD-HHMMSS-XXXX.md`.',
+    'Never route by reading pane titles — use the session file Active Agents table.',
+    'Always append `Enter` to every `tmux send-keys` call.',
+    '',
+  ].join('\n');
+
+  await fs.ensureDir(globalClaudeDir);
+
+  if (await fs.pathExists(globalClaudePath)) {
+    const existing = await fs.readFile(globalClaudePath, 'utf8');
+    if (!existing.includes(TMUX_MARKER)) {
+      await fs.writeFile(globalClaudePath, existing + tmuxSection, 'utf8');
+      console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated with tmux agent rules'));
+    } else {
+      console.log(chalk.gray('  ○ ~/.claude/CLAUDE.md (global) already up to date'));
+    }
+  } else {
+    await fs.writeFile(globalClaudePath, tmuxSection, 'utf8');
+    console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) created with tmux agent rules'));
+  }
 }
 
 module.exports = { setupTmux };
