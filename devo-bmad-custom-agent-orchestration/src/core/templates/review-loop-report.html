@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loop Report - {{timestamp}}</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #9333ea;
+        --bg: #0f172a;
+        --card-bg: #1e293b;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --border: #334155;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        display: flex;
+      }
+      aside {
+        width: 250px;
+        background: var(--card-bg);
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        border-right: 1px solid var(--border);
+        padding: 2rem;
+      }
+      main {
+        flex: 1;
+        padding: 3rem;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      .loop-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+      h1,
+      h2,
+      h3 {
+        color: var(--primary);
+      }
+      pre {
+        background: #000;
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+      }
+      .badge {
+        background: var(--primary);
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h2>Review Loop</h2>
+      <p class="muted">Generated on {{timestamp}}</p>
+      <nav>
+        <ul id="loop-navigation-list"></ul>
+      </nav>
+    </aside>
+    <main>
+      <h1>Iterative Review Analysis</h1>
+      <div class="loop-card">
+        <h3>Summary Dashboard</h3>
+        <p>Total Iterations: <span class="badge">{{total_loops}}</span></p>
+        <p>Status: Completed</p>
+      </div>
+      {{loop_content}}
+    </main>
+  </body>
+</html>
