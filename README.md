@@ -111,7 +111,7 @@ The base package includes a full tmux configuration suite. Run the interactive s
 npx @devo-bmad-custom/agent-orchestration tmux
 ```
 
-This installs `~/.tmux.conf`, status bar scripts, clipboard integration, and shell aliases. Requires tmux 3.2+.
+This installs `~/.tmux.conf`, status bar scripts, clipboard integration, and shell aliases. Requires tmux 3.4+ (uses `set-hook -wg` for `pane-title-changed`, which is a window-level event in 3.4).
 
 ---
 

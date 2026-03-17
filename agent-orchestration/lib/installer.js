@@ -623,11 +623,29 @@ async function setupTmux(projectRoot, chalk) {
     return;
   }
 
+  // Check tmux version if tmux is already installed
+  try {
+    const { execSync } = require('child_process');
+    const verLine = execSync('tmux -V 2>/dev/null', { stdio: 'pipe' }).toString().trim();
+    const match = verLine.match(/tmux (\d+)\.(\d+)/);
+    if (match) {
+      const major = parseInt(match[1], 10);
+      const minor = parseInt(match[2], 10);
+      if (major < 3 || (major === 3 && minor < 4)) {
+        console.log(chalk.yellow(`\n  ⚠  tmux ${match[1]}.${match[2]} detected — this config requires tmux 3.4+`));
+        console.log(chalk.dim('     pane-title-changed hook requires set-hook -wg (3.4 feature)'));
+        console.log(chalk.dim('     Upgrade: sudo apt-get install -y tmux  (or build from source for latest)\n'));
+      } else {
+        console.log(chalk.green(`  ✓  tmux ${match[1]}.${match[2]} — version OK`));
+      }
+    }
+  } catch { /* tmux not installed yet — skip check */ }
+
   console.log('\n' + chalk.bold('Step 1 — Prerequisites'));
   console.log(chalk.dim('  tmux runs in WSL2 (Ubuntu). You need these before continuing:\n'));
   console.log('  ' + chalk.white('① WSL2 + Ubuntu') + chalk.dim(' — in PowerShell (Admin): ') + chalk.cyan('wsl --install'));
   console.log('  ' + chalk.white('② Update packages') + chalk.dim(' — in Ubuntu: ') + chalk.cyan('sudo apt-get update && sudo apt-get upgrade -y'));
-  console.log('  ' + chalk.white('③ Install tmux') + chalk.dim(' — ') + chalk.cyan('sudo apt-get install -y tmux'));
+  console.log('  ' + chalk.white('③ Install tmux 3.4+') + chalk.dim(' — ') + chalk.cyan('sudo apt-get install -y tmux'));
   console.log('  ' + chalk.white('④ Install clipboard + image tools') + chalk.dim(' — ') + chalk.cyan('sudo apt-get install -y wl-clipboard imagemagick wslu'));
   console.log('  ' + chalk.white('⑤ NVM + Node') + chalk.dim(' (for MCP servers) — ') + chalk.cyan('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && source ~/.bashrc && nvm install --lts'));
   console.log('  ' + chalk.white('⑥ Docker Desktop WSL integration') + chalk.dim(' — Docker Desktop → Settings → Resources → WSL Integration → toggle your Ubuntu distro → Apply & Restart'));
