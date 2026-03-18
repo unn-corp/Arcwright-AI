@@ -171,8 +171,8 @@ Create this file at session start. Format:
 
 Track: {nano | small | compact | medium | extended | large}
 
-| Step | Agent | Claude Session ID | Status | Spawned At |
-|------|-------|-------------------|--------|------------|
+| Step | Agent | Pane ID | Session Name | Window ID | Pane Name | Name Source | Claude Session ID | Status | Spawned At |
+|------|-------|---------|--------------|-----------|-----------|-------------|-------------------|--------|------------|
 | {step-name} | {agent-name} | — | pending | — |
 | ... | ... | — | pending | — |
 ```
@@ -526,6 +526,20 @@ pre-output: Before generating any plan, spec, or document artifact, invoke: writ
 
 If an agent skips `writing-skills` and produces an artifact directly, the output is invalid — re-run the step with `writing-skills` loaded.
 
+### Sprint Size → Dev Agent Deployment Type
+
+At DS (dev-story) handoff, read the `deployment:` field on each story file to determine how the dev agent is launched:
+
+| Sprint size | File count | Score | Dev agent deployment |
+|---|---|---|---|
+| Large | 7+ files | 4+ | **Split pane** — `tmux_spawn_agent` with full context |
+| Small | 1–6 files | 0–3 | **In-process** Agent tool — targeted context only |
+
+sm-agent annotates each story file with `deployment: split-pane` or `deployment: in-process` before handing off to master-orchestrator.
+
+**Split pane deployment:** `tmux_spawn_agent` with full context (story file + PRD + architecture doc).
+**In-process deployment:** Agent tool with scoped context — story file + directly referenced docs only. No full PRD/arch unless the story explicitly references them.
+
 ### Split-Pane Agent Behaviour Rules
 
 **`--dangerously-skip-permissions` required:** ALL split pane agents MUST be launched with this flag. Mode [2] command blocks and Mode [3] launch scripts already include it. For tmux-based spawning: `tmux split-window -h "claude --dangerously-skip-permissions '{agent-persona-command}'"`.
@@ -557,6 +571,13 @@ tmux send-keys -t <pane_id> "<message>" Enter
 1. Note the new pane's ID immediately after `tmux split-window` (use `tmux display-message -p "#{pane_id}"` in the new pane or read it from `tmux list-panes`)
 2. Record it in the orchestration session file Active Agents table with role, status, and CWD
 3. Pass the spawner's own pane ID to the spawned agent as part of its task context so it knows where to report back
+4. Immediately after `split-window`, set pane title to `<role>-<pane_id>` and disable auto-rename:
+   ```bash
+   NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
+   tmux set-option -t "$NEW_PANE_ID" -p allow-rename off
+   tmux select-pane -t "$NEW_PANE_ID" -T "${ROLE}-${NEW_PANE_ID}"
+   ```
+   Record `name_source: auto` in session file. If the pane had a non-default title before spawn → `name_source: manual` — NEVER rename a `manual` pane.
 
 ```bash
 # Spawn and capture spawner pane ID first
@@ -615,6 +636,32 @@ tmux kill-pane -t <pane_id>
 1. Update the session file Active Agents table row: `status: closed`
 2. Record `closed_at` timestamp and `session_id`
 3. Only then proceed to spawn the next pipeline pane (if any)
+
+---
+
+### Autonomous Loop Continuation Rules
+
+By default, proceed without stopping between stories and epics — no "ready?" prompts. The workflow continues autonomously unless an explicit halt trigger is encountered.
+
+**Explicit halt triggers:**
+
+| Trigger | Action |
+|---|---|
+| 🔴 review finding requiring scope change decision | Stop, ask user |
+| Schema migration needing approval | Stop, show diff, await `[approve]` |
+| Missing external credentials | Stop, tell user exactly what's needed |
+| AR max retries (3) with unresolved 🔴 | Escalate via [CC] |
+| User says "pause/wait/stop/let me think" | Pause immediately |
+| Testing lock conflict | Halt per qa.md TESTING LOCK PROTOCOL |
+| Explicit USER APPROVAL GATE in track | Hard stop |
+
+**NOT halt triggers** (auto-proceed):
+- 🟡/🟢 review findings — auto-fix and proceed
+- Review pass — announce in one line, proceed
+- QA pass — proceed
+- Story count increase
+
+Split pane is the **default** deployment. In-process is the exception (small stories only — see Sprint Size → Dev Agent Deployment Type above).
 
 ---
 

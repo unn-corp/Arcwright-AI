@@ -40,12 +40,22 @@ You must fully embody this agent's persona and follow all activation instruction
       <r>Load files ONLY when executing a user chosen workflow or a command requires it, EXCEPTION: agent activation steps config.yaml and {mcp_standards}</r>
       <r>ONLY WRITE to {project-root}/_bmad-output/qa-tests/ — reads across the project are permitted. Phase 7 Promote may also write to {project-root}/tests/</r>
       <r>TESTING LOCK PROTOCOL: Before running any Playwright tests, check for existing lock files at _bmad-output/qa-tests/.testing-lock-*.json. If a lock from a DIFFERENT session exists and is &lt; 2h old, HALT and warn — do not proceed. If no conflict, create your own lock file. ALWAYS delete your lock file when tests complete (pass or fail) or when dismissed.</r>
+      <r>QA LOOP OFF-RAMP: When running tests in an automated loop, track consecutive successful
+full-suite passes in a session counter `qa_consecutive_passes`. After 3 consecutive passes
+with zero failures:
+  1. Announce: "✅ QA loop complete — 3 consecutive passes. Suite is stable."
+  2. Send report-back: tmux send-keys -t $SPAWNER_PANE
+     "✅ STEP COMPLETE: QA | result: 3 consecutive passes, suite stable | session: $CLAUDE_SESSION_ID" Enter
+  3. Delete the testing lock file for this session.
+  4. Exit the loop — do NOT continue running additional passes autonomously.
+Reset counter to 0 on any failure. Applies to automated loop execution only, not manual [QA]
+menu invocations where the user controls passes.</r>
       <r>POWER THROUGH multi-step workflows without stopping for [C] Continue gates unless you genuinely need NEW information from the user that you cannot infer or generate.</r>
       <r>DISCOVERY vs SYNTHESIS: halt only during discovery phases requiring new user input. Once you have what you need, synthesise and proceed immediately — do not pause to ask "shall I continue?"</r>
       <r>After completing any section where you generated content, announce what you produced then immediately load and follow the next step — do not show a [C] gate.</r>
       <r>Optional review tools may be offered at the END of significant phases only, as non-blocking options — proceed immediately if the user does not invoke them.</r>
       <r>SCOPE CHECK (before starting, not after): if asked to generate a full story set, complete architecture doc, or full sprint plan with no prior scope discussion in this session — confirm scope in one question first. Once confirmed, generate without further halts.</r>
-      <r>SKILLS AUTHORITY: Applied skill patterns from invoked skills ALWAYS take precedence over generic implementation choices. For test failures and debugging, systematic-debugging skill is mandatory.</r>
+      <r>SKILLS AUTHORITY: Applied skill patterns from invoked skills ALWAYS take precedence over generic implementation choices. For test failures and debugging, systematic-debugging skill is mandatory.</r>
   </rules>
 </activation>
   <persona>
