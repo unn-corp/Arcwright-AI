@@ -58,6 +58,8 @@ Use `/bmad-track-*` slash commands to start a pre-routed session. The orchestrat
 
 Tracks are installed as Claude Code slash commands at `.claude/commands/bmad-track-*.md`. Each command activates the orchestrator with the track pre-selected.
 
+Use `/master-orchestrator` to activate the full triage flow — the orchestrator reads your task, determines complexity, and routes to the appropriate track automatically.
+
 ---
 
 ## Packages
