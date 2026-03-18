@@ -583,8 +583,16 @@ tmux send-keys -t <pane_id> "<message>" Enter
 # Spawn and capture spawner pane ID first
 SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
 tmux split-window -h -c "#{pane_current_path}" \
-  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' 'You are the <role> agent. Spawner pane: $SPAWNER_PANE. <task context>'"
+  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}' 'You are the <role> agent. Spawner pane: $SPAWNER_PANE. <task context>'"
+sleep 8  # ⚠️ REQUIRED — wait for pane to initialize before reading pane list or sending commands
+NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
 ```
+
+**⚠️ Sleep between consecutive tmux commands.** tmux commands are asynchronous — always insert `sleep` between operations:
+- `sleep 8` after `split-window`
+- `sleep 6` after `send-keys`, `kill-pane`, `select-layout`, `set-option`, or `select-pane -T`
+
+Without sleep, race conditions cause stale pane IDs, undelivered messages, and failed layout changes.
 
 **Every spawned agent MUST report back when done:**
 
@@ -742,7 +750,7 @@ Then print the command block:
 # Context file: _bmad-output/scripts/context-{session_id}.md
 # Branch: {branch}  |  Session: {session_id}  |  Step: {step-name}
 # ─────────────────────────────────────────────────────────────────────────────
-claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' "{agent-persona-command}"
+claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}' "{agent-persona-command}"
 ```
 
 The new conversation opens as that agent. The user can say "load the context file at `_bmad-output/scripts/context-{session_id}.md`" and the agent has everything it needs. After printing: halt and wait for user to confirm the step is complete before routing to the next step.
@@ -776,9 +784,9 @@ $agentCmd = "{agent-persona-command}"
 if ($NonInteractive) {
     # Headless mode: capture JSON output with session_id for chaining to next step
     if ($Resume) {
-        $result = claude --resume $Resume -p $agentCmd --output-format json --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}'
+        $result = claude --resume $Resume -p $agentCmd --output-format json --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}'
     } else {
-        $result = claude -p $agentCmd --output-format json --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}'
+        $result = claude -p $agentCmd --output-format json --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}'
     }
     # Parse and save the session_id for the next step to chain from
     $parsed = $result | ConvertFrom-Json
@@ -788,9 +796,9 @@ if ($NonInteractive) {
 } else {
     # Interactive mode: opens agent in terminal, user drives the conversation
     if ($Resume) {
-        claude --resume $Resume --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' $agentCmd
+        claude --resume $Resume --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}' $agentCmd
     } else {
-        claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' $agentCmd
+        claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}' $agentCmd
     }
 }
 
@@ -882,7 +890,7 @@ Synthesize all three outputs before routing to PRD creation.
 
 - AR passed with no criticals → do NOT announce and wait — proceed to next step
 - 🟡 Major findings in any track → auto-fix, then proceed (do not halt for 🟡)
-- 🟢 Minor findings → log and proceed (never halt)
+- 🟢 Minor findings → auto-fix and proceed (never halt — treat same as 🟡)
 - Pre-QA environment check passed → do NOT report and wait — acquire lock and hand off to QA
 - QA tests all passed → do NOT wait for confirmation — proceed to next step: USER APPROVAL GATE for Small, Compact, Medium, Extended (all after QA). For Nano, proceed to USER APPROVAL after DRY+UV gate (no QA in Nano chain). Those are designed halts, not mistakes
 - Any gate that passes cleanly → announce result in one line, immediately start the next step
@@ -893,9 +901,8 @@ Scripts are generated AT ROUTING TIME (after track selection), not at session st
 
 > **Track override:** Small track limits AR to 1 pass regardless of this section. Medium/Large tracks follow the loop below.
 
-- **AR passes (no 🔴):** Announce `"✅ AR passed."` and immediately proceed to next step — no halt.
-- **AR finds 🟡/🟢 only:** Auto-fix all findings, re-run AR. Do not halt for user input.
-- **AR finds 🔴 Critical:** Auto-route back to dev agent with findings. Dev fixes → re-run AR. This loop is autonomous up to max 3 iterations.
+- **AR passes (no findings):** Announce `"✅ AR passed."` and immediately proceed to next step — no halt.
+- **AR finds any combination of 🟢/🟡/🔴:** Auto-fix ALL findings (🔴 first, then 🟡, then 🟢), re-run AR. Do not halt for user input. This loop is autonomous up to max 3 iterations.
 - **AR loop max (3) reached with unresolved 🔴:** This is a halt trigger — requires user decision:
 
 ```
@@ -933,7 +940,7 @@ flowchart TD
 Chain: `Quick Spec → Quick Dev → Review Gate (3 sub-agents: AR+DRY · UV · SR) → QA Tests (Playwright) → ⛔ USER APPROVAL → /prepare-to-merge`
 
 
-**AR pass criterion (Small):** ONE pass only — no retry loop. **Small track overrides the general AR autonomous loop — 1 pass maximum regardless of general AR rules.** 🟡/🟢 findings auto-fixed inline. Only 🔴 Critical findings halt the pipeline; route to dev for fix, then re-run AR once. If 🔴 persists after one fix attempt: escalate to user.
+**AR pass criterion (Small):** ONE pass only — no retry loop. **Small track overrides the general AR autonomous loop — 1 pass maximum regardless of general AR rules.** All findings (🔴/🟡/🟢) auto-fixed inline. If 🔴 persists after one fix attempt: escalate to user.
 
 **Review gate (Small):** `review agent` in **split pane** — stays visible because a 🔴 finding may require user scope decision. Spawns 3 concurrent Gate Sub-agents (`review_type: 3-sub`): Sub-1 (architect-agent: AR+DRY), Sub-2 (ux-designer: UV), Sub-3 (security-agent: SR).
 
@@ -1068,7 +1075,7 @@ flowchart LR
 
 **Epic completion condition:** All stories in the sprint plan for that epic are marked `done` AND the Review Gate has passed.
 
-**Large track 3-sub-agent epic gate autonomous loop:** All 3 Gate Sub-agents run concurrently in Mode [4], sequentially in Mode [1] (`review_type: 3-sub`): Sub-1 architect-agent (AR+DRY), Sub-2 ux-designer (UV), Sub-3 security-agent (SR). Findings 🟡/🟢 → auto-fix → re-run gate. 🔴 → auto-fix what's fixable → re-run gate. All autonomous up to 3 iterations.
+**Large track 3-sub-agent epic gate autonomous loop:** All 3 Gate Sub-agents run concurrently in Mode [4], sequentially in Mode [1] (`review_type: 3-sub`): Sub-1 architect-agent (AR+DRY), Sub-2 ux-designer (UV), Sub-3 security-agent (SR). ALL findings (🔴/🟡/🟢) → auto-fix → re-run gate. All autonomous up to 3 iterations.
 
 **Review gate terminal (3 loops, unresolved 🔴):** Auto-escalate via [CC] Correct Course — do not halt, do not ask. Announce: `"⚠️ Review gate [{epic_slug}] — 🔴 unresolved after 3 reviews. Auto-escalating to Correct Course."` and invoke [CC] immediately.
 
@@ -1102,7 +1109,7 @@ Wait for explicit `[approve]` before running PTM. PTM runs in-process in the mai
 | story-file-written                                       | Dev Story (new dev-agent per story, split pane)                                 |
 | Dev Story                                                | skills-detection → TDD implementation                                            |
 | TDD implementation                                       | review agent (3 Gate Sub-agents concurrent, `review_type: 3-sub`)        |
-| review agent (Sub-1: AR+DRY)                  | auto-fix (🟡/🟢); halt ONLY if 🔴 requires user scope change                   |
+| review agent (Sub-1: AR+DRY)                  | auto-fix ALL (🔴/🟡/🟢); halt ONLY if 🔴 requires user scope change            |
 | review agent (Sub-2: UV + Sub-3: SR)              | qa-sub-agent (auto-invoked, split pane) if all pass; Dev Story if 🔴            |
 | qa-sub-agent                                             | story-done if tests pass; Dev Story with failing output if fail                 |
 | story-done                                               | Create Story (next backlog story) OR all-epics-complete                         |
@@ -1485,7 +1492,7 @@ Per epic:
   1. Dev Story     → /bmad-agent-bmm-dev  (split pane, --dangerously-skip-permissions)
   2. Review Gate   → review agent  (ar-only, up to 3 passes — standard AR loop rules)
   3. QA Tests      → /bmad-agent-bmm-qa   (Playwright .spec.ts only)
-  ↩ loop until story passes Review Gate + QA with no 🔴
+  ↩ loop until story passes Review Gate (all 🔴/🟡/🟢 fixed) + QA
 ```
 
 On max 3 AR iterations with unresolved 🔴 → HALT per AR escalation rules above.
@@ -1498,9 +1505,9 @@ On max 3 AR iterations with unresolved 🔴 → HALT per AR escalation rules abo
 
 #### SMALL PATH — Quick Dev
 
-**Step 8S:** Route `/bmad-agent-bmm-quick-flow-solo-dev` → `/bmad-bmm-quick-dev` (split pane). Fixes all 🔴 + 🟡 from `review-plan-{artifact_id}.md`.
+**Step 8S:** Route `/bmad-agent-bmm-quick-flow-solo-dev` → `/bmad-bmm-quick-dev` (split pane). Fixes ALL findings (🔴 + 🟡 + 🟢) from `review-plan-{artifact_id}.md`.
 
-**Step 9S — Review Gate:** `review agent` with `review_type: 3-sub`. **AR pass rules (Small path):** 1 pass max. 🟡/🟢 auto-fixed. 🔴 → route back to Step 8S once. Persistent 🔴 → escalate.
+**Step 9S — Review Gate:** `review agent` with `review_type: 3-sub`. **AR pass rules (Small path):** 1 pass max. ALL findings (🔴/🟡/🟢) auto-fixed. If 🔴 persists → route back to Step 8S once. Persistent 🔴 → escalate.
 
 **Step 10S:** QA Tests — `/bmad-agent-bmm-qa` (split pane). Playwright `.spec.ts` only.
 
@@ -1650,12 +1657,11 @@ Derive `artifact_id` from active `session_id` if not already set. Run ALL passes
 1. Route `/bmad-agent-bmm-ux-designer` with UI Review handoff context (`loop_mode: true`, `output_path: ...pass1.md`)
 2. ux-designer produces `ui-review-findings-{artifact_id}-pass1.md`
 3. Conductor reads findings:
-   - 🟢 only → log, announce `"✅ UV passed in 1 pass."` → exit loop early
-   - 🟡/🟢 → extract all actionable items, build fix list
-   - 🔴 → add to fix list (🔴 first)
+   - No findings → announce `"✅ UV passed in 1 pass."` → exit loop early
+   - 🟢/🟡/🔴 → extract ALL actionable items into fix list (🔴 first, then 🟡, then 🟢)
 
-**Auto-fix step (after each pass with 🔴 or 🟡):**
-Route dev agent with fix list from `ui-review-findings-{artifact_id}-pass{N}.md`. Dev fixes ALL listed items autonomously. No halts.
+**Auto-fix step (after each pass with ANY findings):**
+Route dev agent with fix list from `ui-review-findings-{artifact_id}-pass{N}.md`. Dev fixes ALL listed items (🔴 + 🟡 + 🟢) autonomously. No halts.
 
 **Pass 2** (if `uv_loop_max >= 2` AND pass 1 had findings):
 Re-run ux-designer. Write `ui-review-findings-{artifact_id}-pass2.md`. Same categorization.
@@ -1793,11 +1799,11 @@ Derive `artifact_id` from active `session_id` if not already set. Run ALL passes
 1. Route `/bmad-agent-bmm-architect` with DRY Review handoff context (`output_path: ...pass1.md`)
 2. architect-agent produces `dry-review-findings-{artifact_id}-pass1.md`
 3. Conductor reads findings:
-   - 🟢 only → log, announce `"✅ DRY passed in 1 pass."` → exit loop early
-   - 🟡/🔴 → extract all actionable items, build fix list (🔴 first)
+   - No findings → announce `"✅ DRY passed in 1 pass."` → exit loop early
+   - 🟢/🟡/🔴 → extract ALL actionable items into fix list (🔴 first, then 🟡, then 🟢)
 
-**Auto-fix step (after each pass with 🔴 or 🟡):**
-Route dev agent with fix list. Dev fixes ALL listed items autonomously. No halts.
+**Auto-fix step (after each pass with ANY findings):**
+Route dev agent with fix list. Dev fixes ALL listed items (🔴 + 🟡 + 🟢) autonomously. No halts.
 
 **Pass 2** (if `dry_loop_max >= 2` AND pass 1 had findings):
 Re-run architect-agent. Write `dry-review-findings-{artifact_id}-pass2.md`. Same categorization.
@@ -1934,11 +1940,11 @@ Derive `artifact_id` from active `session_id` if not already set. Run ALL passes
 1. Route `/bmad-agent-bmm-security` (or dev fallback) with both skills loaded
 2. Agent produces `sr-review-findings-{artifact_id}-pass1.md`
 3. Conductor reads findings:
-   - 🟢 only → log, announce `"✅ SR passed in 1 pass."` → exit loop early
-   - 🟡/🔴 → extract all actionable items (🔴 VULN first, then 🟡 VERIFY)
+   - No findings → announce `"✅ SR passed in 1 pass."` → exit loop early
+   - 🟢/🟡/🔴 → extract ALL actionable items (🔴 VULN first, then 🟡 VERIFY, then 🟢 minor)
 
-**Auto-fix step (after each pass with 🔴 or 🟡):**
-Route dev agent with fix list. Dev fixes ALL listed items autonomously. No halts.
+**Auto-fix step (after each pass with ANY findings):**
+Route dev agent with fix list. Dev fixes ALL listed items (🔴 + 🟡 + 🟢) autonomously. No halts.
 
 **Pass 2** (if `sr_loop_max >= 2` AND pass 1 had findings):
 Re-run security agent with both skills. Write `sr-review-findings-{artifact_id}-pass2.md`.
@@ -2321,7 +2327,7 @@ rm -f _bmad-output/qa-tests/.testing-lock-{session_id}.json
 | Large — Design DRY+UV Gate          | Large    | DRY+UV after Architecture (no AR, no SR)       | 2          | Winston, Bond, Sally, Bob, Paige (5 min) |
 | Large — Epic Review Gate (3-sub)        | Large    | 3 sub-agents concurrent in epic loop, per-story    | 3          | Bond, Amelia, qa-agent, Bob (4 min)         |
 
-**Universal rule:** All present agents ≥10 items each. Severity: 🔴 Critical blocks progression | 🟡 Major addressed before next phase | 🟢 Minor at discretion.
+**Universal rule:** All present agents ≥10 items each. Severity: 🔴 Critical blocks progression | 🟡 Major addressed before next phase | 🟢 Minor addressed before next phase.
 
 ### PMR (Party Mode Review) — Standalone Only
 

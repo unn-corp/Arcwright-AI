@@ -449,10 +449,39 @@ tmux select-pane -t "$TMUX_PANE" -T "My Label"
 When spawning a dedicated agent, pass its role as the task description so the session file registration is clear:
 ```bash
 tmux split-window -h -c "#{pane_current_path}" \
-  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' 'You are the backend agent. Read .agents/orchestration/ and register yourself, then work through assigned tasks.'"
+  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}' 'You are the backend agent. Read .agents/orchestration/ and register yourself, then work through assigned tasks.'"
+sleep 8  # ⚠️ REQUIRED — wait for pane to initialize
+NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
 ```
 
 The spawned agent registers its own pane ID and role in the orchestration session file on startup — no pane title sniffing needed.
+
+### Sleep between tmux commands
+
+tmux commands execute asynchronously — issuing them back-to-back causes race conditions (pane not yet created, message not yet delivered, layout not yet applied). **Always insert a short `sleep` between consecutive tmux operations:**
+
+| After this command | Minimum sleep |
+|---|---|
+| `split-window` (before reading pane list or setting options) | `sleep 8` |
+| `send-keys` (before verifying delivery or sending another command) | `sleep 6` |
+| `kill-pane` (before rebalancing layout) | `sleep 6` |
+| `select-layout` / `select-pane` | `sleep 6` |
+| `set-option` / `select-pane -T` (title set) | `sleep 6` |
+
+```bash
+# ✅ CORRECT — sleep between tmux commands
+tmux split-window -h -c "$PROJECT_ROOT" "claude --dangerously-skip-permissions '...'"
+sleep 8
+NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
+sleep 6
+tmux set-option -t "$NEW_PANE_ID" -p allow-rename off
+sleep 6
+tmux select-pane -t "$NEW_PANE_ID" -T "dev-${NEW_PANE_ID}"
+
+# ❌ WRONG — no sleep, pane list may be stale
+tmux split-window -h -c "$PROJECT_ROOT" "claude ..."
+NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
+```
 
 ### Agent MCP Configuration — Token Optimization
 
@@ -460,7 +489,7 @@ Sub-agents spawned from the master orchestrator should run with **all MCP server
 
 **Only the master orchestrator conversation needs MCP.** All spawned agents use:
 ```bash
---strict-mcp-config --mcp-config '{}'
+--strict-mcp-config --mcp-config '{"mcpServers":{}}'
 ```
 
 | Agent | MCP needed? | Reason |
@@ -478,7 +507,7 @@ Sub-agents spawned from the master orchestrator should run with **all MCP server
 **QA exception:** The qa-agent checks for `playwright-cli` at startup and uses it as the primary test runner. If playwright-cli is confirmed installed, disable all MCP. If not available, allow playwright MCP only:
 ```bash
 # playwright-cli available (preferred — disable all MCP):
---strict-mcp-config --mcp-config '{}'
+--strict-mcp-config --mcp-config '{"mcpServers":{}}'
 
 # playwright-cli NOT available (allow playwright MCP only):
 --strict-mcp-config --mcp-config '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp"]}}}'
