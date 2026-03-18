@@ -902,7 +902,7 @@ Scripts are generated AT ROUTING TIME (after track selection), not at session st
 > **Track override:** Small track limits AR to 1 pass regardless of this section. Medium/Large tracks follow the loop below.
 
 - **AR passes (no findings):** Announce `"✅ AR passed."` and immediately proceed to next step — no halt.
-- **AR finds any combination of 🟢/🟡/🔴:** Auto-fix ALL findings (🔴 first, then 🟡, then 🟢), re-run AR. Do not halt for user input. This loop is autonomous up to max 3 iterations.
+- **AR finds any combination of 🟢/🟡/🔴:** The review agent itself fixes ALL findings in the same pane/context (🔴 first, then 🟡, then 🟢) before reporting back. The agent reviews → fixes → re-reviews in a self-contained loop. No separate dev agent handoff. This loop is autonomous up to max 3 iterations.
 - **AR loop max (3) reached with unresolved 🔴:** This is a halt trigger — requires user decision:
 
 ```
@@ -940,7 +940,7 @@ flowchart TD
 Chain: `Quick Spec → Quick Dev → Review Gate (3 sub-agents: AR+DRY · UV · SR) → QA Tests (Playwright) → ⛔ USER APPROVAL → /prepare-to-merge`
 
 
-**AR pass criterion (Small):** ONE pass only — no retry loop. **Small track overrides the general AR autonomous loop — 1 pass maximum regardless of general AR rules.** All findings (🔴/🟡/🟢) auto-fixed inline. If 🔴 persists after one fix attempt: escalate to user.
+**AR pass criterion (Small):** ONE pass only — no retry loop. **Small track overrides the general AR autonomous loop — 1 pass maximum regardless of general AR rules.** Each review sub-agent fixes ALL its own findings (🔴/🟡/🟢) in the same pane before reporting back — no separate dev agent handoff. If 🔴 persists after one fix attempt: escalate to user.
 
 **Review gate (Small):** `review agent` in **split pane** — stays visible because a 🔴 finding may require user scope decision. Spawns 3 concurrent Gate Sub-agents (`review_type: 3-sub`): Sub-1 (architect-agent: AR+DRY), Sub-2 (ux-designer: UV), Sub-3 (security-agent: SR).
 
@@ -1075,7 +1075,7 @@ flowchart LR
 
 **Epic completion condition:** All stories in the sprint plan for that epic are marked `done` AND the Review Gate has passed.
 
-**Large track 3-sub-agent epic gate autonomous loop:** All 3 Gate Sub-agents run concurrently in Mode [4], sequentially in Mode [1] (`review_type: 3-sub`): Sub-1 architect-agent (AR+DRY), Sub-2 ux-designer (UV), Sub-3 security-agent (SR). ALL findings (🔴/🟡/🟢) → auto-fix → re-run gate. All autonomous up to 3 iterations.
+**Large track 3-sub-agent epic gate autonomous loop:** All 3 Gate Sub-agents run concurrently in Mode [4], sequentially in Mode [1] (`review_type: 3-sub`): Sub-1 architect-agent (AR+DRY), Sub-2 ux-designer (UV), Sub-3 security-agent (SR). Each sub-agent reviews AND fixes its own findings in the same pane before reporting back — no separate dev agent handoff. Re-run gate to verify. All autonomous up to 3 iterations.
 
 **Review gate terminal (3 loops, unresolved 🔴):** Auto-escalate via [CC] Correct Course — do not halt, do not ask. Announce: `"⚠️ Review gate [{epic_slug}] — 🔴 unresolved after 3 reviews. Auto-escalating to Correct Course."` and invoke [CC] immediately.
 
@@ -1109,7 +1109,7 @@ Wait for explicit `[approve]` before running PTM. PTM runs in-process in the mai
 | story-file-written                                       | Dev Story (new dev-agent per story, split pane)                                 |
 | Dev Story                                                | skills-detection → TDD implementation                                            |
 | TDD implementation                                       | review agent (3 Gate Sub-agents concurrent, `review_type: 3-sub`)        |
-| review agent (Sub-1: AR+DRY)                  | auto-fix ALL (🔴/🟡/🟢); halt ONLY if 🔴 requires user scope change            |
+| review agent (Sub-1: AR+DRY)                  | reviews + fixes own findings (🔴/🟡/🟢) in same pane; halt ONLY if 🔴 requires user scope change |
 | review agent (Sub-2: UV + Sub-3: SR)              | qa-sub-agent (auto-invoked, split pane) if all pass; Dev Story if 🔴            |
 | qa-sub-agent                                             | story-done if tests pass; Dev Story with failing output if fail                 |
 | story-done                                               | Create Story (next backlog story) OR all-epics-complete                         |
@@ -1507,7 +1507,7 @@ On max 3 AR iterations with unresolved 🔴 → HALT per AR escalation rules abo
 
 **Step 8S:** Route `/bmad-agent-bmm-quick-flow-solo-dev` → `/bmad-bmm-quick-dev` (split pane). Fixes ALL findings (🔴 + 🟡 + 🟢) from `review-plan-{artifact_id}.md`.
 
-**Step 9S — Review Gate:** `review agent` with `review_type: 3-sub`. **AR pass rules (Small path):** 1 pass max. ALL findings (🔴/🟡/🟢) auto-fixed. If 🔴 persists → route back to Step 8S once. Persistent 🔴 → escalate.
+**Step 9S — Review Gate:** `review agent` with `review_type: 3-sub`. **AR pass rules (Small path):** 1 pass max. Each review sub-agent fixes its own findings (🔴/🟡/🟢) in the same pane before reporting back. If 🔴 persists → route back to Step 8S once. Persistent 🔴 → escalate.
 
 **Step 10S:** QA Tests — `/bmad-agent-bmm-qa` (split pane). Playwright `.spec.ts` only.
 
@@ -1655,19 +1655,18 @@ Derive `artifact_id` from active `session_id` if not already set. Run ALL passes
 
 **Pass 1:**
 1. Route `/bmad-agent-bmm-ux-designer` with UI Review handoff context (`loop_mode: true`, `output_path: ...pass1.md`)
-2. ux-designer produces `ui-review-findings-{artifact_id}-pass1.md`
-3. Conductor reads findings:
+2. ux-designer reviews code, produces findings, then **fixes ALL findings itself** (🔴 first, then 🟡, then 🟢) in the same pane — no separate dev agent handoff
+3. ux-designer writes `ui-review-findings-{artifact_id}-pass1.md` with findings and fix status
+4. Conductor reads results:
    - No findings → announce `"✅ UV passed in 1 pass."` → exit loop early
-   - 🟢/🟡/🔴 → extract ALL actionable items into fix list (🔴 first, then 🟡, then 🟢)
-
-**Auto-fix step (after each pass with ANY findings):**
-Route dev agent with fix list from `ui-review-findings-{artifact_id}-pass{N}.md`. Dev fixes ALL listed items (🔴 + 🟡 + 🟢) autonomously. No halts.
+   - All findings fixed by agent → proceed to pass 2 for re-verification (if `uv_loop_max >= 2`)
+   - Unfixable 🔴 (requires scope change) → HALT for user
 
 **Pass 2** (if `uv_loop_max >= 2` AND pass 1 had findings):
-Re-run ux-designer. Write `ui-review-findings-{artifact_id}-pass2.md`. Same categorization.
+Re-run ux-designer to verify fixes landed. Agent re-reviews, fixes any regressions or remaining items. Write `ui-review-findings-{artifact_id}-pass2.md`.
 
 **Pass 3** (if `uv_loop_max = 3` AND pass 2 had findings):
-Re-run ux-designer. Write `ui-review-findings-{artifact_id}-pass3.md`.
+Re-run ux-designer. Final verification pass. Write `ui-review-findings-{artifact_id}-pass3.md`.
 
 **After final pass OR early exit on 🟢-only:**
 - Write canonical: `ui-review-findings-{artifact_id}.md` (copy of last pass file)
@@ -1797,19 +1796,18 @@ Derive `artifact_id` from active `session_id` if not already set. Run ALL passes
 
 **Pass 1:**
 1. Route `/bmad-agent-bmm-architect` with DRY Review handoff context (`output_path: ...pass1.md`)
-2. architect-agent produces `dry-review-findings-{artifact_id}-pass1.md`
-3. Conductor reads findings:
+2. architect-agent reviews code, produces findings, then **fixes ALL findings itself** (🔴 first, then 🟡, then 🟢) in the same pane — no separate dev agent handoff
+3. architect-agent writes `dry-review-findings-{artifact_id}-pass1.md` with findings and fix status
+4. Conductor reads results:
    - No findings → announce `"✅ DRY passed in 1 pass."` → exit loop early
-   - 🟢/🟡/🔴 → extract ALL actionable items into fix list (🔴 first, then 🟡, then 🟢)
-
-**Auto-fix step (after each pass with ANY findings):**
-Route dev agent with fix list. Dev fixes ALL listed items (🔴 + 🟡 + 🟢) autonomously. No halts.
+   - All findings fixed by agent → proceed to pass 2 for re-verification (if `dry_loop_max >= 2`)
+   - Unfixable 🔴 (requires scope change) → HALT for user
 
 **Pass 2** (if `dry_loop_max >= 2` AND pass 1 had findings):
-Re-run architect-agent. Write `dry-review-findings-{artifact_id}-pass2.md`. Same categorization.
+Re-run architect-agent to verify fixes landed. Agent re-reviews, fixes any regressions or remaining items. Write `dry-review-findings-{artifact_id}-pass2.md`.
 
 **Pass 3** (if `dry_loop_max = 3` AND pass 2 had findings):
-Re-run architect-agent. Write `dry-review-findings-{artifact_id}-pass3.md`.
+Re-run architect-agent. Final verification pass. Write `dry-review-findings-{artifact_id}-pass3.md`.
 
 **After final pass OR early exit on 🟢-only:**
 - Write canonical: `dry-review-findings-{artifact_id}.md` (copy of last pass)
@@ -1938,19 +1936,18 @@ Derive `artifact_id` from active `session_id` if not already set. Run ALL passes
 
 **Pass 1:**
 1. Route `/bmad-agent-bmm-security` (or dev fallback) with both skills loaded
-2. Agent produces `sr-review-findings-{artifact_id}-pass1.md`
-3. Conductor reads findings:
+2. Security agent reviews code, produces findings, then **fixes ALL findings itself** (🔴 VULN first, then 🟡 VERIFY, then 🟢 minor) in the same pane — no separate dev agent handoff
+3. Agent writes `sr-review-findings-{artifact_id}-pass1.md` with findings and fix status
+4. Conductor reads results:
    - No findings → announce `"✅ SR passed in 1 pass."` → exit loop early
-   - 🟢/🟡/🔴 → extract ALL actionable items (🔴 VULN first, then 🟡 VERIFY, then 🟢 minor)
-
-**Auto-fix step (after each pass with ANY findings):**
-Route dev agent with fix list. Dev fixes ALL listed items (🔴 + 🟡 + 🟢) autonomously. No halts.
+   - All findings fixed by agent → proceed to pass 2 for re-verification (if `sr_loop_max >= 2`)
+   - Unfixable 🔴 (requires scope change) → HALT for user
 
 **Pass 2** (if `sr_loop_max >= 2` AND pass 1 had findings):
-Re-run security agent with both skills. Write `sr-review-findings-{artifact_id}-pass2.md`.
+Re-run security agent to verify fixes landed. Agent re-reviews, fixes any regressions or remaining items. Write `sr-review-findings-{artifact_id}-pass2.md`.
 
 **Pass 3** (if `sr_loop_max = 3` AND pass 2 had findings):
-Re-run security agent. Write `sr-review-findings-{artifact_id}-pass3.md`.
+Re-run security agent. Final verification pass. Write `sr-review-findings-{artifact_id}-pass3.md`.
 
 **After final pass OR early exit on 🟢-only:**
 - Write canonical: `sr-review-findings-{artifact_id}.md` (copy of last pass)
