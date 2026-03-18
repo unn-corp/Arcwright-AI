@@ -583,7 +583,7 @@ tmux send-keys -t <pane_id> "<message>" Enter
 # Spawn and capture spawner pane ID first
 SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
 tmux split-window -h -c "#{pane_current_path}" \
-  "claude --dangerously-skip-permissions 'You are the <role> agent. Spawner pane: $SPAWNER_PANE. <task context>'"
+  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' 'You are the <role> agent. Spawner pane: $SPAWNER_PANE. <task context>'"
 ```
 
 **Every spawned agent MUST report back when done:**
@@ -742,7 +742,7 @@ Then print the command block:
 # Context file: _bmad-output/scripts/context-{session_id}.md
 # Branch: {branch}  |  Session: {session_id}  |  Step: {step-name}
 # ─────────────────────────────────────────────────────────────────────────────
-claude --dangerously-skip-permissions "{agent-persona-command}"
+claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' "{agent-persona-command}"
 ```
 
 The new conversation opens as that agent. The user can say "load the context file at `_bmad-output/scripts/context-{session_id}.md`" and the agent has everything it needs. After printing: halt and wait for user to confirm the step is complete before routing to the next step.
@@ -776,9 +776,9 @@ $agentCmd = "{agent-persona-command}"
 if ($NonInteractive) {
     # Headless mode: capture JSON output with session_id for chaining to next step
     if ($Resume) {
-        $result = claude --resume $Resume -p $agentCmd --output-format json --dangerously-skip-permissions
+        $result = claude --resume $Resume -p $agentCmd --output-format json --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}'
     } else {
-        $result = claude -p $agentCmd --output-format json --dangerously-skip-permissions
+        $result = claude -p $agentCmd --output-format json --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}'
     }
     # Parse and save the session_id for the next step to chain from
     $parsed = $result | ConvertFrom-Json
@@ -788,9 +788,9 @@ if ($NonInteractive) {
 } else {
     # Interactive mode: opens agent in terminal, user drives the conversation
     if ($Resume) {
-        claude --resume $Resume --dangerously-skip-permissions $agentCmd
+        claude --resume $Resume --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' $agentCmd
     } else {
-        claude --dangerously-skip-permissions $agentCmd
+        claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' $agentCmd
     }
 }
 

@@ -449,10 +449,42 @@ tmux select-pane -t "$TMUX_PANE" -T "My Label"
 When spawning a dedicated agent, pass its role as the task description so the session file registration is clear:
 ```bash
 tmux split-window -h -c "#{pane_current_path}" \
-  "claude --dangerously-skip-permissions 'You are the backend agent. Read .agents/orchestration/ and register yourself, then work through assigned tasks.'"
+  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{}' 'You are the backend agent. Read .agents/orchestration/ and register yourself, then work through assigned tasks.'"
 ```
 
 The spawned agent registers its own pane ID and role in the orchestration session file on startup — no pane title sniffing needed.
+
+### Agent MCP Configuration — Token Optimization
+
+Sub-agents spawned from the master orchestrator should run with **all MCP servers disabled**. The orchestrator injects any needed database context (feedback items, roadmap cards) into the handoff context file — sub-agents never need to query MCP directly. This significantly reduces token usage since MCP tool schemas are not loaded into the agent's context.
+
+**Only the master orchestrator conversation needs MCP.** All spawned agents use:
+```bash
+--strict-mcp-config --mcp-config '{}'
+```
+
+| Agent | MCP needed? | Reason |
+|---|---|---|
+| master-orchestrator / squid-master | ✅ Yes | Feedback lookup, status updates during triage |
+| dev / quick-flow-solo-dev | ❌ No | Reads and writes code only |
+| pm-agent (QS/PRD/CB) | ❌ No | Works from handoff context file |
+| analyst | ❌ No | Web search + file reads only |
+| ux-designer | ❌ No | Works from PRD only |
+| architect | ❌ No | Works from PRD/UX only |
+| sm-agent | ❌ No | Works from existing artifacts |
+| review-orchestrator | ❌ No | Reads code and findings only |
+| qa-agent | ⚠️ Conditional | Needs playwright MCP only if `playwright-cli` is not installed |
+
+**QA exception:** The qa-agent checks for `playwright-cli` at startup and uses it as the primary test runner. If playwright-cli is confirmed installed, disable all MCP. If not available, allow playwright MCP only:
+```bash
+# playwright-cli available (preferred — disable all MCP):
+--strict-mcp-config --mcp-config '{}'
+
+# playwright-cli NOT available (allow playwright MCP only):
+--strict-mcp-config --mcp-config '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp"]}}}'
+```
+
+**Token savings:** A typical BMAD pipeline with 4–6 spawned agents saves the MCP tool schema load on each agent (~50–200 tokens per MCP server per agent). With 3 MCP servers and 5 agents, this is ~750–3000 tokens per pipeline run.
 
 ### Cap styles
 

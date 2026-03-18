@@ -130,7 +130,7 @@ npx @devo-bmad-custom/squidhub
 
 ---
 
-### `@devo-bmad-custom/tmux` v1.0.2 — tmux Setup
+### `@devo-bmad-custom/tmux` v1.0.3 — tmux Setup
 
 Standalone tmux configuration for AI agent workflows. No BMAD install required.
 
