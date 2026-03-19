@@ -24,6 +24,11 @@ send_path() {
     [ -n "$1" ] && [ -n "$PANE" ] && tmux send-keys -t "$PANE" "$1"
 }
 
+# For plain text: use bracketed paste so Claude Code and readline apps accept it
+send_text() {
+    [ -n "$1" ] && [ -n "$PANE" ] && tmux send-keys -t "$PANE" $'\e[200~'"$1"$'\e[201~'
+}
+
 TYPES=$("$WL_PASTE" --list-types 2>/dev/null)
 [ -z "$TYPES" ] && exit 0
 
@@ -89,6 +94,6 @@ FIRST_LINE=$(printf '%s' "$TEXT" | head -1 | tr -d ' ')
 if [ -f "$FIRST_LINE" ] || [ -d "$FIRST_LINE" ]; then
     send_path "@$FIRST_LINE"
 else
-    printf '%s' "$TEXT" > "$TXTFILE"
-    send_path "$TXTFILE"
+    # Use bracketed paste for plain text so Claude Code and readline apps accept it
+    send_text "$TEXT"
 fi
