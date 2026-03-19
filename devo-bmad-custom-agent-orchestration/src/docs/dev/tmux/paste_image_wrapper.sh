@@ -63,7 +63,6 @@ if [ -n "$IMAGE_TYPE" ]; then
 
     [ -s "$PNGFILE" ] || exit 1
     send_path "@$PNGFILE"
-    /usr/bin/wl-copy --type image/png < "$PNGFILE" 2>/dev/null || true
     exit 0
 fi
 

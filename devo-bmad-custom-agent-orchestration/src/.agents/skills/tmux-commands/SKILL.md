@@ -202,7 +202,7 @@ fi
 
 ### 6. `tmux_register_agent` — Agent startup: find session, register, set identity
 
-Every spawned agent runs this on startup BEFORE doing any work.
+Every agent — including the master/coordinator conversation — runs this on startup BEFORE doing any work. The master conversation always runs `/color blue` + `/rename master-agent` first.
 
 ```bash
 # Inputs: ROLE, SESSION_FILE (passed in spawn context)
