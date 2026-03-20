@@ -1,6 +1,6 @@
 {
   "name": "@devo-bmad-custom/agent-orchestration",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "BMAD Method — AI-native agile workflow system for Claude Code and compatible AI assistants",
   "keywords": [
     "bmad",
