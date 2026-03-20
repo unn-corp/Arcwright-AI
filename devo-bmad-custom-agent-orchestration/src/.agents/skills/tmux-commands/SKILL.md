@@ -212,7 +212,7 @@ case "$MASTER_POS" in
     tmux select-layout main-horizontal
     ;;
   *)
-    tmux select-layout tiled
+    tmux select-layout main-vertical
     ;;
 esac
 sleep 10
@@ -254,7 +254,11 @@ SESSION_NAME=$(tmux display-message -p "#{session_name}")
 WINDOW_ID=$(tmux display-message -p "#{window_id}")
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")
 
-# 3. Find session file
+# 2. Determine role (passed via spawn context — $ROLE should be set)
+ROLE="${ROLE:-unknown}"
+
+# 3. Find session file — SESSION_FILE should be passed explicitly in spawn context.
+#    Fall back to most recent only if not provided (fragile — prefer explicit pass).
 if [ -n "$BMAD_SESSION_ID" ]; then
   SESSION_FILE="$PROJECT_ROOT/_bmad-output/sessions/$BMAD_SESSION_ID/agent-sessions.md"
 else
@@ -336,16 +340,22 @@ SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
 sleep 10
 tmux split-window -h -c "$PROJECT_ROOT" \
   "claude --dangerously-skip-permissions 'You are the $ROLE agent. \
-FIRST: run /color $ROLE_COLOR then /rename $ROLE-agent. \
 Spawner pane: $SPAWNER_PANE. Session file: $SESSION_FILE. \
+Always use -l flag for message content in tmux send-keys. \
 Always sleep 10 before and after every tmux command. \
 Always append Enter to every tmux send-keys call. \
 Always verify pane exists before targeting it. \
 $TASK_CONTEXT'"
-sleep 10
+sleep 15
 
 # Capture ID
 NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
+
+# Set agent identity — spawner sends /color and /rename as separate commands
+sleep 10
+tmux send-keys -t "$NEW_PANE_ID" "/color $ROLE_COLOR" Enter
+sleep 10
+tmux send-keys -t "$NEW_PANE_ID" "/rename ${ROLE}-agent" Enter
 sleep 10
 
 # Set tmux pane title (border label)
@@ -475,7 +485,7 @@ fi
 
 1. **Killing own pane** — always check `TARGET_PANE_ID != $(tmux display-message -p "#{pane_id}")` AND `TARGET_PANE_ID != MASTER_PANE` before `kill-pane`
 2. **No `Enter` on send-keys** — message typed but never submitted
-2. **No sleep between tmux commands** — race conditions, stale pane lists
+3. **No sleep between tmux commands** — race conditions, stale pane lists
 3. **Combining `/color` and `/rename` in one send-keys call** — only the first command runs; send each as a separate call with `sleep 10` between
 4. **Using OSC 2 / `select-pane -T` for naming** — Claude Code overwrites these
 5. **Killing pane without `/exit` first** — leaves partial writes, git locks

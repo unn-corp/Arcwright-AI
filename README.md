@@ -109,7 +109,7 @@ During install you select which AI tools to configure:
 
 ---
 
-### `@devo-bmad-custom/squidhub` v1.0.17 — Squidhub Addon
+### `@devo-bmad-custom/squidhub` v1.0.19 — Squidhub Addon
 
 BMAD Squidhub Addon — squid-master orchestration agent, review workflows, and Squidhub-specific configurations
 

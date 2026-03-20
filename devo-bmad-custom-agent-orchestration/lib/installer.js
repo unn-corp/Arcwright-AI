@@ -234,6 +234,19 @@ async function install(opts) {
     console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`));
   }
 
+  // ── Orchestration template ─────────────────────────────────────────────────
+  const pkgOrchSrc = path.join(SRC_DIR, '.agents', 'orchestration', 'session-template.md');
+  if (await fs.pathExists(pkgOrchSrc)) {
+    const destOrch = path.join(projectRoot, '.agents', 'orchestration');
+    await fs.ensureDir(destOrch);
+    const destFile = path.join(destOrch, 'session-template.md');
+    await fs.copy(pkgOrchSrc, destFile, { overwrite: true });
+    const content = await fs.readFile(pkgOrchSrc);
+    newFileEntries.push({ relPath: '.agents/orchestration/session-template.md', hash: sha256(content) });
+    installedCount++;
+    console.log(chalk.green('  ✓ .agents/orchestration/session-template.md'));
+  }
+
   // ── Orphan removal (update only) ──────────────────────────────────────────
   if (isUpdate) {
     const oldEntries = await readFilesManifest(bmadDir);
