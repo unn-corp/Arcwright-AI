@@ -133,18 +133,25 @@ fi
 
 ### 3. `tmux_kill_agent` — Gracefully close an agent pane
 
+**Trigger:** Coordinator sees a pane with status `ready-to-close` in the session file Pane Lifecycle table.
+
+**Pre-conditions (verify all before killing):**
+- [ ] Agent's report-back received (STEP COMPLETE message seen in this pane or session file updated)
+- [ ] Task marked `done` in session file Tasks section
+- [ ] Claude session ID saved to session file
+
 ```bash
-# Inputs: TARGET_PANE_ID, MASTER_PANE, SESSION_NAME, WINDOW_ID
+# Inputs: TARGET_PANE_ID, MASTER_PANE, SESSION_FILE
 TARGET_PANE_ID="%31"
 MASTER_PANE="%0"
 
-# 1. Verify pane exists in expected context
+# 1. Verify pane exists
 sleep 10
-VERIFIED=$(tmux list-panes -a -F "#{pane_id} #{session_name} #{window_id}" \
-  | grep "^$TARGET_PANE_ID ")
+VERIFIED=$(tmux list-panes -a -F "#{pane_id}" | grep -Fx "$TARGET_PANE_ID")
 if [ -z "$VERIFIED" ]; then
-  echo "ERROR: pane $TARGET_PANE_ID not found — aborting kill"
-  exit 1
+  echo "WARN: pane $TARGET_PANE_ID already gone — marking closed in session file"
+  # Update session file status to closed and exit
+  exit 0
 fi
 
 # 2. Send /exit (lets Claude flush writes and exit cleanly)
@@ -152,17 +159,24 @@ sleep 10
 tmux send-keys -t "$TARGET_PANE_ID" "/exit" Enter
 sleep 10
 
-# 3. Kill the pane
-tmux kill-pane -t "$TARGET_PANE_ID"
-sleep 10
+# 3. Verify pane closed on its own (Claude exits after /exit)
+STILL_ALIVE=$(tmux list-panes -a -F "#{pane_id}" | grep -Fx "$TARGET_PANE_ID")
+if [ -n "$STILL_ALIVE" ]; then
+  # Force kill if still up after /exit
+  tmux kill-pane -t "$TARGET_PANE_ID"
+  sleep 10
+fi
 
-# 4. Rebalance remaining panes
+# 4. Update session file — mark pane as closed
+# Edit Pane Lifecycle row: change status to `closed`, check off remaining boxes
+
+# 5. Rebalance remaining panes
 tmux select-pane -t "$MASTER_PANE"
 sleep 10
 tmux select-layout main-vertical
 sleep 10
 
-echo "Killed pane $TARGET_PANE_ID and rebalanced"
+echo "Closed pane $TARGET_PANE_ID — session file updated, layout rebalanced"
 ```
 
 ### 4. `tmux_rebalance` — Equalize pane sizes with master awareness
@@ -265,8 +279,13 @@ tmux send-keys -t "$SPAWNER_PANE" Enter
 sleep 10
 
 # 4. Check for more pending tasks for this role
-# 5. If found: claim next task
-# 6. If none: set status to idle in Active Agents table
+# 5. If found: claim next task and continue
+# 6. If none:
+#    a. Set status to `ready-to-close` in Pane Lifecycle table (NOT Active Agents)
+#    b. Check all close-down boxes in Pane Lifecycle row:
+#       ☑ report-back sent · ☑ session ID saved · ☑ task marked done · ☑ ready-to-close set
+#    c. The COORDINATOR is responsible for executing /exit + kill-pane.
+#       Do NOT self-exit unless you are the coordinator or explicitly told to.
 ```
 
 ---
