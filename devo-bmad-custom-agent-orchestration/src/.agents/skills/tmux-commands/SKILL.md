@@ -5,8 +5,9 @@ Verified, tested tmux command templates for agent orchestration. Every command i
 **CRITICAL RULES:**
 1. `sleep 10` before AND after every tmux command — no exceptions
 2. Always append `Enter` to every `tmux send-keys` call
-3. Verify pane exists before any operation targeting it
-4. Use `/rename` and `/color` Claude Code commands (not OSC 2 or `select-pane -T`) for agent identity
+3. **Use `-l` (literal) flag for all free-form message content** — prevents `|`, `:`, and other chars being interpreted as tmux key sequences. Send `Enter` as a separate call after. Do NOT use `-l` for slash commands (`/color`, `/rename`, `/exit`) — those must be interpreted.
+4. Verify pane exists before any operation targeting it
+5. Use `/rename` and `/color` Claude Code commands (not OSC 2 or `select-pane -T`) for agent identity
 
 ---
 
@@ -103,9 +104,11 @@ if [ -z "$PANE_EXISTS" ]; then
   exit 1
 fi
 
-# 2. Send the message (ALWAYS with Enter)
+# 2. Send the message — use -l (literal) to prevent | : and other chars being
+#    interpreted as tmux key sequences. ALWAYS append Enter separately.
 sleep 10
-tmux send-keys -t "$TARGET_PANE_ID" "$MESSAGE" Enter
+tmux send-keys -t "$TARGET_PANE_ID" -l "$MESSAGE"
+tmux send-keys -t "$TARGET_PANE_ID" Enter
 sleep 10
 
 # 3. Verify delivery — grep for first 2 words of message in pane buffer
@@ -115,7 +118,8 @@ if [ -z "$DELIVERED" ]; then
   # Retry once
   echo "WARN: message not found in buffer, retrying..."
   sleep 10
-  tmux send-keys -t "$TARGET_PANE_ID" "$MESSAGE" Enter
+  tmux send-keys -t "$TARGET_PANE_ID" -l "$MESSAGE"
+  tmux send-keys -t "$TARGET_PANE_ID" Enter
   sleep 10
 fi
 ```
@@ -250,8 +254,10 @@ RESULT="pass"
 SESSION_ID="<claude_session_id>"
 
 sleep 10
-tmux send-keys -t "$SPAWNER_PANE" \
-  "STEP COMPLETE: $TASK_ID | result: $RESULT | session: $SESSION_ID" Enter
+# Use -l (literal) so | and : are not interpreted as tmux key sequences
+tmux send-keys -t "$SPAWNER_PANE" -l \
+  "STEP COMPLETE: $TASK_ID | result: $RESULT | session: $SESSION_ID"
+tmux send-keys -t "$SPAWNER_PANE" Enter
 sleep 10
 
 # 4. Check for more pending tasks for this role
@@ -336,7 +342,8 @@ tmux send-keys -t "$AGENT_PANE" "/color $NEW_COLOR" Enter
 sleep 10
 tmux send-keys -t "$AGENT_PANE" "/rename $NEW_ROLE-agent" Enter
 sleep 10
-tmux send-keys -t "$AGENT_PANE" "Handle TASK-003 from the session file" Enter
+tmux send-keys -t "$AGENT_PANE" -l "Handle TASK-003 from the session file"
+tmux send-keys -t "$AGENT_PANE" Enter
 sleep 10
 ```
 
