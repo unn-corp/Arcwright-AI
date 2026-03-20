@@ -145,12 +145,26 @@ fi
 TARGET_PANE_ID="%31"
 MASTER_PANE="%0"
 
+# 0. SELF-KILL GUARD — never kill your own pane
+OWN_PANE=$(tmux display-message -p "#{pane_id}")
+if [ "$TARGET_PANE_ID" = "$OWN_PANE" ]; then
+  echo "ERROR: refusing to kill own pane $OWN_PANE — coordinator cannot kill itself"
+  echo "If you need to exit, use /exit manually."
+  exit 1
+fi
+
+# Also guard against killing the master pane (unless caller explicitly overrides)
+if [ "$TARGET_PANE_ID" = "$MASTER_PANE" ]; then
+  echo "ERROR: refusing to kill master pane $MASTER_PANE"
+  exit 1
+fi
+
 # 1. Verify pane exists
 sleep 10
 VERIFIED=$(tmux list-panes -a -F "#{pane_id}" | grep -Fx "$TARGET_PANE_ID")
 if [ -z "$VERIFIED" ]; then
   echo "WARN: pane $TARGET_PANE_ID already gone — marking closed in session file"
-  # Update session file status to closed and exit
+  # Update session file Pane Lifecycle row: status → closed
   exit 0
 fi
 
@@ -167,8 +181,8 @@ if [ -n "$STILL_ALIVE" ]; then
   sleep 10
 fi
 
-# 4. Update session file — mark pane as closed
-# Edit Pane Lifecycle row: change status to `closed`, check off remaining boxes
+# 4. Update session file — mark pane as closed in Pane Lifecycle table
+# Edit row: status → closed, check coord ✓ boxes
 
 # 5. Rebalance remaining panes
 tmux select-pane -t "$MASTER_PANE"
@@ -459,7 +473,8 @@ fi
 
 ## Common Mistakes (Avoid These)
 
-1. **No `Enter` on send-keys** — message typed but never submitted
+1. **Killing own pane** — always check `TARGET_PANE_ID != $(tmux display-message -p "#{pane_id}")` AND `TARGET_PANE_ID != MASTER_PANE` before `kill-pane`
+2. **No `Enter` on send-keys** — message typed but never submitted
 2. **No sleep between tmux commands** — race conditions, stale pane lists
 3. **Combining `/color` and `/rename` in one send-keys call** — only the first command runs; send each as a separate call with `sleep 10` between
 4. **Using OSC 2 / `select-pane -T` for naming** — Claude Code overwrites these
