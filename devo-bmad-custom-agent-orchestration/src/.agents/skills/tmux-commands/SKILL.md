@@ -7,7 +7,7 @@ Verified, tested tmux command templates for agent orchestration. Every command i
 2. Always append `Enter` to every `tmux send-keys` call
 3. **Use `-l` (literal) flag for all free-form message content** — prevents `|`, `:`, and other chars being interpreted as tmux key sequences. Send `Enter` as a separate call after. Do NOT use `-l` for slash commands (`/color`, `/rename`, `/exit`) — those must be interpreted.
 4. Verify pane exists before any operation targeting it
-5. Use `/rename` and `/color` Claude Code commands (not OSC 2 or `select-pane -T`) for agent identity
+5. **`/color` and `/rename` are sent by the spawner** via separate `tmux send-keys` calls after the agent starts — never rely on the agent's prompt to self-invoke them. Each command is its own `send-keys` call with `Enter`, with `sleep 10` between.
 
 ---
 
@@ -56,31 +56,38 @@ ROLE="dev"
 ROLE_COLOR=$(get_role_color "$ROLE")
 SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
 
-# 1. Split the pane
+# 1. Split the pane — wait 15s for WSL bash + Claude to initialize before sending commands
 sleep 10
 tmux split-window -h -c "$PROJECT_ROOT" \
   "claude --dangerously-skip-permissions 'You are the $ROLE agent. \
-FIRST: run /color $ROLE_COLOR then /rename $ROLE-agent. \
-Spawner pane: $SPAWNER_PANE. Session file: $SESSION_FILE. \
+Your spawner pane is $SPAWNER_PANE. Session file: $SESSION_FILE. \
+Always use -l flag for message content in tmux send-keys. \
 Always sleep 10 before and after every tmux command. \
 Always append Enter to every tmux send-keys call. \
 Always verify pane exists before targeting it. \
 $TASK_CONTEXT'"
-sleep 10
+sleep 15
 
 # 2. Capture new pane ID
 NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
+
+# 3. Set agent identity — spawner sends /color and /rename as separate commands.
+#    Do NOT combine into one send-keys call; each must be submitted individually.
+sleep 10
+tmux send-keys -t "$NEW_PANE_ID" "/color $ROLE_COLOR" Enter
+sleep 10
+tmux send-keys -t "$NEW_PANE_ID" "/rename ${ROLE}-agent" Enter
 sleep 10
 
-# 3. Disable OSC 2 auto-rename (we use /rename instead)
+# 4. Disable OSC 2 auto-rename (we use /rename instead)
 tmux set-option -t "$NEW_PANE_ID" -p allow-rename off
 sleep 10
 
-# 4. Set pane border title (visible in tmux, separate from /rename)
+# 5. Set pane border title (visible in tmux, separate from /rename)
 tmux select-pane -t "$NEW_PANE_ID" -T "${ROLE}-${NEW_PANE_ID}"
 sleep 10
 
-# 5. Rebalance layout with master awareness
+# 6. Rebalance layout with master awareness
 tmux select-pane -t "$MASTER_PANE"
 sleep 10
 tmux select-layout main-vertical
@@ -204,9 +211,11 @@ else
 fi
 ```
 
-### 6. `tmux_register_agent` — Agent startup: find session, register, set identity
+### 6. `tmux_register_agent` — Agent startup: find session, register
 
-Every agent — including the master/coordinator conversation — runs this on startup BEFORE doing any work. The master conversation always runs `/color blue` + `/rename master-agent` first.
+Spawned agents do NOT self-invoke `/color` or `/rename` — the spawner sends those via `tmux send-keys` before handing off the task. This template handles session registration only.
+
+The master/coordinator conversation is the exception: it runs `/color blue` and `/rename master-agent` manually as its first two actions since there is no spawner above it.
 
 ```bash
 # Inputs: ROLE, SESSION_FILE (passed in spawn context)
@@ -216,11 +225,6 @@ PANE_ID=$(tmux display-message -p "#{pane_id}")
 SESSION_NAME=$(tmux display-message -p "#{session_name}")
 WINDOW_ID=$(tmux display-message -p "#{window_id}")
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")
-
-# 2. Set own identity via Claude Code commands
-# (These are sent as slash commands in the Claude conversation, not bash)
-# /color <role_color>
-# /rename <role>-agent
 
 # 3. Find session file
 if [ -n "$BMAD_SESSION_ID" ]; then
@@ -349,12 +353,100 @@ sleep 10
 
 ---
 
+## Verification & Retry Protocol
+
+Every tmux operation must be verified after execution. Never assume a command worked.
+
+### Verifying `/color` and `/rename` applied
+
+After the spawner sends identity commands, verify the pane is alive and responsive:
+
+```bash
+# After sending /color and /rename, verify pane is still active (not crashed)
+sleep 10
+PANE_ALIVE=$(tmux list-panes -a -F "#{pane_id}" | grep -Fx "$NEW_PANE_ID")
+if [ -z "$PANE_ALIVE" ]; then
+  echo "ERROR: agent pane $NEW_PANE_ID died after identity commands"
+  exit 1
+fi
+# Note: /color and /rename visual effects are immediate in Claude Code.
+# If the pane is alive, the commands were received.
+```
+
+### Verifying message delivery
+
+Always capture the pane buffer after sending a message and grep for the key token:
+
+```bash
+tmux_verify_delivery() {
+  local PANE="$1"
+  local TOKEN="$2"   # unique substring from the message
+  local RETRIES=3
+
+  for i in $(seq 1 $RETRIES); do
+    sleep 10
+    FOUND=$(tmux capture-pane -t "$PANE" -p -S - | grep -F "$TOKEN")
+    if [ -n "$FOUND" ]; then
+      echo "OK: message confirmed in pane $PANE (attempt $i)"
+      return 0
+    fi
+    if [ $i -lt $RETRIES ]; then
+      echo "WARN: '$TOKEN' not found in pane $PANE, retrying ($i/$RETRIES)..."
+    fi
+  done
+
+  echo "ERROR: message '$TOKEN' never confirmed in pane $PANE after $RETRIES attempts"
+  return 1
+}
+
+# Usage after sending a message:
+tmux send-keys -t "$TARGET_PANE" -l "$MESSAGE"
+tmux send-keys -t "$TARGET_PANE" Enter
+tmux_verify_delivery "$TARGET_PANE" "TASK-001"  # use a unique token from the message
+```
+
+### Verifying agent spawned and initialized
+
+After splitting, confirm the pane exists and Claude has started (prompt visible):
+
+```bash
+# Wait for Claude prompt to appear in new pane (up to 30s)
+READY=0
+for i in 1 2 3; do
+  sleep 10
+  PROMPT=$(tmux capture-pane -t "$NEW_PANE_ID" -p -S - | grep -c "❯\|>\|Claude\|Human")
+  if [ "$PROMPT" -gt 0 ]; then
+    READY=1
+    break
+  fi
+  echo "Waiting for agent to initialize (attempt $i)..."
+done
+if [ "$READY" -eq 0 ]; then
+  echo "ERROR: agent pane $NEW_PANE_ID did not show prompt after 30s"
+  exit 1
+fi
+```
+
+### Retry rules
+
+| Operation | Verify by | Max retries | On failure |
+|---|---|---|---|
+| Message send | grep token in pane buffer | 3 | Log error, write to session file |
+| `/color` / `/rename` | pane still alive | 1 | Re-send both commands |
+| Pane spawn | pane ID in list + prompt visible | 3 | Kill and re-spawn |
+| Layout rebalance | `tmux list-panes` shows expected count | 1 | Re-run `select-layout` |
+
+---
+
 ## Common Mistakes (Avoid These)
 
 1. **No `Enter` on send-keys** — message typed but never submitted
 2. **No sleep between tmux commands** — race conditions, stale pane lists
-3. **Using OSC 2 / `select-pane -T` for naming** — Claude Code overwrites these
-4. **Killing pane without `/exit` first** — leaves partial writes, git locks
-5. **Using `tiled` layout instead of `main-vertical`/`main-horizontal`** — breaks master position
-6. **Reading pane titles for routing** — unreliable; use session file pane IDs
-7. **Spawning without `--dangerously-skip-permissions`** — agent halts on every tool use
+3. **Combining `/color` and `/rename` in one send-keys call** — only the first command runs; send each as a separate call with `sleep 10` between
+4. **Using OSC 2 / `select-pane -T` for naming** — Claude Code overwrites these
+5. **Killing pane without `/exit` first** — leaves partial writes, git locks
+6. **Using `tiled` layout instead of `main-vertical`/`main-horizontal`** — breaks master position
+7. **Reading pane titles for routing** — unreliable; use session file pane IDs
+8. **Spawning without `--dangerously-skip-permissions`** — agent halts on every tool use
+9. **No `-l` flag on message content** — `|` and `:` get interpreted as key sequences, message is garbled
+10. **Agent self-invoking `/color`+`/rename`** — unreliable; spawner sends these via `tmux send-keys` after the agent starts
