@@ -724,19 +724,22 @@ async function setupTmux(projectRoot, chalk) {
   console.log('    ' + chalk.cyan('sudo apt-get install -y wl-clipboard imagemagick wslu'));
   console.log('  ' + chalk.white('⑤ Docker Desktop WSL integration') + chalk.dim(' — GUI only:'));
   console.log('    ' + chalk.dim('Docker Desktop → Settings → Resources → WSL Integration → toggle Ubuntu → Apply & Restart'));
+  console.log('  ' + chalk.white('⑥ gsudo') + chalk.dim(' (Windows sudo — allows WSL to run elevated PowerShell):'));
+  console.log('    ' + chalk.cyan('winget install gerardog.gsudo'));
+  console.log('    ' + chalk.dim('    Or via scoop: scoop install gsudo'));
 
   console.log('');
   console.log(chalk.bold.yellow('  ✦ Can be done manually OR by an AI with relaxed permissions:'));
   console.log(chalk.dim('     These are safe to automate — no sudo or system-level access needed.\n'));
-  console.log('  ' + chalk.white('⑥ NVM + Node') + chalk.dim(' (required for Node-based MCP servers):'));
+  console.log('  ' + chalk.white('⑧ NVM + Node') + chalk.dim(' (required for Node-based MCP servers):'));
   console.log('    ' + chalk.cyan('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash'));
   console.log('    ' + chalk.cyan('source ~/.bashrc && nvm install --lts'));
-  console.log('  ' + chalk.white('⑦ TPM (tmux Plugin Manager):'));
+  console.log('  ' + chalk.white('⑨ TPM (tmux Plugin Manager):'));
   console.log('    ' + chalk.cyan('git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm'));
   console.log('    ' + chalk.dim('    Then inside tmux: press Ctrl+B I to install plugins'));
-  console.log('  ' + chalk.white('⑧ fzf') + chalk.dim(' (required for Actions popup menu):'));
+  console.log('  ' + chalk.white('⑩ fzf') + chalk.dim(' (required for Actions popup menu):'));
   console.log('    ' + chalk.cyan('mkdir -p ~/.local/bin && curl -Lo /tmp/fzf.tar.gz https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz && tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin'));
-  console.log('  ' + chalk.white('⑨ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators):'));
+  console.log('  ' + chalk.white('⑪ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators):'));
   console.log('    ' + chalk.dim('    Download JetBrainsMono NFM from https://www.nerdfonts.com/'));
   console.log('    ' + chalk.dim('    Install JetBrainsMonoNerdFontMono-Regular.ttf to Windows (double-click → Install for all users)'));
   console.log('    ' + chalk.white('    Cursor/VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
@@ -796,6 +799,33 @@ async function setupTmux(projectRoot, chalk) {
     }
   } else {
     console.log(chalk.dim(`  ○ ${xdgOpenPath} already exists`));
+  }
+
+  // gsudo shim — lets WSL call Windows-side gsudo.exe without full path
+  const gsudoShimPath = path.join(homeDir, '.local', 'bin', 'gsudo');
+  if (!await fs.pathExists(gsudoShimPath)) {
+    // Find gsudo.exe on Windows side
+    const { execSync } = require('child_process');
+    let gsudoExe = null;
+    try {
+      // cmd.exe /c where gsudo returns Windows paths — convert first result to WSL path
+      const winPath = execSync('cmd.exe /c where gsudo 2>NUL', { stdio: 'pipe' })
+        .toString().split('\n')[0].trim();
+      if (winPath && winPath.endsWith('.exe')) {
+        // Convert C:\... → /mnt/c/...
+        gsudoExe = '/mnt/' + winPath.replace(/\\/g, '/').replace(/^([A-Za-z]):/, (_, d) => d.toLowerCase());
+      }
+    } catch { /* gsudo not installed on Windows yet */ }
+
+    if (gsudoExe) {
+      const shimContent = `#!/bin/bash\nexec '${gsudoExe}' "$@"\n`;
+      await fs.writeFile(gsudoShimPath, shimContent, { mode: 0o755 });
+      console.log(chalk.green(`  ✓ gsudo shim → ${gsudoShimPath} (delegates to ${gsudoExe})`));
+    } else {
+      console.log(chalk.yellow('  ⚠  gsudo not found on Windows — install it first (winget install gerardog.gsudo), then re-run setup'));
+    }
+  } else {
+    console.log(chalk.dim(`  ○ gsudo shim already exists at ${gsudoShimPath}`));
   }
 
   // ── Step 3: TPM check ────────────────────────────────────────────────────
