@@ -131,6 +131,31 @@ async function setupTmux(projectRoot, chalk) {
     console.log(chalk.dim(`  ○ ${xdgOpenPath} already exists`));
   }
 
+  // gsudo shim — lets WSL call Windows-side gsudo.exe without full path
+  const gsudoShimPath = path.join(homeDir, '.local', 'bin', 'gsudo');
+  if (!await fs.pathExists(gsudoShimPath)) {
+    const { execSync } = require('child_process');
+    let gsudoExe = null;
+    try {
+      const winPath = execSync('cmd.exe /c where gsudo 2>NUL', { stdio: 'pipe' })
+        .toString().split('\n')[0].trim();
+      if (winPath && winPath.endsWith('.exe')) {
+        gsudoExe = '/mnt/' + winPath.replace(/\\/g, '/').replace(/^([A-Za-z]):/, (_, d) => d.toLowerCase());
+      }
+    } catch { /* gsudo not installed on Windows yet */ }
+
+    if (gsudoExe) {
+      const shimContent = `#!/bin/bash\nexec '${gsudoExe}' "$@"\n`;
+      await fs.writeFile(gsudoShimPath, shimContent, { mode: 0o755 });
+      console.log(chalk.green(`  ✓ gsudo shim → ${gsudoShimPath} (delegates to ${gsudoExe})`));
+    } else {
+      console.log(chalk.yellow('  ⚠  gsudo not found on Windows — install it with: winget install gerardog.gsudo'));
+      console.log(chalk.dim('     Then re-run setup to create the WSL shim.'));
+    }
+  } else {
+    console.log(chalk.dim(`  ○ gsudo shim already exists at ${gsudoShimPath}`));
+  }
+
   // ── Step 3: TPM check ─────────────────────────────────────────────────────
   console.log('\n' + chalk.bold('Step 3 — TPM check'));
   if (await fs.pathExists(tpmPath)) {

@@ -118,6 +118,7 @@ Tell Claude to "set up my tmux config" and it will:
 | `sudo apt-get install -y wl-clipboard` | Wayland clipboard access for `Alt+V` paste (`wl-paste`) |
 | `sudo apt-get install -y imagemagick` | BMP/JPEG/WEBP → PNG conversion for `Alt+V` paste |
 | `sudo apt-get install -y wslu` | Provides `wslview` — required for tmux-open URL opening in WSL2 |
+| Install gsudo on Windows (see below) | Allows WSL to run elevated PowerShell commands |
 | Press `Ctrl+B I` inside tmux after first launch | TPM plugin install — requires interactive session |
 
 After installing `wslu`, create the `xdg-open` shim (no sudo):
@@ -125,6 +126,14 @@ After installing `wslu`, create the `xdg-open` shim (no sudo):
 ln -sf /usr/bin/wslview ~/.local/bin/xdg-open
 ```
 This is needed because `tmux-open` hard-codes a check for `xdg-open` and errors if not found.
+
+**gsudo (Windows sudo):** Required for any WSL script that needs to run elevated PowerShell. Install on the Windows side:
+```powershell
+winget install gerardog.gsudo
+# or via Scoop:
+scoop install gsudo
+```
+The installer automatically creates a WSL shim at `~/.local/bin/gsudo` that delegates to the Windows binary. If gsudo is not installed when the installer runs, you'll see a warning — install it then re-run the installer to create the shim.
 
 ---
 
