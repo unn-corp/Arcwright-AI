@@ -864,15 +864,7 @@ async function setupTmux(projectRoot, chalk) {
     const src = path.join(tmuxSrc, srcName);
     if (!await fs.pathExists(src)) continue;
 
-    const exists = await fs.pathExists(dest);
-    if (exists) {
-      const overwrite = await ask(chalk.dim(`  ${dest} already exists. Overwrite? (y/N): `));
-      if (!overwrite.toLowerCase().startsWith('y')) {
-        console.log(chalk.dim(`  ○ Skipped ${path.basename(dest)}`));
-        continue;
-      }
-    }
-
+    // Always overwrite tmux scripts — ensures fixes (e.g. PNG normalization) propagate on update
     await fs.copy(src, dest, { overwrite: true });
     if (dest.endsWith('.sh') || dest.endsWith('.py') || dest === xclipPath) {
       try { await fs.chmod(dest, 0o755); } catch {}

@@ -681,7 +681,11 @@ tmux kill-pane -t <pane_id>
 | `text/html` | Saved to `/tmp/tmux_clipboard_content.html`, path typed |
 | `text/plain` | If it's a valid path: `@path`; otherwise saved to `/tmp/tmux_clipboard_text.txt` |
 
-**Implementation:** `paste_image_wrapper.sh` uses `/usr/bin/wl-paste` (Linux-native Wayland clipboard — no PowerShell/vsock). Files are saved as `/tmp/tmux_clip_YYYYMMDD_HHMMSS.<ext>`. On each run, files from previous days are automatically deleted. The PNG is also copied back to the Wayland clipboard so `Ctrl+V` may also work in Claude Code.
+**Implementation:** `paste_image_wrapper.sh` uses `/usr/bin/wl-paste` (Linux-native Wayland clipboard — no PowerShell/vsock). Files are saved as `/tmp/tmux_clip_YYYYMMDD_HHMMSS.<ext>`. On each run, files from previous days are automatically deleted. The normalized PNG is also written back to the Wayland clipboard via `wl-copy` so subsequent pastes are also clean.
+
+**PNG normalization (WSLg PowerShell fallback):** When `wl-paste` produces empty output (common on WSLg), the script falls back to PowerShell's `System.Windows.Forms.Clipboard::GetImage()`. The raw `Image.Save()` call can produce indexed/palette-mode PNGs that the Anthropic API rejects with `"image format image/png not supported"`. The fix redraws the clipboard image onto a fresh `Format32bppArgb` bitmap before saving, ensuring the output is always standard RGBA PNG.
+
+> **Troubleshooting:** If Claude reports `"Image format image/png not supported"` after pasting a screenshot, your `paste_image_wrapper.sh` is outdated. Re-run the installer (it now always overwrites tmux scripts) or copy the latest version from `docs/dev/paste_image_wrapper.sh`.
 
 **`Ctrl+V` binding** uses `tmux paste-buffer -p` (no trailing newline). Without `-p`, `paste-buffer` appended a newline that auto-submitted the pasted content — fixed.
 

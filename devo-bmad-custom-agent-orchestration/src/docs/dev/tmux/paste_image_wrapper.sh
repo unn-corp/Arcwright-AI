@@ -54,15 +54,28 @@ if [ -n "$IMAGE_TYPE" ]; then
     # Fall back to PowerShell (Windows clipboard API) when wl-paste produces empty output.
     if [ ! -s "$PNGFILE" ]; then
         WINPATH=$(wslpath -w "$PNGFILE" 2>/dev/null)
+        # Normalize to 32bppArgb before saving — System.Drawing.Image.Save() can produce
+        # indexed/palette PNGs that the Anthropic API rejects with "image format not supported".
         powershell.exe -NoProfile -Command "
             Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName System.Drawing
             \$img = [System.Windows.Forms.Clipboard]::GetImage()
-            if (\$img -ne \$null) { \$img.Save('$WINPATH') }
+            if (\$img -ne \$null) {
+                \$bmp = New-Object System.Drawing.Bitmap(\$img.Width, \$img.Height, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+                \$g = [System.Drawing.Graphics]::FromImage(\$bmp)
+                \$g.DrawImage(\$img, 0, 0)
+                \$g.Dispose()
+                \$bmp.Save('$WINPATH', [System.Drawing.Imaging.ImageFormat]::Png)
+                \$bmp.Dispose()
+                \$img.Dispose()
+            }
         " 2>/dev/null
     fi
 
     [ -s "$PNGFILE" ] || exit 1
     send_path "@$PNGFILE"
+    # Writeback normalized PNG to Wayland clipboard so subsequent pastes are also clean
+    /usr/bin/wl-copy --type image/png < "$PNGFILE" 2>/dev/null || true
     exit 0
 fi
 
