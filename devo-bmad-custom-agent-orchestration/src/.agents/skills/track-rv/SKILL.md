@@ -71,6 +71,22 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: REVIEW | result: done | session:
 Artifact naming: all files use `{artifact_id}` suffix.
 Output path: `_bmad-output/features/{feature-slug}/planning/`
 
+**`artifact_id` derivation:** strip leading date and dash from session_id — everything after the third `-` separator.
+Example: `2026-03-13-mission-wizard-review-a3f2` → `artifact_id = mission-wizard-review-a3f2`
+
+**Full artifact naming table:**
+
+| Artifact | Filename pattern |
+|---|---|
+| Review plan | `review-plan-{artifact_id}.md` |
+| Review synthesis | `review-synthesis-{artifact_id}.md` |
+| Research synthesis | `research-synthesis-{artifact_id}.md` |
+| Research bucket N | `research-bucket-{N}-{artifact_id}.md` |
+| UI review findings | `ui-review-findings-{artifact_id}.md` |
+| DRY/SOLID review | `dry-review-findings-{artifact_id}.md` |
+| Security review | `sr-review-findings-{artifact_id}.md` |
+| Epic retro | `retro-{epic-slug}-{artifact_id}.md` |
+
 ### 7. Volume Gate
 
 | Condition                                           | Path  |

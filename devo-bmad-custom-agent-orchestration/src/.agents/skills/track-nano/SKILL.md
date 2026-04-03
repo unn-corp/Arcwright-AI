@@ -46,13 +46,18 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: QD | result: done | session: $CL
 ### 3. USER APPROVAL
 Present summary block and wait for [approve]:
 ```
-OK DRY+UV gate passed. Ready to merge {branch}.
-  Files:  {N} ({lines} lines)
-  DRY:    passed
-  UV:     passed
-[approve] -> /prepare-to-merge
-[review]  -> inspect first
+✅ DRY+UV gate passed. Ready to merge `{branch}`.
+
+Change summary:
+  Files: {N} ({lines} lines changed)
+  DRY: ✅ passed ({N} 🟡 auto-fixed)
+  UV:  ✅ passed
+
+[approve] Proceed to /prepare-to-merge
+[review]  I want to check something first
 ```
+
+Wait for explicit `[approve]` before running PTM. Do NOT auto-proceed.
 
 ### 4. PTM
 - `/prepare-to-merge` in-process
@@ -66,6 +71,10 @@ OK DRY+UV gate passed. Ready to merge {branch}.
 | QA spec file | Inline assertions only               |
 
 Exception: if critical path is touched (auth, payments), add inline assertions and escalate to Small.
+
+## QA Note
+
+Load the `playwright-cli` skill if any UI is touched. Verify the change works through the UI programmatically — navigate to the affected element and assert the expected behaviour. No `.spec.ts` file required unless the change touches critical path logic (auth, payments, core data flows).
 
 ## Non-tmux Variant
 

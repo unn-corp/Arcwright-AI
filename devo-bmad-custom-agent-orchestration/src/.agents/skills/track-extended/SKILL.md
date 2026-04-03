@@ -53,15 +53,22 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: PRD | result: done | session: $C
 ### 4. UX Design + Architecture Notes + Sprint Plan
 - All 3 in ONE split pane session, run sequentially
 - Do NOT spawn 3 separate panes for this step
+- Agent closes ONLY after all three docs are written
 
-| Sub-step      | Agent           | Output file                        |
-|---------------|-----------------|------------------------------------|
-| UX Design     | ux-designer     | ux-design.md                       |
-| Arch Notes    | architect-agent | architecture-notes.md              |
-| Sprint Plan   | pm-agent        | sprint-plan.md                     |
+| Sub-step    | Agent           | Output file             |
+|-------------|-----------------|-------------------------|
+| UX Design   | ux-designer     | ux-design.md            |
+| Arch Notes  | architect-agent | architecture-notes.md   |
+| Sprint Plan | (same session)  | sprint-plan.md          |
 
-Architecture Notes format (<=2 pages):
-- Key tech decisions (<=5 bullets)
+Execution order:
+1. Produce UX design doc (invoking `/bmad-bmm-create-ux-design` inline)
+2. Produce Architecture Notes (invoking `/bmad-bmm-create-architecture` in brief mode) in the same conversation
+3. Run Sprint Planning: 2 parallel in-process sub-agents (backend planner + frontend planner) → synthesise into `sprint-plan.md`
+4. Write all three docs to output path before closing
+
+Architecture Notes format (≤2 pages):
+- Key tech decisions (≤5 bullets)
 - Data model changes
 - API contract changes
 - Dependencies
@@ -70,6 +77,7 @@ Architecture Notes format (<=2 pages):
 Sprint Plan format: ordered task checklist. NOT epic/story decomposition.
 
 Output path: `_bmad-output/features/{slug}/planning/`
+Context passed: PRD + research reports. Handoff: UX doc path, Arch Notes path, Sprint Plan path → Dev agent.
 
 Completion signal:
 ```
@@ -107,7 +115,31 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: DEV | result: done | session: $C
 - Method: Playwright `.spec.ts` via `npx playwright test`
 
 ### 9. USER APPROVAL
-Wait for [approve].
+Present summary and wait for explicit `[approve]`:
+```
+✅ All review gates passed. Ready to merge `{branch}`.
+
+Planning summary:
+  PRD: ✅ written
+  UX: ✅ written
+  Arch Notes: ✅ written
+  Sprint Plan: ✅ written
+  AR+DRY: ✅ passed
+  UV:     ✅ passed
+  SR:     ✅ passed
+  QA:     ✅ {N} tests passing
+
+[approve] Proceed to /prepare-to-merge
+[review]  I want to check something first
+```
+
+Do NOT auto-proceed.
 
 ### 10. PTM
 - `/prepare-to-merge` in-process
+
+## QA Enforcement
+
+Load the `playwright-cli` skill. Primary approach: drive tests through the UI programmatically — open the app, navigate to the feature, interact with it as a real user would, verify behaviour via snapshots and assertions. Prioritize UI interaction testing over writing test files.
+
+`npx playwright test` (`.spec.ts` files) is secondary — use for regression suites or when programmatic UI testing is insufficient for the scenario.

@@ -76,7 +76,7 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: QD | result: done | session: $CL
 - Agent: `review agent`
 - Deployment: split pane
 - review_type: `3-sub`
-- 1 pass per sub-agent (no AR retry loop on Medium)
+- **1 pass per sub-agent — max-3 general AR loop does NOT apply to Final Review Gate**
 - If critical finding: route back to Quick Dev once
 
 ### 7. QA Tests
@@ -85,10 +85,29 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: QD | result: done | session: $CL
 - Method: Playwright `.spec.ts` via `npx playwright test`
 
 ### 8. USER APPROVAL
-Wait for [approve].
+Present summary and wait for explicit `[approve]`:
+```
+✅ Final gate + QA passed. Ready to merge `{branch}`.
+
+  AR+DRY: ✅ passed
+  UV:     ✅ passed
+  SR:     ✅ passed
+  QA:     ✅ {N} tests passing
+
+[approve] Proceed to /prepare-to-merge
+[review]  I want to check something first
+```
+
+Do NOT auto-proceed.
 
 ### 9. PTM
 - `/prepare-to-merge` in-process
+
+## QA Enforcement
+
+Load the `playwright-cli` skill. Primary approach: drive tests through the UI programmatically — open the app, navigate to the feature, interact with it as a real user would, verify behaviour via snapshots and assertions. Prioritize UI interaction testing over writing test files.
+
+`npx playwright test` (`.spec.ts` files) is secondary — use for regression suites or when programmatic UI testing is insufficient for the scenario.
 
 ## Non-tmux Variant
 

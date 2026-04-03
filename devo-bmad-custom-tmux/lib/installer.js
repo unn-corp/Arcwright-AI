@@ -73,6 +73,11 @@ async function setupTmux(projectRoot, chalk) {
   console.log('    ' + chalk.dim('    Install JetBrainsMonoNerdFontMono-Regular.ttf to Windows (double-click → Install for all users)'));
   console.log('    ' + chalk.white('    Cursor/VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
   console.log('    ' + chalk.white('    Windows Terminal:') + ' ' + chalk.cyan('"font": { "face": "JetBrainsMono NFM", "builtinGlyphs": false }'));
+  console.log('  ' + chalk.white('⑩ GitHub CLI (gh)') + chalk.dim(' (required for PR creation and GitHub operations):'));
+  console.log('    ' + chalk.cyan('curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg'));
+  console.log('    ' + chalk.cyan('echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list'));
+  console.log('    ' + chalk.cyan('sudo apt update && sudo apt install gh -y'));
+  console.log('    ' + chalk.dim('    Then authenticate: gh auth login'));
 
   console.log('\n' + chalk.dim('  Complete the manual steps above, then press Enter to continue with config file installation.'));
   await ask(chalk.yellow('  Press Enter to continue → '));

@@ -296,6 +296,18 @@ async function install(opts) {
   console.log(`\n${chalk.bold.green('✓ Done!')} ${installedCount} files ${isUpdate ? 'updated' : 'installed'}.`);
   console.log(`  BMAD is ready at ${chalk.cyan('_devo-bmad-custom/')}\n`);
 
+  // ── Skill prerequisites ────────────────────────────────────────────────────
+  console.log(chalk.bold('Optional skill prerequisites:'));
+  console.log('');
+  console.log('  ' + chalk.white('playwright-cli') + chalk.dim(' — browser automation for QA agent (.agents/skills/playwright-cli/)'));
+  console.log('    ' + chalk.cyan('npm install -g @playwright/cli@latest'));
+  console.log('    ' + chalk.dim('Then: npx playwright install  # downloads browser binaries'));
+  console.log('');
+  console.log('  ' + chalk.white('gsudo') + chalk.dim(' — Windows privilege escalation for git/PowerShell/playwright (.agents/skills/gsudo/)'));
+  console.log('    ' + chalk.cyan('winget install gerardog.gsudo') + chalk.dim('  # Windows'));
+  console.log('    ' + chalk.cyan('scoop install gsudo') + chalk.dim('            # Windows (Scoop)'));
+  console.log('');
+
   // ── Open workflows overview in default browser ─────────────────────────────
   const overviewHtml = path.join(bmadDir, '_memory', 'master-orchestrator-sidecar', 'workflows-overview.html');
   if (await fs.pathExists(overviewHtml)) {
@@ -502,11 +514,15 @@ async function writeClaudeSettings(projectRoot, chalk) {
   if (!settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS) {
     settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = '1';
   }
+  // Disable terminal flicker (alternate rendering path)
+  if (!settings.env.CLAUDE_CODE_NO_FLICKER) {
+    settings.env.CLAUDE_CODE_NO_FLICKER = '1';
+  }
 
   const after = JSON.stringify(settings);
   if (before !== after) {
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
-    console.log(chalk.green('  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)'));
+    console.log(chalk.green('  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1)'));
   } else {
     console.log(chalk.gray('  ○ .claude/settings.json already up to date'));
   }

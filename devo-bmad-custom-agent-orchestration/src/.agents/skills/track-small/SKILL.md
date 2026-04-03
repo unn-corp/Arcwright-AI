@@ -67,10 +67,30 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: QA | result: {pass|fail} | sessi
 ```
 
 ### 5. USER APPROVAL
-Wait for [approve] before PTM.
+Present summary and wait for explicit `[approve]`:
+```
+✅ QA passed. Ready to merge `{branch}`.
+
+Review summary:
+  AR+DRY: ✅ passed ({N} 🟡 auto-fixed)
+  UV:     ✅ passed
+  SR:     ✅ passed
+  QA:     ✅ {N} tests passing
+
+[approve] Proceed to /prepare-to-merge
+[review]  I want to check something first
+```
+
+Do NOT auto-proceed.
 
 ### 6. PTM
 - `/prepare-to-merge` in-process
+
+## QA Enforcement
+
+Load the `playwright-cli` skill. Primary approach: drive tests through the UI programmatically — open the app, navigate to the feature, interact with it as a real user would, verify behaviour via snapshots and assertions. Prioritize UI interaction testing over writing test files.
+
+`npx playwright test` (`.spec.ts` files) is secondary — use for regression suites or when programmatic UI testing is insufficient for the scenario.
 
 ## Non-tmux Variant
 
