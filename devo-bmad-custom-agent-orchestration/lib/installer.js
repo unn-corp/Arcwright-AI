@@ -410,6 +410,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk) {
   // Write root CLAUDE.md (claude-code only) — upserts managed BMAD + tmux sections
   if (tool === 'claude-code') {
     const rootClaudePath = path.join(projectRoot, 'CLAUDE.md');
+    await migrateOldClaudeMd(rootClaudePath);
     const bmadResult  = await upsertManagedBlock(rootClaudePath, '<!-- bmad-agent-start -->', '<!-- bmad-agent-end -->', bmadEntry);
     const tmuxResult  = await upsertManagedBlock(rootClaudePath, '<!-- bmad-tmux-start -->',  '<!-- bmad-tmux-end -->',  tmuxEntry);
     const anyChanged  = bmadResult !== 'noop' || tmuxResult !== 'noop';
@@ -575,6 +576,9 @@ async function writeGlobalClaudeMd(bmadEntry, tmuxEntry, chalk) {
 
   await fs.ensureDir(globalClaudeDir);
 
+  // Migrate: strip old markerless sections left by pre-1.0.21 installers
+  await migrateOldClaudeMd(globalClaudePath);
+
   const bmadResult = await upsertManagedBlock(globalClaudePath, '<!-- bmad-agent-start -->', '<!-- bmad-agent-end -->', bmadEntry);
   const tmuxResult = await upsertManagedBlock(globalClaudePath, '<!-- bmad-tmux-start -->',  '<!-- bmad-tmux-end -->',  tmuxEntry);
   const anyChanged = bmadResult !== 'noop' || tmuxResult !== 'noop';
@@ -585,6 +589,35 @@ async function writeGlobalClaudeMd(bmadEntry, tmuxEntry, chalk) {
     console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated (stale sections replaced)'));
   } else {
     console.log(chalk.gray('  ○ ~/.claude/CLAUDE.md (global) already up to date'));
+  }
+}
+
+/**
+ * One-time migration: remove old markerless BMAD/tmux sections injected by
+ * pre-1.0.21 installers. Detects the old heading anchors and strips from that
+ * heading to the next top-level heading (or end of file). No-ops if file has
+ * new managed-block markers already, or if old headings are not present.
+ */
+async function migrateOldClaudeMd(filePath) {
+  if (!await fs.pathExists(filePath)) return;
+  const content = await fs.readFile(filePath, 'utf8');
+  // Already migrated — new markers present
+  if (content.includes('<!-- bmad-agent-start -->') || content.includes('<!-- bmad-tmux-start -->')) return;
+
+  const OLD_MARKERS = ['## BMAD Method', '## Agent Spawning (tmux-aware)'];
+  let cleaned = content;
+  for (const marker of OLD_MARKERS) {
+    const idx = cleaned.indexOf(marker);
+    if (idx === -1) continue;
+    // Find the next top-level heading after this one, or end of string
+    const rest = cleaned.slice(idx + marker.length);
+    const nextHeading = rest.search(/\n## /);
+    const end = nextHeading === -1 ? cleaned.length : idx + marker.length + nextHeading;
+    cleaned = cleaned.slice(0, idx) + cleaned.slice(end);
+  }
+
+  if (cleaned !== content) {
+    await fs.writeFile(filePath, cleaned.trimStart(), 'utf8');
   }
 }
 

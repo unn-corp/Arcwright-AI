@@ -252,6 +252,9 @@ async function writeGlobalClaudeMd(chalk) {
 
   await fs.ensureDir(globalClaudeDir);
 
+  // Migrate: strip old markerless tmux section left by pre-1.0.19 installers
+  await migrateOldClaudeMd(globalClaudePath);
+
   const START = '<!-- bmad-tmux-start -->';
   const END   = '<!-- bmad-tmux-end -->';
   const block = `${START}\n${tmuxSection}\n${END}`;
@@ -264,6 +267,25 @@ async function writeGlobalClaudeMd(chalk) {
   } else {
     console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) created with tmux agent rules'));
   }
+}
+
+/**
+ * One-time migration: strip old markerless BMAD/tmux sections from pre-1.0.19 installers.
+ */
+async function migrateOldClaudeMd(filePath) {
+  if (!await fs.pathExists(filePath)) return;
+  const content = await fs.readFile(filePath, 'utf8');
+  if (content.includes('<!-- bmad-tmux-start -->')) return;
+
+  const OLD_MARKER = '## Agent Spawning (tmux-aware)';
+  const idx = content.indexOf(OLD_MARKER);
+  if (idx === -1) return;
+
+  const rest = content.slice(idx + OLD_MARKER.length);
+  const nextHeading = rest.search(/\n## /);
+  const end = nextHeading === -1 ? content.length : idx + OLD_MARKER.length + nextHeading;
+  const cleaned = (content.slice(0, idx) + content.slice(end)).trimStart();
+  await fs.writeFile(filePath, cleaned, 'utf8');
 }
 
 /**

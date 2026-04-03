@@ -2420,6 +2420,9 @@ Before routing to ANY sub-agent, scan `{project-root}/.agents/skills/` for insta
 | WebSocket/RT | websocket-engineer, redis-best-practices                                                                                        |
 | Java         | java-fundamentals, java-performance                                                                                             |
 | Debugging    | systematic-debugging                                                                                                            |
+| QA / Testing | playwright-cli (MANDATORY — load .agents/skills/playwright-cli/SKILL.md), systematic-debugging, audit-website                  |
+| UI Review    | ui-ux-pro-custom, ux-audit                                                                                                      |
+| Windows host | gsudo (if $OS == Windows_NT — load .agents/skills/gsudo/SKILL.md for git/pwsh/playwright operations)                           |
 | Code Review (Gate Sub-1) | clean-code-standards (DRY/SOLID lens — always injected for architect-agent at review gates)         |
 | Security Review (Gate Sub-3) | security-review (getsentry — always injected for security-agent at code review gates)             |
 | Any          | subagent-driven-development (if parallel work), writing-skills (if creating specs/docs), audit-website (if QA/review)           |
