@@ -57,8 +57,8 @@ Product Brief (split pane)
 
 ### 5. UX Design + Architecture Doc (parallel)
 - Spawn 2 split panes simultaneously after Planning Gate passes
-- Pane A: `ux-designer-agent` → `ux-design.md`
-- Pane B: `architect-agent` → `architecture.md` **+ inline self-review** (architect runs `/bmad-bmm-create-architecture` then immediately runs `/bmad-bmm-code-review` on its own output before closing — no separate AR sub-agent needed)
+- Pane A: `ux-designer-agent` -> `ux-design.md`
+- Pane B: `architect-agent` -> `architecture.md`
 - Both must complete before Design Gate
 
 ### 6. Design Gate
@@ -68,8 +68,7 @@ Product Brief (split pane)
 
 ### 7. Epics & Stories
 - Deployment: split pane
-- **MANDATORY context (pass ALL of these):** product-brief.md, prd.md, research-mr.md, research-dr.md, research-tr.md (all 3), ux-design.md, architecture.md, design-gate findings
-- Same mandatory context list required again for Sprint Planning (step 9)
+- MANDATORY context: product-brief.md, prd.md, all 3 research reports, ux-design.md, architecture.md, design-gate findings
 - Output: epic and story files in `_bmad-output/features/{slug}/`
 
 ### 8. IR Check (in-process)
@@ -100,6 +99,7 @@ Create Story -> Dev Story (split pane) -> Review Gate (3-sub) -> QA Sub-agent (s
 - Deployment: split pane, `--dangerously-skip-permissions`
 - Context: story file + research context + ux-design.md (if UI story)
 - Pass ONLY what the story needs -- no full planning dump
+- Context scoping rule: story file + directly referenced docs only. Do NOT dump the entire planning folder into context.
 
 **VERTICAL PLANNING RULE:**
 Each dev agent owns one full epic end-to-end (frontend + backend + tests).
@@ -116,12 +116,11 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: DEV:{epic_id} | result: done | s
 - Sub-1 (architect): AR + DRY, up to 3 AR iterations
 - Sub-2 (ux-designer): UV
 - Sub-3 (security): SR
-- Each sub-agent reviews AND fixes its own findings (🔴/🟡/🟢) in the same pane — no separate dev handoff
-- **Auto-escalate via [CC] if 3 AR iterations still have unresolved 🔴** — do not halt, do not ask. Announce: `"⚠️ Review gate [{epic_slug}] — 🔴 unresolved after 3 reviews. Auto-escalating to Correct Course."` then invoke [CC]
+- Auto-escalate via [CC] if 3 AR passes fail — do NOT loop indefinitely
 
 ### Loop Step D: QA Sub-agent
 - Auto-spawned on story-done signal
-- Playwright `.spec.ts` via `npx playwright test`
+- Method: Load the `playwright-cli` skill. Primary approach: drive tests through the UI programmatically. `npx playwright test` with `.spec.ts` files is secondary, only for critical path logic.
 - Pass -> next story in epic
 - Fail -> back to Dev Story for this story
 
@@ -132,32 +131,21 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: DEV:{epic_id} | result: done | s
 - Full codebase review after all epics complete
 
 ### Final QA
-- Full regression run across all new `.spec.ts` files
+- Full regression run: load `playwright-cli` skill, drive full UI regression programmatically across all new features. Supplement with `npx playwright test` for any `.spec.ts` files covering critical path logic.
 
 ### USER APPROVAL + PTM
-Present summary and wait for explicit `[approve]`:
+Present summary block and wait for explicit `[approve]`:
 ```
-✅ All epics complete. Final review gate passed. QA: {N} tests passing. Ready to merge `{branch}`.
+✅ Ready to merge `{branch}`.
 
-Final gate summary:
-  AR+DRY: ✅ passed
-  UV:     ✅ passed
-  SR:     ✅ passed
-  QA:     ✅ {N} tests passing
+Change summary:
+  Epics completed: {N}
+  DRY: ✅  UV: ✅  SR: ✅
+  QA:  ✅ passed (full regression)
 
 [approve] Proceed to /prepare-to-merge
 [review]  I want to check something first
 ```
 
-Wait for explicit `[approve]` before running PTM. PTM runs in-process in the main conversation.
-
-## QA Enforcement
-
-Load the `playwright-cli` skill. Primary approach: drive tests through the UI programmatically — open the app, navigate to the feature, interact with it as a real user would, verify behaviour via snapshots and assertions. Prioritize UI interaction testing over writing test files.
-
-`npx playwright test` (`.spec.ts` files) is secondary — use for regression suites or when programmatic UI testing is insufficient for the scenario.
-
-## Context Scoping (Per-Story Dev)
-
-Pass ONLY: story file, research context file, UX design doc (if `is_ui_story: true`), IR findings.
-Do NOT pass full PRD, full architecture doc, or other stories' context — causes context bloat and bleeding.
+Wait for explicit `[approve]` before running PTM. Do NOT auto-proceed.
+- Then `/prepare-to-merge` in-process.

@@ -939,7 +939,27 @@ Scripts are generated AT ROUTING TIME (after track selection), not at session st
 > **Track override:** Small track limits AR to 1 pass regardless of this section. Medium/Large tracks follow the loop below.
 
 - **AR passes (no findings):** Announce `"✅ AR passed."` and immediately proceed to next step — no halt.
-- **AR finds any combination of 🟢/🟡/🔴:** The review agent itself fixes ALL findings in the same pane/context (🔴 first, then 🟡, then 🟢) before reporting back. The agent reviews → fixes → re-reviews in a self-contained loop. No separate dev agent handoff. This loop is autonomous up to max 3 iterations.
+- **AR finds any combination of 🟢/🟡/🔴:** AR agent (architect sub-agent) produces a structured findings report — it does NOT fix issues itself. Flow:
+
+**Step 1 — AR agent reviews and reports:**
+- Emits `AGENT_SIGNAL::FINDING::ar::{task_id}::issue::{severity} {description}` per issue found
+- Does NOT implement fixes
+- Produces findings file at: `_bmad-output/features/{slug}/ar-findings-{task_id}.md`
+- Format: severity table (🔴/🟡/🟢), description, file:line, proposed fix approach
+- Emits `AGENT_SIGNAL::TASK_DONE::ar::{task_id}::findings::{N} issues found`
+
+**Step 2 — Master dispatches fixes:**
+- If active team with dev pane: dispatch fix task to dev pane with findings file as context
+- If no active team: spawn in-process dev agent with findings context
+- Dev agent implements all 🔴 and 🟡 findings (🟢 are advisory — implement at dev's discretion)
+- Dev signals master: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_changed}`
+
+**Step 3 — Master re-dispatches to AR agent:**
+- "Re-review only the files changed in {files_changed}"
+- AR agent re-reviews → emits findings (should be fewer/none)
+- Loop until AR emits TASK_DONE with no new 🔴/🟡 findings
+- This AR→dev→AR loop is autonomous up to max 3 full iterations
+
 - **AR loop max (3) reached with unresolved 🔴:** This is a halt trigger — requires user decision:
 
 ```
@@ -952,6 +972,8 @@ Options: [skip] override with documented risk, [escalate] trigger [CC] Correct C
 
 If [CC] is chosen: invoke the Correct Course workflow automatically.
 
+> **Active team routing:** When a team is active, AR findings are always routed through the team's registered dev pane (read from `active_team.panes.dev` in session-state.md). Master dispatches the findings file path to the dev pane and polls for `AGENT_SIGNAL::TASK_DONE::dev`. If no dev pane is registered in the active team, fall back to spawning an in-process dev agent.
+
 ---
 
 ## Workflow Tracks
@@ -963,472 +985,26 @@ If [CC] is chosen: invoke the Correct Course workflow automatically.
 
 ### Track Selection Reference
 
-| Score | Track    | Files  | Key signal                                          |
-|-------|----------|--------|-----------------------------------------------------|
-| 0–1   | Nano     | 1–2    | ≤20 lines, no new imports, one-commit undo          |
-| 1–2   | Small    | 2–4    | single concern, no schema changes                   |
-| 2–3   | Compact  | 4–8    | may need light research, one review cycle           |
-| 3–4   | Medium   | 6–12   | UX design needed, 2 review gates                    |
-| 4–5   | Extended | 10–16  | PRD + arch notes + sprint plan, no epic loop        |
-| 5+    | Large    | 12+    | epic decomposition, full planning pipeline          |
+| Track | Trigger Criteria |
+|---|---|
+| Nano | 1-2 files, <=20 lines, no new imports |
+| Small | 2-4 files, single concern, clear AC |
+| Compact | 4-8 files, may touch unfamiliar area or external API |
+| Medium | 6-12 files, new UI flow or notable backend change |
+| Extended | 10-16 files, significant feature, cross-cutting concerns |
+| Large | 12+ files, multi-epic, new subsystem |
+| RV | Audit-first: existing area review, then fix path determined by finding volume |
 
 ### Scope Creep Upgrade Table
 
-If scope grows past the active track's file limit, pause and offer upgrade:
-
-| Active Track | File limit | Upgrade to |
-|---|---|---|
-| Nano     | 1–2   | Small    |
-| Small    | 2–4   | Compact  |
-| Compact  | 4–8   | Medium   |
-| Medium   | 6–12  | Extended |
-| Extended | 10–16 | Large    |
-
-**On upgrade:** update `session-state.track`. Continue from current step — do NOT restart triage.
-
----
-
-### UI Review Sub-Workflow (`[UV]`)
-
-**Trigger:** `[UV]` standalone OR injected as UI sub-agent by `review agent` during Multi-Lens Audit.
-
-**Agent:** `/bmad-agent-bmm-ux-designer`
-
-**Skill:** `ui-ux-pro-custom` (`--design-system --stack shadcn`) — loaded on EVERY invocation.
-Also runs: `--domain ux` for accessibility supplement.
-**Also reads:** your project's styling standards doc (configure path in master-orchestrator config.yaml).
-
-#### Audit Categories
-
-| Category | Severity Guide |
+| From | Upgrade trigger |
 |---|---|
-| Design Token Violations | 🔴 always critical |
-| Dialog Pattern (WCAG 2.1 flex-column) | 🔴 always critical |
-| Component Reuse (reimplementing `ui/` components) | 🟡 major |
-| Typography (hardcoded font sizes) | 🟡 major |
-| Spacing & Layout (magic pixel values) | 🟢 minor |
-| Mobile Responsive (missing breakpoints) | 🔴 if completely absent · 🟡 if partial |
-| Accessibility (a11y) — WCAG 2.1 AA | 🔴 for AA violations · 🟡 for improvements |
-| Animation & Transitions | 🟡 major |
-| Icon Consistency | 🟢 minor |
-| Dark Mode | 🟡 major |
+| Nano | Exceeds 20 lines OR requires new imports |
+| Small | Exceeds 4 files OR schema/dep changes |
+| Compact | Exceeds 8 files OR needs UX design |
+| Medium | Exceeds 12 files OR needs epic decomposition |
+| Extended | Exceeds 16 files OR needs full epic loop |
 
-**Status rules:**
-- `passed` — zero critical findings AND three or fewer major findings
-- `needs_fixes` — any critical finding OR four or more major findings
-
-**Output:** `ui-review-findings-{artifact_id}.md` in `_bmad-output/features/{feature-slug}/planning/`
-
-**YAML verdict returned to review agent:**
-```yaml
-ui_review_verdict:
-  target: {path or feature name}
-  actionable_count: {N}
-  critical: {count}
-  major: {count}
-  minor: {count}
-  findings_path: _bmad-output/features/{feature-slug}/planning/ui-review-findings-{artifact_id}.md
-  status: passed | needs_fixes
-```
-
-**Handoff context block:**
-```
-<context>
-  session_id: {session_id}
-  artifact_id: {artifact_id}
-  step: "UI Review — {target}"
-  review_target: {path or feature name}
-  feature_slug: {slug}
-  planning_artifacts: _bmad-output/features/{feature-slug}/planning/
-  skill: ui-ux-pro-custom
-  stack: shadcn
-  styling_standards: {project_styling_standards_path}
-  loop_mode: false
-  output_path: _bmad-output/features/{feature-slug}/planning/ui-review-findings-{artifact_id}.md
-  execution_directive: >
-    FULLY AUTONOMOUS. Load ui-ux-pro-custom (--design-system --stack shadcn) and
-    (--domain ux). Read styling-standards.md. Audit the target. Produce findings report.
-    Do not halt for input. Write output to output_path.
-</context>
-/bmad-agent-bmm-ux-designer
-```
-
-**`[UV]` standalone post-findings:** Display summary, then ask:
-```
-🎨 UI Review complete — {N} findings (🔴 {r} · 🟡 {y} · 🟢 {g}).
-
-[QD] Fix now — Quick Dev → QA → Review Gate (3 sub-agents) → USER APPROVAL
-[defer] Save findings for later — findings written to {output_path}
-```
-
-**Reference:** `_bmad-output/bmb-creations/master-orchestrator/tracks/ui-review-workflow.md`
-
----
-
-### UI Review Loop (`[UVL]`)
-
-**Trigger:** `[UVL]` or fuzzy match on "ui-review-loop".
-
-**Purpose:** Autonomous N-pass UI review cycle — asks loop count upfront, then runs all passes + auto-fixes without stopping. Same skill context as `[UV]`.
-
-#### Upfront Loop Count Prompt
-
-```
-🎨 UI Review Loop activated.
-
-How many review iterations would you like?
-  [1] One pass — review and fix, no repeat
-  [2] Two passes — fix then re-verify
-  [3] Three passes — maximum (recommended for major UI overhaul)
-  [enter] Default: 2
-```
-
-Store as `session-state.uv_loop_max` (1–3).
-
-#### Loop Execution (Fully Autonomous)
-
-Derive `artifact_id` from active `session_id` if not already set. Run ALL passes without halting between them.
-
-**Pass 1:**
-1. Route `/bmad-agent-bmm-ux-designer` with UI Review handoff context (`loop_mode: true`, `output_path: ...pass1.md`)
-2. ux-designer reviews code, produces findings, then **fixes ALL findings itself** (🔴 first, then 🟡, then 🟢) in the same pane — no separate dev agent handoff
-3. ux-designer writes `ui-review-findings-{artifact_id}-pass1.md` with findings and fix status
-4. Conductor reads results:
-   - No findings → announce `"✅ UV passed in 1 pass."` → exit loop early
-   - All findings fixed by agent → proceed to pass 2 for re-verification (if `uv_loop_max >= 2`)
-   - Unfixable 🔴 (requires scope change) → HALT for user
-
-**Pass 2** (if `uv_loop_max >= 2` AND pass 1 had findings):
-Re-run ux-designer to verify fixes landed. Agent re-reviews, fixes any regressions or remaining items. Write `ui-review-findings-{artifact_id}-pass2.md`.
-
-**Pass 3** (if `uv_loop_max = 3` AND pass 2 had findings):
-Re-run ux-designer. Final verification pass. Write `ui-review-findings-{artifact_id}-pass3.md`.
-
-**After final pass OR early exit on 🟢-only:**
-- Write canonical: `ui-review-findings-{artifact_id}.md` (copy of last pass file)
-- Announce:
-  ```
-  ✅ UV loop complete — {N} pass(es). {r} 🔴 {y} 🟡 {g} 🟢 remaining.
-  ```
-
-**If `uv_loop_max` reached AND unresolved 🔴 still present — HALT:**
-```
-⚠️ UI Review loop limit ({uv_loop_max} passes) reached.
-Persistent 🔴 findings:
-  - {finding 1}
-  - {finding 2}
-Options: [skip] override with documented risk  |  [escalate] trigger [CC] Correct Course.
-```
-
-**Key differences from single-pass `[UV]`:**
-- `[UV]` runs once, reports, asks user what to do next
-- `[UVL]` asks loop count upfront, then runs ALL passes + auto-fixes without stopping
-
-**Same skill context as `[UV]` on EVERY pass:** `ui-ux-pro-custom` + `shadcn` stack + `docs/frontend/styling-standards.md`
-
-**Per-pass output files:** `ui-review-findings-{artifact_id}-pass{N}.md`
-**Canonical output:** `ui-review-findings-{artifact_id}.md` (written after loop exits)
-
-This mirrors the AR review loop behaviour defined in the Adversarial Review autonomous flow section above.
-
----
-
-### DRY/SOLID Review Sub-Workflow (`[DRY]`)
-
-**Trigger:** `[DRY]` standalone OR injected as part of Gate Sub-1 by `review agent` (architect-agent runs AR + DRY in sequence as part of the gate).
-
-**Agent:** `/bmad-agent-bmm-architect`
-
-**Skill:** `clean-code-standards` — loaded on EVERY invocation. Evaluates 23 rules across 7 categories (SOLID, Core, Design Patterns, Organization, Naming, Functions, Documentation).
-
-**Finding IDs:** `DRY-001`, `DRY-002`, etc.
-
-**Auto-pass rule:** If the target is pure markup (`.css`/`.svg`/`.md` only — no `.ts`/`.tsx`/`.py`), DRY auto-passes with a note.
-
-#### Audit Categories
-
-| Category | Rules | Severity Guide |
-|---|---|---|
-| SOLID | SRP · OCP · LSP · ISP · DIP | 🔴 when causing tight coupling or untestability |
-| Core Principles | DRY · KISS · YAGNI · SoC · LoD · Fail Fast · Encapsulation | 🔴 DRY with 3+ duplicated blocks · 🟡 others |
-| Design Patterns | Repository · Factory · Observer | 🟡 major |
-| Code Organization | Module size (>300 lines) · Function size (>30 lines) · Nesting (3+ levels) | 🟡 major |
-| Naming | Intent · Consistency | 🟡 major |
-| Functions | ≤3 args · No hidden side effects | 🟡 major |
-| Documentation | WHY not WHAT | 🟢 minor |
-
-**Status rules:**
-- `passed` — zero critical findings and ≤3 major findings
-- `needs_fixes` — any critical finding OR 4+ major findings
-
-**Output:** `dry-review-findings-{artifact_id}.md` in `_bmad-output/features/{feature-slug}/planning/`
-
-**YAML verdict returned:**
-```yaml
-dry_review_verdict:
-  target: {path or feature name}
-  actionable_count: {N}
-  critical: {count}
-  major: {count}
-  minor: {count}
-  findings_path: _bmad-output/features/{feature-slug}/planning/dry-review-findings-{artifact_id}.md
-  status: passed | needs_fixes
-```
-
-**Handoff context block:**
-```
-<context>
-  session_id: {session_id}
-  artifact_id: {artifact_id}
-  step: "DRY/SOLID Review — {target}"
-  review_target: {path or feature name}
-  feature_slug: {slug}
-  planning_artifacts: _bmad-output/features/{feature-slug}/planning/
-  skill: clean-code-standards
-  output_path: _bmad-output/features/{feature-slug}/planning/dry-review-findings-{artifact_id}.md
-  execution_directive: >
-    FULLY AUTONOMOUS. Load clean-code-standards skill. Audit all .ts, .tsx, .py files
-    in the target. Evaluate all 23 rules. Produce findings report. Write output.
-    Do not halt for input.
-</context>
-/bmad-agent-bmm-architect
-```
-
-**`[DRY]` standalone post-findings:** Display summary, then ask:
-```
-🔨 DRY/SOLID Review complete — {N} findings (🔴 {r} · 🟡 {y} · 🟢 {g}).
-
-[QD] Fix now — Quick Dev → QA → Review Gate (3 sub-agents) → USER APPROVAL
-[defer] Save findings for later — written to {output_path}
-```
-
-**Reference:** `_bmad-output/bmb-creations/master-orchestrator/tracks/dr-review-workflow.md`
-
----
-
-### DRY/SOLID Review Loop (`[DRYL]`)
-
-**Trigger:** `[DRYL]` or fuzzy match on "dry-solid-review-loop".
-
-**Purpose:** Autonomous N-pass DRY/SOLID review cycle — asks loop count upfront, then runs all passes + auto-fixes without stopping. Same skill context as `[DRY]`.
-
-#### Upfront Loop Count Prompt
-
-```
-🔨 DRY/SOLID Review Loop activated.
-
-How many review iterations would you like?
-  [1] One pass — review and fix, no repeat
-  [2] Two passes — fix then re-verify
-  [3] Three passes — maximum (recommended for major refactor)
-  [enter] Default: 2
-```
-
-Store as `session-state.dry_loop_max` (1–3).
-
-#### Loop Execution (Fully Autonomous)
-
-Derive `artifact_id` from active `session_id` if not already set. Run ALL passes without halting.
-
-**Pass 1:**
-1. Route `/bmad-agent-bmm-architect` with DRY Review handoff context (`output_path: ...pass1.md`)
-2. architect-agent reviews code, produces findings, then **fixes ALL findings itself** (🔴 first, then 🟡, then 🟢) in the same pane — no separate dev agent handoff
-3. architect-agent writes `dry-review-findings-{artifact_id}-pass1.md` with findings and fix status
-4. Conductor reads results:
-   - No findings → announce `"✅ DRY passed in 1 pass."` → exit loop early
-   - All findings fixed by agent → proceed to pass 2 for re-verification (if `dry_loop_max >= 2`)
-   - Unfixable 🔴 (requires scope change) → HALT for user
-
-**Pass 2** (if `dry_loop_max >= 2` AND pass 1 had findings):
-Re-run architect-agent to verify fixes landed. Agent re-reviews, fixes any regressions or remaining items. Write `dry-review-findings-{artifact_id}-pass2.md`.
-
-**Pass 3** (if `dry_loop_max = 3` AND pass 2 had findings):
-Re-run architect-agent. Final verification pass. Write `dry-review-findings-{artifact_id}-pass3.md`.
-
-**After final pass OR early exit on 🟢-only:**
-- Write canonical: `dry-review-findings-{artifact_id}.md` (copy of last pass)
-- Announce: `"✅ DRY loop complete — {N} pass(es). {r} 🔴 {y} 🟡 {g} 🟢 remaining."`
-
-**If `dry_loop_max` reached AND unresolved 🔴 — HALT:**
-```
-⚠️ DRY/SOLID Review loop limit ({dry_loop_max} passes) reached.
-Persistent 🔴 findings:
-  - {finding 1}
-  - {finding 2}
-Options: [skip] override with documented risk  |  [escalate] trigger [CC] Correct Course.
-```
-
-**Per-pass output files:** `dry-review-findings-{artifact_id}-pass{N}.md`
-**Canonical output:** `dry-review-findings-{artifact_id}.md` (written after loop exits)
-
-This mirrors the UV and AR review loop behaviour defined above.
-
----
-
-### Security Review Sub-Workflow (`[SR]`)
-
-**Trigger:** `[SR]` standalone OR injected as Gate Sub-3 by `review agent`.
-
-**Agent:** `/bmad-agent-bmm-security` (fallback: `/bmad-agent-bmm-dev` if security agent not installed)
-
-**Skills:** BOTH loaded on EVERY invocation:
-1. `security-review` (getsentry) — confidence-tiered, data flow tracing, `VULN-NNN`/`VERIFY-NNN` IDs
-2. Claude Code native `/security-review` — SQL injection, XSS, auth flaws, input sanitization, deps
-
-**Auto-pass rule:** If the target is pure markup (`.css`/`.svg`/`.md` only), SR auto-passes with a note.
-
-#### Vulnerability Categories
-
-| Category | What to Check | Severity |
-|---|---|---|
-| SQL Injection | Raw query strings, f-string in queries, ORM raw() | 🔴 HIGH |
-| XSS | `dangerouslySetInnerHTML`, `innerHTML`, unescaped vars | 🔴 HIGH |
-| Authentication | Missing `@token_required`/`@admin_required`, JWT gaps | 🔴 HIGH |
-| IDOR | Missing ownership checks on resource access | 🔴 HIGH |
-| Secrets in Code | Hardcoded API keys, passwords, tokens | 🔴 HIGH |
-| Input Validation | Unvalidated request params, missing bounds | 🟡 MEDIUM |
-| CSRF | State-changing POST without CSRF protection | 🟡 MEDIUM |
-| Path Traversal | User input in file paths, `../` sequences | 🟡 MEDIUM |
-| Broken Access Control | Privilege escalation, role bypass | 🟡 MEDIUM |
-| Dependency Vulns | Known CVEs in requirements/package.json | 🟡 MEDIUM |
-
-**Severity mapping:**
-- 🔴 Critical = HIGH confidence (confirmed exploitable, clear data flow to sink)
-- 🟡 Major = MEDIUM confidence (probable, needs verification) — finding ID: `VERIFY-NNN`
-- 🟢 Minor = LOW confidence / informational
-
-**Status rules:**
-- `passed` — zero critical (HIGH) findings and ≤3 major (MEDIUM) findings
-- `needs_fixes` — any critical finding OR 4+ major findings
-
-**Output:** `sr-review-findings-{artifact_id}.md` in `_bmad-output/features/{feature-slug}/planning/`
-
-**YAML verdict returned:**
-```yaml
-sr_review_verdict:
-  target: {path or feature name}
-  actionable_count: {N}
-  critical: {count of HIGH}
-  major: {count of MEDIUM}
-  minor: {count of LOW}
-  findings_path: _bmad-output/features/{feature-slug}/planning/sr-review-findings-{artifact_id}.md
-  status: passed | needs_fixes
-```
-
-**Handoff context block:**
-```
-<context>
-  session_id: {session_id}
-  artifact_id: {artifact_id}
-  step: "Security Review — {target}"
-  review_target: {path or feature name}
-  feature_slug: {slug}
-  planning_artifacts: _bmad-output/features/{feature-slug}/planning/
-  skills: [security-review, /security-review]
-  output_path: _bmad-output/features/{feature-slug}/planning/sr-review-findings-{artifact_id}.md
-  execution_directive: >
-    FULLY AUTONOMOUS. Load getsentry security-review skill AND activate native /security-review.
-    Run both on the target. Produce unified findings using VULN-NNN (HIGH) / VERIFY-NNN (MEDIUM).
-    Write output to output_path. Do not halt for input. Return sr_review_verdict.
-</context>
-/bmad-agent-bmm-security
-```
-
-**`[SR]` standalone post-findings:** Display summary, then ask:
-```
-🔒 Security Review complete — {N} findings (🔴 {r} VULN · 🟡 {y} VERIFY · 🟢 {g}).
-
-[QD] Fix now — Quick Dev → QA → Review Gate (3 sub-agents) → USER APPROVAL
-[defer] Save findings for later — written to {output_path}
-```
-
-**Reference:** `_bmad-output/bmb-creations/master-orchestrator/tracks/sr-review-workflow.md`
-
----
-
-### Security Review Loop (`[SRL]`)
-
-**Trigger:** `[SRL]` or fuzzy match on "security-review-loop".
-
-**Purpose:** Autonomous N-pass security review cycle. Same skill context as `[SR]` on every pass.
-
-#### Upfront Loop Count Prompt
-
-```
-🔒 Security Review Loop activated.
-
-How many review iterations would you like?
-  [1] One pass — review and fix, no repeat
-  [2] Two passes — fix then re-verify
-  [3] Three passes — maximum (recommended for security hardening sprint)
-  [enter] Default: 2
-```
-
-Store as `session-state.sr_loop_max` (1–3).
-
-#### Loop Execution (Fully Autonomous)
-
-Derive `artifact_id` from active `session_id` if not already set. Run ALL passes without halting.
-
-**Pass 1:**
-1. Route `/bmad-agent-bmm-security` (or dev fallback) with both skills loaded
-2. Security agent reviews code, produces findings, then **fixes ALL findings itself** (🔴 VULN first, then 🟡 VERIFY, then 🟢 minor) in the same pane — no separate dev agent handoff
-3. Agent writes `sr-review-findings-{artifact_id}-pass1.md` with findings and fix status
-4. Conductor reads results:
-   - No findings → announce `"✅ SR passed in 1 pass."` → exit loop early
-   - All findings fixed by agent → proceed to pass 2 for re-verification (if `sr_loop_max >= 2`)
-   - Unfixable 🔴 (requires scope change) → HALT for user
-
-**Pass 2** (if `sr_loop_max >= 2` AND pass 1 had findings):
-Re-run security agent to verify fixes landed. Agent re-reviews, fixes any regressions or remaining items. Write `sr-review-findings-{artifact_id}-pass2.md`.
-
-**Pass 3** (if `sr_loop_max = 3` AND pass 2 had findings):
-Re-run security agent. Final verification pass. Write `sr-review-findings-{artifact_id}-pass3.md`.
-
-**After final pass OR early exit on 🟢-only:**
-- Write canonical: `sr-review-findings-{artifact_id}.md` (copy of last pass)
-- Announce: `"✅ SR loop complete — {N} pass(es). {r} 🔴 {y} 🟡 {g} 🟢 remaining."`
-
-**If `sr_loop_max` reached AND unresolved 🔴 — HALT:**
-```
-⚠️ Security Review loop limit ({sr_loop_max} passes) reached.
-Persistent 🔴 findings (unresolved vulnerabilities):
-  - {VULN-001: finding description}
-  - {VULN-002: finding description}
-Options: [skip] override with documented risk  |  [escalate] trigger [CC] Correct Course.
-```
-
-**Per-pass output files:** `sr-review-findings-{artifact_id}-pass{N}.md`
-**Canonical output:** `sr-review-findings-{artifact_id}.md` (written after loop exits)
-
-This mirrors the UV and DRY review loop behaviour defined above.
-
----
-
-### Research Context Reuse Protocol
-
-> **Why reuse?** create-story dispatches 3–4 consolidated research agents (each covering 2 source docs) to build a research report. This is expensive. dev-story runs immediately after — it should not re-read the same artifacts.
-
-**Context file location:** `_bmad-output/parallel/research-context-{story-key}.md`
-
-**Lifecycle:**
-
-- **Written by:** create-story Step 2, after all consolidated research agents return
-- **Read by:** dev-story Step 1 (before doing any artifact reads)
-- **Deleted by:** dev-story Step 12 on story completion (or after 24h staleness check — whichever comes first)
-- **Staleness check:** if file is older than 24h when dev-story loads it, warn: `"⚠️ Research context is {N}h old — architecture/UX docs may have changed. Reload? [Yes/No]"`
-
-**Master Orchestrator routing:** When routing to dev-story after create-story in same session, automatically pass the context file path in the handoff context block:
-
-```
-research_context: _bmad-output/parallel/research-context-{story-key}.md
-story_key: {story-key}
-is_ui_story: {is_ui_story}
-```
-
-**IR report location:** `_bmad-output/parallel/story-ir-report-{story-key}.md` (also available for dev agent to review before starting implementation)
-
----
 
 ## Parallel Dev Protocol
 

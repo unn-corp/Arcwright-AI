@@ -62,7 +62,7 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: REVIEW | result: {pass|escalate}
 ### 5. QA Tests
 - Agent: `qa-agent`
 - Deployment: split pane
-- Method: Playwright `.spec.ts` via `npx playwright test`
+- Method: Load the `playwright-cli` skill. Primary approach: drive tests through the UI programmatically — navigate, interact, assert. `npx playwright test` with `.spec.ts` files is secondary, only when critical path logic (auth, payments, core data flows) is touched.
 
 Completion signal:
 ```
@@ -70,30 +70,23 @@ tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: QA | result: {pass|fail} | sessi
 ```
 
 ### 6. USER APPROVAL
-Present summary and wait for explicit `[approve]`:
+Present summary block and wait for explicit `[approve]`:
 ```
-✅ QA passed. Ready to merge `{branch}`.
+✅ Ready to merge `{branch}`.
 
-Review summary:
-  AR+DRY: ✅ passed ({N} 🟡 auto-fixed)
-  UV:     ✅ passed
-  SR:     ✅ passed
-  QA:     ✅ {N} tests passing
+Change summary:
+  Files: {N}
+  DRY: ✅  UV: ✅  SR: ✅
+  QA:  ✅ passed
 
 [approve] Proceed to /prepare-to-merge
 [review]  I want to check something first
 ```
 
-Do NOT auto-proceed.
+Wait for explicit `[approve]` before running PTM. Do NOT auto-proceed.
 
 ### 7. PTM
 - `/prepare-to-merge` in-process
-
-## QA Enforcement
-
-Load the `playwright-cli` skill. Primary approach: drive tests through the UI programmatically — open the app, navigate to the feature, interact with it as a real user would, verify behaviour via snapshots and assertions. Prioritize UI interaction testing over writing test files.
-
-`npx playwright test` (`.spec.ts` files) is secondary — use for regression suites or when programmatic UI testing is insufficient for the scenario.
 
 ## Non-tmux Variant
 
