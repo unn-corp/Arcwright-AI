@@ -296,7 +296,7 @@ Recommended upgrade: [{suggested_track}]
 
 ```
 🎯 TRIAGE RESULT
-─────────────────────────────
+-----------------------------
 Q1 Scope:           [answer] ([plain English]) → +N complexity
 Q2 Risk:            [answer] ([plain English]) → +N complexity
 Q3 Reversibility:   [answer] ([plain English]) → +N complexity
@@ -306,7 +306,7 @@ Recommended Track: [NANO / SMALL / COMPACT / MEDIUM / EXTENDED / LARGE]
 
 Why: [1-2 sentences linking the three answers to the recommendation]
 What this means for you: [one sentence translating track into user-facing terms]
-─────────────────────────────
+-----------------------------
 
 Override? Pick your track:
   [N] Nano     — 1–2 files, straight to dev, ≤ 20 lines, no spec
@@ -406,6 +406,15 @@ If you'd like to develop this alongside other work on an existing branch, say "a
 **Execution mode sync direction:** `memories.execution_mode_preference` → `session-state.execution_mode` on session start (memories is the persisted preference). `session-state.execution_mode` → `memories.execution_mode_preference` on [XM] mode switch or session end. Session-state is the live value; memories is the persisted preference.
 
 User can switch modes at any point with `[XM switch-mode]` — the change applies from the next agent handoff onward.
+
+### Windows Operations (gsudo)
+
+On Windows (WSL2 or PowerShell), use `gsudo` for privileged commands:
+- Git credentials: `gsudo git credential-manager configure`
+- PowerShell: `gsudo pwsh -Command "..."`
+- Playwright install: `gsudo playwright-cli install chromium`
+- Skill: load `.agents/skills/gsudo/SKILL.md` before any admin operation
+- Install: `winget install gerardog.gsudo`
 
 ### Workflow-to-Agent Mapping
 
@@ -537,6 +546,8 @@ At DS (dev-story) handoff, read the `deployment:` field on each story file to de
 
 sm-agent annotates each story file with `deployment: split-pane` or `deployment: in-process` before handing off to master-orchestrator.
 
+**Vertical planning rule:** Each dev agent owns one full epic end-to-end (frontend + backend + tests). Do NOT split an epic into separate frontend/backend agents — one agent builds the full story. Spawn a new agent only for the NEXT epic.
+
 **Split pane deployment:** `tmux_spawn_agent` with full context (story file + PRD + architecture doc).
 **In-process deployment:** Agent tool with scoped context — story file + directly referenced docs only. No full PRD/arch unless the story explicitly references them.
 
@@ -580,12 +591,17 @@ tmux send-keys -t <pane_id> "<message>" Enter
    Record `name_source: auto` in session file. If the pane had a non-default title before spawn → `name_source: manual` — NEVER rename a `manual` pane.
 
 ```bash
-# Spawn and capture spawner pane ID first
+# MANDATORY spawn sequence — do not reorder
 SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
+sleep 3  # pre-command buffer
 tmux split-window -h -c "#{pane_current_path}" \
-  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}' 'You are the <role> agent. Spawner pane: $SPAWNER_PANE. <task context>'"
-sleep 8  # ⚠️ REQUIRED — wait for pane to initialize before reading pane list or sending commands
+  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' 'You are the <role> agent. Spawner pane: $SPAWNER_PANE. <task context>'"
+sleep 8  # REQUIRED — pane initialization
 NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
+# Verify pane exists before any operation
+tmux list-panes | grep -q "$NEW_PANE_ID" || { echo "ERROR: pane spawn failed"; exit 1; }
+sleep 6
+tmux select-layout tiled
 ```
 
 **⚠️ Sleep between consecutive tmux commands.** tmux commands are asynchronous — always insert `sleep` between operations:
@@ -644,6 +660,27 @@ tmux kill-pane -t <pane_id>
 1. Update the session file Active Agents table row: `status: closed`
 2. Record `closed_at` timestamp and `session_id`
 3. Only then proceed to spawn the next pipeline pane (if any)
+
+### Master Pane Monitoring
+
+After spawning a split-pane agent, master checks pane health every 30s (Mode [3] scripts only):
+
+```bash
+# Paste into generated .ps1 scripts after spawn
+while true; do
+  sleep 30
+  if ! tmux list-panes | grep -q "$AGENT_PANE"; then
+    echo "WARN: Agent pane $AGENT_PANE gone — check session file"
+    break
+  fi
+  STATUS=$(tmux capture-pane -t "$AGENT_PANE" -p | tail -3)
+  echo "[$(date +%H:%M:%S)] Agent check: $STATUS"
+done &
+MONITOR_PID=$!
+```
+
+For Mode [1] (same-conversation): check session file after each step instead of polling.
+Kill monitor when completion signal received: `kill $MONITOR_PID 2>/dev/null`
 
 ---
 
@@ -746,10 +783,10 @@ This is a pipeline. Silence = proceed. Speed is the goal.
 Then print the command block:
 
 ```powershell
-# ─── Master Orchestrator handoff ───────────────────────────────────────────────────
+# ─── Master Orchestrator handoff -----------------------------──────────────────────
 # Context file: _bmad-output/scripts/context-{session_id}.md
 # Branch: {branch}  |  Session: {session_id}  |  Step: {step-name}
-# ─────────────────────────────────────────────────────────────────────────────
+# ----------------------------------------------------------───────────────────
 claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{"mcpServers":{}}' "{agent-persona-command}"
 ```
 
@@ -767,11 +804,11 @@ Generate `{project-root}/_bmad-output/scripts/start-{agent-slug}-{step}-{timesta
 # Auto-generated by Master Orchestrator — self-deletes after run
 # Branch: {branch}  |  Session: {session_id}  |  Step: {step-name}
 # Context: _bmad-output/scripts/context-{session_id}.md
-# ─────────────────────────────────────────────────────────────────────────────
+# ----------------------------------------------------------───────────────────
 # Usage: .\this-script.ps1 [-Resume <prior-session-id>] [-NonInteractive]
 # -Resume: chain from a previous agent's session (pass output session_id)
 # -NonInteractive: run headless and capture JSON output (for automation pipelines)
-# ─────────────────────────────────────────────────────────────────────────────
+# ----------------------------------------------------------───────────────────
 
 param(
     [string]$Resume = "",
@@ -918,6 +955,9 @@ If [CC] is chosen: invoke the Correct Course workflow automatically.
 ---
 
 ## Workflow Tracks
+
+> Track workflow chains are also available as invokable skills for context efficiency.
+> Load on demand: `.agents/skills/track-{nano|small|compact|medium|extended|large|rv}/SKILL.md`
 
 ### Small Track
 

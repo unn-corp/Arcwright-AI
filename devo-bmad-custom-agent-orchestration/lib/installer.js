@@ -234,19 +234,6 @@ async function install(opts) {
     console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`));
   }
 
-  // ── Orchestration template ─────────────────────────────────────────────────
-  const pkgOrchSrc = path.join(SRC_DIR, '.agents', 'orchestration', 'session-template.md');
-  if (await fs.pathExists(pkgOrchSrc)) {
-    const destOrch = path.join(projectRoot, '.agents', 'orchestration');
-    await fs.ensureDir(destOrch);
-    const destFile = path.join(destOrch, 'session-template.md');
-    await fs.copy(pkgOrchSrc, destFile, { overwrite: true });
-    const content = await fs.readFile(pkgOrchSrc);
-    newFileEntries.push({ relPath: '.agents/orchestration/session-template.md', hash: sha256(content) });
-    installedCount++;
-    console.log(chalk.green('  ✓ .agents/orchestration/session-template.md'));
-  }
-
   // ── Orphan removal (update only) ──────────────────────────────────────────
   if (isUpdate) {
     const oldEntries = await readFilesManifest(bmadDir);
@@ -420,24 +407,16 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk) {
     }
   }
 
-  // Write root CLAUDE.md (claude-code only) — appends BMAD + tmux sections
+  // Write root CLAUDE.md (claude-code only) — upserts managed BMAD + tmux sections
   if (tool === 'claude-code') {
     const rootClaudePath = path.join(projectRoot, 'CLAUDE.md');
-    if (await fs.pathExists(rootClaudePath)) {
-      const existing = await fs.readFile(rootClaudePath, 'utf8');
-      let updated = existing;
-      let changed = false;
-      if (!existing.includes(platform.rulesMarker)) { updated += bmadEntry; changed = true; }
-      if (!existing.includes('## Agent Spawning (tmux-aware)')) { updated += tmuxEntry; changed = true; }
-      if (changed) {
-        await fs.writeFile(rootClaudePath, updated, 'utf8');
-        console.log(chalk.green('  ✓ CLAUDE.md updated'));
-      } else {
-        console.log(chalk.gray('  ○ CLAUDE.md already up to date'));
-      }
+    const bmadResult  = await upsertManagedBlock(rootClaudePath, '<!-- bmad-agent-start -->', '<!-- bmad-agent-end -->', bmadEntry);
+    const tmuxResult  = await upsertManagedBlock(rootClaudePath, '<!-- bmad-tmux-start -->',  '<!-- bmad-tmux-end -->',  tmuxEntry);
+    const anyChanged  = bmadResult !== 'noop' || tmuxResult !== 'noop';
+    if (anyChanged) {
+      console.log(chalk.green('  ✓ CLAUDE.md updated (stale sections replaced)'));
     } else {
-      await fs.writeFile(rootClaudePath, `${bmadEntry}${tmuxEntry}`, 'utf8');
-      console.log(chalk.green('  ✓ CLAUDE.md created'));
+      console.log(chalk.gray('  ○ CLAUDE.md already up to date'));
     }
 
     // Write global ~/.claude/CLAUDE.md — applies BMAD + tmux rules to every project
@@ -592,27 +571,51 @@ function buildTmuxEntry() {
 async function writeGlobalClaudeMd(bmadEntry, tmuxEntry, chalk) {
   const os = require('os');
   const globalClaudeDir = path.join(os.homedir(), '.claude');
-  const globalClaudePath = path.join(globalClaudeDir, 'CLAUDE.md');
-  const GLOBAL_BMAD_MARKER = '## BMAD Method';
+  const globalClaudePath = path.join(globalClaudeDir, 'Claude.md');
 
   await fs.ensureDir(globalClaudeDir);
 
-  if (await fs.pathExists(globalClaudePath)) {
-    const existing = await fs.readFile(globalClaudePath, 'utf8');
-    let updated = existing;
-    let changed = false;
-    if (!existing.includes(GLOBAL_BMAD_MARKER)) { updated += bmadEntry; changed = true; }
-    if (!existing.includes('## Agent Spawning (tmux-aware)')) { updated += tmuxEntry; changed = true; }
-    if (changed) {
-      await fs.writeFile(globalClaudePath, updated, 'utf8');
-      console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated'));
-    } else {
-      console.log(chalk.gray('  ○ ~/.claude/CLAUDE.md (global) already up to date'));
-    }
-  } else {
-    await fs.writeFile(globalClaudePath, `${bmadEntry}${tmuxEntry}`, 'utf8');
+  const bmadResult = await upsertManagedBlock(globalClaudePath, '<!-- bmad-agent-start -->', '<!-- bmad-agent-end -->', bmadEntry);
+  const tmuxResult = await upsertManagedBlock(globalClaudePath, '<!-- bmad-tmux-start -->',  '<!-- bmad-tmux-end -->',  tmuxEntry);
+  const anyChanged = bmadResult !== 'noop' || tmuxResult !== 'noop';
+
+  if (bmadResult === 'created' || tmuxResult === 'created') {
     console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) created'));
+  } else if (anyChanged) {
+    console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated (stale sections replaced)'));
+  } else {
+    console.log(chalk.gray('  ○ ~/.claude/CLAUDE.md (global) already up to date'));
   }
+}
+
+/**
+ * Upsert a managed block in a file using start/end HTML comment markers.
+ * - File missing or markers absent: append block
+ * - Markers present: replace content between them (removes stale content)
+ * Returns: 'created' | 'appended' | 'updated' | 'noop'
+ */
+async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
+  await fs.ensureDir(path.dirname(filePath));
+  const block = `${startMarker}\n${content}\n${endMarker}`;
+
+  if (!await fs.pathExists(filePath)) {
+    await fs.writeFile(filePath, block + '\n', 'utf8');
+    return 'created';
+  }
+
+  const existing = await fs.readFile(filePath, 'utf8');
+  const startIdx = existing.indexOf(startMarker);
+  const endIdx   = existing.indexOf(endMarker);
+
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    const replacement = existing.slice(0, startIdx) + block + existing.slice(endIdx + endMarker.length);
+    if (replacement === existing) return 'noop';
+    await fs.writeFile(filePath, replacement, 'utf8');
+    return 'updated';
+  }
+
+  await fs.writeFile(filePath, existing.trimEnd() + '\n\n' + block + '\n', 'utf8');
+  return 'appended';
 }
 
 /**
@@ -724,22 +727,19 @@ async function setupTmux(projectRoot, chalk) {
   console.log('    ' + chalk.cyan('sudo apt-get install -y wl-clipboard imagemagick wslu'));
   console.log('  ' + chalk.white('⑤ Docker Desktop WSL integration') + chalk.dim(' — GUI only:'));
   console.log('    ' + chalk.dim('Docker Desktop → Settings → Resources → WSL Integration → toggle Ubuntu → Apply & Restart'));
-  console.log('  ' + chalk.white('⑥ gsudo') + chalk.dim(' (Windows sudo — allows WSL to run elevated PowerShell):'));
-  console.log('    ' + chalk.cyan('winget install gerardog.gsudo'));
-  console.log('    ' + chalk.dim('    Or via scoop: scoop install gsudo'));
 
   console.log('');
   console.log(chalk.bold.yellow('  ✦ Can be done manually OR by an AI with relaxed permissions:'));
   console.log(chalk.dim('     These are safe to automate — no sudo or system-level access needed.\n'));
-  console.log('  ' + chalk.white('⑧ NVM + Node') + chalk.dim(' (required for Node-based MCP servers):'));
+  console.log('  ' + chalk.white('⑥ NVM + Node') + chalk.dim(' (required for Node-based MCP servers):'));
   console.log('    ' + chalk.cyan('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash'));
   console.log('    ' + chalk.cyan('source ~/.bashrc && nvm install --lts'));
-  console.log('  ' + chalk.white('⑨ TPM (tmux Plugin Manager):'));
+  console.log('  ' + chalk.white('⑦ TPM (tmux Plugin Manager):'));
   console.log('    ' + chalk.cyan('git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm'));
   console.log('    ' + chalk.dim('    Then inside tmux: press Ctrl+B I to install plugins'));
-  console.log('  ' + chalk.white('⑩ fzf') + chalk.dim(' (required for Actions popup menu):'));
+  console.log('  ' + chalk.white('⑧ fzf') + chalk.dim(' (required for Actions popup menu):'));
   console.log('    ' + chalk.cyan('mkdir -p ~/.local/bin && curl -Lo /tmp/fzf.tar.gz https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz && tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin'));
-  console.log('  ' + chalk.white('⑪ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators):'));
+  console.log('  ' + chalk.white('⑨ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators):'));
   console.log('    ' + chalk.dim('    Download JetBrainsMono NFM from https://www.nerdfonts.com/'));
   console.log('    ' + chalk.dim('    Install JetBrainsMonoNerdFontMono-Regular.ttf to Windows (double-click → Install for all users)'));
   console.log('    ' + chalk.white('    Cursor/VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
@@ -801,33 +801,6 @@ async function setupTmux(projectRoot, chalk) {
     console.log(chalk.dim(`  ○ ${xdgOpenPath} already exists`));
   }
 
-  // gsudo shim — lets WSL call Windows-side gsudo.exe without full path
-  const gsudoShimPath = path.join(homeDir, '.local', 'bin', 'gsudo');
-  if (!await fs.pathExists(gsudoShimPath)) {
-    // Find gsudo.exe on Windows side
-    const { execSync } = require('child_process');
-    let gsudoExe = null;
-    try {
-      // cmd.exe /c where gsudo returns Windows paths — convert first result to WSL path
-      const winPath = execSync('cmd.exe /c where gsudo 2>NUL', { stdio: 'pipe' })
-        .toString().split('\n')[0].trim();
-      if (winPath && winPath.endsWith('.exe')) {
-        // Convert C:\... → /mnt/c/...
-        gsudoExe = '/mnt/' + winPath.replace(/\\/g, '/').replace(/^([A-Za-z]):/, (_, d) => d.toLowerCase());
-      }
-    } catch { /* gsudo not installed on Windows yet */ }
-
-    if (gsudoExe) {
-      const shimContent = `#!/bin/bash\nexec '${gsudoExe}' "$@"\n`;
-      await fs.writeFile(gsudoShimPath, shimContent, { mode: 0o755 });
-      console.log(chalk.green(`  ✓ gsudo shim → ${gsudoShimPath} (delegates to ${gsudoExe})`));
-    } else {
-      console.log(chalk.yellow('  ⚠  gsudo not found on Windows — install it first (winget install gerardog.gsudo), then re-run setup'));
-    }
-  } else {
-    console.log(chalk.dim(`  ○ gsudo shim already exists at ${gsudoShimPath}`));
-  }
-
   // ── Step 3: TPM check ────────────────────────────────────────────────────
   console.log('\n' + chalk.bold('Step 3 — TPM check'));
   if (await fs.pathExists(tpmPath)) {
@@ -857,6 +830,7 @@ async function setupTmux(projectRoot, chalk) {
     ['cpu_usage.sh',            path.join(tmuxBin, 'cpu_usage.sh')],
     ['ram_usage.sh',            path.join(tmuxBin, 'ram_usage.sh')],
     ['claude_usage.sh',         path.join(tmuxBin, 'claude_usage.sh')],
+    ['watch-sync.sh',           path.join(tmuxBin, 'watch-sync.sh')],
     ['xclip',                   xclipPath],
   ];
 
@@ -864,7 +838,15 @@ async function setupTmux(projectRoot, chalk) {
     const src = path.join(tmuxSrc, srcName);
     if (!await fs.pathExists(src)) continue;
 
-    // Always overwrite tmux scripts — ensures fixes (e.g. PNG normalization) propagate on update
+    const exists = await fs.pathExists(dest);
+    if (exists) {
+      const overwrite = await ask(chalk.dim(`  ${dest} already exists. Overwrite? (y/N): `));
+      if (!overwrite.toLowerCase().startsWith('y')) {
+        console.log(chalk.dim(`  ○ Skipped ${path.basename(dest)}`));
+        continue;
+      }
+    }
+
     await fs.copy(src, dest, { overwrite: true });
     if (dest.endsWith('.sh') || dest.endsWith('.py') || dest === xclipPath) {
       try { await fs.chmod(dest, 0o755); } catch {}

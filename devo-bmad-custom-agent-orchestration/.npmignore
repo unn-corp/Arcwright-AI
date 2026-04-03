@@ -1,3 +1,0 @@
-# Intentionally minimal — all src/ contents including dotdirectories are included
-# node_modules is always excluded by npm regardless
-node_modules/

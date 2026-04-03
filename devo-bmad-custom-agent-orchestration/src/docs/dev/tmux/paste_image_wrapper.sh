@@ -24,11 +24,6 @@ send_path() {
     [ -n "$1" ] && [ -n "$PANE" ] && tmux send-keys -t "$PANE" "$1"
 }
 
-# For plain text: use bracketed paste so Claude Code and readline apps accept it
-send_text() {
-    [ -n "$1" ] && [ -n "$PANE" ] && tmux send-keys -t "$PANE" $'\e[200~'"$1"$'\e[201~'
-}
-
 TYPES=$("$WL_PASTE" --list-types 2>/dev/null)
 [ -z "$TYPES" ] && exit 0
 
@@ -54,8 +49,6 @@ if [ -n "$IMAGE_TYPE" ]; then
     # Fall back to PowerShell (Windows clipboard API) when wl-paste produces empty output.
     if [ ! -s "$PNGFILE" ]; then
         WINPATH=$(wslpath -w "$PNGFILE" 2>/dev/null)
-        # Normalize to 32bppArgb before saving — System.Drawing.Image.Save() can produce
-        # indexed/palette PNGs that the Anthropic API rejects with "image format not supported".
         powershell.exe -NoProfile -Command "
             Add-Type -AssemblyName System.Windows.Forms
             Add-Type -AssemblyName System.Drawing
@@ -74,7 +67,6 @@ if [ -n "$IMAGE_TYPE" ]; then
 
     [ -s "$PNGFILE" ] || exit 1
     send_path "@$PNGFILE"
-    # Writeback normalized PNG to Wayland clipboard so subsequent pastes are also clean
     /usr/bin/wl-copy --type image/png < "$PNGFILE" 2>/dev/null || true
     exit 0
 fi
@@ -106,6 +98,6 @@ FIRST_LINE=$(printf '%s' "$TEXT" | head -1 | tr -d ' ')
 if [ -f "$FIRST_LINE" ] || [ -d "$FIRST_LINE" ]; then
     send_path "@$FIRST_LINE"
 else
-    # Use bracketed paste for plain text so Claude Code and readline apps accept it
-    send_text "$TEXT"
+    printf '%s' "$TEXT" > "$TXTFILE"
+    send_path "$TXTFILE"
 fi

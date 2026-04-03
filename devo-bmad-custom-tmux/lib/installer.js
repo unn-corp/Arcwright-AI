@@ -131,31 +131,6 @@ async function setupTmux(projectRoot, chalk) {
     console.log(chalk.dim(`  ○ ${xdgOpenPath} already exists`));
   }
 
-  // gsudo shim — lets WSL call Windows-side gsudo.exe without full path
-  const gsudoShimPath = path.join(homeDir, '.local', 'bin', 'gsudo');
-  if (!await fs.pathExists(gsudoShimPath)) {
-    const { execSync } = require('child_process');
-    let gsudoExe = null;
-    try {
-      const winPath = execSync('cmd.exe /c where gsudo 2>NUL', { stdio: 'pipe' })
-        .toString().split('\n')[0].trim();
-      if (winPath && winPath.endsWith('.exe')) {
-        gsudoExe = '/mnt/' + winPath.replace(/\\/g, '/').replace(/^([A-Za-z]):/, (_, d) => d.toLowerCase());
-      }
-    } catch { /* gsudo not installed on Windows yet */ }
-
-    if (gsudoExe) {
-      const shimContent = `#!/bin/bash\nexec '${gsudoExe}' "$@"\n`;
-      await fs.writeFile(gsudoShimPath, shimContent, { mode: 0o755 });
-      console.log(chalk.green(`  ✓ gsudo shim → ${gsudoShimPath} (delegates to ${gsudoExe})`));
-    } else {
-      console.log(chalk.yellow('  ⚠  gsudo not found on Windows — install it with: winget install gerardog.gsudo'));
-      console.log(chalk.dim('     Then re-run setup to create the WSL shim.'));
-    }
-  } else {
-    console.log(chalk.dim(`  ○ gsudo shim already exists at ${gsudoShimPath}`));
-  }
-
   // ── Step 3: TPM check ─────────────────────────────────────────────────────
   console.log('\n' + chalk.bold('Step 3 — TPM check'));
   if (await fs.pathExists(tpmPath)) {
@@ -185,6 +160,7 @@ async function setupTmux(projectRoot, chalk) {
     ['cpu_usage.sh',           path.join(tmuxBin, 'cpu_usage.sh')],
     ['ram_usage.sh',           path.join(tmuxBin, 'ram_usage.sh')],
     ['claude_usage.sh',        path.join(tmuxBin, 'claude_usage.sh')],
+    ['watch-sync.sh',          path.join(tmuxBin, 'watch-sync.sh')],
     ['xclip',                  xclipPath],
   ];
 
@@ -192,7 +168,15 @@ async function setupTmux(projectRoot, chalk) {
     const src = path.join(tmuxSrc, srcName);
     if (!await fs.pathExists(src)) continue;
 
-    // Always overwrite tmux scripts — ensures fixes (e.g. PNG normalization) propagate on update
+    const exists = await fs.pathExists(dest);
+    if (exists) {
+      const overwrite = await ask(chalk.dim(`  ${dest} already exists. Overwrite? (y/N): `));
+      if (!overwrite.toLowerCase().startsWith('y')) {
+        console.log(chalk.dim(`  ○ Skipped ${path.basename(dest)}`));
+        continue;
+      }
+    }
+
     await fs.copy(src, dest, { overwrite: true });
     if (dest.endsWith('.sh') || dest.endsWith('.py') || dest === xclipPath) {
       try { await fs.chmod(dest, 0o755); } catch {}
@@ -268,18 +252,43 @@ async function writeGlobalClaudeMd(chalk) {
 
   await fs.ensureDir(globalClaudeDir);
 
-  if (await fs.pathExists(globalClaudePath)) {
-    const existing = await fs.readFile(globalClaudePath, 'utf8');
-    if (!existing.includes(TMUX_MARKER)) {
-      await fs.writeFile(globalClaudePath, existing + tmuxSection, 'utf8');
-      console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated with tmux agent rules'));
-    } else {
-      console.log(chalk.gray('  ○ ~/.claude/CLAUDE.md (global) already up to date'));
-    }
+  const START = '<!-- bmad-tmux-start -->';
+  const END   = '<!-- bmad-tmux-end -->';
+  const block = `${START}\n${tmuxSection}\n${END}`;
+
+  const result = await upsertManagedBlock(globalClaudePath, START, END, tmuxSection);
+  if (result === 'updated') {
+    console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated (old tmux block replaced)'));
+  } else if (result === 'appended') {
+    console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated with tmux agent rules'));
   } else {
-    await fs.writeFile(globalClaudePath, tmuxSection, 'utf8');
     console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) created with tmux agent rules'));
   }
+}
+
+/**
+ * Upsert a managed block in a file using start/end markers.
+ * - File missing: create with block
+ * - Markers absent: append block
+ * - Markers present: replace content between them (removes stale content)
+ */
+async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
+  await fs.ensureDir(path.dirname(filePath));
+  const block = `${startMarker}\n${content}\n${endMarker}`;
+  if (await fs.pathExists(filePath)) {
+    const existing = await fs.readFile(filePath, 'utf8');
+    const startIdx = existing.indexOf(startMarker);
+    const endIdx   = existing.indexOf(endMarker);
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      const updated = existing.slice(0, startIdx) + block + existing.slice(endIdx + endMarker.length);
+      await fs.writeFile(filePath, updated, 'utf8');
+      return 'updated';
+    }
+    await fs.writeFile(filePath, existing.trimEnd() + '\n\n' + block + '\n', 'utf8');
+    return 'appended';
+  }
+  await fs.writeFile(filePath, block + '\n', 'utf8');
+  return 'created';
 }
 
 module.exports = { setupTmux };

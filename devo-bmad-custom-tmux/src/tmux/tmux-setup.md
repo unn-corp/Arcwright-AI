@@ -118,7 +118,6 @@ Tell Claude to "set up my tmux config" and it will:
 | `sudo apt-get install -y wl-clipboard` | Wayland clipboard access for `Alt+V` paste (`wl-paste`) |
 | `sudo apt-get install -y imagemagick` | BMP/JPEG/WEBP → PNG conversion for `Alt+V` paste |
 | `sudo apt-get install -y wslu` | Provides `wslview` — required for tmux-open URL opening in WSL2 |
-| Install gsudo on Windows (see below) | Allows WSL to run elevated PowerShell commands |
 | Press `Ctrl+B I` inside tmux after first launch | TPM plugin install — requires interactive session |
 
 After installing `wslu`, create the `xdg-open` shim (no sudo):
@@ -126,14 +125,6 @@ After installing `wslu`, create the `xdg-open` shim (no sudo):
 ln -sf /usr/bin/wslview ~/.local/bin/xdg-open
 ```
 This is needed because `tmux-open` hard-codes a check for `xdg-open` and errors if not found.
-
-**gsudo (Windows sudo):** Required for any WSL script that needs to run elevated PowerShell. Install on the Windows side:
-```powershell
-winget install gerardog.gsudo
-# or via Scoop:
-scoop install gsudo
-```
-The installer automatically creates a WSL shim at `~/.local/bin/gsudo` that delegates to the Windows binary. If gsudo is not installed when the installer runs, you'll see a warning — install it then re-run the installer to create the shim.
 
 ---
 
@@ -228,11 +219,11 @@ tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin
 Single bar at bottom:
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│  terminal content                                                                        │
-│                                                                                          │
-│ ▶ │⚙ Actions│🔄 Reload│  💻session│🪟window│📁path│🧮CPU│💾RAM│⏰time │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------------------------------------+
+|  terminal content                                                                         |
+|                                                                                           |
+|  > | Actions | Reload |  session | window | path | CPU | RAM | time |                    |
++-------------------------------------------------------------------------------------------+
 ```
 
 **Left side** — two clickable pills: Actions (opens full menu) + Reload
@@ -537,6 +528,27 @@ Active pane uses bright border color per pane index; inactive uses dim (`#414559
 
 ---
 
+## Hot Reload (watch-sync.sh)
+
+The `watch-sync.sh` script syncs file changes from the WSL host into the Docker container with ~2-4s latency.
+
+Start each dev session:
+    bash scripts/watch-sync.sh         # foreground (dedicated pane)
+    bash scripts/watch-sync.sh &       # background
+
+Monitor:
+    tail -f /tmp/watch-sync.log
+
+Stop:
+    kill $(cat /tmp/watch-sync.pid)
+
+Configure via env vars:
+    WATCH_CONTAINER=squidhub-frontend-1
+    WATCH_HOST_DIR=./frontend
+    WATCH_CONTAINER_DIR=/app
+
+---
+
 ## Agent Orchestration
 
 When coordinating multiple Claude agents, use **orchestration session files** — not pane title sniffing. Pane titles are overwritten by Claude Code and are unreliable for routing.
@@ -690,11 +702,7 @@ tmux kill-pane -t <pane_id>
 | `text/html` | Saved to `/tmp/tmux_clipboard_content.html`, path typed |
 | `text/plain` | If it's a valid path: `@path`; otherwise saved to `/tmp/tmux_clipboard_text.txt` |
 
-**Implementation:** `paste_image_wrapper.sh` uses `/usr/bin/wl-paste` (Linux-native Wayland clipboard — no PowerShell/vsock). Files are saved as `/tmp/tmux_clip_YYYYMMDD_HHMMSS.<ext>`. On each run, files from previous days are automatically deleted. The normalized PNG is also written back to the Wayland clipboard via `wl-copy` so subsequent pastes are also clean.
-
-**PNG normalization (WSLg PowerShell fallback):** When `wl-paste` produces empty output (common on WSLg), the script falls back to PowerShell's `System.Windows.Forms.Clipboard::GetImage()`. The raw `Image.Save()` call can produce indexed/palette-mode PNGs that the Anthropic API rejects with `"image format image/png not supported"`. The fix redraws the clipboard image onto a fresh `Format32bppArgb` bitmap before saving, ensuring the output is always standard RGBA PNG.
-
-> **Troubleshooting:** If Claude reports `"Image format image/png not supported"` after pasting a screenshot, your `paste_image_wrapper.sh` is outdated. Re-run the installer (it now always overwrites tmux scripts) or copy the latest version from `docs/dev/paste_image_wrapper.sh`.
+**Implementation:** `paste_image_wrapper.sh` uses `/usr/bin/wl-paste` (Linux-native Wayland clipboard — no PowerShell/vsock). Files are saved as `/tmp/tmux_clip_YYYYMMDD_HHMMSS.<ext>`. On each run, files from previous days are automatically deleted. The PNG is also copied back to the Wayland clipboard so `Ctrl+V` may also work in Claude Code.
 
 **`Ctrl+V` binding** uses `tmux paste-buffer -p` (no trailing newline). Without `-p`, `paste-buffer` appended a newline that auto-submitted the pasted content — fixed.
 
@@ -778,6 +786,12 @@ The status bar contains emoji (💻 🪟 📁 🧮 💾 ⏰ etc.) and Powerline 
 | `#{session_index}` in hooks expands to empty | `#{session_index}` is not a valid tmux format variable. Use `#{session_name}` or `#{b:pane_current_path}` instead. |
 | `Alt+V` types nothing | WSL vsock interop (`powershell.exe`) fails in tmux `run-shell` context. The wrapper uses `/usr/bin/wl-paste` (Wayland, Linux-native). Ensure `wl-clipboard` is installed: `sudo apt-get install -y wl-clipboard`. |
 | Right-click opens new pane accidentally | tmux default `MouseDown3Pane` shows a split/kill menu. Fixed with `bind -T root MouseDown3Pane select-pane -t=` in `.tmux.conf`. Do **not** set `rightClickContextMenu: true` in WT — it breaks right-click paste and drag-and-drop. |
+
+## Troubleshooting: Garbled Copy-Paste from tmux
+
+If copied text shows garbage like box-drawing chars (|, -, Unicode squares), the issue is
+UTF-8 encoding in Windows Terminal. Fix: use ASCII-only tables and borders in scripts/docs.
+Set terminal to UTF-8: Windows Terminal Settings > Profile > Advanced > Text encoding: UTF-8.
 
 ---
 
