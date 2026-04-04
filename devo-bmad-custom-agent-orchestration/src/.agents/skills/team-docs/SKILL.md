@@ -5,6 +5,11 @@ description: "The Library — Tech Writer drafts, Architect reviews for technica
 
 # Agent Team: Docs + Arch Review — The Library
 
+## tmux Protocol
+
+If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+
+
 ## Team Composition
 
 | Role | Agent | Skills |
@@ -30,11 +35,11 @@ The Library ensures documentation is both readable and technically accurate. Tec
 
 ```bash
 # 1. Split Tech Writer pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the Tech Writer agent in The Library team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-tech-writer.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Tech Writer agent in The Library team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-tech-writer.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split Architect pane (bottom-right, below Tech Writer)
-tmux split-window -v -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the Architect agent in The Library team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-architect.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly. In this team your role is technical accuracy review of documentation drafts. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in The Library team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-architect.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly. In this team your role is technical accuracy review of documentation drafts. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Equalize pane sizes
@@ -102,7 +107,7 @@ Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}:
 
 ## Team Registration
 
-When spawning this team, master writes to `_bmad/_memory/squid-master-sidecar/session-state.md` under `active_team`:
+When spawning this team, master writes to `_bmad/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
 ```yaml
 active_team:
   code: docs
@@ -125,7 +130,7 @@ When `$TMUX` is not set, run agents sequentially using the Agent tool:
 ## Team Close Protocol
 
 When master needs to close this team:
-1. Read pane IDs from `active_team` in `_bmad/_memory/squid-master-sidecar/session-state.md`
+1. Read pane IDs from `active_team` in `_bmad/_memory/master-orchestrator-sidecar/session-state.md`
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 

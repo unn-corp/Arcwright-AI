@@ -1,6 +1,6 @@
 ---
 name: excalidraw-dark-standard
-description: Squid-Master dark mode Excalidraw design standard — colors, shapes, typography, spacing, and naming convention for all system diagrams
+description: Master Orchestrator dark mode Excalidraw design standard — colors, shapes, typography, spacing, and naming convention for all system diagrams
 version: 1.0.0
 author: bmad
 tags: [diagrams, excalidraw, design-system, dark-mode, visualization]
@@ -10,9 +10,9 @@ tags: [diagrams, excalidraw, design-system, dark-mode, visualization]
 
 ## Overview
 
-All Squid-Master Excalidraw diagrams follow this standard. Load this skill before creating or editing any `.excalidraw` file. It defines the full visual language: canvas setup, semantic colors, shape vocabulary, typography, spacing, and file naming.
+All Master Orchestrator Excalidraw diagrams follow this standard. Load this skill before creating or editing any `.excalidraw` file. It defines the full visual language: canvas setup, semantic colors, shape vocabulary, typography, spacing, and file naming.
 
-Use the `excalidraw-diagram-generator` skill alongside this one — it provides the JSON generation engine. This skill provides the Squid-Master color and structure rules that override its defaults.
+Use the `excalidraw-diagram-generator` skill alongside this one — it provides the JSON generation engine. This skill provides the Master Orchestrator color and structure rules that override its defaults.
 
 ---
 
@@ -229,7 +229,7 @@ Badge size: auto-width × 24px, font 11px, border-radius 12px.
 
 | Prefix | Use |
 |---|---|
-| `sm-` | Squid-Master system diagrams |
+| `sm-` | Master Orchestrator system diagrams |
 | `sq-` | Squidhub platform diagrams |
 | `bd-` | BMAD agent framework diagrams |
 | `feat-` | Feature-specific diagrams |

@@ -11,10 +11,25 @@ const path = require('path');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
 
-async function setupTmux(projectRoot, chalk) {
+/** Detect platform — respects BMAD_PLATFORM env override for testing */
+function detectPlatform() {
+  if (process.env.BMAD_PLATFORM) return process.env.BMAD_PLATFORM;
+  if (process.platform === 'win32') return 'windows-wsl';
+  if (process.platform === 'darwin') return 'macos';
+  try {
+    const fsSync = require('fs');
+    const v = fsSync.readFileSync('/proc/version', 'utf8');
+    if (v.toLowerCase().includes('microsoft')) return 'windows-wsl';
+  } catch (_) {}
+  return 'linux-native';
+}
+
+async function setupTmux(projectRoot, chalk, platform) {
   const readline = require('readline');
   const os = require('os');
   const { execSync } = require('child_process');
+
+  if (!platform) platform = detectPlatform();
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const ask = (q) => new Promise(res => rl.question(q, res));
@@ -44,40 +59,81 @@ async function setupTmux(projectRoot, chalk) {
   console.log(chalk.bold('Step 1 — Prerequisites'));
   console.log('');
 
-  console.log(chalk.bold.red('  ⛔ Must be done manually (require WSL install or sudo):'));
-  console.log(chalk.dim('     These cannot be automated. Complete them before continuing.\n'));
-  console.log('  ' + chalk.white('① Install WSL2 + Ubuntu') + chalk.dim(' — run in PowerShell (Admin):'));
-  console.log('    ' + chalk.cyan('wsl --install'));
-  console.log('  ' + chalk.white('② Update packages') + chalk.dim(' — run in Ubuntu terminal:'));
-  console.log('    ' + chalk.cyan('sudo apt-get update && sudo apt-get upgrade -y'));
-  console.log('  ' + chalk.white('③ Install tmux 3.4+') + chalk.dim(' — run in Ubuntu terminal:'));
-  console.log('    ' + chalk.cyan('sudo apt-get install -y tmux'));
-  console.log('  ' + chalk.white('④ Install clipboard + image tools') + chalk.dim(' — run in Ubuntu terminal:'));
-  console.log('    ' + chalk.cyan('sudo apt-get install -y wl-clipboard imagemagick wslu'));
-  console.log('  ' + chalk.white('⑤ Docker Desktop WSL integration') + chalk.dim(' — GUI only:'));
-  console.log('    ' + chalk.dim('Docker Desktop → Settings → Resources → WSL Integration → toggle Ubuntu → Apply & Restart'));
+  if (platform === 'linux-native') {
+    // ── Linux (Fedora/Ubuntu/Arch) prerequisites ──────────────────────────────
+    console.log(chalk.bold.red('  ⛔ Must be done manually (require sudo):'));
+    console.log(chalk.dim('     These cannot be automated. Complete them before continuing.\n'));
+    console.log('  ' + chalk.white('① Install tmux 3.4+') + chalk.dim(' — Fedora:'));
+    console.log('    ' + chalk.cyan('sudo dnf install -y tmux'));
+    console.log('  ' + chalk.dim('    Ubuntu:'));
+    console.log('    ' + chalk.cyan('sudo apt-get install -y tmux'));
+    console.log('  ' + chalk.white('② Install clipboard + image tools') + chalk.dim(' — Fedora:'));
+    console.log('    ' + chalk.cyan('sudo dnf install -y wl-clipboard ImageMagick xclip fzf'));
+    console.log('  ' + chalk.dim('    Ubuntu:'));
+    console.log('    ' + chalk.cyan('sudo apt-get install -y wl-clipboard imagemagick xclip fzf'));
+    console.log('  ' + chalk.white('③ GitHub CLI (gh)') + chalk.dim(' — Fedora:'));
+    console.log('    ' + chalk.cyan('sudo dnf install -y gh'));
+    console.log('  ' + chalk.dim('    Ubuntu:'));
+    console.log('    ' + chalk.cyan('curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg'));
+    console.log('    ' + chalk.cyan('echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list'));
+    console.log('    ' + chalk.cyan('sudo apt update && sudo apt install gh -y'));
 
-  console.log('');
-  console.log(chalk.bold.yellow('  ✦ Can be done manually OR by an AI with relaxed permissions:'));
-  console.log(chalk.dim('     These are safe to automate — no sudo or system-level access needed.\n'));
-  console.log('  ' + chalk.white('⑥ NVM + Node') + chalk.dim(' (required for Node-based MCP servers):'));
-  console.log('    ' + chalk.cyan('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash'));
-  console.log('    ' + chalk.cyan('source ~/.bashrc && nvm install --lts'));
-  console.log('  ' + chalk.white('⑦ TPM (tmux Plugin Manager):'));
-  console.log('    ' + chalk.cyan('git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm'));
-  console.log('    ' + chalk.dim('    Then inside tmux: press Ctrl+B I to install plugins'));
-  console.log('  ' + chalk.white('⑧ fzf') + chalk.dim(' (required for Actions popup menu):'));
-  console.log('    ' + chalk.cyan('mkdir -p ~/.local/bin && curl -Lo /tmp/fzf.tar.gz https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz && tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin'));
-  console.log('  ' + chalk.white('⑨ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators):'));
-  console.log('    ' + chalk.dim('    Download JetBrainsMono NFM from https://www.nerdfonts.com/'));
-  console.log('    ' + chalk.dim('    Install JetBrainsMonoNerdFontMono-Regular.ttf to Windows (double-click → Install for all users)'));
-  console.log('    ' + chalk.white('    Cursor/VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
-  console.log('    ' + chalk.white('    Windows Terminal:') + ' ' + chalk.cyan('"font": { "face": "JetBrainsMono NFM", "builtinGlyphs": false }'));
-  console.log('  ' + chalk.white('⑩ GitHub CLI (gh)') + chalk.dim(' (required for PR creation and GitHub operations):'));
-  console.log('    ' + chalk.cyan('curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg'));
-  console.log('    ' + chalk.cyan('echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list'));
-  console.log('    ' + chalk.cyan('sudo apt update && sudo apt install gh -y'));
-  console.log('    ' + chalk.dim('    Then authenticate: gh auth login'));
+    console.log('');
+    console.log(chalk.bold.yellow('  ✦ Can be done manually OR by an AI with relaxed permissions:'));
+    console.log(chalk.dim('     These are safe to automate — no sudo or system-level access needed.\n'));
+    console.log('  ' + chalk.white('④ Node.js via fnm') + chalk.dim(' (recommended):'));
+    console.log('    ' + chalk.cyan('curl -fsSL https://fnm.vercel.app/install | bash'));
+    console.log('    ' + chalk.cyan('fnm install 20 && fnm use 20'));
+    console.log('  ' + chalk.white('⑤ Claude Code:'));
+    console.log('    ' + chalk.cyan('curl -fsSL https://claude.ai/install.sh | bash'));
+    console.log('  ' + chalk.white('⑥ Infisical CLI') + chalk.dim(' — Fedora:'));
+    console.log('    ' + chalk.cyan("curl -1sLf 'https://artifacts-cli.infisical.com/setup.rpm.sh' | sudo -E bash && sudo dnf install infisical"));
+    console.log('  ' + chalk.dim('    Ubuntu:'));
+    console.log('    ' + chalk.cyan("curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | sudo -E bash && sudo apt-get install infisical"));
+    console.log('  ' + chalk.white('⑦ TPM (tmux Plugin Manager):'));
+    console.log('    ' + chalk.cyan('git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm'));
+    console.log('    ' + chalk.dim('    Then inside tmux: press Ctrl+B I to install plugins'));
+    console.log('  ' + chalk.white('⑧ Nerd Fonts') + chalk.dim(' (required for Powerline status bar):'));
+    console.log('    ' + chalk.dim('    Download JetBrainsMono NFM from https://www.nerdfonts.com/'));
+    console.log('    ' + chalk.dim('    Copy to ~/.local/share/fonts/ and run: fc-cache -fv'));
+    console.log('    ' + chalk.white('    VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
+  } else {
+    // ── Windows (WSL2) prerequisites ──────────────────────────────────────────
+    console.log(chalk.bold.red('  ⛔ Must be done manually (require WSL install or sudo):'));
+    console.log(chalk.dim('     These cannot be automated. Complete them before continuing.\n'));
+    console.log('  ' + chalk.white('① Install WSL2 + Ubuntu') + chalk.dim(' — run in PowerShell (Admin):'));
+    console.log('    ' + chalk.cyan('wsl --install'));
+    console.log('  ' + chalk.white('② Update packages') + chalk.dim(' — run in Ubuntu terminal:'));
+    console.log('    ' + chalk.cyan('sudo apt-get update && sudo apt-get upgrade -y'));
+    console.log('  ' + chalk.white('③ Install tmux 3.4+') + chalk.dim(' — run in Ubuntu terminal:'));
+    console.log('    ' + chalk.cyan('sudo apt-get install -y tmux'));
+    console.log('  ' + chalk.white('④ Install clipboard + image tools') + chalk.dim(' — run in Ubuntu terminal:'));
+    console.log('    ' + chalk.cyan('sudo apt-get install -y wl-clipboard imagemagick wslu'));
+    console.log('  ' + chalk.white('⑤ Docker Desktop WSL integration') + chalk.dim(' — GUI only:'));
+    console.log('    ' + chalk.dim('Docker Desktop → Settings → Resources → WSL Integration → toggle Ubuntu → Apply & Restart'));
+
+    console.log('');
+    console.log(chalk.bold.yellow('  ✦ Can be done manually OR by an AI with relaxed permissions:'));
+    console.log(chalk.dim('     These are safe to automate — no sudo or system-level access needed.\n'));
+    console.log('  ' + chalk.white('⑥ NVM + Node') + chalk.dim(' (required for Node-based MCP servers):'));
+    console.log('    ' + chalk.cyan('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash'));
+    console.log('    ' + chalk.cyan('source ~/.bashrc && nvm install --lts'));
+    console.log('  ' + chalk.white('⑦ TPM (tmux Plugin Manager):'));
+    console.log('    ' + chalk.cyan('git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm'));
+    console.log('    ' + chalk.dim('    Then inside tmux: press Ctrl+B I to install plugins'));
+    console.log('  ' + chalk.white('⑧ fzf') + chalk.dim(' (required for Actions popup menu):'));
+    console.log('    ' + chalk.cyan('mkdir -p ~/.local/bin && curl -Lo /tmp/fzf.tar.gz https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz && tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin'));
+    console.log('  ' + chalk.white('⑨ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators):'));
+    console.log('    ' + chalk.dim('    Download JetBrainsMono NFM from https://www.nerdfonts.com/'));
+    console.log('    ' + chalk.dim('    Install JetBrainsMonoNerdFontMono-Regular.ttf to Windows (double-click → Install for all users)'));
+    console.log('    ' + chalk.white('    Cursor/VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
+    console.log('    ' + chalk.white('    Windows Terminal:') + ' ' + chalk.cyan('"font": { "face": "JetBrainsMono NFM", "builtinGlyphs": false }'));
+    console.log('  ' + chalk.white('⑩ GitHub CLI (gh)') + chalk.dim(' (required for PR creation and GitHub operations):'));
+    console.log('    ' + chalk.cyan('curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg'));
+    console.log('    ' + chalk.cyan('echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list'));
+    console.log('    ' + chalk.cyan('sudo apt update && sudo apt install gh -y'));
+    console.log('    ' + chalk.dim('    Then authenticate: gh auth login'));
+  }
 
   console.log('\n' + chalk.dim('  Complete the manual steps above, then press Enter to continue with config file installation.'));
   await ask(chalk.yellow('  Press Enter to continue → '));
@@ -102,6 +158,12 @@ async function setupTmux(projectRoot, chalk) {
   await fs.ensureDir(path.join(homeDir, '.local', 'bin'));
   await fs.ensureDir(path.join(homeDir, '.tmux', 'plugins'));
 
+  // Write platform marker — read by tmux.conf if-shell and paste_clipboard.sh at runtime
+  const tmuxConfigDir = path.join(homeDir, '.config', 'tmux');
+  await fs.ensureDir(tmuxConfigDir);
+  const platformValue = platform === 'linux-native' ? 'linux' : 'wsl';
+  await fs.writeFile(path.join(tmuxConfigDir, 'platform'), platformValue, 'utf8');
+
   // ── Step 2: Shell aliases ──────────────────────────────────────────────────
   console.log('\n' + chalk.bold('Step 2 — Shell aliases'));
   const bashrc = path.join(homeDir, '.bashrc');
@@ -124,16 +186,18 @@ async function setupTmux(projectRoot, chalk) {
     console.log(chalk.dim('  ○ Aliases already in ~/.bashrc'));
   }
 
-  // xdg-open → wslview symlink
-  if (!await fs.pathExists(xdgOpenPath)) {
-    try {
-      await fs.ensureSymlink('/usr/bin/wslview', xdgOpenPath);
-      console.log(chalk.green(`  ✓ ${xdgOpenPath} → /usr/bin/wslview`));
-    } catch {
-      console.log(chalk.dim(`  ○ Could not create xdg-open symlink (run: ln -sf /usr/bin/wslview ~/.local/bin/xdg-open)`));
+  // xdg-open → wslview symlink (WSL only — wslview doesn't exist on native Linux)
+  if (platform === 'windows-wsl') {
+    if (!await fs.pathExists(xdgOpenPath)) {
+      try {
+        await fs.ensureSymlink('/usr/bin/wslview', xdgOpenPath);
+        console.log(chalk.green(`  ✓ ${xdgOpenPath} → /usr/bin/wslview`));
+      } catch {
+        console.log(chalk.dim(`  ○ Could not create xdg-open symlink (run: ln -sf /usr/bin/wslview ~/.local/bin/xdg-open)`));
+      }
+    } else {
+      console.log(chalk.dim(`  ○ ${xdgOpenPath} already exists`));
     }
-  } else {
-    console.log(chalk.dim(`  ○ ${xdgOpenPath} already exists`));
   }
 
   // ── Step 3: TPM check ─────────────────────────────────────────────────────
@@ -153,6 +217,7 @@ async function setupTmux(projectRoot, chalk) {
   const FILE_MAP = [
     ['tmux.conf',              tmuxConf],
     ['colors.conf',            colorsConf],
+    ['agent_spawn.sh',         path.join(tmuxBin, 'agent_spawn.sh')],
     ['dispatch.sh',            path.join(tmuxBin, 'dispatch.sh')],
     ['actions_popup.py',       path.join(tmuxBin, 'actions_popup.py')],
     ['actions_popup.sh',       path.join(tmuxBin, 'actions_popup.sh')],

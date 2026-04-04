@@ -82,7 +82,7 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://<frontend-url>/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

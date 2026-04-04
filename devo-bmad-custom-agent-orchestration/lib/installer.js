@@ -14,6 +14,7 @@ const { glob } = require('glob');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const { setupTmux } = require('./tmuxInstaller');
+const { detectPlatform } = require('./platform');
 
 // Modules available in src/
 const AVAILABLE_MODULES = ['bmm', 'bmb', 'core', '_memory'];
@@ -133,13 +134,36 @@ async function install(opts) {
 
   let resolvedTools = tools ? tools.split(',').map(t => t.trim()).filter(t => t !== 'none') : ['claude-code'];
 
+  // Detect or ask platform
+  let platform = existingManifest?.platform || null;
+  if (!platform) {
+    platform = detectPlatform();
+  }
+
   if (!yes) {
-    const { intro, text, multiselect, outro, isCancel } = require('@clack/prompts');
+    const { intro, text, multiselect, select, outro, isCancel, cancel } = require('@clack/prompts');
     intro(chalk.bold.cyan(`BMAD Method — ${isUpdate ? 'Update' : 'Install'}`));
 
     if (isUpdate && existingManifest) {
       console.log(chalk.dim(`  Existing installation: v${existingManifest.version || '?'}`));
       console.log(chalk.dim(`  Installed: ${existingManifest.installDate || '?'}\n`));
+    }
+
+    // Platform selection — always ask if not already stored in manifest
+    if (!existingManifest?.platform) {
+      const platformMap = { 'windows-wsl': 'Windows (WSL2)', 'linux-native': 'Linux (native — Fedora/Ubuntu/Arch)', 'macos': 'macOS' };
+      const confirmedPlatform = await select({
+        message: `Detected platform: ${platformMap[platform]}. Is this correct?`,
+        options: [
+          { value: platform, label: `✓ Yes — ${platformMap[platform]}` },
+          { value: 'windows-wsl', label: 'Windows (WSL2)' },
+          { value: 'linux-native', label: 'Linux (native — Fedora/Ubuntu/Arch)' },
+          { value: 'macos', label: 'macOS' },
+        ],
+        initialValue: platform,
+      });
+      if (isCancel(confirmedPlatform)) { cancel('Installation cancelled.'); process.exit(0); }
+      platform = confirmedPlatform;
     }
 
     if (!resolvedUserName) {
@@ -276,7 +300,7 @@ async function install(opts) {
 
   // ── tmux setup (claude-code only) ─────────────────────────────────────────
   if (resolvedTools.includes('claude-code')) {
-    await setupTmux(projectRoot, chalk);
+    await setupTmux(projectRoot, chalk, platform);
   }
 
   // ── Manifest write ────────────────────────────────────────────────────────
@@ -287,6 +311,7 @@ async function install(opts) {
     lastUpdated: now,
     userName: resolvedUserName || 'Developer',
     outputFolder,
+    platform: platform,
     modules: [...modulesToInstall],
     tools: resolvedTools,
   };
@@ -548,36 +573,7 @@ function buildTmuxEntry() {
     '',
     '## Agent Spawning (tmux-aware)',
     '',
-    'When spawning sub-agents, check whether tmux is active (`$TMUX` environment variable is set).',
-    '',
-    '| Situation | Method |',
-    '|-----------|--------|',
-    '| Task is fully autonomous — no user input or monitoring needed | **In-process** (Agent tool) |',
-    '| Task benefits from user observation, may need clarification, or user said "spawn" / "open agent" | **Split pane** — new tmux pane running `claude` |',
-    '',
-    '**How to open a split-pane agent when tmux is active:**',
-    '```bash',
-    '# Vertical split (side by side) — preferred for longer tasks',
-    'tmux split-window -h -c "#{pane_current_path}" "claude --dangerously-skip-permissions \'<task>\'"',
-    '# Horizontal split (top/bottom) — preferred for monitoring',
-    'tmux split-window -v -c "#{pane_current_path}" "claude --dangerously-skip-permissions \'<task>\'"',
-    '```',
-    '',
-    '**Pane close sequence (mandatory):**',
-    '```bash',
-    '# 1. Send /exit first — lets Claude finish and save state',
-    'tmux send-keys -t <pane_id> "/exit" Enter',
-    '# 2. Then kill the pane',
-    'tmux kill-pane -t <pane_id>',
-    '```',
-    '',
-    '**Multi-pane layout:** Before first split, decide master position (left/right/top/bottom).',
-    'Panes 2–4 stack opposite master. Panes 5+ surround on perpendicular axis.',
-    '',
-    '**Agent orchestration:** Coordinate agents via session files at',
-    '`.agents/orchestration/session-YYYYMMDD-HHMMSS-XXXX.md`.',
-    'Never route by reading pane titles — use the session file Active Agents table.',
-    'Always append `Enter` to every `tmux send-keys` call.',
+    'If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any multi-pane work.',
     '',
   ].join('\n');
 }

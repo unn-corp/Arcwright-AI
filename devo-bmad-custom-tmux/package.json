@@ -1,7 +1,7 @@
 {
   "name": "@devo-bmad-custom/tmux",
-  "version": "1.0.23",
-  "description": "tmux setup for AI agent workflows — Catppuccin theme, pane title sync, clipboard integration, and Claude Code multi-agent scripts",
+  "version": "1.0.24",
+  "description": "tmux setup for AI agent workflows — Catppuccin theme, pane title sync, clipboard integration, and Claude Code multi-agent scripts. Supports Windows (WSL2) and Linux (Fedora/Ubuntu/Arch).",
   "keywords": [
     "tmux",
     "claude",

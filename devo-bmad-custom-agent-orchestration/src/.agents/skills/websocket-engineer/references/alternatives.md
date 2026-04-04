@@ -60,7 +60,7 @@ app.listen(3000);
 ### SSE Client
 
 ```javascript
-const eventSource = new EventSource('http://localhost:3000/events');
+const eventSource = new EventSource('http://<frontend-url>/events');
 
 eventSource.onmessage = (event) => {
   const data = JSON.parse(event.data);
@@ -201,7 +201,7 @@ const clientId = Math.random().toString(36);
 async function poll() {
   try {
     const response = await fetch(
-      `http://localhost:3000/poll?clientId=${clientId}`,
+      `http://<frontend-url>/poll?clientId=${clientId}`,
       { signal: AbortSignal.timeout(35000) }
     );
 

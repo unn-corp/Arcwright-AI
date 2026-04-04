@@ -19,6 +19,7 @@
     flex-wrap: nowrap;
     margin-bottom: 10px;
     overflow-x: auto;
+    padding-bottom: 12px;
   }
 
   /* Workflow node */
@@ -32,6 +33,7 @@
     flex-direction: column;
     gap: 3px;
     min-width: 160px;
+    min-height: 56px;
   }
   .wf-name { font-weight: 700; color: #e5e5e5; font-size: 0.8rem; }
   .wf-trigger { font-size: 0.66rem; color: #4a9eed; font-family: monospace; }
@@ -854,6 +856,7 @@
 <div class="rv-section">
 
   <!-- Row 1: main flow through gate -->
+  <div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
   <div class="wf-row" style="align-items:center;">
     <div class="wf wf-user" style="min-width:90px;">
       <div class="wf-name">[RV] Entry</div>
@@ -903,11 +906,13 @@
       </div>
     </div>
   </div>
+  </div>
 
   <!-- Branch rows aligned after gate -->
   <div style="display:flex;flex-direction:column;gap:8px;margin-left:840px;">
 
     <!-- YES branch -->
+    <div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
     <div class="wf-row" style="align-items:center;">
       <div class="rv-branch-label rv-branch-yes">YES &gt;8 / 🔴 arch</div>
       <div class="arr amber"></div>
@@ -968,8 +973,10 @@
         <div class="wf-name">✅ BRANCH READY</div>
       </div>
     </div>
+    </div>
 
     <!-- NO branch -->
+    <div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
     <div class="wf-row" style="align-items:center;">
       <div class="rv-branch-label rv-branch-no">NO → small path</div>
       <div class="arr green"></div>
@@ -1017,6 +1024,7 @@
         <div class="wf-name">✅ BRANCH READY</div>
       </div>
     </div>
+    </div>
 
   </div>
 </div>
@@ -1026,6 +1034,7 @@
 
 <div class="group-border">
   <div class="group-label">STANDARD CODE REVIEW GATE (3-sub) — all code tracks</div>
+  <div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
   <div class="wf-row" style="align-items:center;">
     <div class="wf wf-user" style="min-width:120px;">
       <div class="wf-name">Entry point</div>
@@ -1059,10 +1068,12 @@
       <div class="wf-trigger">re-audit after fixes</div>
     </div>
   </div>
+  </div>
 </div>
 
 <div class="group-border">
   <div class="group-label">SPEC-ONLY GATE (2-sub — Nano, Large planning/design) — no AR, no SR</div>
+  <div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
   <div class="wf-row" style="align-items:center;">
     <div class="wf wf-orch" style="min-width:120px;">
       <div class="wf-name">review agent</div>
@@ -1092,6 +1103,7 @@
       <div class="wf-trigger">re-audit after fixes</div>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ══════════ REVIEW LOOP WORKFLOWS ══════════ -->
@@ -1100,6 +1112,7 @@
 <div class="group-border">
   <div class="group-label">LOOP PATTERN (same for DRYL, UVL, SRL)</div>
 
+  <div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
   <div class="wf-row">
     <div class="wf wf-loop"><div class="wf-name">Ask loop count<span class="badge badge-loop">1/2/3 default 2</span></div><div class="mode-badge mode-inprocess">in-process</div></div>
     <div class="arr yellow"></div>
@@ -1113,7 +1126,9 @@
     <div class="arr red"></div>
     <div class="wf wf-sec"><div class="wf-name">max + 🔴</div><div class="wf-agent">🛑 HALT + escalate</div></div>
   </div>
+  </div>
 
+  <div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
   <div class="wf-row" style="margin-top:10px;">
     <div class="wf wf-arch" style="min-width:140px;"><div class="wf-name">DRYL</div><div class="wf-trigger">[DRYL]</div><div class="wf-skill">clean-code-standards</div><div class="wf-agent">architect-agent</div></div>
     <div class="arr yellow"></div>
@@ -1121,11 +1136,13 @@
     <div class="arr yellow"></div>
     <div class="wf wf-sec" style="min-width:140px;"><div class="wf-name">SRL</div><div class="wf-trigger">[SRL]</div><div class="wf-skill">security-review + /sr</div><div class="wf-agent">security-agent</div></div>
   </div>
+  </div>
 </div>
 
 <!-- ══════════ PLANNING WORKFLOWS ══════════ -->
 <div class="section-title">Planning Workflows — left to right through agents</div>
 
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
 <div class="wf-row">
   <div class="wf wf-user"><div class="wf-name">Product Brief</div><div class="wf-trigger">bmad-bmm-create-product-brief</div><div class="wf-agent">pm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
   <div class="arr"></div>
@@ -1137,10 +1154,12 @@
   <div class="arr"></div>
   <div class="wf wf-ux"><div class="wf-name">Create UX Design</div><div class="wf-trigger">bmad-bmm-create-ux-design</div><div class="wf-agent">ux-designer-agent</div><div class="wf-skill">ux-audit</div><div class="mode-badge mode-inprocess">in-process</div></div>
 </div>
+</div>
 
 <!-- ══════════ SPRINT EXECUTION ══════════ -->
 <div class="section-title">Sprint Execution Workflows</div>
 
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
 <div class="wf-row">
   <div class="wf wf-pm"><div class="wf-name">Create Epics + Stories</div><div class="wf-trigger">bmad-bmm-create-epics-and-stories</div><div class="wf-agent">sm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
   <div class="arr"></div>
@@ -1152,10 +1171,12 @@
   <div class="arr"></div>
   <div class="wf wf-user"><div class="wf-name">QA / E2E Tests</div><div class="wf-trigger">bmad-bmm-qa-generate-e2e-tests</div><div class="wf-agent">qa-agent</div><div class="mode-badge mode-splitpane">split-pane</div></div>
 </div>
+</div>
 
 <!-- ══════════ RESEARCH ══════════ -->
 <div class="section-title">Research Workflows</div>
 
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
 <div class="wf-row">
   <div class="wf wf-arch"><div class="wf-name">Domain Research</div><div class="wf-trigger">bmad-bmm-domain-research</div><div class="wf-agent">analyst-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
   <div class="arr"></div>
@@ -1163,10 +1184,12 @@
   <div class="arr"></div>
   <div class="wf wf-arch"><div class="wf-name">Technical Research</div><div class="wf-trigger">bmad-bmm-technical-research</div><div class="wf-agent">analyst-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
 </div>
+</div>
 
 <!-- ══════════ SPRINT HEALTH ══════════ -->
 <div class="section-title">Sprint Health + Lifecycle</div>
 
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
 <div class="wf-row">
   <div class="wf wf-pm"><div class="wf-name">Sprint Status</div><div class="wf-trigger">bmad-bmm-sprint-status</div><div class="wf-agent">sm-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
   <div class="arr"></div>
@@ -1176,10 +1199,12 @@
   <div class="arr"></div>
   <div class="wf wf-arch"><div class="wf-name">Impl. Readiness Check</div><div class="wf-trigger">bmad-bmm-check-impl-readiness</div><div class="wf-agent">architect-agent</div><div class="mode-badge mode-inprocess">in-process</div></div>
 </div>
+</div>
 
 <!-- ══════════ KRAKKEN MENU TRIGGERS ══════════ -->
 <div class="section-title">Orchestrator Menu Triggers — all left-to-right invocation paths</div>
 
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
 <div class="wf-row" style="flex-wrap:wrap;gap:8px;">
   <div class="wf wf-user" style="min-width:80px;"><div class="wf-name">[N]</div><div class="wf-trigger">Nano track</div></div>
   <div class="arr"></div>
@@ -1207,144 +1232,331 @@
   <div class="arr yellow"></div>
   <div class="wf wf-loop" style="min-width:80px;"><div class="wf-name">[SRL]</div><div class="wf-trigger">SR Loop</div></div>
 </div>
-
-<div class="section-title">Agent Teams <span style="font-size:0.72rem;font-weight:400;color:#999;">— Persistent multi-pane teams managed by squid-master. Spawn with [ST-{code}].</span></div>
-<div style="overflow-x:auto;margin-bottom:24px;">
-<table style="width:100%;border-collapse:collapse;font-size:0.74rem;">
-  <thead>
-    <tr>
-      <th style="text-align:left;padding:7px 10px;background:#2a2a3e;color:#7dd3fc;border-bottom:1px solid #3a3a5e;white-space:nowrap;">Code</th>
-      <th style="text-align:left;padding:7px 10px;background:#2a2a3e;color:#7dd3fc;border-bottom:1px solid #3a3a5e;white-space:nowrap;">Name</th>
-      <th style="text-align:left;padding:7px 10px;background:#2a2a3e;color:#7dd3fc;border-bottom:1px solid #3a3a5e;white-space:nowrap;">Agents</th>
-      <th style="text-align:left;padding:7px 10px;background:#2a2a3e;color:#7dd3fc;border-bottom:1px solid #3a3a5e;white-space:nowrap;">Loop Type</th>
-      <th style="text-align:left;padding:7px 10px;background:#2a2a3e;color:#7dd3fc;border-bottom:1px solid #3a3a5e;">Best For</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">blueprint</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The War Room</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">PM · Analyst · Architect</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Strategic planning: PRDs, research, architecture decisions before any build</td>
-    </tr>
-    <tr>
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">dev-qa</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">Dev + QA</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Dev · QA</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">General feature work and bug fixes with iterative test loop</td>
-    </tr>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">arch-dev</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Foundry</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Architect · Dev</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Design-before-build: system boundaries, new services, data model changes</td>
-    </tr>
-    <tr>
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">tdd</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Forge</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">QA (tests first) · Dev</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Test-driven development: QA writes failing specs, Dev implements to pass</td>
-    </tr>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">solo-dev</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">Ghost</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Solo Dev</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Nano/Small tasks, no overhead, fast execution</td>
-    </tr>
-    <tr>
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">review</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">Review + Fix Loop</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Architect · UX · Dev</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="badge badge-loop">loop</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Iterative code review: reviewers find issues, Dev fixes, reviewers re-check</td>
-    </tr>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">audit</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Crucible</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Architect · UX · Security · Dev</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="badge badge-loop">loop</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Deep codebase audit with full iterative fix loop (RV track)</td>
-    </tr>
-    <tr>
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">sec-qa</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Vault</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Security · QA · Dev</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="badge badge-loop">loop</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Security hardening: auth, payments, API surface with fix verification</td>
-    </tr>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">ux-qa</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Atelier</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">UX Designer · QA</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">UI-focused build: UX designs/implements, QA validates through browser</td>
-    </tr>
-    <tr>
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">ux-arch</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Blueprint Room</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">UX Designer · Architect</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Design-system work: new pages/flows, design artifacts only</td>
-    </tr>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">research</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">Recon Pod</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Analyst · PM · Tech Writer</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Deep research, competitive analysis, domain exploration</td>
-    </tr>
-    <tr>
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">docs</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Library</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Tech Writer · Architect</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Documentation with technical accuracy review</td>
-    </tr>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">hotfix</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">Rapid Response</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Dev · Security</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Production incidents: fast path, no ceremony, security sign-off required</td>
-    </tr>
-    <tr>
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">sprint</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Strike Team</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">SM · Dev · QA</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Full sprint execution with task queue management</td>
-    </tr>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">full-dev</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Engine Room</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Dev · QA · Architect</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Complex features needing inline architecture consultation</td>
-    </tr>
-    <tr>
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;border-bottom:1px solid #2a2a3e;">solo-arch</td>
-      <td style="padding:6px 10px;color:#e5e5e5;border-bottom:1px solid #2a2a3e;">The Oracle</td>
-      <td style="padding:6px 10px;color:#ccc;border-bottom:1px solid #2a2a3e;">Architect (full skill access)</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #2a2a3e;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;border-bottom:1px solid #2a2a3e;">Architecture analysis, design proposals, prototyping</td>
-    </tr>
-    <tr style="background:#252535;">
-      <td style="padding:6px 10px;color:#4a9eed;font-family:monospace;">solo-qa</td>
-      <td style="padding:6px 10px;color:#e5e5e5;">The Inquisitor</td>
-      <td style="padding:6px 10px;color:#ccc;">QA</td>
-      <td style="padding:6px 10px;"><span class="mode-badge mode-splitpane">split-pane</span></td>
-      <td style="padding:6px 10px;color:#aaa;">QA-only runs, regression tests, playwright-cli sessions</td>
-    </tr>
-  </tbody>
-</table>
 </div>
 
-<div class="legend">
+<!-- AGENT TEAMS FLOWCHARTS -->
+<div class="section-title" style="margin-top:48px;">Agent Teams — Flowcharts</div>
+<p style="color:#aaa;font-size:13px;margin:0 0 28px 0;">All 17 persistent teams. Arrows show task dispatch &amp; signal flow. Loop badges indicate iterative fix cycles.</p>
+
+<!-- CATEGORY: PLANNING & RESEARCH -->
+<div style="margin-bottom:10px;font-size:12px;font-weight:700;color:#a78bfa;letter-spacing:.08em;text-transform:uppercase;">Planning &amp; Research Teams</div>
+
+<!-- blueprint -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;">blueprint · The War Room — Architect + PM + UX Designer</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-blueprint</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-arch">🏛 Architect<br><small>requirements</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-pm">📋 PM<br><small>stories</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-ux">🎨 UX Designer<br><small>wireframes</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-user">✅ Master<br><small>collects output</small></div>
+</div>
+</div>
+
+<!-- research -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">research · Deep Dive — Architect + Tech Writer</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-research</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-arch">🏛 Architect<br><small>research</small></div>
+  <div class="arr">→</div>
+  <div class="wf" style="background:#1c2a1c;border-color:#4ade80;color:#4ade80;">✍ Tech Writer<br><small>document</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-user">✅ Master<br><small>report ready</small></div>
+</div>
+</div>
+
+<!-- docs -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">docs · The Library — Tech Writer + Architect</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-docs</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf" style="background:#1c2a1c;border-color:#4ade80;color:#4ade80;">✍ Tech Writer<br><small>draft</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-arch">🏛 Architect<br><small>accuracy review</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-user">✅ Master<br><small>docs ready</small></div>
+</div>
+</div>
+
+<!-- ux-arch -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">ux-arch · The Design System — UX Designer + Architect</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-ux-arch</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-ux">🎨 UX Designer<br><small>design proposal</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-arch">🏛 Architect<br><small>feasibility</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-user">✅ Master<br><small>spec ready</small></div>
+</div>
+</div>
+
+<!-- solo-arch -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">solo-arch · The Oracle — Architect (full skill access)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-solo-arch</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-arch" style="min-width:160px;">🏛 Architect<br><small>analysis · design · prototype</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-user">✅ Master<br><small>AGENT_SIGNAL done</small></div>
+</div>
+</div>
+
+<!-- CATEGORY: DEV PAIRS -->
+<div style="margin-top:40px;margin-bottom:10px;font-size:12px;font-weight:700;color:#38bdf8;letter-spacing:.08em;text-transform:uppercase;">Dev Pair Teams</div>
+
+<!-- dev-qa -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;">dev-qa · Dynamic Duo — Dev + QA (iterative loop)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-dev-qa</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>implement</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-loop">🔍 QA<br><small>validate</small></div>
+  <div class="arr arr-red">→ fail?</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>fix</small></div>
+  <div class="arr arr-green">→ pass</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ QA fail → Dev fix → re-validate (max 3 loops then [CC])</div>
+
+<!-- tdd -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">tdd · Red-Green — QA first + Dev (test-driven loop)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-tdd</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-loop">🔍 QA<br><small>write tests (RED)</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>implement (GREEN)</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-loop">🔍 QA<br><small>verify pass</small></div>
+  <div class="arr arr-green">→ pass</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ QA fail → Dev refactor → re-verify</div>
+
+<!-- arch-dev -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">arch-dev · Blueprint + Build — Architect + Dev (design-first)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-arch-dev</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-arch">🏛 Architect<br><small>design</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-arch" style="border-color:#60a5fa;">⚙ Dev<br><small>implement</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-arch">🏛 Architect<br><small>review</small></div>
+  <div class="arr arr-green">→ pass</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ Arch review fail → Dev rework → re-review</div>
+
+<!-- ux-qa -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">ux-qa · Look &amp; Feel — UX Designer + QA + Dev (UI fix loop)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-ux-qa</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-ux">🎨 UX Designer<br><small>UI review</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-loop">🔍 QA<br><small>playwright</small></div>
+  <div class="arr arr-red">→ fail?</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>fix UI</small></div>
+  <div class="arr arr-green">→ pass</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ QA/UX fail → Dev fix → re-validate</div>
+
+<!-- solo-dev -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">solo-dev · The Lone Wolf — Dev only</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-solo-dev</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-arch" style="min-width:160px;">⚙ Dev<br><small>implement · self-review · signal done</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+
+<!-- solo-qa -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">solo-qa · The Inquisitor — QA only</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-solo-qa</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-loop" style="min-width:160px;">🔍 QA<br><small>test · playwright · regression</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-user">✅ Master<br><small>report</small></div>
+</div>
+</div>
+
+<!-- CATEGORY: REVIEW / FIX LOOPS -->
+<div style="margin-top:40px;margin-bottom:10px;font-size:12px;font-weight:700;color:#fbbf24;letter-spacing:.08em;text-transform:uppercase;">Review &amp; Fix Loop Teams</div>
+
+<!-- review -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;">review · The Council — AR + QA + Dev (multi-reviewer fix loop)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-review</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-loop">📐 AR<br><small>arch review</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-loop">🔍 QA<br><small>test review</small></div>
+  <div class="arr arr-red">→ findings</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>fix all</small></div>
+  <div class="arr arr-purple">→ re-review</div>
+  <div class="wf wf-loop">📐 AR + 🔍 QA</div>
+  <div class="arr arr-green">→ pass</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ Any reviewer fail → Dev batch-fixes → all reviewers re-check (max 3 loops then [CC])</div>
+
+<!-- audit -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">audit · The Inquisition — AR + QA + Sec + Dev (full audit loop)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-audit</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-loop">📐 AR</div>
+  <div class="arr">+</div>
+  <div class="wf wf-loop">🔍 QA</div>
+  <div class="arr">+</div>
+  <div class="wf wf-sec">🔒 Sec</div>
+  <div class="arr arr-red">→ findings</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>fix all</small></div>
+  <div class="arr arr-purple">→ re-audit</div>
+  <div class="wf wf-loop">all reviewers</div>
+  <div class="arr arr-green">→ pass</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ AR + QA + Sec findings batched to Dev → full re-audit (max 3 loops then [CC])</div>
+
+<!-- sec-qa -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">sec-qa · The Bunker — Security + QA + Dev (security fix loop)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-sec-qa</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-sec">🔒 Security<br><small>audit</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-loop">🔍 QA<br><small>validate</small></div>
+  <div class="arr arr-red">→ findings</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>fix</small></div>
+  <div class="arr arr-purple">→ re-check</div>
+  <div class="wf wf-sec">🔒 Sec + 🔍 QA</div>
+  <div class="arr arr-green">→ pass</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ Sec/QA findings → Dev fix → re-security-check (max 3 loops then [CC])</div>
+
+<!-- CATEGORY: FULL TEAMS -->
+<div style="margin-top:40px;margin-bottom:10px;font-size:12px;font-weight:700;color:#22c55e;letter-spacing:.08em;text-transform:uppercase;">Full Teams</div>
+
+<!-- sprint -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;">sprint · The Strike Team — SM + Dev + QA (task queue)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-sprint</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-pm">📋 SM<br><small>queue mgmt</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>implement</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-loop">🔍 QA<br><small>validate</small></div>
+  <div class="arr arr-red">→ fail?</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>fix</small></div>
+  <div class="arr arr-green">→ next story</div>
+  <div class="wf wf-pm">📋 SM</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ SM tracks queue · QA fail → Dev fix → next story from SM</div>
+
+<!-- full-dev -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">full-dev · The Engine Room — Dev + QA + Architect</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-full-dev</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master</div>
+  <div class="arr arr-purple">→</div>
+  <div class="wf wf-arch">🏛 Architect<br><small>consult</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-arch" style="border-color:#60a5fa;">⚙ Dev<br><small>implement</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-loop">🔍 QA<br><small>validate</small></div>
+  <div class="arr arr-red">→ fail?</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>fix</small></div>
+  <div class="arr arr-green">→ pass</div>
+  <div class="wf wf-user">✅ Master</div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#fbbf24;">↺ Architect available for consult at any loop iteration · QA fail → Dev fix</div>
+
+<!-- hotfix -->
+<div style="margin-bottom:6px;font-size:11px;color:#7c7c9a;margin-top:20px;">hotfix · Rapid Response — Dev + Security (production incidents)</div>
+<div style="margin-bottom:8px;"><code style="background:#1a1a2e;border:1px solid #3a3a5e;border-radius:4px;padding:2px 8px;font-size:11px;color:#a78bfa;">/spawn-team-hotfix</code></div>
+<div style="overflow-x:auto;padding-bottom:12px;margin-bottom:4px;">
+<div class="wf-row">
+  <div class="wf wf-orch">🦑 Master<br><small>🚨 incident</small></div>
+  <div class="arr arr-red">→ fast path</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>hotfix</small></div>
+  <div class="arr">→</div>
+  <div class="wf wf-sec">🔒 Security<br><small>sign-off required</small></div>
+  <div class="arr arr-red">→ issues?</div>
+  <div class="wf wf-arch">⚙ Dev<br><small>remediate</small></div>
+  <div class="arr arr-green">→ signed off</div>
+  <div class="wf wf-user">✅ Master<br><small>deploy</small></div>
+</div>
+</div>
+<div style="margin:4px 0 0 0;font-size:11px;color:#f87171;">⚠ No spec overhead. Security sign-off mandatory before deploy.</div>
+
+<!-- AGENT_SIGNAL legend -->
+<div style="margin-top:36px;padding:14px 18px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:8px;font-size:12px;">
+  <div style="color:#a78bfa;font-weight:700;margin-bottom:8px;">AGENT_SIGNAL Protocol</div>
+  <div style="display:flex;gap:24px;flex-wrap:wrap;color:#ccc;line-height:1.8;">
+    <span><code style="color:#38bdf8;">STEP_COMPLETE</code> — task done, ready for next dispatch</span>
+    <span><code style="color:#22c55e;">PASS</code> — review/QA passed, no issues</span>
+    <span><code style="color:#f87171;">FAIL</code> — issues found, findings file written</span>
+    <span><code style="color:#fbbf24;">BLOCKED</code> — needs master input to proceed</span>
+    <span><code style="color:#fb923c;">STATUS_CHECK</code> — master polling at 2min silence</span>
+  </div>
+  <div style="margin-top:8px;color:#7c7c9a;font-size:11px;">Format: <code>AGENT_SIGNAL::{TYPE}::{FROM}::{TASK_ID}::{STATUS}::{DETAIL}</code></div>
+</div>
+
+
   <div class="legend-item"><div class="ls" style="background:#2d1b69;border-color:#a78bfa;"></div>Review Agent / Gate</div>
   <div class="legend-item"><div class="ls" style="background:#1e3a5f;border-color:#4a9eed;"></div>Architect / Dev</div>
   <div class="legend-item"><div class="ls" style="background:#1a3040;border-color:#38bdf8;"></div>UX domain</div>

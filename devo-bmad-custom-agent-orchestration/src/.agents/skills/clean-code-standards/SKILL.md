@@ -91,7 +91,7 @@ Fix: {specific fix — include corrected code snippet where helpful}
 
 ---
 
-## YAML Verdict (return to review-orchestrator or Krakken)
+## YAML Verdict (return to review-orchestrator or Conductor)
 
 ```yaml
 dry_review_verdict:

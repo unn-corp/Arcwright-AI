@@ -53,7 +53,7 @@ Get project path and dev server URL:
 ```json
 { "name": "get_project_metadata", "arguments": {} }
 ```
-Returns: `{ "projectPath": "/path/to/project", "devServerUrl": "http://localhost:3000" }`
+Returns: `{ "projectPath": "/path/to/project", "devServerUrl": "http://<frontend-url>" }`
 
 #### `get_page_metadata`
 Get runtime metadata about current page render (requires active browser session):

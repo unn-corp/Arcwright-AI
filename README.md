@@ -64,9 +64,9 @@ Use `/master-orchestrator` to activate the full triage flow — the orchestrator
 
 ## Packages
 
-### `@devo-bmad-custom/agent-orchestration` v1.0.29 — Base Package
+### `@devo-bmad-custom/agent-orchestration` v1.0.30 — Base Package
 
-BMAD Method — AI-native agile workflow system for Claude Code and compatible AI assistants
+BMAD Method — AI-native agile workflow system for Claude Code and compatible AI assistants. Supports Windows (WSL2) and Linux (Fedora/Ubuntu/Arch).
 
 Installs the full agent system into your project. Includes all specialist agents, the `master-orchestrator` conductor, 24-skill library, 7 workflow track slash commands, and IDE integration for 6 platforms.
 
@@ -109,7 +109,7 @@ During install you select which AI tools to configure:
 
 ---
 
-### `@devo-bmad-custom/squidhub` v1.0.27 — Squidhub Addon
+### `@devo-bmad-custom/squidhub` v1.0.28 — Squidhub Addon
 
 BMAD Squidhub Addon — squid-master orchestration agent, review workflows, and Squidhub-specific configurations
 
@@ -132,7 +132,7 @@ npx @devo-bmad-custom/squidhub
 
 ---
 
-### `@devo-bmad-custom/tmux` v1.0.23 — tmux Setup
+### `@devo-bmad-custom/tmux` v1.0.24 — tmux Setup
 
 Standalone tmux configuration for AI agent workflows. No BMAD install required.
 

@@ -5,6 +5,15 @@ description: "The Vault — Security finds vulnerabilities, Dev remediates, QA c
 
 # Agent Team: Security + QA — The Vault
 
+## tmux Protocol
+
+If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+
+## Available Skills
+
+Scan `_bmad/_config/skills-menu.md` for skills relevant to this task. Load the full SKILL.md for any that apply before starting work.
+
+
 ## Team Composition
 
 | Role | Agent | Skills |
@@ -33,15 +42,15 @@ The Vault is purpose-built for security-first remediation cycles. Security ident
 
 ```bash
 # 1. Split Security pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the Security reviewer in The Vault team managed by Krakken (squid-master). Activate with a security-only review lens: focus exclusively on OWASP Top 10, injection vulnerabilities, XSS, auth bypass, secrets exposure, and insecure data handling. Emit AGENT_SIGNAL::FINDING signals as you discover issues. You have sign-off authority on fixed items. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::security::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Security reviewer in The Vault team managed by Conductor (master-orchestrator). Activate with a security-only review lens: focus exclusively on OWASP Top 10, injection vulnerabilities, XSS, auth bypass, secrets exposure, and insecure data handling. Emit AGENT_SIGNAL::FINDING signals as you discover issues. You have sign-off authority on fixed items. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::security::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split QA pane (mid-right)
-tmux split-window -v -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the QA agent in The Vault team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-qa.md. In this team your role is to VERIFY THAT EXPLOIT PATHS ARE CLOSED — not just that code compiles. Use playwright-cli to attempt to trigger vulnerabilities through the live UI and API. Signal pass only when you have confirmed the attack surface is gone. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in The Vault team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-qa.md. In this team your role is to VERIFY THAT EXPLOIT PATHS ARE CLOSED — not just that code compiles. Use playwright-cli to attempt to trigger vulnerabilities through the live UI and API. Signal pass only when you have confirmed the attack surface is gone. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Split Dev pane (bottom-right)
-tmux split-window -v -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the Dev agent in The Vault team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-dev.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in The Vault team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-dev.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 4. Equalize pane sizes
@@ -119,7 +128,7 @@ Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}:
 
 ## Team Registration
 
-When spawning this team, master writes to `_bmad/_memory/squid-master-sidecar/session-state.md` under `active_team`:
+When spawning this team, master writes to `_bmad/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
 ```yaml
 active_team:
   code: sec-qa
@@ -145,7 +154,7 @@ When `$TMUX` is not set, run agents sequentially using the Agent tool:
 ## Team Close Protocol
 
 When master needs to close this team:
-1. Read pane IDs from `active_team` in `_bmad/_memory/squid-master-sidecar/session-state.md`
+1. Read pane IDs from `active_team` in `_bmad/_memory/master-orchestrator-sidecar/session-state.md`
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 

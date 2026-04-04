@@ -5,6 +5,11 @@ description: "The Atelier — UX Designer implements (can write code), QA valida
 
 # Agent Team: UX + QA — The Atelier
 
+## tmux Protocol
+
+If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+
+
 ## Team Composition
 
 | Role | Agent | Skills |
@@ -30,11 +35,11 @@ The Atelier pairs a UX Designer who can write code directly with a QA agent that
 
 ```bash
 # 1. Split UX Designer pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the UX Designer agent in The Atelier team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-ux-designer.md. You have full dev skill access and can write code directly — you are not limited to design artifacts. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::ux::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the UX Designer agent in The Atelier team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-ux-designer.md. You have full dev skill access and can write code directly — you are not limited to design artifacts. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::ux::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split QA pane (bottom-right, below UX)
-tmux split-window -v -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the QA agent in The Atelier team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-qa.md. Use playwright-cli to navigate the live UI and assert visual correctness and functional behavior. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in The Atelier team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-qa.md. Use playwright-cli to navigate the live UI and assert visual correctness and functional behavior. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Equalize pane sizes
@@ -99,7 +104,7 @@ Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}:
 
 ## Team Registration
 
-When spawning this team, master writes to `_bmad/_memory/squid-master-sidecar/session-state.md` under `active_team`:
+When spawning this team, master writes to `_bmad/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
 ```yaml
 active_team:
   code: ux-qa
@@ -122,7 +127,7 @@ When `$TMUX` is not set, run agents sequentially using the Agent tool:
 ## Team Close Protocol
 
 When master needs to close this team:
-1. Read pane IDs from `active_team` in `_bmad/_memory/squid-master-sidecar/session-state.md`
+1. Read pane IDs from `active_team` in `_bmad/_memory/master-orchestrator-sidecar/session-state.md`
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 

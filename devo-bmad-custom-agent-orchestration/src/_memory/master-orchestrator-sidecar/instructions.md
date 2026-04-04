@@ -553,7 +553,7 @@ sm-agent annotates each story file with `deployment: split-pane` or `deployment:
 
 ### Split-Pane Agent Behaviour Rules
 
-**`--dangerously-skip-permissions` required:** ALL split pane agents MUST be launched with this flag. Mode [2] command blocks and Mode [3] launch scripts already include it. For tmux-based spawning: `tmux split-window -h "claude --dangerously-skip-permissions '{agent-persona-command}'"`.
+**`agent_spawn.sh` required:** ALL split pane agents MUST be launched via `~/.config/tmux/bin/agent_spawn.sh`. It wraps `claude --dangerously-skip-permissions` and auto-kills the pane on exit, preventing dead panes and orphaned Node subprocesses. Mode [2] command blocks and Mode [3] launch scripts already include it. For tmux-based spawning: `tmux split-window -h "~/.config/tmux/bin/agent_spawn.sh '{agent-persona-command}'"`.
 
 **Explore first, spawn later:** When a split pane agent activates and receives its task context, it MUST explore and reason in conversation before spawning any in-process sub-agents. The agent should:
 1. Read the context file and task description
@@ -565,122 +565,11 @@ Do NOT spawn in-process research agents immediately on activation. Exploration h
 
 **Dev agents always launch in split pane:** ANY agent that performs code implementation — `quick-flow-solo-dev`, `dev-agent`, or any dev-story agent — MUST be launched in a new split pane with `--dangerously-skip-permissions`. No track is exempt from this rule, including Nano. In-process code generation is forbidden for dev steps.
 
-### Pane Messaging Protocol
+### tmux Protocol
 
-> See also: global CLAUDE.md "Agent Orchestration — File-Based Task Routing" for the general multi-agent pane routing protocol. This section covers BMAD-specific usage.
+**If `$TMUX` is set** (tmux is active), load and follow `.agents/skills/tmux-protocol/SKILL.md` before proceeding. That skill covers: pane spawn sequence, message delivery verification, sleep timings, agent report-back, pane close protocol, master pane monitoring, `AGENT_SIGNAL` format + polling, and follow-up task routing with active teams.
 
-**Sending a message to another pane:**
-
-```bash
-tmux send-keys -t <pane_id> "<message>" Enter
-```
-
-⚠️ **`Enter` is mandatory.** Without it the message is typed into the pane but never submitted — the agent will not receive it.
-
-**On spawning a split-pane agent:**
-
-1. Note the new pane's ID immediately after `tmux split-window` (use `tmux display-message -p "#{pane_id}"` in the new pane or read it from `tmux list-panes`)
-2. Record it in the orchestration session file Active Agents table with role, status, and CWD
-3. Pass the spawner's own pane ID to the spawned agent as part of its task context so it knows where to report back
-4. Immediately after `split-window`, set pane title to `<role>-<pane_id>` and disable auto-rename:
-   ```bash
-   NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
-   tmux set-option -t "$NEW_PANE_ID" -p allow-rename off
-   tmux select-pane -t "$NEW_PANE_ID" -T "${ROLE}-${NEW_PANE_ID}"
-   ```
-   Record `name_source: auto` in session file. If the pane had a non-default title before spawn → `name_source: manual` — NEVER rename a `manual` pane.
-
-```bash
-# MANDATORY spawn sequence — do not reorder
-SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
-sleep 3  # pre-command buffer
-tmux split-window -h -c "#{pane_current_path}" \
-  "claude --dangerously-skip-permissions --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' 'You are the <role> agent. Spawner pane: $SPAWNER_PANE. <task context>'"
-sleep 8  # REQUIRED — pane initialization
-NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
-# Verify pane exists before any operation
-tmux list-panes | grep -q "$NEW_PANE_ID" || { echo "ERROR: pane spawn failed"; exit 1; }
-sleep 6
-tmux select-layout tiled
-```
-
-**⚠️ Sleep between consecutive tmux commands.** tmux commands are asynchronous — always insert `sleep` between operations:
-- `sleep 8` after `split-window`
-- `sleep 6` after `send-keys`, `kill-pane`, `select-layout`, `set-option`, or `select-pane -T`
-
-Without sleep, race conditions cause stale pane IDs, undelivered messages, and failed layout changes.
-
-**Every spawned agent MUST report back when done:**
-
-As its final action before closing or going idle, every spawned agent sends a completion message to the pane that spawned it:
-
-```bash
-tmux send-keys -t <spawner_pane_id> "✅ STEP COMPLETE: <step-name> | result: <pass/fail/summary> | session: <claude_session_id>" Enter
-```
-
-This is non-negotiable — master-orchestrator blocks on this message to know when a pipeline step is finished.
-
-**Master Orchestrator on receiving a completion message:**
-
-1. Parse the step name, result, and session ID from the message
-2. Update `_bmad-output/parallel/{session_id}/agent-sessions.md` — set that agent's row to `status: closed`, record the session ID and timestamp
-3. If result contains findings or failures, handle per track rules (e.g. spawn quick-dev fix pane)
-4. Proceed to the next pipeline step
-
-### Pane Close Protocol
-
-Every split-pane agent has a defined closing point. The close sequence is always two steps — **in this order**:
-
-**Step 1 — Send `/exit` into the agent's conversation:**
-```bash
-tmux send-keys -t <pane_id> "/exit" Enter
-```
-This lets Claude finish any in-progress output, flush file writes, and exit cleanly. Never skip this.
-
-**Step 2 — Kill the pane:**
-```bash
-tmux kill-pane -t <pane_id>
-```
-
-**Never kill the pane without `/exit` first.** Skipping Step 1 can leave partial file writes, git lock files, or unsaved session state that will block the next pipeline step.
-
-**When each pane type closes — per workflow role:**
-
-| Agent | Closes when |
-|---|---|
-| `quick-flow-solo-dev` / `dev-agent` | After code is committed on branch and completion report-back sent |
-| `qa-agent` | After all tests pass (or fail report sent) and report-back sent |
-| `review agent` | After all sub-agent verdicts collected, findings resolved, and report-back sent |
-| `pm-agent` / `sm-agent` (planning step) | After output artifact written to disk and report-back sent |
-| `analyst-agent` (research) | After research report written and report-back sent |
-| `sm-agent` (epic loop coordinator) | When Master Orchestrator sends `/exit` after all epics complete — never self-closes |
-| Any agent with 🔴 unresolved | Stays open until blocker resolved by user, then closes via normal sequence |
-
-**After closing every pane**, Master Orchestrator MUST:
-1. Update the session file Active Agents table row: `status: closed`
-2. Record `closed_at` timestamp and `session_id`
-3. Only then proceed to spawn the next pipeline pane (if any)
-
-### Master Pane Monitoring
-
-After spawning a split-pane agent, master checks pane health every 30s (Mode [3] scripts only):
-
-```bash
-# Paste into generated .ps1 scripts after spawn
-while true; do
-  sleep 30
-  if ! tmux list-panes | grep -q "$AGENT_PANE"; then
-    echo "WARN: Agent pane $AGENT_PANE gone — check session file"
-    break
-  fi
-  STATUS=$(tmux capture-pane -t "$AGENT_PANE" -p | tail -3)
-  echo "[$(date +%H:%M:%S)] Agent check: $STATUS"
-done &
-MONITOR_PID=$!
-```
-
-For Mode [1] (same-conversation): check session file after each step instead of polling.
-Kill monitor when completion signal received: `kill $MONITOR_PID 2>/dev/null`
+**If `$TMUX` is not set**, skip the skill entirely — all agent work runs in-process via the Agent tool.
 
 ---
 

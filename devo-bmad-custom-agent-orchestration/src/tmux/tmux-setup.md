@@ -456,6 +456,56 @@ NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
 
 The spawned agent registers its own pane ID and role in the orchestration session file on startup — no pane title sniffing needed.
 
+### Message Delivery Verification
+
+**Every `tmux send-keys` dispatch to a team or pipeline pane MUST be verified.** `send-keys` is fire-and-forget — it does not confirm the pane received or processed the message. Without verification, silent failures (bad pane ID, pane gone, agent crashed) go undetected until the 2-minute backup timeout.
+
+**Mandatory send + verify pattern:**
+
+```bash
+# 1. Send the message
+tmux send-keys -t <pane_id> "<message>" Enter
+sleep 6  # let pane process the keystrokes
+
+# 2. Verify a unique token from the message appears in the pane buffer
+DELIVERY=$(tmux capture-pane -t <pane_id> -p 2>/dev/null | tail -15)
+if ! echo "$DELIVERY" | grep -q "<unique_token>"; then
+  echo "⚠️ Delivery unconfirmed to pane <pane_id> — retrying once..."
+  tmux send-keys -t <pane_id> "<message>" Enter
+  sleep 6
+  # Second check — if still not visible, surface to user
+  DELIVERY2=$(tmux capture-pane -t <pane_id> -p 2>/dev/null | tail -15)
+  if ! echo "$DELIVERY2" | grep -q "<unique_token>"; then
+    echo "❌ Message not delivered to pane <pane_id> after retry. Pane may be unresponsive."
+    # Present to user: [retry] [respawn] [skip]
+  fi
+fi
+```
+
+Use a short unique token from the message — the task ID is ideal (e.g. `TASK-042`). If the pane does not exist at all (`tmux capture-pane` returns non-zero), skip the grep and go straight to the respawn path.
+
+**Always confirm delivery before polling for `AGENT_SIGNAL`.** Polling for a signal from a pane that never received the task will always time out.
+
+---
+
+### Follow-up Task Routing with Active Teams
+
+**When a team is active, ALL follow-up user requests must be routed to the correct team pane — never handled inline by master.**
+
+Before dispatching any follow-up:
+
+1. Read `active_team.panes` from `_bmad/_memory/squid-master-sidecar/session-state.md`
+2. Verify the target pane is alive: `tmux list-panes -a | grep -q "<pane_id>"`
+3. If pane is gone: respawn it, re-register in session-state, then dispatch
+4. Dispatch with the full send + verify protocol above
+5. **Always respond in the master pane** confirming where the task went and that you're polling:
+   > _"→ Dispatched to `{role}` (`{pane_id}`): {task summary}. Polling for TASK_DONE..."_
+6. Report back to master pane when `AGENT_SIGNAL::TASK_DONE` is received
+
+**Multiple follow-ups:** Queue them. Dispatch to different role panes in parallel if independent. Dispatch sequentially to the same pane, waiting for `TASK_DONE` between each.
+
+---
+
 ### Sleep between tmux commands
 
 tmux commands execute asynchronously — issuing them back-to-back causes race conditions (pane not yet created, message not yet delivered, layout not yet applied). **Always insert a short `sleep` between consecutive tmux operations:**

@@ -5,6 +5,11 @@ description: "Recon Pod — Analyst researches, PM synthesizes into briefs, Tech
 
 # Agent Team: Research — Recon Pod
 
+## tmux Protocol
+
+If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+
+
 ## Team Composition
 
 | Role | Agent | Skills |
@@ -35,15 +40,15 @@ The Recon Pod assembles for deep research tasks before strategy or build decisio
 
 ```bash
 # 1. Split Analyst pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the Analyst agent in the Recon Pod team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-analyst.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::analyst::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Analyst agent in the Recon Pod team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-analyst.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::analyst::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split PM pane (mid-right)
-tmux split-window -v -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the PM agent in the Recon Pod team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-pm.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::pm::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the PM agent in the Recon Pod team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-pm.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::pm::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Split Tech Writer pane (bottom-right)
-tmux split-window -v -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are the Tech Writer agent in the Recon Pod team managed by Krakken (squid-master). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-tech-writer.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Tech Writer agent in the Recon Pod team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/bmad-agent-bmm-tech-writer.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 4. Equalize pane sizes
@@ -51,7 +56,7 @@ tmux select-layout tiled
 sleep 6
 
 # Optional: Spawn second Analyst pane for parallel research tracks
-# tmux split-window -h -c "#{pane_current_path}" "claude --dangerously-skip-permissions 'You are Analyst-2 in the Recon Pod team...'"
+# tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are Analyst-2 in the Recon Pod team...'"
 # sleep 8
 # tmux select-layout tiled
 # sleep 6
@@ -119,7 +124,7 @@ Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}:
 
 ## Team Registration
 
-When spawning this team, master writes to `_bmad/_memory/squid-master-sidecar/session-state.md` under `active_team`:
+When spawning this team, master writes to `_bmad/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
 ```yaml
 active_team:
   code: research
@@ -146,7 +151,7 @@ When `$TMUX` is not set, run agents sequentially using the Agent tool:
 ## Team Close Protocol
 
 When master needs to close this team:
-1. Read pane IDs from `active_team` in `_bmad/_memory/squid-master-sidecar/session-state.md`
+1. Read pane IDs from `active_team` in `_bmad/_memory/master-orchestrator-sidecar/session-state.md`
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 

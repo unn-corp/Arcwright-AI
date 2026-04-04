@@ -1,7 +1,7 @@
 {
   "name": "@devo-bmad-custom/agent-orchestration",
-  "version": "1.0.29",
-  "description": "BMAD Method — AI-native agile workflow system for Claude Code and compatible AI assistants",
+  "version": "1.0.30",
+  "description": "BMAD Method — AI-native agile workflow system for Claude Code and compatible AI assistants. Supports Windows (WSL2) and Linux (Fedora/Ubuntu/Arch).",
   "keywords": [
     "bmad",
     "ai-agents",
