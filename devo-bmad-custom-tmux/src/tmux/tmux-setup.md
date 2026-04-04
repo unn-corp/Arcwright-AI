@@ -488,24 +488,6 @@ Use a short unique token from the message — the task ID is ideal (e.g. `TASK-0
 
 ---
 
-### Follow-up Task Routing with Active Teams
-
-**When a team is active, ALL follow-up user requests must be routed to the correct team pane — never handled inline by master.**
-
-Before dispatching any follow-up:
-
-1. Read `active_team.panes` from `_bmad/_memory/squid-master-sidecar/session-state.md`
-2. Verify the target pane is alive: `tmux list-panes -a | grep -q "<pane_id>"`
-3. If pane is gone: respawn it, re-register in session-state, then dispatch
-4. Dispatch with the full send + verify protocol above
-5. **Always respond in the master pane** confirming where the task went and that you're polling:
-   > _"→ Dispatched to `{role}` (`{pane_id}`): {task summary}. Polling for TASK_DONE..."_
-6. Report back to master pane when `AGENT_SIGNAL::TASK_DONE` is received
-
-**Multiple follow-ups:** Queue them. Dispatch to different role panes in parallel if independent. Dispatch sequentially to the same pane, waiting for `TASK_DONE` between each.
-
----
-
 ### Sleep between tmux commands
 
 tmux commands execute asynchronously — issuing them back-to-back causes race conditions (pane not yet created, message not yet delivered, layout not yet applied). **Always insert a short `sleep` between consecutive tmux operations:**
