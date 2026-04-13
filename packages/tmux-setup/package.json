@@ -1,0 +1,31 @@
+{
+  "name": "@arcwright/tmux-setup",
+  "version": "1.0.0",
+  "description": "tmux setup for AI agent workflows — Catppuccin theme, pane title sync, clipboard integration, and multi-agent orchestration scripts",
+  "keywords": [
+    "tmux",
+    "claude",
+    "ai-agents",
+    "arcwright",
+    "wsl",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "arcwright-tmux": "bin/arcwright-tmux.js"
+  },
+  "main": "lib/installer.js",
+  "files": [
+    "bin/",
+    "lib/",
+    "src/"
+  ],
+  "dependencies": {
+    "commander": "^12.0.0",
+    "fs-extra": "^11.0.0",
+    "chalk": "^5.3.0"
+  }
+}

@@ -67,6 +67,23 @@ npx @arcwright/agent-orchestration --global
 
 Cross-platform: Windows (WSL2), Linux, macOS.
 
+## tmux Setup
+
+Standalone tmux configuration optimized for AI agent workflows:
+
+```bash
+npx @arcwright/tmux-setup
+```
+
+Installs Catppuccin theme, pane title sync, clipboard integration, agent orchestration scripts, and status bar widgets (CPU, RAM, Claude usage). Requires tmux 3.4+.
+
+## Packages
+
+| Package | Description | Install |
+|---------|-------------|---------|
+| `@arcwright/agent-orchestration` | Agents, skills, workflows, IDE configs | `npx @arcwright/agent-orchestration` |
+| `@arcwright/tmux-setup` | tmux config + scripts for agent workflows | `npx @arcwright/tmux-setup` |
+
 ## Building from Source
 
 ```bash
