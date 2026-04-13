@@ -406,45 +406,30 @@ function bundleTrackCommands() {
 function bundleTmuxSetup() {
   console.log('⌨️   Bundling tmux setup → src/tmux/');
 
-  const tmuxBaseSrc = path.join(PROJECT_ROOT, 'docs', 'dev', 'tmux');
-  const sharedSrc   = path.join(tmuxBaseSrc, 'shared');
-  const destDir     = path.join(PKG_SRC, 'tmux');
+  // Single source of truth: packages/tmux-setup/src/tmux/
+  const tmuxSrc = path.join(PROJECT_ROOT, 'packages', 'tmux-setup', 'src', 'tmux');
+  const destDir = path.join(PKG_SRC, 'tmux');
 
-  fs.mkdirSync(destDir, { recursive: true });
-
-  // Prefer docs/dev/tmux/shared/ if it exists; fall back to docs/dev/tmux/ flat
-  const sharedSource = fs.existsSync(sharedSrc) ? sharedSrc : (fs.existsSync(tmuxBaseSrc) ? tmuxBaseSrc : null);
-
-  if (!sharedSource) {
-    console.log('  ⚠  docs/dev/tmux/ not found — skipping tmux bundle');
+  if (!fs.existsSync(tmuxSrc)) {
+    console.log('  ⚠  packages/tmux-setup/src/tmux/ not found — skipping tmux bundle');
     return;
   }
 
-  // Copy all files directly in the source directory (non-recursive — subdirs handled below)
-  const sharedFiles = fs.readdirSync(sharedSource, { withFileTypes: true })
-    .filter(e => e.isFile());
-
-  let sharedCopied = 0;
-  for (const e of sharedFiles) {
-    const src = path.join(sharedSource, e.name);
-    copyFile(src, path.join(destDir, e.name));
-    sharedCopied++;
-  }
-  console.log(`  ✓  tmux/shared  (${sharedCopied} files)  → src/tmux/`);
-
-  // Copy platform-specific subdirs (windows/, linux/) — always include both
-  for (const subdir of ['windows', 'linux']) {
-    const subdirSrc = path.join(tmuxBaseSrc, subdir);
-    if (!fs.existsSync(subdirSrc)) continue;
-    const subdirDest = path.join(destDir, subdir);
-    fs.mkdirSync(subdirDest, { recursive: true });
-    const files = fs.readdirSync(subdirSrc, { withFileTypes: true }).filter(e => e.isFile());
-    for (const e of files) {
-      copyFile(path.join(subdirSrc, e.name), path.join(subdirDest, e.name));
+  const files = walk(tmuxSrc, tmuxSrc);
+  let copied = 0;
+  for (const { full, rel } of files) {
+    if (isExcluded(rel)) continue;
+    const dest = path.join(destDir, rel);
+    const content = readText(full);
+    if (content !== null) {
+      writeFile(dest, content);
+    } else {
+      copyFile(full, dest);
     }
-    console.log(`  ✓  tmux/${subdir}/  (${files.length} files)  → src/tmux/${subdir}/`);
+    copied++;
   }
 
+  console.log(`  ✓  packages/tmux-setup/src/tmux/  (${copied} files)  → src/tmux/`);
   console.log('');
 }
 
