@@ -15,7 +15,7 @@ HK  = '\033[1;38;2;255;213;116m'
 HT  = '\033[1;38;2;220;224;255m'
 RST = '\033[0m'
 
-W = 26  # cell content width (popup must be >= W*3 + 8)
+W = 26  # cell content width (popup must be >= W*NC + (NC-1)*3 + 5)
 
 # All keys are lowercase. ("---", label) = separator. ("", "") = empty padding.
 COLS = [

@@ -1,0 +1,9 @@
+{
+  "name": "arcwright-workshop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Arcwright — AI agent workflow workshop",
+  "scripts": {
+    "build": "node build/build.js"
+  }
+}

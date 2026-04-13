@@ -1,0 +1,36 @@
+{
+  "name": "@arcwright/agent-orchestration",
+  "version": "1.0.30",
+  "description": "Arcwright — AI-native agile workflow system for Claude Code, Kiro, and compatible AI assistants. Supports Windows (WSL2) and Linux (Fedora/Ubuntu/Arch).",
+  "keywords": [
+    "arcwright",
+    "ai-agents",
+    "claude",
+    "kiro",
+    "agile",
+    "workflow",
+    "llm"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "arcwright": "bin/arcwright.js",
+    "arcwright-install": "bin/arcwright.js"
+  },
+  "main": "lib/installer.js",
+  "files": [
+    "bin/",
+    "lib/",
+    "src/"
+  ],
+  "dependencies": {
+    "commander": "^12.0.0",
+    "fs-extra": "^11.0.0",
+    "yaml": "^2.4.0",
+    "glob": "^11.0.0",
+    "@clack/prompts": "^0.8.0",
+    "chalk": "^5.3.0"
+  }
+}

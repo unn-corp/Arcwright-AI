@@ -126,7 +126,7 @@ program
 program
   .command('tmux')
   .description('Set up tmux for AI agent workflows — writes config, scripts, and walks through WSL prerequisites')
-  .option('-d, --directory <path>', 'Project root (used for squid/squid-claude aliases)', process.cwd())
+  .option('-d, --directory <path>', 'Project root (used for tmux-ai/tmux-claude aliases)', process.cwd())
   .addHelpText('after', `
 Examples:
   # Interactive tmux setup

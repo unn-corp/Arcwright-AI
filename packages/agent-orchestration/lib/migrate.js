@@ -38,6 +38,8 @@ const DIR_RENAMES = [
   { from: '_arcwright/bmb', to: '_arcwright/awb' },
   // Output subdirectories
   { from: '_arcwright-output/bmb-creations', to: '_arcwright-output/awb-creations' },
+  // Workflow directories
+  { from: '_arcwright/awm/workflows/bmad-quick-flow', to: '_arcwright/awm/workflows/arcwright-quick-flow' },
 ];
 
 /** Patterns for .claude/commands/ files to DELETE (old bmad commands that have no arcwright equivalent) */

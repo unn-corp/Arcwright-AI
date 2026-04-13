@@ -2,7 +2,7 @@
 
 > AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
 
-Arcwright installs a structured system of specialist AI agents, workflow tracks, and a 54-skill library into any project. Pick a track sized to your task, and the orchestrator routes it through spec, research, UX, implementation, review, and QA — using named agents in coordinated tmux panes.
+Arcwright installs a structured system of specialist AI agents, workflow tracks, and a 53-skill library into any project. Pick a track sized to your task, and the orchestrator routes it through spec, research, UX, implementation, review, and QA — using named agents in coordinated tmux panes.
 
 ## Quick Start
 
