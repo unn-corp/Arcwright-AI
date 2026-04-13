@@ -8,14 +8,14 @@ Powerline-style single status bar with clickable buttons and live stats.
 ## Shell Commands
 
 ```bash
-squid         # open a new tmux session in the Squidhub project directory
-squid-claude  # same, but immediately launches Claude with --dangerously-skip-permissions
+tmux-ai       # open a new tmux session in your project directory
+tmux-claude   # same, but immediately launches Claude with --dangerously-skip-permissions
 ```
 
 Defined in `~/.bashrc`:
 ```bash
-alias squid='tmux new-session -c /mnt/c/Users/White/Documents/Squidhub/Squidhub'
-alias squid-claude='tmux new-session -c /mnt/c/Users/White/Documents/Squidhub/Squidhub "claude --dangerously-skip-permissions"'
+alias tmux-ai='tmux new-session -c /path/to/your/project'
+alias tmux-claude='tmux new-session -c /path/to/your/project "claude --dangerously-skip-permissions"'
 ```
 
 ---
@@ -58,7 +58,7 @@ nvm install --lts
 
 Open **Docker Desktop → Settings → Resources → WSL Integration**, toggle on your Ubuntu distro, click **Apply & Restart**.
 
-> ⚠️ Without this, the `n8n-unnportal` and `dokploy` MCP servers will fail to connect even though Docker is installed on Windows.
+> ⚠️ Without this, Docker-based MCP servers will fail to connect even though Docker is installed on Windows.
 
 ---
 
@@ -92,7 +92,7 @@ If you prefer SSH keys instead:
 ```bash
 ssh-keygen -t ed25519 -C "you@example.com"
 cat ~/.ssh/id_ed25519.pub   # paste this into GitHub → Settings → SSH Keys
-git remote set-url origin git@github.com:unn-corp/Squidhub.git
+git remote set-url origin git@github.com:your-org/your-repo.git
 ```
 
 ---
@@ -456,38 +456,6 @@ NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
 
 The spawned agent registers its own pane ID and role in the orchestration session file on startup — no pane title sniffing needed.
 
-### Message Delivery Verification
-
-**Every `tmux send-keys` dispatch to a team or pipeline pane MUST be verified.** `send-keys` is fire-and-forget — it does not confirm the pane received or processed the message. Without verification, silent failures (bad pane ID, pane gone, agent crashed) go undetected until the 2-minute backup timeout.
-
-**Mandatory send + verify pattern:**
-
-```bash
-# 1. Send the message
-tmux send-keys -t <pane_id> "<message>" Enter
-sleep 6  # let pane process the keystrokes
-
-# 2. Verify a unique token from the message appears in the pane buffer
-DELIVERY=$(tmux capture-pane -t <pane_id> -p 2>/dev/null | tail -15)
-if ! echo "$DELIVERY" | grep -q "<unique_token>"; then
-  echo "⚠️ Delivery unconfirmed to pane <pane_id> — retrying once..."
-  tmux send-keys -t <pane_id> "<message>" Enter
-  sleep 6
-  # Second check — if still not visible, surface to user
-  DELIVERY2=$(tmux capture-pane -t <pane_id> -p 2>/dev/null | tail -15)
-  if ! echo "$DELIVERY2" | grep -q "<unique_token>"; then
-    echo "❌ Message not delivered to pane <pane_id> after retry. Pane may be unresponsive."
-    # Present to user: [retry] [respawn] [skip]
-  fi
-fi
-```
-
-Use a short unique token from the message — the task ID is ideal (e.g. `TASK-042`). If the pane does not exist at all (`tmux capture-pane` returns non-zero), skip the grep and go straight to the respawn path.
-
-**Always confirm delivery before polling for `AGENT_SIGNAL`.** Polling for a signal from a pane that never received the task will always time out.
-
----
-
 ### Sleep between tmux commands
 
 tmux commands execute asynchronously — issuing them back-to-back causes race conditions (pane not yet created, message not yet delivered, layout not yet applied). **Always insert a short `sleep` between consecutive tmux operations:**
@@ -526,7 +494,7 @@ Sub-agents spawned from the master orchestrator should run with **all MCP server
 
 | Agent | MCP needed? | Reason |
 |---|---|---|
-| master-orchestrator / squid-master | ✅ Yes | Feedback lookup, status updates during triage |
+| master-orchestrator | ✅ Yes | Feedback lookup, status updates during triage |
 | dev / quick-flow-solo-dev | ❌ No | Reads and writes code only |
 | pm-agent (QS/PRD/CB) | ❌ No | Works from handoff context file |
 | analyst | ❌ No | Web search + file reads only |
@@ -575,7 +543,7 @@ Stop:
     kill $(cat /tmp/watch-sync.pid)
 
 Configure via env vars:
-    WATCH_CONTAINER=squidhub-frontend-1
+    WATCH_CONTAINER=app-frontend-1
     WATCH_HOST_DIR=./frontend
     WATCH_CONTAINER_DIR=/app
 
@@ -598,15 +566,15 @@ When coordinating multiple Claude agents, use **orchestration session files** �
 
 ```markdown
 # Agent Session: 20260313-143022-a4f1
-**Project:** /mnt/c/Users/White/Documents/Squidhub/Squidhub
+**Project:** /path/to/your/project
 **Created:** 2026-03-13T14:30:22
 
 ## Active Agents
 | Pane ID | Role        | Status | CWD                     |
 |---------|-------------|--------|-------------------------|
-| %27     | coordinator | idle   | .../Squidhub            |
-| %31     | backend     | busy   | .../Squidhub            |
-| %33     | frontend    | idle   | .../Squidhub            |
+| %27     | coordinator | idle   | .../my-project          |
+| %31     | backend     | busy   | .../my-project          |
+| %33     | frontend    | idle   | .../my-project          |
 
 ## Tasks
 ### TASK-001 · pending · backend
@@ -835,7 +803,7 @@ MCP servers work differently depending on their transport type. The project-comm
 
 ### Step 1 — Enable Docker Desktop WSL integration
 
-Two of the three servers (`n8n-unnportal`, `dokploy`) use `docker exec`. For `docker` to work inside WSL, Docker Desktop must have WSL integration enabled.
+Docker-based MCP servers use `docker exec`. For `docker` to work inside WSL, Docker Desktop must have WSL integration enabled.
 
 1. Open **Docker Desktop → Settings → Resources → WSL Integration**
 2. Toggle on **your Ubuntu distro** (e.g. `Ubuntu` or `Ubuntu-24.04`)
@@ -849,15 +817,10 @@ If you see container output (or an empty table), Docker is wired up. If you get 
 
 ---
 
-### Step 2 — squidhub server (HTTP, localhost:5050)
+### Step 2 — HTTP-based MCP servers
 
-This server is HTTP-based — no Node or Docker config needed. It just requires the backend stack to be running.
+If your project exposes an HTTP MCP endpoint, ensure the backend is running and verify:
 
-```bash
-./scripts/infisical-run docker-compose up -d
-```
-
-Verify the MCP endpoint is live:
 ```bash
 curl -s http://localhost:5050/mcp | head -c 100
 ```
@@ -912,15 +875,13 @@ Start Claude and run:
 ```
 
 You should see all three project servers listed as connected:
-- `squidhub` — connected (HTTP)
-- `n8n-unnportal` — connected (docker exec)
-- `dokploy` — connected (docker exec)
+- `my-server` — connected (HTTP)
+- `my-docker-server` — connected (docker exec)
 
 If any server shows as failed, check:
 
-| Server | Common cause | Fix |
-|--------|-------------|-----|
-| `squidhub` | Backend not running | `./scripts/infisical-run docker-compose up -d` |
-| `n8n-unnportal` | Docker WSL integration off | Enable in Docker Desktop → WSL Integration |
-| `dokploy` | Container not running | Check `docker ps \| grep dokploy` |
-| Any Node server | Wrong node path in user scope | Re-run `claude mcp add` with correct NVM path |
+| Server type | Common cause | Fix |
+|-------------|-------------|-----|
+| HTTP | Backend not running | Start your backend services |
+| Docker exec | Docker WSL integration off | Enable in Docker Desktop → WSL Integration |
+| Node.js | Wrong node path in user scope | Re-run `claude mcp add` with correct NVM path |

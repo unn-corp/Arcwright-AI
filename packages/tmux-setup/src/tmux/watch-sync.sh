@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-CONTAINER_NAME="${WATCH_CONTAINER:-squidhub-frontend-1}"
+CONTAINER_NAME="${WATCH_CONTAINER:-app-frontend-1}"
 HOST_DIR="${WATCH_HOST_DIR:-./frontend}"
 CONTAINER_DIR="${WATCH_CONTAINER_DIR:-/app}"
 LOG_FILE="/tmp/watch-sync.log"

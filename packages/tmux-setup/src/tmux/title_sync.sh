@@ -11,7 +11,7 @@
 #   $2  pane_active    1 or 0
 #   $3  window_index   e.g. 1
 #   $4  pane_title     e.g. "✳ Claude Code"
-#   $5  cwd_basename   e.g. "Squidhub"
+#   $5  cwd_basename   e.g. "my-project"
 
 PANE_ID="$1"
 PANE_ACTIVE="$2"
@@ -42,7 +42,7 @@ if [ "$WINDOW_INDEX" = "1" ]; then
         EXISTING=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep -Fx "$TARGET")
         CURRENT=$(tmux display-message -p -t "$PANE_ID" "#{session_name}" 2>/dev/null)
         if [ -n "$EXISTING" ] && [ "$CURRENT" != "$TARGET" ]; then
-            # Strip % from pane ID for a clean suffix e.g. "✳ Claude Code · Squidhub · 20"
+            # Strip % from pane ID for a clean suffix e.g. "✳ Claude Code · my-project · 20"
             SUFFIX="${PANE_ID#%}"
             TARGET="$PANE_TITLE · $CWD · $SUFFIX"
         fi

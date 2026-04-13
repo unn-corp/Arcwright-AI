@@ -34,6 +34,10 @@ COLS = [
      ("c","  Copy mode"),("i","  Paste image"),
      ("o","  Open URL / file"),("g","  Search in browser"),
      ("","")],
+    [("E","  Neovim (Alt+e)"),("N","  NvimTree explorer"),
+     ("Y","  Yazi file manager"),("G","  Lazygit"),
+     ("D","  Lazydocker"),
+     ("",""),("",""),("",""),("",""),("","")],
 ]
 
 NR = max(len(c) for c in COLS)
@@ -58,25 +62,29 @@ def render_cell(c, r, hl):
     return f"{KEY}{k}{TXT}{dp}{RST}"
 
 def hline(l, m, r):
-    s = '\u2500' * (W + 2)
-    return f"{DIM}{l}{s}{m}{s}{m}{s}{r}{RST}\n"
+    seg = '\u2500' * (W + 2)
+    segs = [seg] * NC
+    return f"{DIM}{l}{m.join(segs)}{r}{RST}\n"
 
 def data_row_line(r, sc, sr):
     cells = [render_cell(c, r, sc == c and sr == r) for c in range(NC)]
-    return f"{DIM}\u2502{RST} {cells[0]} {DIM}\u2502{RST} {cells[1]} {DIM}\u2502{RST} {cells[2]} {DIM}\u2502{RST}"
+    inner = f" {DIM}\u2502{RST} ".join(cells)
+    return f"{DIM}\u2502{RST} {inner} {DIM}\u2502{RST}"
 
 BSU = '\033[?2026h'   # begin synchronized update (buffer, don't render yet)
 ESU = '\033[?2026l'   # end synchronized update (flush to screen atomically)
 
+HDR_LABELS = [' Window & Session', ' Pane Controls', ' Tools & Clipboard', ' Launch']
+
 def draw(sc, sr):
     """Full initial render."""
-    iw = W * 3 + 6
+    iw = W * NC + (NC - 1) * 3 + 3
     out = [BSU, "\033[2J\033[H",
            f"{HDR}  {'tmux Actions':<{iw}}{RST}\n",
            hline('\u250c', '\u252c', '\u2510')]
-    hdrs = [f"{HDR}{h:<{W}}{RST}" for h in
-            [' Window & Session', ' Pane Controls', ' Tools & Clipboard']]
-    out.append(f"{DIM}\u2502{RST} {hdrs[0]} {DIM}\u2502{RST} {hdrs[1]} {DIM}\u2502{RST} {hdrs[2]} {DIM}\u2502{RST}\n")
+    hdrs = [f"{HDR}{h:<{W}}{RST}" for h in HDR_LABELS[:NC]]
+    inner = f" {DIM}\u2502{RST} ".join(hdrs)
+    out.append(f"{DIM}\u2502{RST} {inner} {DIM}\u2502{RST}\n")
     out.append(hline('\u251c', '\u253c', '\u2524'))
     for r in range(NR):
         out.append(data_row_line(r, sc, sr) + "\n")
@@ -97,9 +105,11 @@ def update(old_sc, old_sr, sc, sr):
     sys.stdout.flush()
 
 def x2col(x):
-    if 2 <= x <= W + 2:           return 0
-    if W + 4 <= x <= 2*W + 4:    return 1
-    if 2*W + 6 <= x <= 3*W + 6:  return 2
+    for c in range(NC):
+        lo = 2 + c * (W + 3)
+        hi = lo + W
+        if lo <= x <= hi:
+            return c
     return -1
 
 def y2row(y): return y - DATA_Y0
@@ -166,6 +176,11 @@ def execute(key):
         'i': lambda: tmux('run-shell', '-b', f"bash ~/.config/tmux/bin/paste_image_wrapper.sh '{PANE}'"),
         'o': lambda: tmux('run-shell', '-b', 'bash ~/.config/tmux/bin/open_clip.sh url'),
         'g': lambda: tmux('run-shell', '-b', 'bash ~/.config/tmux/bin/open_clip.sh search'),
+        'E': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' nvim"),
+        'N': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' 'nvim +NvimTreeOpen'"),
+        'Y': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' yazi"),
+        'G': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' lazygit"),
+        'D': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' lazydocker"),
     }
     if key in dispatch:
         dispatch[key]()
