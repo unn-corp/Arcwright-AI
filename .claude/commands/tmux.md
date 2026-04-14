@@ -1,5 +1,5 @@
 ---
-description: Install or configure tmux for AI agent workflows — runs @arcwright/tmux-setup
+description: Install or configure tmux for AI agent workflows — runs @arcwright-ai/tmux-setup
 ---
 
 # /tmux — Install tmux Setup
@@ -30,7 +30,7 @@ Run the Arcwright tmux setup to install the full tmux configuration optimized fo
 Run the interactive installer:
 
 ```bash
-npx @arcwright/tmux-setup
+npx @arcwright-ai/tmux-setup
 ```
 
 The installer will:
@@ -48,7 +48,7 @@ After install, start tmux with `tmux-ai` or `tmux-claude`, then press `Ctrl+B I`
 If you have the main Arcwright package installed, you can also run:
 
 ```bash
-npx @arcwright/agent-orchestration tmux
+npx @arcwright-ai/agent-orchestration tmux
 ```
 
 Both paths install the exact same files.

@@ -11,7 +11,7 @@ You are running a migration from the old "bmad" agent framework naming to "arcwr
 Run the migration script in dry-run mode first to preview all changes:
 
 ```bash
-npx @arcwright/agent-orchestration migrate --dry-run
+npx @arcwright-ai/agent-orchestration migrate --dry-run
 ```
 
 Report what the script will do. If there are no changes needed, stop here.
@@ -21,7 +21,7 @@ Report what the script will do. If there are no changes needed, stop here.
 If the dry run looks correct, run the migration:
 
 ```bash
-npx @arcwright/agent-orchestration migrate
+npx @arcwright-ai/agent-orchestration migrate
 ```
 
 ### Step 3: Verify — Directory Structure
@@ -71,7 +71,7 @@ If any files still contain "bmad" references, manually review and fix them. Comm
 | `BMAD Builder` | `Arcwright Builder` |
 | `BMM Module` | `AWM Module` |
 | `BMB Module` | `AWB Module` |
-| `@devo-bmad-custom/*` | `@arcwright/*` |
+| `@devo-bmad-custom/*` | `@arcwright-ai/*` |
 
 ### Step 6: Verify — Config Files
 

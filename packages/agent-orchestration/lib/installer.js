@@ -545,7 +545,7 @@ async function status(opts) {
 
   if (!await fs.pathExists(arcwrightDir)) {
     console.log(chalk.yellow('Arcwright is not installed in this project.'));
-    console.log('Run: npx @arcwright/agent-orchestration');
+    console.log('Run: npx @arcwright-ai/agent-orchestration');
     return;
   }
 

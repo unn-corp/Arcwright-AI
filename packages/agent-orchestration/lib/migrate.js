@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @arcwright/agent-orchestration — lib/migrate.js
+ * @arcwright-ai/agent-orchestration — lib/migrate.js
  *
  * Migration script: renames bmad → arcwright across a project.
  *
@@ -92,10 +92,10 @@ const CONTENT_REPLACEMENTS = [
   { pattern: /bmad-track-/g,          replacement: 'arcwright-track-' },
   { pattern: /\/bmad-track-/g,        replacement: '/arcwright-track-' },
   // npx references
-  { pattern: /@devo-bmad-custom\/tmux/g,                  replacement: '@arcwright/tmux-setup' },
-  { pattern: /@devo-bmad-custom\/agent-orchestration/g,    replacement: '@arcwright/agent-orchestration' },
-  { pattern: /devo-bmad-custom-agent-orchestration/g,      replacement: '@arcwright/agent-orchestration' },
-  { pattern: /devo-bmad-custom-tmux/g,                     replacement: '@arcwright/tmux-setup' },
+  { pattern: /@devo-bmad-custom\/tmux/g,                  replacement: '@arcwright-ai/tmux-setup' },
+  { pattern: /@devo-bmad-custom\/agent-orchestration/g,    replacement: '@arcwright-ai/agent-orchestration' },
+  { pattern: /devo-bmad-custom-agent-orchestration/g,      replacement: '@arcwright-ai/agent-orchestration' },
+  { pattern: /devo-bmad-custom-tmux/g,                     replacement: '@arcwright-ai/tmux-setup' },
   // Generic bmad → arcwright (last, most general — lowercase only to avoid false positives)
   { pattern: /bmad-master/g,          replacement: 'arcwright-master' },
 ];

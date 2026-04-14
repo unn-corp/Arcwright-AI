@@ -1,6 +1,6 @@
 'use strict';
 /**
- * @arcwright/tmux-setup — lib/cli.js
+ * @arcwright-ai/tmux-setup — lib/cli.js
  */
 
 const { Command } = require('commander');
@@ -25,10 +25,10 @@ program
 program.addHelpText('after', `
 Examples:
   # Interactive tmux setup
-  npx @arcwright/tmux-setup
+  npx @arcwright-ai/tmux-setup
 
   # tmux setup for a specific project directory
-  npx @arcwright/tmux-setup --directory /path/to/project
+  npx @arcwright-ai/tmux-setup --directory /path/to/project
 `);
 
 program.parse(process.argv);

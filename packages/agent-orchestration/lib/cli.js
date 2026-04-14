@@ -30,7 +30,7 @@ program
 
 program
   .command('install', { isDefault: true })
-  .description('Install Arcwright into the current project (default command — runs on `npx @arcwright/agent-orchestration`)')
+  .description('Install Arcwright into the current project (default command — runs on `npx @arcwright-ai/agent-orchestration`)')
   .option('-d, --directory <path>', 'Target project root', process.cwd())
   .option('-m, --modules <ids>', 'Modules to install (comma-separated: awm,awb,core,_memory)', 'awm,awb,core,_memory')
   .option('--tools <ids>', `IDE integrations to configure (comma-separated). Supported: ${SUPPORTED_TOOLS}`, 'claude-code')
@@ -41,19 +41,19 @@ program
   .addHelpText('after', `
 Examples:
   # Interactive install — prompts for your name, detects existing installation
-  npx @arcwright/agent-orchestration
+  npx @arcwright-ai/agent-orchestration
 
   # Non-interactive, install everything
-  npx @arcwright/agent-orchestration --yes
+  npx @arcwright-ai/agent-orchestration --yes
 
   # Install with specific IDEs
-  npx @arcwright/agent-orchestration --tools claude-code,kiro,cursor --yes
+  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor --yes
 
   # Install into a specific directory
-  npx @arcwright/agent-orchestration --directory /path/to/project --yes
+  npx @arcwright-ai/agent-orchestration --directory /path/to/project --yes
 
   # Global install (applies to all projects)
-  npx @arcwright/agent-orchestration --global --yes
+  npx @arcwright-ai/agent-orchestration --global --yes
 `)
   .action(async (opts) => {
     const { install } = require('./installer');
@@ -73,13 +73,13 @@ program
   .addHelpText('after', `
 Examples:
   # Interactive update — shows installed version, preserves your name
-  npx @arcwright/agent-orchestration update
+  npx @arcwright-ai/agent-orchestration update
 
   # Non-interactive update
-  npx @arcwright/agent-orchestration update --yes
+  npx @arcwright-ai/agent-orchestration update --yes
 
   # Update and add Kiro support
-  npx @arcwright/agent-orchestration update --tools claude-code,kiro --yes
+  npx @arcwright-ai/agent-orchestration update --tools claude-code,kiro --yes
 `)
   .action(async (opts) => {
     const { install } = require('./installer');
@@ -118,7 +118,7 @@ program
     for (const row of rows) {
       console.log('  ' + row.map((cell, i) => cell.padEnd(widths[i])).join('   '));
     }
-    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright/agent-orchestration --tools claude-code,kiro,cursor\n');
+    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor\n');
   });
 
 // ─── tmux ─────────────────────────────────────────────────────────────────────
@@ -130,10 +130,10 @@ program
   .addHelpText('after', `
 Examples:
   # Interactive tmux setup
-  npx @arcwright/agent-orchestration tmux
+  npx @arcwright-ai/agent-orchestration tmux
 
   # tmux setup for a specific project directory
-  npx @arcwright/agent-orchestration tmux --directory /path/to/project
+  npx @arcwright-ai/agent-orchestration tmux --directory /path/to/project
 `)
   .action(async (opts) => {
     const { setupTmux } = require('./installer');
@@ -151,13 +151,13 @@ program
   .addHelpText('after', `
 Examples:
   # Preview what would change
-  npx @arcwright/agent-orchestration migrate --dry-run
+  npx @arcwright-ai/agent-orchestration migrate --dry-run
 
   # Apply the migration
-  npx @arcwright/agent-orchestration migrate
+  npx @arcwright-ai/agent-orchestration migrate
 
   # Migrate a specific project
-  npx @arcwright/agent-orchestration migrate --directory /path/to/project
+  npx @arcwright-ai/agent-orchestration migrate --directory /path/to/project
 `)
   .action(async (opts) => {
     const { migrate } = require('./migrate');

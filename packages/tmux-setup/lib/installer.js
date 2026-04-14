@@ -1,6 +1,6 @@
 'use strict';
 /**
- * @arcwright/tmux-setup — lib/installer.js
+ * @arcwright-ai/tmux-setup — lib/installer.js
  * Standalone tmux setup for AI agent workflows.
  * Installs ~/.tmux.conf, scripts, TPM, and shell aliases.
  * Requires tmux 3.4+ (pane-title-changed is a window-level hook in 3.4).
@@ -93,7 +93,7 @@ async function setupTmux(projectRoot, chalk) {
 
   const tmuxSrc = path.join(SRC_DIR, 'tmux');
   if (!await fs.pathExists(tmuxSrc)) {
-    console.log(chalk.red('\n  ✗  tmux source files not found in package. Try reinstalling: npx @arcwright/tmux-setup@latest'));
+    console.log(chalk.red('\n  ✗  tmux source files not found in package. Try reinstalling: npx @arcwright-ai/tmux-setup@latest'));
     rl.close();
     return;
   }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @arcwright/tmux-setup — bin/arcwright-tmux.js
+ * @arcwright-ai/tmux-setup — bin/arcwright-tmux.js
  * NPX entry point — runs interactive tmux setup.
  */
 'use strict';

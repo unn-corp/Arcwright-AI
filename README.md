@@ -7,7 +7,7 @@ Arcwright installs a structured system of specialist AI agents, workflow tracks,
 ## Quick Start
 
 ```bash
-npx @arcwright/agent-orchestration
+npx @arcwright-ai/agent-orchestration
 ```
 
 Then use a slash command to kick off a workflow:
@@ -59,10 +59,10 @@ Claude Code, Kiro (IDE + CLI), Cursor, Windsurf, Cline, GitHub Copilot, Gemini
 
 ```bash
 # Install for specific IDEs
-npx @arcwright/agent-orchestration --tools claude-code,kiro
+npx @arcwright-ai/agent-orchestration --tools claude-code,kiro
 
 # Global install
-npx @arcwright/agent-orchestration --global
+npx @arcwright-ai/agent-orchestration --global
 ```
 
 Cross-platform: Windows (WSL2), Linux, macOS.
@@ -72,7 +72,7 @@ Cross-platform: Windows (WSL2), Linux, macOS.
 Standalone tmux configuration optimized for AI agent workflows:
 
 ```bash
-npx @arcwright/tmux-setup
+npx @arcwright-ai/tmux-setup
 ```
 
 Installs Catppuccin theme, pane title sync, clipboard integration, agent orchestration scripts, and status bar widgets (CPU, RAM, Claude usage). Requires tmux 3.4+.
@@ -81,8 +81,8 @@ Installs Catppuccin theme, pane title sync, clipboard integration, agent orchest
 
 | Package | Description | Install |
 |---------|-------------|---------|
-| `@arcwright/agent-orchestration` | Agents, skills, workflows, IDE configs | `npx @arcwright/agent-orchestration` |
-| `@arcwright/tmux-setup` | tmux config + scripts for agent workflows | `npx @arcwright/tmux-setup` |
+| `@arcwright-ai/agent-orchestration` | Agents, skills, workflows, IDE configs | `npx @arcwright-ai/agent-orchestration` |
+| `@arcwright-ai/tmux-setup` | tmux config + scripts for agent workflows | `npx @arcwright-ai/tmux-setup` |
 
 ## Building from Source
 

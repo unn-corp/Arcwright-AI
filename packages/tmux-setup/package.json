@@ -1,5 +1,5 @@
 {
-  "name": "@arcwright/tmux-setup",
+  "name": "@arcwright-ai/tmux-setup",
   "version": "1.0.0",
   "description": "tmux setup for AI agent workflows — Catppuccin theme, pane title sync, clipboard integration, and multi-agent orchestration scripts",
   "keywords": [
