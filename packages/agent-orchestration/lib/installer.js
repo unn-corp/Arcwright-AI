@@ -203,7 +203,7 @@ async function writeFilesManifest(arcwrightDir, entries) {
 
 // ─── Kiro config writer ───────────────────────────────────────────────────────
 
-async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform) {
+async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
   const kiroHooksSrc = path.join(SRC_DIR, '.kiro', 'hooks');
 
@@ -221,9 +221,14 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform) {
   const agentSkillsSrc = path.join(SRC_DIR, '.agents', 'skills');
   if (await fs.pathExists(agentSkillsSrc)) {
     await fs.ensureDir(skillsDest);
-    await fs.copy(agentSkillsSrc, skillsDest, { overwrite: true });
-    const skillFiles = await glob('**/*', { cwd: agentSkillsSrc, nodir: true });
-    console.log(chalk.green(`  ✓ .kiro/skills/ (${skillFiles.length} files)`));
+    const filter = resolvedTeams
+      ? undefined
+      : (src) => !/[/\\]team-[^/\\]+[/\\]?$/.test(src) && !/[/\\]team-[^/\\]+[/\\]/.test(src);
+    await fs.copy(agentSkillsSrc, skillsDest, { overwrite: true, filter });
+    const allSkillFiles = await glob('**/*', { cwd: agentSkillsSrc, nodir: true });
+    const skillFiles = resolvedTeams ? allSkillFiles : allSkillFiles.filter(f => !/^team-/.test(f));
+    const teamNote = !resolvedTeams ? chalk.dim(` (skipped ${allSkillFiles.length - skillFiles.length} team-* files)`) : '';
+    console.log(chalk.green(`  ✓ .kiro/skills/ (${skillFiles.length} files)`) + teamNote);
   }
 
   // Copy steering files
@@ -254,6 +259,7 @@ async function install(opts) {
     outputFolder = '_arcwright-output',
     action = 'install',
     yes = false,
+    teams = true,  // include team-* skills and /team command
   } = opts;
 
   let isGlobal = opts.global || false;
@@ -285,9 +291,10 @@ async function install(opts) {
   let resolvedUserName = userName;
 
   let resolvedTools = tools ? tools.split(',').map(t => t.trim()).filter(t => t !== 'none') : ['claude-code'];
+  let resolvedTeams = teams !== false;
 
   if (!yes) {
-    const { intro, text, multiselect, select, outro, isCancel, cancel } = require('@clack/prompts');
+    const { intro, text, multiselect, select, confirm, outro, isCancel, cancel } = require('@clack/prompts');
     intro(chalk.bold.cyan(`Arcwright — ${isUpdate ? 'Update' : 'Install'}`));
 
     if (isUpdate && existingManifest) {
@@ -356,6 +363,14 @@ async function install(opts) {
       resolvedTools = platformChoices;
     }
 
+    // Agent teams opt-in — 17 team-* skills + /team slash command
+    const teamsChoice = await confirm({
+      message: 'Install agent teams? (17 pre-built multi-agent compositions + /team command — requires tmux for split-pane mode)',
+      initialValue: existingManifest?.teams !== false,
+    });
+    if (isCancel(teamsChoice)) { process.exit(0); }
+    resolvedTeams = teamsChoice;
+
     outro(`${isUpdate ? 'Updating' : 'Installing'} Arcwright...`);
   }
 
@@ -419,14 +434,25 @@ async function install(opts) {
       ? resolveToolPath('claude-code', '.claude/skills', true, homes, platform)
       : path.join(projectRoot, '.agents', 'skills');
     await fs.ensureDir(destSkills);
-    await fs.copy(pkgSkillsSrc, destSkills, { overwrite: true });
-    const skillFiles = await glob('**/*', { cwd: pkgSkillsSrc, nodir: true });
+
+    // Filter team-* skills if teams were declined
+    const filter = resolvedTeams
+      ? undefined
+      : (src) => !/[/\\]team-[^/\\]+[/\\]?$/.test(src) && !/[/\\]team-[^/\\]+[/\\]/.test(src);
+
+    await fs.copy(pkgSkillsSrc, destSkills, { overwrite: true, filter });
+    const allSkillFiles = await glob('**/*', { cwd: pkgSkillsSrc, nodir: true });
+    const skillFiles = resolvedTeams
+      ? allSkillFiles
+      : allSkillFiles.filter(f => !/^team-/.test(f));
     for (const rel of skillFiles) {
       const content = await fs.readFile(path.join(pkgSkillsSrc, rel));
       newFileEntries.push({ relPath: path.join('.agents/skills', rel).replace(/\\/g, '/'), hash: sha256(content) });
     }
     installedCount += skillFiles.length;
-    console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`));
+    const skippedTeams = allSkillFiles.length - skillFiles.length;
+    const teamNote = skippedTeams > 0 ? chalk.dim(` (skipped ${skippedTeams} team-* files)`) : '';
+    console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`) + teamNote);
   }
 
   // ── Orphan removal (update only) ──────────────────────────────────────────
@@ -473,7 +499,7 @@ async function install(opts) {
 
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
-    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform);
+    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams);
   }
 
   // ── tmux setup (claude-code only, project installs only) ──────────────────
@@ -492,6 +518,7 @@ async function install(opts) {
     platform: platform,
     modules: [...modulesToInstall],
     tools: resolvedTools,
+    teams: resolvedTeams,
     global: isGlobal,
   };
 
@@ -677,13 +704,17 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         ? resolveToolPath('claude-code', '.claude/commands', true, homes, platform)
         : path.join(projectRoot, '.claude', 'commands');
       await fs.ensureDir(cmdDest);
-      const files = (await fs.readdir(cmdSrc)).filter(f => f.startsWith('arcwright-track-') && f.endsWith('.md'));
+      const allFiles = (await fs.readdir(cmdSrc)).filter(f => f.endsWith('.md'));
+      const files = resolvedTeams ? allFiles : allFiles.filter(f => f !== 'team.md');
       let installed = 0;
       for (const f of files) {
         await fs.copy(path.join(cmdSrc, f), path.join(cmdDest, f), { overwrite: true });
         installed++;
       }
-      if (installed) console.log(chalk.green(`  ✓ ${installed} /arcwright-track-* slash commands → .claude/commands/`));
+      if (installed) {
+        const teamNote = resolvedTeams ? '' : chalk.dim(' (skipped /team)');
+        console.log(chalk.green(`  ✓ ${installed} slash commands → .claude/commands/`) + teamNote);
+      }
     }
   }
 

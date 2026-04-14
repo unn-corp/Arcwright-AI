@@ -38,6 +38,7 @@ program
   .option('--output-folder <path>', 'Output folder for Arcwright artifacts', '_arcwright-output')
   .option('-y, --yes', 'Skip interactive prompts and accept all defaults', false)
   .option('-g, --global', 'Install to global config dirs (~/.claude/, ~/.kiro/, etc.)')
+  .option('--no-teams', 'Skip agent team skills and /team command (saves 17 team-* skills)')
   .addHelpText('after', `
 Examples:
   # Interactive install — prompts for your name, detects existing installation
@@ -45,6 +46,9 @@ Examples:
 
   # Non-interactive, install everything
   npx @arcwright-ai/agent-orchestration --yes
+
+  # Install without agent teams
+  npx @arcwright-ai/agent-orchestration --no-teams --yes
 
   # Install with specific IDEs
   npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor --yes
@@ -70,6 +74,7 @@ program
   .option('--tools <ids>', `IDE integrations to re-configure (comma-separated). Supported: ${SUPPORTED_TOOLS}`, 'claude-code')
   .option('-y, --yes', 'Skip interactive prompts', false)
   .option('-g, --global', 'Update global config dirs (~/.claude/, ~/.kiro/, etc.)')
+  .option('--no-teams', 'Skip agent team skills and /team command')
   .addHelpText('after', `
 Examples:
   # Interactive update — shows installed version, preserves your name
