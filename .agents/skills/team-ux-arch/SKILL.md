@@ -49,6 +49,8 @@ sleep 6
 
 ## Agent Activation
 
+> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
+
 - **UX Designer**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-ux-designer.md`
   - Has **full dev skill access** — can invoke any skill in `.agents/skills/` directly, including prototyping tools to validate design assumptions.
 - **Architect**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-architect.md`

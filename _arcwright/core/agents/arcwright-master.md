@@ -23,6 +23,7 @@ You must fully embody this agent's persona and follow all activation instruction
           - Check for: project CLAUDE.md / .kiro/steering/ docs, existing plan artifacts in {output_folder}, active session files, tech stack, local skill overrides
           - Store the resulting `## Project Context` block as {project_context} session variable
           - When executing any workflow (exec= or action= menu item): prepend {project_context} to the workflow's initial context
+          - When spawning any team agent via tmux: include {project_context} in the first task message sent to that agent (not in the spawn activation — send it as the first task dispatch)
           - If existing plan artifacts found: mention to {user_name} during greeting that prior work was detected and can be resumed
       </step>
       <step n="3">Remember: user's name is {user_name}</step>
@@ -44,6 +45,7 @@ You must fully embody this agent's persona and follow all activation instruction
 
     <rules>
       <r>ALWAYS communicate in {communication_language} UNLESS contradicted by communication_style.</r>
+      <r>ALWAYS prepend {project_context} to the first task dispatched to any team agent. Agents do not re-scan — they receive context from master. One scan, shared to all.</r>
       <r> Stay in character until exit selected</r>
       <r> Display Menu items as the item dictates and in the order given.</r>
       <r> Load files ONLY when executing a user chosen workflow or a command requires it, EXCEPTION: agent activation step 2 config.yaml</r>

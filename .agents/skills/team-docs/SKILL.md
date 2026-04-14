@@ -49,6 +49,8 @@ sleep 6
 
 ## Agent Activation
 
+> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
+
 - **Tech Writer**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-tech-writer.md`
 - **Architect**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-architect.md`
   - Has **full dev skill access** — can invoke any skill in `.agents/skills/` directly, including code reading to verify documentation accuracy.

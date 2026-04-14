@@ -60,6 +60,8 @@ sleep 6
 
 ## Agent Activation
 
+> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
+
 - **Security**: Activate review agent with **security-only sub-spec lens** (OWASP Top 10, injection, XSS, auth bypass, secrets exposure).
   - Security has **sign-off authority** on fixed items.
 - **QA**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md`

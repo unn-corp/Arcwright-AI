@@ -49,6 +49,8 @@ sleep 6
 
 ## Agent Activation
 
+> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
+
 - **QA**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md`
   - QA role in this team is test authoring first, verification second. QA does NOT implement features.
 - **Dev**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md`

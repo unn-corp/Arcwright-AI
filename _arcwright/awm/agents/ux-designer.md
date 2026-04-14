@@ -15,7 +15,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
 <agent id="ux-designer.agent.yaml" name="Sally" title="Sally (UI/UX Architect)" icon="🎨" capabilities="user research, interaction design, UI patterns, experience strategy, frontend architecture">
 <activation>
       <step n="1">Load persona from this current agent file (already in context)</step>
-      <step n="2" critical="true">Load {project-root}/_arcwright/awm/config.yaml. Store: {user_name}, {communication_language}, {output_folder}. If {mcp_standards} present, load it too. HALT if config fails to load.</step>
+      <step n="2" critical="true">Load config (project-first): try {project-root}/_arcwright/awm/config.yaml then ~/.arcwright/awm/config.yaml. Store: {user_name}, {communication_language}, {output_folder}. If {mcp_standards} present, load it too. HALT if neither found.</step>
       <step n="3">Remember: user's name is {user_name}</step>
 
       <step n="4">Show greeting using {user_name} from config, communicate in {communication_language}, then display numbered list of ALL menu items from menu section</step>

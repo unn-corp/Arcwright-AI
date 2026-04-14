@@ -65,6 +65,8 @@ sleep 6
 
 ## Agent Activation
 
+> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
+
 - **Dev**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md`
   - Constrained: max 4 files, isolated subsystem, no cross-cutting changes.
 - **Security**: Activate review agent with **security-only sub-spec lens**.
