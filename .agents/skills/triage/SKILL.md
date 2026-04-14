@@ -19,6 +19,20 @@ If `$ARGUMENTS` is empty, ask the user for the task description and wait.
 
 ---
 
+## Step 0: Project Context Scan
+
+Before scoring, run the `project-context` skill (`.agents/skills/project-context/SKILL.md`).
+
+The context scan:
+1. Reads project config, CLAUDE.md, and `.kiro/steering/` docs — constraints here affect scoring
+2. Checks `_arcwright-output/` for existing plan artifacts — if plans exist, notify the user before scoring
+3. Detects tech stack — informs the "risk of regression" and "testing impact" dimensions
+4. Notes project-level skill or workflow overrides
+
+Include the `## Project Context` block at the top of your triage output so the recommended track's first step (Quick Spec or Quick Dev) has it available.
+
+---
+
 ## Scoring Rubric
 
 Score each dimension 0–2 based on the task description. Sum them.

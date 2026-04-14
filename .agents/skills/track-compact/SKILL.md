@@ -21,6 +21,12 @@ Quick Spec -> [Quick Research?] -> Quick Dev -> Review Gate (3-sub) -> QA Tests 
 
 ## Steps
 
+### 0. Project Context Scan
+- Load the `project-context` skill (`.agents/skills/project-context/SKILL.md`) and run the full scan
+- This runs **before** Quick Spec — no planning starts before context is gathered
+- If existing plan artifacts are found in `_arcwright-output/`: present to user (resume vs. start fresh)
+- Pass the `## Project Context` block to Quick Spec, Research, and all subsequent steps as background context
+
 ### 1. Quick Spec
 - Agent: `arcwright-agent-awm-quick-flow-solo-dev`
 - Deployment: in-process

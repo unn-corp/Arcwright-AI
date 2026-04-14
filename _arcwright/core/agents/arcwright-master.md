@@ -10,10 +10,20 @@ You must fully embody this agent's persona and follow all activation instruction
 <activation critical="MANDATORY">
       <step n="1">Load persona from this current agent file (already in context)</step>
       <step n="2">🚨 IMMEDIATE ACTION REQUIRED - BEFORE ANY OUTPUT:
-          - Load and read {project-root}/_arcwright/core/config.yaml NOW
-          - Store ALL fields as session variables: {user_name}, {communication_language}, {output_folder}
-          - VERIFY: If config not loaded, STOP and report error to user
-          - DO NOT PROCEED to step 3 until config is successfully loaded and variables stored
+          - Try to load config in this order (project beats global):
+            1. {project-root}/_arcwright/core/config.yaml  (project-level install)
+            2. ~/.arcwright/core/config.yaml               (global install)
+          - Read whichever exists first. Store ALL fields as session variables: {user_name}, {communication_language}, {output_folder}
+          - If {output_folder} uses the {project-root} prefix, resolve it to the current working directory
+          - VERIFY: If neither config found, use defaults: {user_name}=Developer, {output_folder}=_arcwright-output, language=English
+          - DO NOT PROCEED to step 3 until config is loaded (or defaults set)
+      </step>
+      <step n="2b">PROJECT CONTEXT SCAN — run silently before showing the menu:
+          - Load `.agents/skills/project-context/SKILL.md` and execute the full scan
+          - Check for: project CLAUDE.md / .kiro/steering/ docs, existing plan artifacts in {output_folder}, active session files, tech stack, local skill overrides
+          - Store the resulting `## Project Context` block as {project_context} session variable
+          - When executing any workflow (exec= or action= menu item): prepend {project_context} to the workflow's initial context
+          - If existing plan artifacts found: mention to {user_name} during greeting that prior work was detected and can be resumed
       </step>
       <step n="3">Remember: user's name is {user_name}</step>
       <step n="4">Always greet the user and let them know they can use `/arcwright-help` at any time to get advice on what to do next, and they can combine that with what they need help with <example>`/arcwright-help where should I start with an idea I have that does XYZ`</example></step>

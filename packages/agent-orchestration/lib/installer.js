@@ -453,6 +453,12 @@ async function install(opts) {
   // when CLI flags were not explicitly provided (Commander sets defaults that are
   // indistinguishable from explicit flags, so we use manifest when value == default).
   const manifestFallback = yes && isUpdate && existingManifest;
+
+  // Restore userName from manifest on --yes updates (so config.yaml gets the right name
+  // if it needs to be created, e.g. old global install that pre-dates config.yaml writing).
+  if (manifestFallback && !resolvedUserName && existingManifest.userName) {
+    resolvedUserName = existingManifest.userName;
+  }
   let resolvedTools = (() => {
     const parsed = tools ? tools.split(',').map(t => t.trim()).filter(t => t !== 'none') : [];
     if (manifestFallback && parsed.join(',') === 'claude-code' && existingManifest.tools?.length) {
@@ -684,16 +690,19 @@ async function install(opts) {
     console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`) + teamNote);
   }
 
-  // ── config.yaml generation (skip for global installs) ────────────────────
-  if (!isGlobal) {
-    for (const mod of selectedModules) {
-      const configPath = path.join(effectiveArwDir, mod, 'config.yaml');
-      if (!isUpdate || !await fs.pathExists(configPath)) {
-        const config = buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder);
-        await fs.ensureDir(path.dirname(configPath));
-        await fs.writeFile(configPath, yaml.stringify(config), 'utf8');
-        console.log(chalk.green(`  ✓ config.yaml → _arcwright/${mod}/`));
-      }
+  // ── config.yaml generation ────────────────────────────────────────────────
+  // Written for both project and global installs. Global installs write to
+  // ~/.arcwright/{mod}/config.yaml. The output_folder uses {project-root} so
+  // agents always resolve artifacts into the user's current project directory,
+  // regardless of whether Arcwright was installed locally or globally.
+  for (const mod of selectedModules) {
+    const configPath = path.join(effectiveArwDir, mod, 'config.yaml');
+    if (!isUpdate || !await fs.pathExists(configPath)) {
+      const config = buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder);
+      await fs.ensureDir(path.dirname(configPath));
+      await fs.writeFile(configPath, yaml.stringify(config), 'utf8');
+      const label = isGlobal ? `~/.arcwright/${mod}/` : `_arcwright/${mod}/`;
+      console.log(chalk.green(`  ✓ config.yaml → ${label}`));
     }
   }
 
@@ -780,7 +789,7 @@ async function install(opts) {
     installDate: existingManifest?.installDate || now,
     lastUpdated: now,
     userName: resolvedUserName || 'Developer',
-    outputFolder: isGlobal ? null : outputFolder,
+    outputFolder: outputFolder || '_arcwright-output',
     platform: platform,
     modules: [...modulesToInstall],
     tools: resolvedTools,
@@ -1122,6 +1131,7 @@ function buildProactiveEntry() {
     '',
     '| Situation | Skill |',
     '|-----------|-------|',
+    '| Starting any Arcwright workflow (track, triage, team) | `project-context` |',
     '| Bug, test failure, or unexpected behavior | `systematic-debugging` |',
     '| Writing or reviewing TypeScript | `typescript-best-practices` |',
     '| Writing or reviewing React | `react-expert` |',

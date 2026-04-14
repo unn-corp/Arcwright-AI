@@ -25,6 +25,12 @@ Target Definition
 
 ## Steps
 
+### 0. Project Context Scan
+- Load the `project-context` skill (`.agents/skills/project-context/SKILL.md`) and run the full scan
+- This runs **before** Target Definition — review agents need full project context to assess correctly
+- If existing RV findings are found in `_arcwright-output/`: present to user (resume vs. fresh audit)
+- Pass the `## Project Context` block to all review agents and the Findings Synthesis step
+
 ### 1. Target Definition
 Ask user for:
 - Area: file path, feature name, or module name

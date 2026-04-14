@@ -33,6 +33,14 @@ Product Brief (split pane)
   -> PTM
 ```
 
+## Steps
+
+### 0. Project Context Scan
+- Load the `project-context` skill (`.agents/skills/project-context/SKILL.md`) and run the full scan
+- This runs **before** Product Brief — no planning starts before context is gathered
+- If existing plan artifacts are found in `_arcwright-output/`: present to user (resume vs. start fresh)
+- Pass the `## Project Context` block to Product Brief, Research, and all subsequent steps
+
 ## Planning Phase
 
 ### 1. Product Brief

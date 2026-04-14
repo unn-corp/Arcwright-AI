@@ -25,6 +25,12 @@ Quick Dev (split pane) -> DRY+UV Gate (in-process) -> USER APPROVAL -> PTM
 
 ## Steps
 
+### 0. Project Context Scan
+- Load the `project-context` skill (`.agents/skills/project-context/SKILL.md`) and run the full scan
+- This runs **before** Quick Dev — no code is written before context is gathered
+- If existing plan artifacts are found in `_arcwright-output/`: present to user (resume vs. start fresh)
+- Pass the `## Project Context` block to the Quick Dev agent as background context
+
 ### 1. Quick Dev
 - Agent: `arcwright-agent-awm-quick-flow-solo-dev`
 - Deployment: split pane, `--dangerously-skip-permissions`
