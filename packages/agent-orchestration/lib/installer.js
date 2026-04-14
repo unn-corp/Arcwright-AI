@@ -461,9 +461,32 @@ async function install(opts) {
   // ── Interactive prompts ───────────────────────────────────────────────────
   let resolvedUserName = userName;
 
-  let resolvedTools = tools ? tools.split(',').map(t => t.trim()).filter(t => t !== 'none') : ['claude-code'];
-  let resolvedTeams = teams !== false;
-  let resolvedDockerCheck = dockerCheck === true;
+  // Resolve tools/teams/dockerCheck — for --yes updates, fall back to manifest values
+  // when CLI flags were not explicitly provided (Commander sets defaults that are
+  // indistinguishable from explicit flags, so we use manifest when value == default).
+  const manifestFallback = yes && isUpdate && existingManifest;
+  let resolvedTools = (() => {
+    const parsed = tools ? tools.split(',').map(t => t.trim()).filter(t => t !== 'none') : [];
+    if (manifestFallback && parsed.join(',') === 'claude-code' && existingManifest.tools?.length) {
+      // CLI default — prefer manifest value
+      return existingManifest.tools;
+    }
+    return parsed.length ? parsed : ['claude-code'];
+  })();
+  let resolvedTeams = (() => {
+    // teams===false means --no-teams was explicitly passed; teams===true is the default
+    if (manifestFallback && teams !== false && existingManifest.teams !== undefined) {
+      return existingManifest.teams !== false;
+    }
+    return teams !== false;
+  })();
+  let resolvedDockerCheck = (() => {
+    // dockerCheck===true means --docker-check was explicitly passed; false is the default
+    if (manifestFallback && dockerCheck !== true && existingManifest.dockerCheck !== undefined) {
+      return existingManifest.dockerCheck === true;
+    }
+    return dockerCheck === true;
+  })();
 
   if (!yes) {
     const { intro, text, multiselect, select, confirm, outro, isCancel, cancel } = require('@clack/prompts');
@@ -673,36 +696,6 @@ async function install(opts) {
     console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`) + teamNote);
   }
 
-  // ── Orphan removal (update only) ──────────────────────────────────────────
-  // NOTE: _arcwright/overlays/ and _arcwright/_config/agents/*.customize.yaml are
-  // project-local and must never be removed by orphan cleanup — they are user-owned.
-  if (isUpdate) {
-    const oldEntries = await readFilesManifest(effectiveArwDir);
-    const newPaths = new Set(newFileEntries.map(e => e.relPath));
-    const orphans = oldEntries.filter(e => {
-      if (newPaths.has(e.relPath)) return false; // still present in new install
-      if (e.relPath.startsWith('overlays/')) return false; // project-local overlays — never remove
-      if (e.relPath.endsWith('.customize.yaml')) return false; // user customize overlays — never remove
-      return true;
-    });
-
-    if (orphans.length > 0) {
-      console.log(chalk.dim(`\n  Removing ${orphans.length} orphaned file(s) from previous version:`));
-      for (const orphan of orphans) {
-        // _arcwright/ files
-        let fullPath = path.join(effectiveArwDir, orphan.relPath);
-        // .agents/skills/ files
-        if (!isGlobal && orphan.relPath.startsWith('.agents/')) {
-          fullPath = path.join(projectRoot, orphan.relPath);
-        }
-        if (await fs.pathExists(fullPath)) {
-          await fs.remove(fullPath);
-          console.log(chalk.dim(`    ✗ ${orphan.relPath}`));
-        }
-      }
-    }
-  }
-
   // ── config.yaml generation (skip for global installs) ────────────────────
   if (!isGlobal) {
     for (const mod of selectedModules) {
@@ -728,6 +721,54 @@ async function install(opts) {
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
     await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck);
+  }
+
+  // ── Orphan removal (update only) ──────────────────────────────────────────
+  // Runs AFTER all newFileEntries are collected (modules + skills + IDE entries + commands)
+  // so that nothing currently being installed is mistakenly flagged as an orphan.
+  // NOTE: _arcwright/overlays/ and _arcwright/_config/agents/*.customize.yaml are
+  // project-local and must never be removed by orphan cleanup — they are user-owned.
+  if (isUpdate) {
+    const oldEntries = await readFilesManifest(effectiveArwDir);
+    const newPaths = new Set(newFileEntries.map(e => e.relPath));
+    const orphans = oldEntries.filter(e => {
+      if (newPaths.has(e.relPath)) return false; // still present in new install
+      if (e.relPath.startsWith('overlays/')) return false; // project-local overlays — never remove
+      if (e.relPath.endsWith('.customize.yaml')) return false; // user customize overlays — never remove
+      return true;
+    });
+
+    if (orphans.length > 0) {
+      console.log(chalk.dim(`\n  Removing ${orphans.length} orphaned file(s) from previous version:`));
+      for (const orphan of orphans) {
+        let fullPath;
+        if (isGlobal) {
+          // Global install: each prefix maps to its real resolved path
+          if (orphan.relPath.startsWith('.agents/skills/')) {
+            // Skills written to ~/.claude/skills/ for global installs
+            const rel = orphan.relPath.slice('.agents/skills/'.length);
+            fullPath = path.join(resolveToolPath('claude-code', '.claude/skills', true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.claude/')) {
+            // .claude/agents/, .claude/commands/, etc. — resolve from terminal home
+            fullPath = resolveToolPath('claude-code', orphan.relPath, true, homes, platform);
+          } else {
+            // _arcwright/ module files — in ~/.arcwright/
+            fullPath = path.join(effectiveArwDir, orphan.relPath);
+          }
+        } else {
+          // Project install: _arcwright/ files use effectiveArwDir; others use projectRoot
+          if (orphan.relPath.startsWith('.agents/') || orphan.relPath.startsWith('.claude/')) {
+            fullPath = path.join(projectRoot, orphan.relPath);
+          } else {
+            fullPath = path.join(effectiveArwDir, orphan.relPath);
+          }
+        }
+        if (await fs.pathExists(fullPath)) {
+          await fs.remove(fullPath);
+          console.log(chalk.dim(`    ✗ ${orphan.relPath}`));
+        }
+      }
+    }
   }
 
   // ── tmux setup (claude-code only; runs for both project and global installs) ─
@@ -956,7 +997,11 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
       });
       let installed = 0;
       for (const f of files) {
-        await fs.copy(path.join(cmdSrc, f), path.join(cmdDest, f), { overwrite: true });
+        const srcFile = path.join(cmdSrc, f);
+        await fs.copy(srcFile, path.join(cmdDest, f), { overwrite: true });
+        // Track in manifest for orphan removal on future updates
+        const content = await fs.readFile(srcFile);
+        stubEntries.push({ relPath: `.claude/commands/${f}`, hash: sha256(content) });
         installed++;
       }
       if (installed) {
@@ -1058,6 +1103,7 @@ function buildArcwrightRulesEntry(modules) {
     'To toggle agent teams: add `--no-teams` or run update again and choose differently at the prompt.',
     'To enable Docker type-check: add `--docker-check`.',
     'To modify gitignore behavior on next update: add `--gitignore full|skills|output-only|none`.',
+    'For global installs: add `--global` to any command. Update a global install with `npx @arcwright-ai/agent-orchestration update --global`.',
     '',
   ].join('\n');
 }

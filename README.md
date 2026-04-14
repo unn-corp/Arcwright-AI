@@ -203,6 +203,34 @@ The installer **never** commits to git on your behalf. It only writes to `.gitig
 
 Global installs skip gitignore logic entirely since they write to `~/` config dirs outside your project.
 
+### Global Install & Updates
+
+Global installs write to user-level config dirs instead of a project:
+
+| Target | Linux / macOS | Windows (WSL2) |
+|--------|---------------|----------------|
+| Core modules | `~/.arcwright/` | `~/.arcwright/` (WSL Linux home) |
+| Claude Code assets | `~/.claude/` | `~/.claude/` (WSL Linux home) |
+| Kiro assets | `~/.kiro/` | `/mnt/c/Users/<name>/.kiro/` (Windows home) |
+| tmux config | `~/.tmux.conf`, `~/.config/tmux/` | `~/.tmux.conf`, `~/.config/tmux/` |
+
+**Updating a global install:**
+
+```bash
+npx @arcwright-ai/agent-orchestration update --global
+```
+
+The updater reads the global manifest at `~/.arcwright/_config/manifest.yaml`, applies changes for new versions, removes orphaned files from prior versions, and preserves:
+- User-created agent overlays at `~/.arcwright/overlays/customize-agents/`
+- Your `config.yaml` (only version metadata is refreshed)
+- tmux config files if they already exist (installer prompts before overwriting)
+
+Global installs skip the project-level gitignore prompt. On `update --yes --global`, the installer restores your previous choices for `--tools`, `--teams`, and `--docker-check` from the manifest automatically — no need to re-pass flags.
+
+**Switching between global and project installs:**
+
+These are independent — installing globally does not replace a project-level install. Claude Code and Kiro merge global and project configs at runtime. If both exist, the project-level entries take precedence.
+
 ---
 
 ## tmux Setup
