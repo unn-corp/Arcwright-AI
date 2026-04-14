@@ -1,6 +1,6 @@
 {
   "name": "@arcwright-ai/agent-orchestration",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Arcwright — AI-native agile workflow system for Claude Code, Kiro, and compatible AI assistants. Supports Windows (WSL2) and Linux (Fedora/Ubuntu/Arch).",
   "keywords": [
     "arcwright",
