@@ -501,7 +501,10 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro') continue; // handled separately below
-    await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams);
+    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams);
+    if (ideEntries && ideEntries.length > 0) {
+      newFileEntries.push(...ideEntries);
+    }
   }
 
   // ── Kiro integration ──────────────────────────────────────────────────────
@@ -623,6 +626,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
 async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true) {
+  const stubEntries = [];
   const platformCfg = PLATFORMS[tool];
   if (!platformCfg) {
     console.log(chalk.yellow(`  ⚠ Unknown IDE platform: ${tool}`));
@@ -738,11 +742,11 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     const agentDir = isGlobal
       ? resolveToolPath('claude-code', GLOBAL_PATHS['claude-code'].agents, true, homes, platform)
       : path.join(projectRoot, platformCfg.agentDir);
-    const arcwrightInstallDir = isGlobal
-      ? path.join(homes.linux, '.arcwright')
-      : path.join(projectRoot, '_arcwright');
-    await writeClaudeAgentStubs(arcwrightInstallDir, agentDir, chalk);
+    const entries = await writeClaudeAgentStubs(SRC_DIR, agentDir, chalk, modules);
+    stubEntries.push(...entries);
   }
+
+  return stubEntries;
 }
 
 function getFileHeader(tool) {
@@ -910,53 +914,83 @@ async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
 
 /**
  * Write lightweight agent stub files into .claude/agents/ so the IDE
- * can discover Arcwright agents without requiring the user to manually load them.
+ * can discover Arcwright agents natively without requiring the user to
+ * manually load them.
+ *
+ * Reads from SRC_DIR/{module}/agents/ for awm and awb (core is skipped —
+ * the master orchestrator is invoked via slash commands, not agent stubs).
+ *
+ * Returns an array of { relPath, hash } manifest entries so the caller
+ * can merge them into newFileEntries for orphan-removal tracking.
  */
-async function writeClaudeAgentStubs(arcwrightDir, agentDest, chalk) {
-  const arcwrightAgentsGlob = await glob('**/*.agent.md', {
-    cwd: arcwrightDir,
-    nodir: true,
-  });
+async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules) {
+  const STUB_MODULES = ['awm', 'awb'];
+  const selectedStubModules = (modules || STUB_MODULES).filter(m => STUB_MODULES.includes(m));
 
-  if (arcwrightAgentsGlob.length === 0) return;
-
-  await fs.ensureDir(agentDest);
+  const manifestEntries = [];
   let written = 0;
 
-  for (const rel of arcwrightAgentsGlob) {
-    const agentPath = path.join(arcwrightDir, rel);
-    const raw = await fs.readFile(agentPath, 'utf8');
+  await fs.ensureDir(agentDest);
 
-    // Extract name + description from frontmatter if present
-    const nameMatch = raw.match(/^name:\s*['"]?(.+?)['"]?\s*$/m);
-    const descMatch = raw.match(/^description:\s*['"]?(.+?)['"]?\s*$/m);
-    const name = nameMatch?.[1] || path.basename(rel, '.agent.md');
-    const description = descMatch?.[1] || `Arcwright agent: ${name}`;
+  for (const mod of selectedStubModules) {
+    const agentsSrc = path.join(srcDir, mod, 'agents');
+    if (!await fs.pathExists(agentsSrc)) continue;
 
-    const stubFile = path.join(agentDest, `arcwright-${path.basename(rel, '.agent.md')}.md`);
-    const stub = [
-      '---',
-      `name: '${name}'`,
-      `description: '${description}'`,
-      '---',
-      '',
-      'You must fully embody this agent\'s persona when activated.',
-      '',
-      `<agent-activation CRITICAL="TRUE">`,
-      `1. LOAD the full agent file from {project-root}/_arcwright/${rel}`,
-      '2. READ its entire contents before responding.',
-      '3. FOLLOW all activation instructions within it.',
-      '</agent-activation>',
-      '',
-    ].join('\n');
+    // Walk all *.md files under the agents dir (handles subdirs like tech-writer/)
+    const agentFiles = await glob('**/*.md', { cwd: agentsSrc, nodir: true });
 
-    await fs.writeFile(stubFile, stub, 'utf8');
-    written++;
+    for (const rel of agentFiles) {
+      const agentPath = path.join(agentsSrc, rel);
+      const raw = await fs.readFile(agentPath, 'utf8');
+
+      // Parse YAML frontmatter name/description
+      const nameMatch = raw.match(/^name:\s*["']?(.+?)["']?\s*$/m);
+      const descMatch = raw.match(/^description:\s*["']?(.+?)["']?\s*$/m);
+
+      // Fall back to <agent name="..." title="..."> XML tag
+      const xmlNameMatch = raw.match(/<agent[^>]+name="([^"]+)"/);
+      const xmlTitleMatch = raw.match(/<agent[^>]+title="([^"]+)"/);
+
+      const description = descMatch?.[1] || xmlTitleMatch?.[1] || xmlNameMatch?.[1] || `Arcwright ${mod} agent`;
+
+      // Slug = basename without .md (e.g. dev, ux-designer, tech-writer)
+      const slug = path.basename(rel, '.md');
+      // Original filename (just the basename) for the activation path
+      const originalFilename = path.basename(rel);
+      // Module subfolder relative to agents/ (e.g. '' or 'tech-writer')
+      const subdir = path.dirname(rel) === '.' ? '' : path.dirname(rel) + '/';
+
+      const stubName = `arcwright-${slug}.md`;
+      const stubPath = path.join(agentDest, stubName);
+      const stub = [
+        '---',
+        `name: arcwright-${slug}`,
+        `description: ${description}`,
+        '---',
+        '',
+        `<agent-activation CRITICAL="TRUE">`,
+        `1. LOAD {project-root}/_arcwright/${mod}/agents/${subdir}${originalFilename}`,
+        '2. READ its entire contents',
+        '3. EXECUTE every critical_action in order',
+        '4. PRESENT the menu',
+        '5. WAIT for user input',
+        '</agent-activation>',
+        '',
+      ].join('\n');
+
+      await fs.writeFile(stubPath, stub, 'utf8');
+      written++;
+
+      const relManifestPath = `.claude/agents/${stubName}`;
+      manifestEntries.push({ relPath: relManifestPath, hash: sha256(stub) });
+    }
   }
 
   if (written > 0) {
-    console.log(chalk.green(`  ✓ ${path.relative(os.homedir(), agentDest) || agentDest} (${written} agent stubs)`));
+    console.log(chalk.green(`  ✓ ${written} Claude Code agent stubs → .claude/agents/`));
   }
+
+  return manifestEntries;
 }
 
 module.exports = { install, status, setupTmux };

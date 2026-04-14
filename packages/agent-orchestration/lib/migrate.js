@@ -111,12 +111,12 @@ const CONTENT_REPLACEMENTS = [
   { pattern: /bmb_creations_output_folder/g, replacement: 'awb_creations_output_folder' },
   // Workflow directory name
   { pattern: /bmad-quick-flow/g,      replacement: 'arcwright-quick-flow' },
-  // Dead slash command references — rewrite to workflow file pointers (must come before generic bmad-track- rule)
-  { pattern: /\/bmad-agent-bmad-master/g,  replacement: 'core agent _arcwright/core/agents/arcwright-master.md' },
-  { pattern: /\/bmad-agent-bmm-(\w+)/g,    replacement: 'awm agent _arcwright/awm/agents/$1.md' },
-  { pattern: /\/bmad-agent-bmb-(\w+)/g,    replacement: 'awb agent _arcwright/awb/agents/$1.md' },
-  { pattern: /\/bmad-bmm-(\w+)/g,          replacement: 'awm workflow _arcwright/awm/workflows/$1/' },
-  { pattern: /\/bmad-bmb-(\w+)/g,          replacement: 'awb workflow _arcwright/awb/workflows/$1/' },
+  // Dead slash command references — rewrite to stub agent names or workflow file pointers (must come before generic bmad-track- rule)
+  { pattern: /\/bmad-agent-bmm-(\w[\w-]*)/g,  replacement: '/arcwright-$1' },
+  { pattern: /\/bmad-agent-bmb-(\w[\w-]*)/g,  replacement: '/arcwright-$1' },
+  { pattern: /\/bmad-agent-bmad-master/g,      replacement: '/arcwright-master' },
+  { pattern: /\/bmad-bmm-(\w[\w-]*)/g,         replacement: 'awm workflow _arcwright/awm/workflows/$1/' },
+  { pattern: /\/bmad-bmb-(\w[\w-]*)/g,         replacement: 'awb workflow _arcwright/awb/workflows/$1/' },
   // Package/command references
   { pattern: /bmad-track-/g,          replacement: 'arcwright-track-' },
   { pattern: /\/bmad-track-/g,        replacement: '/arcwright-track-' },
