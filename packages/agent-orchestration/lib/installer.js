@@ -456,10 +456,17 @@ async function install(opts) {
   }
 
   // ── Orphan removal (update only) ──────────────────────────────────────────
+  // NOTE: _arcwright/overlays/ and _arcwright/_config/agents/*.customize.yaml are
+  // project-local and must never be removed by orphan cleanup — they are user-owned.
   if (isUpdate) {
     const oldEntries = await readFilesManifest(effectiveArwDir);
     const newPaths = new Set(newFileEntries.map(e => e.relPath));
-    const orphans = oldEntries.filter(e => !newPaths.has(e.relPath));
+    const orphans = oldEntries.filter(e => {
+      if (newPaths.has(e.relPath)) return false; // still present in new install
+      if (e.relPath.startsWith('overlays/')) return false; // project-local overlays — never remove
+      if (e.relPath.endsWith('.customize.yaml')) return false; // user customize overlays — never remove
+      return true;
+    });
 
     if (orphans.length > 0) {
       console.log(chalk.dim(`\n  Removing ${orphans.length} orphaned file(s) from previous version:`));
@@ -494,7 +501,7 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro') continue; // handled separately below
-    await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform);
+    await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams);
   }
 
   // ── Kiro integration ──────────────────────────────────────────────────────
@@ -615,7 +622,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
-async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform) {
+async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true) {
   const platformCfg = PLATFORMS[tool];
   if (!platformCfg) {
     console.log(chalk.yellow(`  ⚠ Unknown IDE platform: ${tool}`));

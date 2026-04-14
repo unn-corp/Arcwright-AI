@@ -16,9 +16,14 @@
  *   2. Renames files:  bmad-track-*.md → arcwright-track-*.md in .claude/commands/
  *   3. Deletes obsolete .claude/commands/ (bmad-agent-*, bmad-bmm-*, bmad-bmb-*, bmad-help.md, etc.)
  *   4. Replaces content references in config/yaml/md files
- *   5. Removes _arcwright/_config/ (no longer used)
+ *   5. Removes _arcwright/_config/ (no longer used); preserves *.customize.yaml overlays
  *
  * Always run with --dry-run first to preview changes.
+ *
+ * Known limitation (#6): Custom agents under _bmad/agents/ that users created themselves
+ * may need manual path fixes after migration. The migration only rewrites stock bmad paths.
+ * If your agent's `id:` frontmatter referenced `_bmad/agents/yourname/yourname.md`, update
+ * it post-migration to the appropriate _arcwright/ location.
  */
 'use strict';
 
@@ -42,11 +47,29 @@ const DIR_RENAMES = [
   { from: '_arcwright/awm/workflows/bmad-quick-flow', to: '_arcwright/awm/workflows/arcwright-quick-flow' },
 ];
 
-/** Patterns for .claude/commands/ files to DELETE (old bmad commands that have no arcwright equivalent) */
+/**
+ * Returns true if the .claude/commands/ file should be deleted during migration.
+ * Deletes ALL bmad-*.md files EXCEPT track commands (which get renamed, not deleted).
+ * Also deletes orchestration-master.* which has no bmad- prefix.
+ */
+function shouldDeleteCommand(filename) {
+  // Non-bmad files that are still obsolete
+  if (/^orchestration-master\./.test(filename)) return true;
+  // All bmad-* except track commands (those get renamed)
+  if (!/^bmad-/.test(filename)) return false;
+  if (/^bmad-track-/.test(filename)) return false; // renamed, not deleted
+  return true;
+}
+
+/** @deprecated kept for reference only — shouldDeleteCommand() is used instead */
 const COMMANDS_TO_DELETE = [
   /^bmad-agent-/,
   /^bmad-bmm-/,
   /^bmad-bmb-/,
+  /^bmad-adversarial-/,
+  /^bmad-editorial-/,
+  /^bmad-index-/,
+  /^bmad-review-/,
   /^bmad-help\./,
   /^bmad-brainstorming\./,
   /^bmad-shard-doc\./,
@@ -88,6 +111,12 @@ const CONTENT_REPLACEMENTS = [
   { pattern: /bmb_creations_output_folder/g, replacement: 'awb_creations_output_folder' },
   // Workflow directory name
   { pattern: /bmad-quick-flow/g,      replacement: 'arcwright-quick-flow' },
+  // Dead slash command references — rewrite to workflow file pointers (must come before generic bmad-track- rule)
+  { pattern: /\/bmad-agent-bmad-master/g,  replacement: 'core agent _arcwright/core/agents/arcwright-master.md' },
+  { pattern: /\/bmad-agent-bmm-(\w+)/g,    replacement: 'awm agent _arcwright/awm/agents/$1.md' },
+  { pattern: /\/bmad-agent-bmb-(\w+)/g,    replacement: 'awb agent _arcwright/awb/agents/$1.md' },
+  { pattern: /\/bmad-bmm-(\w+)/g,          replacement: 'awm workflow _arcwright/awm/workflows/$1/' },
+  { pattern: /\/bmad-bmb-(\w+)/g,          replacement: 'awb workflow _arcwright/awb/workflows/$1/' },
   // Package/command references
   { pattern: /bmad-track-/g,          replacement: 'arcwright-track-' },
   { pattern: /\/bmad-track-/g,        replacement: '/arcwright-track-' },
@@ -163,7 +192,7 @@ function migrateCommands(root, dryRun) {
 
   // Delete obsolete commands
   for (const file of files) {
-    if (COMMANDS_TO_DELETE.some(pat => pat.test(file))) {
+    if (shouldDeleteCommand(file)) {
       actions.push({ type: 'delete', path: `.claude/commands/${file}` });
       if (!dryRun) {
         fs.unlinkSync(path.join(commandsDir, file));
@@ -250,10 +279,57 @@ function cleanupConfig(root, dryRun) {
   const actions = [];
   const configDir = path.join(root, '_arcwright', '_config');
 
-  if (fs.existsSync(configDir)) {
+  if (!fs.existsSync(configDir)) return actions;
+
+  // Preserve *.customize.yaml overlays before deleting the config dir
+  const customizeFiles = [];
+  function findCustomize(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) { findCustomize(full); }
+      else if (entry.name.endsWith('.customize.yaml')) { customizeFiles.push(full); }
+    }
+  }
+  try { findCustomize(configDir); } catch {}
+
+  if (customizeFiles.length > 0) {
+    const overlayDest = path.join(root, '_arcwright', 'overlays', 'customize-agents');
+    actions.push({ type: 'preserve-overlays', count: customizeFiles.length, dest: '_arcwright/overlays/customize-agents/' });
+    if (!dryRun) {
+      fs.mkdirSync(overlayDest, { recursive: true });
+      for (const src of customizeFiles) {
+        const destFile = path.join(overlayDest, path.basename(src));
+        fs.copyFileSync(src, destFile);
+      }
+      console.log(`  ⚠️  Preserved ${customizeFiles.length} customize.yaml overlay${customizeFiles.length !== 1 ? 's' : ''} → _arcwright/overlays/customize-agents/`);
+    }
+  }
+
+  // Only delete if no unrecognized files remain after preservation
+  const KNOWN_GENERATED = new Set(['manifest.yaml', 'files-manifest.csv']);
+  let hasUnknown = false;
+  function checkUnknown(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'agents') continue; // known generated subdir
+        checkUnknown(full);
+      } else if (!KNOWN_GENERATED.has(entry.name) && !entry.name.endsWith('.customize.yaml')) {
+        hasUnknown = true;
+      }
+    }
+  }
+  try { checkUnknown(configDir); } catch {}
+
+  if (!hasUnknown) {
     actions.push({ type: 'delete-dir', path: '_arcwright/_config/' });
     if (!dryRun) {
       fs.rmSync(configDir, { recursive: true });
+    }
+  } else {
+    actions.push({ type: 'skip', reason: 'Skipped _arcwright/_config/ deletion — unknown files present', path: configDir });
+    if (!dryRun) {
+      console.log(`  ⚠️  _arcwright/_config/ not deleted — contains unknown files. Review manually.`);
     }
   }
 
@@ -324,6 +400,25 @@ function migrate(projectRoot, dryRun) {
 
   if (dryRun && total > 0) {
     console.log(`\n   Run without --dry-run to apply these changes.`);
+  }
+
+  // Post-migration audit: report files that still contain /bmad- references
+  if (!dryRun) {
+    const dirsToAudit = [
+      path.join(root, '_arcwright'),
+      path.join(root, '_arcwright-output'),
+      path.join(root, '.claude', 'commands'),
+    ];
+    const auditFiles = [];
+    for (const dir of dirsToAudit) auditFiles.push(...walkFiles(dir));
+    const dangling = auditFiles.filter(f => {
+      if (!isTextFile(f)) return false;
+      try { return /\/bmad-/.test(fs.readFileSync(f, 'utf8')); } catch { return false; }
+    });
+    if (dangling.length > 0) {
+      console.log(`\n   ⚠️  ${dangling.length} file${dangling.length !== 1 ? 's' : ''} still contain /bmad-* references — review manually:`);
+      for (const f of dangling) console.log(`      ${path.relative(root, f)}`);
+    }
   }
 
   console.log('');

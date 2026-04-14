@@ -31,8 +31,17 @@ async function setupTmux(projectRoot, chalk, platform) {
 
   if (!platform) platform = detectPlatform();
 
+  // Detect non-interactive mode (piped stdin, --yes / -y flag, or CI)
+  const isNonInteractive = !process.stdin.isTTY
+    || process.argv.includes('--yes')
+    || process.argv.includes('-y')
+    || process.env.CI === 'true';
+
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const ask = (q) => new Promise(res => rl.question(q, res));
+  // ask() is a no-op in non-interactive mode — returns the supplied default immediately
+  const ask = (q, defaultValue = '') => isNonInteractive
+    ? Promise.resolve(defaultValue)
+    : new Promise(res => rl.question(q, res));
 
   console.log('\n' + chalk.bold.cyan('━━━ tmux Setup for AI Agent Workflows ━━━'));
   console.log(chalk.dim('  Installs a full tmux config optimized for Claude Code + multi-agent pipelines.'));
@@ -135,8 +144,10 @@ async function setupTmux(projectRoot, chalk, platform) {
     console.log('    ' + chalk.dim('    Then authenticate: gh auth login'));
   }
 
-  console.log('\n' + chalk.dim('  Complete the manual steps above, then press Enter to continue with config file installation.'));
-  await ask(chalk.yellow('  Press Enter to continue → '));
+  if (!isNonInteractive) {
+    console.log('\n' + chalk.dim('  Complete the manual steps above, then press Enter to continue with config file installation.'));
+    await ask(chalk.yellow('  Press Enter to continue → '), '');
+  }
 
   // ── Paths ───────────────────────────────────────────────────────────────────
   const homeDir    = os.homedir();
@@ -176,7 +187,7 @@ async function setupTmux(projectRoot, chalk, platform) {
 
   const aliasBlock = `\n# Arcwright tmux shortcuts\n${tmuxAlias}\n${tmuxClaudeAlias}\n`;
   if (!bashrcContent.includes('tmux-claude')) {
-    const addAliases = await ask(chalk.yellow(`  Add 'tmux-ai' and 'tmux-claude' aliases to ~/.bashrc? (Y/n): `));
+    const addAliases = await ask(chalk.yellow(`  Add 'tmux-ai' and 'tmux-claude' aliases to ~/.bashrc? (Y/n): `), 'y');
     if (!addAliases.toLowerCase().startsWith('n')) {
       await fs.appendFile(bashrc, aliasBlock, 'utf8');
       console.log(chalk.green('  ✓ Aliases added to ~/.bashrc'));
@@ -240,7 +251,7 @@ async function setupTmux(projectRoot, chalk, platform) {
 
     const exists = await fs.pathExists(dest);
     if (exists) {
-      const overwrite = await ask(chalk.dim(`  ${dest} already exists. Overwrite? (y/N): `));
+      const overwrite = await ask(chalk.dim(`  ${dest} already exists. Overwrite? (y/N): `), 'n');
       if (!overwrite.toLowerCase().startsWith('y')) {
         console.log(chalk.dim(`  ○ Skipped ${path.basename(dest)}`));
         continue;
