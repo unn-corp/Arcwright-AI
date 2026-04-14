@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+description: TRIGGER when encountering any bug, test failure, or unexpected behavior — invoke before proposing fixes. Step-by-step diagnosis methodology.
 ---
 
 # Systematic Debugging

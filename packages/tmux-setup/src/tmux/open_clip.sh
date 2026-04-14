@@ -5,7 +5,7 @@ MODE="${1:-url}"
 CLIP=$(powershell.exe -NoProfile -Command \
     "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; Get-Clipboard" \
     2>/dev/null | tr -d '\r' | head -1)
-[ -z "$CLIP" ] && exit 1
+[ -z "$CLIP" ] && { tmux display-message "Clipboard is empty"; exit 0; }
 
 case "$MODE" in
     url)    powershell.exe Start "$CLIP" 2>/dev/null ;;

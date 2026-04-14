@@ -121,6 +121,59 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
 
+## Kiro CLI — Subagent Tool API
+
+When running in Kiro CLI, dispatch subagents using the native `subagent` tool instead of the Claude Code `Agent` tool. The `subagent` tool accepts a DAG of stages with dependency management.
+
+**Single-task dispatch** (implementer):
+```json
+{
+  "task": "Implement Task N: [task name]",
+  "stages": [
+    {
+      "name": "implement",
+      "role": "arcwright-dev",
+      "prompt_template": "[Full task text + context from implementer-prompt.md template]"
+    }
+  ]
+}
+```
+
+**Implement → Review pipeline** (sequential):
+```json
+{
+  "task": "Implement and review Task N: [task name]",
+  "stages": [
+    {
+      "name": "implement",
+      "role": "arcwright-dev",
+      "prompt_template": "[Full task text from implementer-prompt.md]"
+    },
+    {
+      "name": "spec-review",
+      "role": "arcwright-qa",
+      "prompt_template": "[Spec review prompt from spec-reviewer-prompt.md]",
+      "depends_on": ["implement"]
+    },
+    {
+      "name": "quality-review",
+      "role": "arcwright-architect",
+      "prompt_template": "[Code quality prompt from code-quality-reviewer-prompt.md]",
+      "depends_on": ["spec-review"]
+    }
+  ]
+}
+```
+
+**Key differences from Claude Code:**
+- `role` references a Kiro agent config name (e.g. `arcwright-dev`, `arcwright-qa`) — these must exist in `.kiro/agents/`
+- Stages with no `depends_on` run in parallel; dependent stages wait
+- Use `{task}` in `prompt_template` to reference the overall `task` string
+- Each stage runs as a persistent session (monitor with `Ctrl+G`)
+- Subagents report back via the `summary` tool automatically
+
+**If a review stage finds issues**, dispatch a new pipeline with a fix stage followed by re-review — don't try to loop within a single pipeline invocation.
+
 ## Example Workflow
 
 ```

@@ -87,5 +87,36 @@ Wait for explicit `[approve]` before running PTM. Do NOT auto-proceed.
 
 ## Non-tmux Variant
 
-Mode [1] sequential steps in same conversation.
-Mode [2] command blocks for dev and QA steps.
+**Claude Code:** Mode [1] sequential steps in same conversation. Mode [2] command blocks for dev and QA steps.
+
+**Kiro CLI:** Use the `subagent` tool to run the pipeline:
+```json
+{
+  "task": "Small track: [task description]",
+  "stages": [
+    {
+      "name": "spec",
+      "role": "arcwright-quick-flow-solo-dev",
+      "prompt_template": "Write a quick spec for: {task}. Output: task definition + acceptance criteria."
+    },
+    {
+      "name": "dev",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement per spec: {task}",
+      "depends_on": ["spec"]
+    },
+    {
+      "name": "review",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "3-sub review (AR+DRY, UV, SR) of implementation for: {task}",
+      "depends_on": ["dev"]
+    },
+    {
+      "name": "qa",
+      "role": "arcwright-qa",
+      "prompt_template": "QA validation for: {task}. Use playwright-cli for UI, assertions for logic.",
+      "depends_on": ["review"]
+    }
+  ]
+}
+```

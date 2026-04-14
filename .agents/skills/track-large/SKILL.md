@@ -149,3 +149,93 @@ Change summary:
 
 Wait for explicit `[approve]` before running PTM. Do NOT auto-proceed.
 - Then `/prepare-to-merge` in-process.
+
+## Non-tmux Variant
+
+**Claude Code:** Mode [1] sequential for all planning. Epic loop uses Agent tool for dev/review/QA per story.
+
+**Kiro CLI:** Use the `subagent` tool. Break into two pipeline invocations:
+
+**Pipeline 1 — Planning:**
+```json
+{
+  "task": "Large track planning: [task description]",
+  "stages": [
+    {
+      "name": "brief",
+      "role": "arcwright-pm",
+      "prompt_template": "Write product brief for: {task}"
+    },
+    {
+      "name": "research-codebase",
+      "role": "arcwright-analyst",
+      "prompt_template": "Codebase exploration for: {task}",
+      "depends_on": ["brief"]
+    },
+    {
+      "name": "research-domain",
+      "role": "arcwright-analyst",
+      "prompt_template": "Domain/technical research for: {task}",
+      "depends_on": ["brief"]
+    },
+    {
+      "name": "research-ux",
+      "role": "arcwright-analyst",
+      "prompt_template": "UX patterns and competitive research for: {task}",
+      "depends_on": ["brief"]
+    },
+    {
+      "name": "prd",
+      "role": "arcwright-pm",
+      "prompt_template": "Write PRD from brief + research for: {task}",
+      "depends_on": ["research-codebase", "research-domain", "research-ux"]
+    },
+    {
+      "name": "ux",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "UX design for: {task}",
+      "depends_on": ["prd"]
+    },
+    {
+      "name": "arch",
+      "role": "arcwright-architect",
+      "prompt_template": "Architecture doc for: {task}",
+      "depends_on": ["prd"]
+    },
+    {
+      "name": "epics",
+      "role": "arcwright-pm",
+      "prompt_template": "Epics and stories for: {task}",
+      "depends_on": ["ux", "arch"]
+    }
+  ]
+}
+```
+
+**Pipeline 2 — Per-epic dev loop** (run once per epic, sequentially):
+```json
+{
+  "task": "Epic N: [epic description]",
+  "stages": [
+    {
+      "name": "dev",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement epic: {task}. One dev owns full epic (frontend+backend+tests)."
+    },
+    {
+      "name": "review",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "3-sub review (AR+DRY, UV, SR) for: {task}",
+      "depends_on": ["dev"]
+    },
+    {
+      "name": "qa",
+      "role": "arcwright-qa",
+      "prompt_template": "QA for epic: {task}",
+      "depends_on": ["review"]
+    }
+  ]
+}
+```
+
+After all epics, run a final review + QA pipeline before USER APPROVAL.

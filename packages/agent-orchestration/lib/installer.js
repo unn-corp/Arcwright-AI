@@ -73,7 +73,6 @@ const PLATFORMS = {
     agentDir: '.kiro/agents',
     skillsDir: '.kiro/skills',
     steeringDir: '.kiro/steering',
-    hooksDir: '.kiro/hooks',
     rulesFile: null,  // Kiro uses steering files, not a single rules file
     rulesMarker: null,
   },
@@ -169,6 +168,7 @@ const GLOBAL_PATHS = {
     skills: '.claude/skills',
   },
   'kiro': {
+    agents: '.kiro/agents',
     skills: '.kiro/skills',
     steering: '.kiro/steering',
   },
@@ -232,7 +232,6 @@ async function writeFilesManifest(arcwrightDir, entries) {
 
 async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
-  const kiroHooksSrc = path.join(SRC_DIR, '.kiro', 'hooks');
   const kiroAgentsSrc = path.join(SRC_DIR, '.kiro', 'agents');
 
   const skillsDest = isGlobal
@@ -241,24 +240,21 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
   const steeringDest = isGlobal
     ? resolveToolPath('kiro', '.kiro/steering', isGlobal, homes, platform)
     : path.join(projectRoot, '.kiro', 'steering');
-  const hooksDest = isGlobal
-    ? resolveToolPath('kiro', '.kiro/hooks', isGlobal, homes, platform)
-    : path.join(projectRoot, '.kiro', 'hooks');
   const agentsDest = isGlobal
     ? resolveToolPath('kiro', '.kiro/agents', isGlobal, homes, platform)
     : path.join(projectRoot, '.kiro', 'agents');
 
-  // Copy skills (same format as Claude Code skills — SKILL.md files are compatible)
-  const agentSkillsSrc = path.join(SRC_DIR, '.agents', 'skills');
-  if (await fs.pathExists(agentSkillsSrc)) {
+  // Copy skills (Kiro-adapted versions with .kiro/ paths)
+  const kiroSkillsSrc = path.join(SRC_DIR, '.kiro', 'skills');
+  if (await fs.pathExists(kiroSkillsSrc)) {
     await fs.ensureDir(skillsDest);
     const filter = (src) => {
       if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
       return true;
     };
-    await fs.copy(agentSkillsSrc, skillsDest, { overwrite: true, filter });
-    const allSkillFiles = await glob('**/*', { cwd: agentSkillsSrc, nodir: true });
+    await fs.copy(kiroSkillsSrc, skillsDest, { overwrite: true, filter });
+    const allSkillFiles = await glob('**/*', { cwd: kiroSkillsSrc, nodir: true });
     const skillFiles = allSkillFiles.filter(f => {
       if (!resolvedTeams && /^team-/.test(f)) return false;
       if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
@@ -280,13 +276,13 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     console.log(chalk.green(`  ✓ .kiro/steering/ (${steeringFiles.length} files)`));
   }
 
-  // Copy Kiro subagents (.kiro/agents/ — native Kiro slash commands)
+  // Copy Kiro agents (.kiro/agents/ — native Kiro agent configs, JSON format)
   if (await fs.pathExists(kiroAgentsSrc)) {
     await fs.ensureDir(agentsDest);
-    const allAgentFiles = (await fs.readdir(kiroAgentsSrc)).filter(f => f.endsWith('.md'));
+    const allAgentFiles = (await fs.readdir(kiroAgentsSrc)).filter(f => f.endsWith('.json'));
     const agentFiles = allAgentFiles.filter(f => {
-      if (!resolvedTeams && f === 'team.md') return false;
-      if (!resolvedDockerCheck && f === 'docker-check.md') return false;
+      if (!resolvedTeams && f === 'team.json') return false;
+      if (!resolvedDockerCheck && f === 'docker-check.json') return false;
       return true;
     });
     for (const f of agentFiles) {
@@ -296,15 +292,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     if (!resolvedTeams) skipNotes.push('/team');
     if (!resolvedDockerCheck) skipNotes.push('/docker-check');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
-    console.log(chalk.green(`  ✓ .kiro/agents/ (${agentFiles.length} subagents)`) + teamNote);
-  }
-
-  // Copy hooks (project-level only, not global)
-  if (!isGlobal && await fs.pathExists(kiroHooksSrc)) {
-    await fs.ensureDir(hooksDest);
-    await fs.copy(kiroHooksSrc, hooksDest, { overwrite: true });
-    const hookFiles = await fs.readdir(kiroHooksSrc);
-    console.log(chalk.green(`  ✓ .kiro/hooks/ (${hookFiles.length} files)`));
+    console.log(chalk.green(`  ✓ .kiro/agents/ (${agentFiles.length} agents)`) + teamNote);
   }
 }
 
@@ -909,6 +897,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
 
   const arcwrightEntry = buildArcwrightRulesEntry(modules);
   const tmuxEntry = buildTmuxEntry();
+  const proactiveEntry = buildProactiveEntry();
 
   // Write rules/context file
   if (platformCfg.rulesFile) {
@@ -955,9 +944,10 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
       ? resolveToolPath('claude-code', '.claude/CLAUDE.md', true, homes, platform)
       : path.join(projectRoot, 'CLAUDE.md');
     await migrateOldClaudeMd(rootClaudePath);
-    const arcwrightResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', arcwrightEntry);
-    const tmuxResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-tmux-start -->',  '<!-- arcwright-tmux-end -->',  tmuxEntry);
-    const anyChanged  = arcwrightResult !== 'noop' || tmuxResult !== 'noop';
+    const arcwrightResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-agent-start -->',    '<!-- arcwright-agent-end -->',    arcwrightEntry);
+    const tmuxResult       = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-tmux-start -->',     '<!-- arcwright-tmux-end -->',     tmuxEntry);
+    const proactiveResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-proactive-start -->', '<!-- arcwright-proactive-end -->', proactiveEntry);
+    const anyChanged  = arcwrightResult !== 'noop' || tmuxResult !== 'noop' || proactiveResult !== 'noop';
     if (anyChanged) {
       console.log(chalk.green(`  ✓ ${isGlobal ? '~/.claude/CLAUDE.md' : 'CLAUDE.md'} updated (stale sections replaced)`));
     } else {
@@ -966,7 +956,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
 
     // Write global ~/.claude/CLAUDE.md — applies Arcwright + tmux rules to every project
     if (!isGlobal) {
-      await writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, chalk);
+      await writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, proactiveEntry, chalk);
     }
   }
 
@@ -1118,11 +1108,39 @@ function buildTmuxEntry() {
   ].join('\n');
 }
 
+function buildProactiveEntry() {
+  // Each skill directory contains a RULES.md sidecar (~300 tokens) alongside SKILL.md (~2500 tokens).
+  // Proactive loading reads RULES.md only; full SKILL.md is loaded when executing the procedure.
+  return [
+    '',
+    '## Proactive Skill Invocation',
+    '',
+    'When your work touches a domain covered by a skill, read its `RULES.md` sidecar for quick',
+    'context (~300 tokens — alongside SKILL.md in the same skill directory).',
+    'Load the full `SKILL.md` only when executing the skill as a formal procedure.',
+    'Do not ask the user before invoking — if the trigger is clear, act immediately.',
+    '',
+    '| Situation | Skill |',
+    '|-----------|-------|',
+    '| Bug, test failure, or unexpected behavior | `systematic-debugging` |',
+    '| Writing or reviewing TypeScript | `typescript-best-practices` |',
+    '| Writing or reviewing React | `react-expert` |',
+    '| Writing Python backend code | `python-backend` |',
+    '| Writing Next.js / App Router | `nextjs-app-router-patterns` |',
+    '| Security-sensitive code (auth, input, SQL, file ops) | `security-review` |',
+    '| Code quality / refactor review | `dry` |',
+    '| New task or ambiguous feature request | `triage` |',
+    '| Writing frontend / CSS / layout | `frontend-responsive-design-standards` |',
+    '| Redis, PostgreSQL, WebSocket implementation | `redis-best-practices` / `postgresql-optimization` / `websocket-engineer` |',
+    '',
+  ].join('\n');
+}
+
 /**
  * Write / merge ~/.claude/CLAUDE.md (global) with Arcwright + tmux sections.
  * This file is loaded by Claude Code for every project automatically.
  */
-async function writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, chalk) {
+async function writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, proactiveEntry, chalk) {
   const globalClaudeDir = path.join(os.homedir(), '.claude');
   const globalClaudePath = path.join(globalClaudeDir, 'CLAUDE.md');
 
@@ -1131,11 +1149,12 @@ async function writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, chalk) {
   // Migrate: strip old markerless sections left by pre-1.0.21 installers
   await migrateOldClaudeMd(globalClaudePath);
 
-  const arcwrightResult = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', arcwrightEntry);
-  const tmuxResult = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-tmux-start -->',  '<!-- arcwright-tmux-end -->',  tmuxEntry);
-  const anyChanged = arcwrightResult !== 'noop' || tmuxResult !== 'noop';
+  const arcwrightResult  = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-agent-start -->',    '<!-- arcwright-agent-end -->',    arcwrightEntry);
+  const tmuxResult       = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-tmux-start -->',     '<!-- arcwright-tmux-end -->',     tmuxEntry);
+  const proactiveResult  = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-proactive-start -->', '<!-- arcwright-proactive-end -->', proactiveEntry);
+  const anyChanged = arcwrightResult !== 'noop' || tmuxResult !== 'noop' || proactiveResult !== 'noop';
 
-  if (arcwrightResult === 'created' || tmuxResult === 'created') {
+  if (arcwrightResult === 'created' || tmuxResult === 'created' || proactiveResult === 'created') {
     console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) created'));
   } else if (anyChanged) {
     console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated (stale sections replaced)'));

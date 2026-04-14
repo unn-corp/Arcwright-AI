@@ -1,8 +1,6 @@
 ---
 name: typescript-best-practices
-description:
-  Modern TypeScript patterns your AI agent should use. Strict mode, discriminated unions, satisfies
-  operator, const assertions, and type-safe patterns for TypeScript 5.x.
+description: TRIGGER when writing or reviewing TypeScript files — strict mode, discriminated unions, satisfies operator, const assertions, and type-safe patterns for TypeScript 5.x.
 metadata:
   tags: typescript, type-safety, best-practices
 ---

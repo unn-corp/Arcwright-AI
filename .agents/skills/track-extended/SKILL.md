@@ -127,3 +127,81 @@ Wait for explicit `[approve]` before running PTM. Do NOT auto-proceed.
 
 ### 10. PTM
 - `/prepare-to-merge` in-process
+
+## Non-tmux Variant
+
+**Claude Code:** Mode [1] sequential for all planning steps (spec, research, PRD, UX/arch/sprint). Single split pane for Dev. Review gates and QA in-process.
+
+**Kiro CLI:** Use the `subagent` tool. Planning runs sequentially, UX/arch/sprint can run in parallel:
+```json
+{
+  "task": "Extended track: [task description]",
+  "stages": [
+    {
+      "name": "spec",
+      "role": "arcwright-quick-flow-solo-dev",
+      "prompt_template": "Quick spec for: {task}"
+    },
+    {
+      "name": "research-1",
+      "role": "arcwright-analyst",
+      "prompt_template": "Codebase exploration for: {task}",
+      "depends_on": ["spec"]
+    },
+    {
+      "name": "research-2",
+      "role": "arcwright-analyst",
+      "prompt_template": "Domain/technical research for: {task}",
+      "depends_on": ["spec"]
+    },
+    {
+      "name": "prd",
+      "role": "arcwright-pm",
+      "prompt_template": "Write PRD for: {task}",
+      "depends_on": ["research-1", "research-2"]
+    },
+    {
+      "name": "ux",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "UX design for: {task}",
+      "depends_on": ["prd"]
+    },
+    {
+      "name": "arch",
+      "role": "arcwright-architect",
+      "prompt_template": "Architecture notes for: {task}",
+      "depends_on": ["prd"]
+    },
+    {
+      "name": "sprint-plan",
+      "role": "arcwright-pm",
+      "prompt_template": "Sprint plan for: {task}",
+      "depends_on": ["prd"]
+    },
+    {
+      "name": "review-1",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Review gate 1 (3-sub) for: {task}",
+      "depends_on": ["ux", "arch", "sprint-plan"]
+    },
+    {
+      "name": "dev",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement per PRD, UX, arch notes, sprint plan: {task}",
+      "depends_on": ["review-1"]
+    },
+    {
+      "name": "review-2",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Review gate 2 (3-sub, 1 pass) for: {task}",
+      "depends_on": ["dev"]
+    },
+    {
+      "name": "qa",
+      "role": "arcwright-qa",
+      "prompt_template": "QA validation for: {task}",
+      "depends_on": ["review-2"]
+    }
+  ]
+}
+```

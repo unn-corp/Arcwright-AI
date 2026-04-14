@@ -63,6 +63,43 @@ const LEAK_PATTERNS = [
   /SquidAI/,
 ];
 
+/** Slash command files to ship. Shared by bundleKiroAgents() and bundleTrackCommands(). */
+const SHIPPED_COMMANDS = [
+  /^arcwright-track-.*\.md$/,
+  /^arcwright-migrate\.md$/,
+  /^tmux\.md$/,
+  /^gsudo\.md$/,
+  /^team\.md$/,
+  /^dry\.md$/,
+  /^dry-loop\.md$/,
+  /^ux-audit\.md$/,
+  /^ux-loop\.md$/,
+  /^security-review\.md$/,
+  /^sec-loop\.md$/,
+  /^design\.md$/,
+  /^playwright\.md$/,
+  /^audit-site\.md$/,
+  /^diagram\.md$/,
+  /^triage\.md$/,
+  /^docker-check\.md$/,
+  /^react\.md$/,
+  /^typescript\.md$/,
+  /^nextjs\.md$/,
+  /^nextjs-app-router\.md$/,
+  /^python\.md$/,
+  /^python-perf\.md$/,
+  /^python-api\.md$/,
+  /^java\.md$/,
+  /^java-perf\.md$/,
+  /^postgres\.md$/,
+  /^redis\.md$/,
+  /^websocket\.md$/,
+  /^responsive\.md$/,
+  /^secure\.md$/,
+  /^debug\.md$/,
+  /^clean-code\.md$/,
+];
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -113,6 +150,40 @@ function writeFile(dest, content) {
 function copyFile(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
+}
+
+
+// ─── Kiro adaptation helpers (module-scope, shared by buildKiroAssets + bundleKiroAgents) ──
+
+/**
+ * Adapt text content for Kiro CLI:
+ * - Rewrite .agents/skills/ → .kiro/skills/
+ * - Rewrite .claude/commands/ → .kiro/agents/
+ * - Replace `claude --dangerously-skip-permissions` with `kiro-cli chat --trust-all-tools --agent`
+ * - Strip bare --dangerously-skip-permissions
+ */
+function adaptContentForKiro(text) {
+  let p = text;
+  p = p.replace(/\.agents\/skills\//g, '.kiro/skills/');
+  p = p.replace(/\.claude\/commands\//g, '.kiro/agents/');
+  p = p.replace(
+    /claude\s+--dangerously-skip-permissions/g,
+    'kiro-cli chat --trust-all-tools --agent'
+  );
+  p = p.replace(/,?\s*--dangerously-skip-permissions/g, '');
+  return p;
+}
+
+/**
+ * Full adaptation for agent prompts (extends adaptContentForKiro with $ARGUMENTS handling).
+ */
+function adaptPromptForKiro(body) {
+  let p = adaptContentForKiro(body);
+  p = p.replace(
+    /`?\$ARGUMENTS`?/g,
+    '(the user\'s request — provided in their message)'
+  );
+  return p;
 }
 
 
@@ -170,9 +241,10 @@ function buildGenericPackage() {
 
 /**
  * Walk SKILLS_SRC and copy all skill directories to destBase.
+ * Optional transform function applied to text content (used for Kiro path adaptation).
  * Returns count of files copied.
  */
-function copySkillsTo(destBase, logLabel) {
+function copySkillsTo(destBase, logLabel, transform) {
   if (!fs.existsSync(SKILLS_SRC)) {
     console.log(`  ⚠  .agents/skills/ not found — skipping`);
     return 0;
@@ -192,7 +264,7 @@ function copySkillsTo(destBase, logLabel) {
       const dest    = path.join(destBase, skill, rel);
       const content = readText(full);
       if (content !== null) {
-        writeFile(dest, content);
+        writeFile(dest, transform ? transform(content) : content);
       } else {
         copyFile(full, dest);
       }
@@ -209,9 +281,9 @@ function copySkillsTo(destBase, logLabel) {
 function buildKiroAssets() {
   console.log('🟣  Building Kiro assets → .kiro/');
 
-  // 2a. Copy .agents/skills/ → src/.kiro/skills/ (1:1 — SKILL.md already Kiro-compatible)
+  // 2a. Copy .agents/skills/ → src/.kiro/skills/, rewriting paths/CLI refs for Kiro
   const kiroSkillsDest = path.join(PKG_SRC, '.kiro', 'skills');
-  const skillsCopied   = copySkillsTo(kiroSkillsDest, 'src/.kiro/skills/');
+  const skillsCopied   = copySkillsTo(kiroSkillsDest, 'src/.kiro/skills/', adaptContentForKiro);
 
   // 2b. Generate steering docs in src/.kiro/steering/
   const steeringDir = path.join(PKG_SRC, '.kiro', 'steering');
@@ -219,11 +291,6 @@ function buildKiroAssets() {
 
   generateAgentsSteering(steeringDir);
   generateWorkflowsSteering(steeringDir);
-
-  // 2c. Create placeholder hooks directory
-  const hooksDir = path.join(PKG_SRC, '.kiro', 'hooks');
-  fs.mkdirSync(hooksDir, { recursive: true });
-  console.log(`  ✓  .kiro/hooks/ (placeholder created)`);
 
   console.log('');
 }
@@ -312,6 +379,53 @@ function generateAgentsSteering(steeringDir) {
   lines.push('');
   lines.push('Slash commands in `.claude/commands/arcwright-track-*.md` activate the master orchestrator with a pre-selected workflow track.');
   lines.push('');
+
+  // ── Skill library catalog ─────────────────────────────────────────────────
+  // Include skill names + descriptions so the AI knows what's available and
+  // can auto-load the right skill when the user's request matches.
+  const skillsDir = path.join(PROJECT_ROOT, '.agents', 'skills');
+  if (fs.existsSync(skillsDir)) {
+    const skillDirs = fs.readdirSync(skillsDir, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .sort();
+
+    const skills = [];
+    for (const dir of skillDirs) {
+      const skillMd = path.join(skillsDir, dir, 'SKILL.md');
+      if (!fs.existsSync(skillMd)) continue;
+      const content = fs.readFileSync(skillMd, 'utf8');
+      // Extract description — handle single-line and multi-line YAML
+      let desc = null;
+      const singleLine = content.match(/^---[\s\S]*?description:\s*["']([^"'\n]+)["']/m);
+      if (singleLine) { desc = singleLine[1].trim(); }
+      else {
+        const unquoted = content.match(/^---[\s\S]*?description:\s*([^\n"'][^\n]+)/m);
+        if (unquoted) desc = unquoted[1].trim();
+      }
+      // Multi-line description (indented continuation)
+      if (!desc) {
+        const multiLine = content.match(/^---[\s\S]*?description:\s*\n((?:\s+[^\n]+\n?)+)/m);
+        if (multiLine) desc = multiLine[1].replace(/\n\s*/g, ' ').trim();
+      }
+      if (desc) skills.push({ name: dir, desc });
+    }
+
+    if (skills.length > 0) {
+      lines.push('## Skill Library');
+      lines.push('');
+      lines.push('The following skills are available in `.kiro/skills/` (Kiro) or `.agents/skills/` (Claude Code). Read the SKILL.md file to load a skill when the task matches its description.');
+      lines.push('');
+      lines.push('| Skill | Description |');
+      lines.push('|-------|-------------|');
+      for (const { name, desc } of skills) {
+        // Truncate long descriptions for the table
+        const shortDesc = desc.length > 150 ? desc.substring(0, 147) + '...' : desc;
+        lines.push(`| \`${name}\` | ${shortDesc} |`);
+      }
+      lines.push('');
+    }
+  }
 
   const dest = path.join(steeringDir, 'arcwright-core.md');
   writeFile(dest, lines.join('\n'));
@@ -417,9 +531,9 @@ function generateWorkflowsSteering(steeringDir) {
 // ─── Step 2b: bundleKiroAgents ───────────────────────────────────────────────
 
 /**
- * Read each .claude/commands/*.md and write a Kiro-compatible subagent file
- * at src/.kiro/agents/{name}.md with name+description frontmatter.
- * Body is identical to the Claude slash command body.
+ * Read each .claude/commands/*.md and write a Kiro-compatible agent JSON file
+ * at src/.kiro/agents/{name}.json. Also generates specialist agent stubs from
+ * _arcwright/awm/agents/ so the subagent tool's `role` field can reference them.
  */
 function bundleKiroAgents() {
   const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
@@ -430,25 +544,7 @@ function bundleKiroAgents() {
     return;
   }
 
-  const SHIPPED_COMMANDS = [
-    /^arcwright-track-.*\.md$/,
-    /^arcwright-migrate\.md$/,
-    /^tmux\.md$/,
-    /^gsudo\.md$/,
-    /^team\.md$/,
-    /^dry\.md$/,
-    /^dry-loop\.md$/,
-    /^ux-audit\.md$/,
-    /^ux-loop\.md$/,
-    /^security-review\.md$/,
-    /^sec-loop\.md$/,
-    /^design\.md$/,
-    /^playwright\.md$/,
-    /^audit-site\.md$/,
-    /^diagram\.md$/,
-    /^triage\.md$/,
-    /^docker-check\.md$/,
-  ];
+  fs.mkdirSync(agentsDest, { recursive: true });
 
   const cmdFiles = fs.readdirSync(commandsSrc)
     .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
@@ -459,122 +555,175 @@ function bundleKiroAgents() {
     return;
   }
 
-  fs.mkdirSync(agentsDest, { recursive: true });
-
-  /**
-   * Parse YAML frontmatter from a markdown file.
-   * Returns { description, body } where body is everything after the closing ---.
-   */
+  /** Parse YAML frontmatter from a markdown file. */
   function parseFrontmatter(content) {
     const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-    if (!fmMatch) {
-      // No frontmatter — body is the whole file
-      return { description: null, body: content };
-    }
+    if (!fmMatch) return { description: null, body: content };
     const fmBlock = fmMatch[1];
     const body    = fmMatch[2];
-
-    // Extract description field (handles quoted and unquoted values)
     const descMatch = fmBlock.match(/^description:\s*["']?(.*?)["']?\s*$/m);
-    const description = descMatch ? descMatch[1].trim() : null;
-
-    return { description, body };
+    return { description: descMatch ? descMatch[1].trim() : null, body };
   }
 
   /**
-   * Kiro subagent tool declarations (confirmed from https://kiro.dev/docs/chat/subagents/)
-   * Kiro does NOT have a "useSubagent" tool. Subagent delegation happens via:
-   *   - Direct prompt instruction: "Use the <name> subagent to..."
-   *   - Slash command invocation: /<name> [task]
-   * The `tools` frontmatter field controls which tools the subagent can access.
-   *
-   * Track commands need broad access (read, write, shell) since they orchestrate
-   * multi-step flows. Utility commands get more restricted access.
+   * Kiro CLI tool names. These are the actual tool identifiers Kiro recognises.
    */
-  const TOOLS_BY_PATTERN = {
-    'arcwright-track':    ['read', 'write', 'shell', 'web', '@builtin'],
-    'team':               ['read', 'write', 'shell', '@builtin'],
-    'arcwright-migrate':  ['read', 'write', 'shell'],
-    'dry':                ['read', 'write', 'shell'],
-    'ux-audit':           ['read', 'write', 'shell', 'web'],
-    'ux-loop':            ['read', 'write', 'shell', 'web'],
-    'security-review':    ['read', 'write', 'shell'],
-    'sec-loop':           ['read', 'write', 'shell'],
-    'design':             ['read', 'write', 'web'],
-    'playwright':         ['read', 'write', 'shell'],
-    'audit-site':         ['read', 'write', 'web'],
-    'diagram':            ['read', 'write'],
-    'triage':             ['read'],
-    'docker-check':       ['read', 'shell'],
-    'tmux':               ['read', 'write', 'shell'],
-    'gsudo':              ['shell'],
+  const KIRO_TOOLS_BY_PATTERN = {
+    'arcwright-track':    ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch', 'subagent', 'knowledge'],
+    'team':               ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'subagent', 'knowledge'],
+    'arcwright-migrate':  ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
+    'dry':                ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'ux-audit':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch'],
+    'ux-loop':            ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch'],
+    'security-review':    ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'sec-loop':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'design':             ['fs_read', 'fs_write', 'grep', 'glob', 'web_search', 'web_fetch'],
+    'playwright':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
+    'audit-site':         ['fs_read', 'fs_write', 'execute_bash', 'web_search', 'web_fetch'],
+    'diagram':            ['fs_read', 'fs_write', 'grep', 'glob'],
+    'triage':             ['fs_read', 'grep', 'glob', 'code'],
+    'docker-check':       ['fs_read', 'execute_bash', 'grep'],
+    'tmux':               ['fs_read', 'fs_write', 'execute_bash'],
+    'gsudo':              ['execute_bash'],
+    // Coding / best-practice skill commands
+    'react':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'typescript':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'nextjs':             ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch'],
+    'python':             ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'python-perf':        ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'python-api':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'java':               ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'java-perf':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'postgres':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'redis':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'websocket':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'responsive':         ['fs_read', 'fs_write', 'grep', 'glob', 'code', 'web_search', 'web_fetch'],
+    'secure':             ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'debug':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'clean-code':         ['fs_read', 'fs_write', 'grep', 'glob', 'code'],
   };
 
-  /**
-   * Subagent delegation note added to track and team commands.
-   * Kiro's delegation model: instruct the model to invoke named subagents
-   * via natural language or slash commands — no special tool required.
-   */
-  const SUBAGENT_DELEGATION_BODY = `
-## Subagent Delegation
-
-This agent orchestrates specialist subagents. In Kiro, delegation works by
-instructing the model to use a named subagent:
-
-- Type: "Use the arcwright-dev subagent to implement the feature"
-- Or use a slash command directly: \`/arcwright-dev [task]\`
-
-Available specialist subagents (installed to \`.kiro/agents/\`):
-- \`arcwright-analyst\` — requirements elicitation, research
-- \`arcwright-architect\` — system design, technical decisions
-- \`arcwright-dev\` — implementation
-- \`arcwright-pm\` — product management, PRDs
-- \`arcwright-qa\` — testing, validation
-- \`arcwright-sm\` — scrum master, sprint management
-- \`arcwright-tech-writer\` — documentation
-- \`arcwright-ux-designer\` — interface design, accessibility
-
-Delegate each stage of the workflow to the appropriate specialist rather than
-doing all work in a single agent context.
-`;
-
   function resolveTools(name) {
-    for (const [pattern, toolList] of Object.entries(TOOLS_BY_PATTERN)) {
-      if (name.startsWith(pattern) || name === pattern) {
-        return toolList;
-      }
+    for (const [pattern, toolList] of Object.entries(KIRO_TOOLS_BY_PATTERN)) {
+      if (name.startsWith(pattern) || name === pattern) return toolList;
     }
-    return ['read', 'write', 'shell'];
+    return ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'];
   }
 
   const isTrackOrTeam = (name) =>
     name.startsWith('arcwright-track') || name === 'team';
+
+  /** Specialist agent names for toolsSettings.crew */
+  const SPECIALIST_AGENTS = [
+    'arcwright-analyst', 'arcwright-architect', 'arcwright-dev', 'arcwright-pm',
+    'arcwright-qa', 'arcwright-quick-flow-solo-dev', 'arcwright-review-orchestrator',
+    'arcwright-sm', 'arcwright-tech-writer', 'arcwright-ux-designer',
+  ];
+
+  /** Kiro-specific tmux addendum appended to track/team agent prompts */
+  const KIRO_TMUX_ADDENDUM = `
+
+## Kiro CLI — Split-Pane Mode (tmux)
+
+When \`$TMUX\` is set, Kiro CLI can orchestrate split-pane agent workflows via \`execute_bash\`.
+
+**Spawning a Kiro agent in a new tmux pane:**
+\`\`\`bash
+SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
+tmux split-window -h -c "#{pane_current_path}" \\
+  "kiro-cli chat --trust-all-tools --agent arcwright-dev 'Your task: <task description>. Master pane: $SPAWNER_PANE. Report back with: tmux send-keys -t $SPAWNER_PANE \\"AGENT_SIGNAL::TASK_DONE::<role>::<task_id>::<status>::<summary>\\" Enter'"
+sleep 8
+NEW_PANE=$(tmux list-panes -F "#{pane_id}" | tail -1)
+tmux select-layout tiled
+\`\`\`
+
+**Key differences from Claude Code split-pane mode:**
+- Use \`kiro-cli chat --trust-all-tools --agent <agent-name>\` instead of \`claude --dangerously-skip-permissions\`
+- Agent names reference \`.kiro/agents/*.json\` configs (e.g. \`arcwright-dev\`, \`arcwright-qa\`)
+- Skills are at \`.kiro/skills/\` not \`.agents/skills/\`
+- The AGENT_SIGNAL protocol, message delivery verification, and pane close sequence from the \`tmux-protocol\` skill all apply identically
+
+**When \`$TMUX\` is NOT set:** Use the \`subagent\` tool for in-process multi-agent pipelines instead. See the Non-tmux Variant section in each track skill.
+`;
 
   let generated = 0;
   for (const fname of cmdFiles) {
     const srcPath  = path.join(commandsSrc, fname);
     const name     = fname.replace(/\.md$/, '');
     const raw      = fs.readFileSync(srcPath, 'utf8');
-
     const { description, body } = parseFrontmatter(raw);
 
-    // Fallback: extract description from first heading subtitle (## line)
     let desc = description;
     if (!desc) {
-      const headingMatch = body.match(/^##\s+(.+)/m);
-      desc = headingMatch ? headingMatch[1].trim() : `Arcwright slash command: ${name}`;
+      const headingMatch = body.match(/^##?\s+(.+)/m);
+      desc = headingMatch ? headingMatch[1].trim() : `Arcwright command: ${name}`;
     }
 
     const tools = resolveTools(name);
-    const toolsYaml = `tools: [${tools.join(', ')}]`;
-    const delegationSection = isTrackOrTeam(name) ? SUBAGENT_DELEGATION_BODY : '';
+    let prompt = adaptPromptForKiro(body.trim());
 
-    const kiroContent = `---\nname: ${name}\ndescription: ${desc}\n${toolsYaml}\n---\n\n${body.trimStart()}${delegationSection}`;
-    writeFile(path.join(agentsDest, fname), kiroContent);
+    // Append tmux addendum to track and team agents
+    if (isTrackOrTeam(name)) {
+      prompt += KIRO_TMUX_ADDENDUM;
+    }
+
+    const agent = { name, description: desc, prompt, tools };
+
+    // Track and team agents get read-only tools auto-approved, skill resources, and crew config
+    if (isTrackOrTeam(name)) {
+      agent.allowedTools = ['fs_read', 'grep', 'glob', 'code', 'knowledge', 'web_search', 'web_fetch'];
+      agent.resources = [
+        'skill://.kiro/skills/**/SKILL.md',
+        'file://_arcwright/core/agents/arcwright-master.md',
+      ];
+      agent.toolsSettings = {
+        crew: {
+          availableAgents: SPECIALIST_AGENTS,
+        },
+      };
+    }
+
+    writeFile(path.join(agentsDest, `${name}.json`), JSON.stringify(agent, null, 2) + '\n');
     generated++;
   }
 
-  console.log(`  ✓  .kiro/agents/  (${generated} subagents generated) → src/.kiro/agents/`);
+  // ── Generate specialist agent stubs from _arcwright/awm/agents/ ───────────
+  const awmAgentsDir = path.join(ARCWRIGHT_SRC, 'awm', 'agents');
+  let specialists = 0;
+  if (fs.existsSync(awmAgentsDir)) {
+    const agentFiles = [];
+    (function collectMd(dir) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) collectMd(path.join(dir, entry.name));
+        else if (entry.name.endsWith('.md')) agentFiles.push(path.join(dir, entry.name));
+      }
+    })(awmAgentsDir);
+
+    for (const agentPath of agentFiles) {
+      const raw = fs.readFileSync(agentPath, 'utf8');
+      const slug = path.basename(agentPath, '.md');
+      const kiroName = `arcwright-${slug}`;
+
+      const descMatch = raw.match(/^---[\s\S]*?description:\s*["']?(.+?)["']?\s*$/m);
+      const desc = descMatch ? descMatch[1].trim() : `Arcwright ${slug} agent`;
+
+      const relFromArcwright = path.relative(ARCWRIGHT_SRC, agentPath).replace(/\\/g, '/');
+
+      const agent = {
+        name: kiroName,
+        description: desc,
+        prompt: `file://_arcwright/${relFromArcwright}`,
+        tools: ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch', 'knowledge'],
+        allowedTools: ['fs_read', 'grep', 'glob', 'code', 'knowledge'],
+        resources: ['skill://.kiro/skills/**/SKILL.md'],
+      };
+
+      writeFile(path.join(agentsDest, `${kiroName}.json`), JSON.stringify(agent, null, 2) + '\n');
+      specialists++;
+    }
+  }
+
+  console.log(`  ✓  .kiro/agents/  (${generated} command agents + ${specialists} specialist agents) → src/.kiro/agents/`);
   console.log('');
 }
 
@@ -592,26 +741,6 @@ function bundleTrackCommands() {
   }
 
   // Bundle all slash commands: arcwright-track-*, arcwright-migrate, tmux, gsudo, and utility commands
-  const SHIPPED_COMMANDS = [
-    /^arcwright-track-.*\.md$/,
-    /^arcwright-migrate\.md$/,
-    /^tmux\.md$/,
-    /^gsudo\.md$/,
-    /^team\.md$/,
-    /^dry\.md$/,
-    /^dry-loop\.md$/,
-    /^ux-audit\.md$/,
-    /^ux-loop\.md$/,
-    /^security-review\.md$/,
-    /^sec-loop\.md$/,
-    /^design\.md$/,
-    /^playwright\.md$/,
-    /^audit-site\.md$/,
-    /^diagram\.md$/,
-    /^triage\.md$/,
-    /^docker-check\.md$/,
-  ];
-
   const cmdFiles = fs.readdirSync(commandsSrc)
     .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
     .sort();

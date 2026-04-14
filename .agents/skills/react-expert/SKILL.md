@@ -1,6 +1,6 @@
 ---
 name: react-expert
-description: Use when researching React APIs or concepts for documentation. Use when you need authoritative usage examples, caveats, warnings, or errors for a React feature.
+description: TRIGGER when writing or reviewing React code — authoritative API research from source. Verifies usage examples, caveats, and patterns against React test files and source, not LLM training data.
 ---
 
 # React Expert Research Skill

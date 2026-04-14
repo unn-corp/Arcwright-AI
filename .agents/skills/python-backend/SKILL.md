@@ -1,6 +1,6 @@
 ---
 name: python-backend
-description: Production-ready Python backend patterns for FastAPI, SQLAlchemy, and Upstash
+description: TRIGGER when writing Python backend code — production-ready patterns for FastAPI, SQLAlchemy, and Upstash Redis.
 ---
 
 # python-backend

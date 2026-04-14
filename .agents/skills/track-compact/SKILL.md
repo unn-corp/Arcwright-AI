@@ -90,5 +90,42 @@ Wait for explicit `[approve]` before running PTM. Do NOT auto-proceed.
 
 ## Non-tmux Variant
 
-Mode [1] same-conversation for Quick Spec and Research.
-Split pane (single) for Quick Dev -- DRY+UV in same conversation after dev completes.
+**Claude Code:** Mode [1] same-conversation for Quick Spec and Research. Split pane (single) for Quick Dev — DRY+UV in same conversation after dev completes.
+
+**Kiro CLI:** Use the `subagent` tool to run the pipeline:
+```json
+{
+  "task": "Compact track: [task description]",
+  "stages": [
+    {
+      "name": "spec",
+      "role": "arcwright-quick-flow-solo-dev",
+      "prompt_template": "Quick spec for: {task}. Include research needs."
+    },
+    {
+      "name": "research",
+      "role": "arcwright-analyst",
+      "prompt_template": "Codebase research for: {task}",
+      "depends_on": ["spec"]
+    },
+    {
+      "name": "dev",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement per spec and research: {task}",
+      "depends_on": ["research"]
+    },
+    {
+      "name": "review",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "3-sub review (AR+DRY, UV, SR) for: {task}",
+      "depends_on": ["dev"]
+    },
+    {
+      "name": "qa",
+      "role": "arcwright-qa",
+      "prompt_template": "QA validation for: {task}",
+      "depends_on": ["review"]
+    }
+  ]
+}
+```

@@ -76,10 +76,28 @@ API docs, syntax guides, tool documentation (office docs)
 skills/
   skill-name/
     SKILL.md              # Main reference (required)
+    RULES.md              # Compact sidecar — ~300 tokens (recommended for proactive loading)
     supporting-file.*     # Only if needed
 ```
 
 **Flat namespace** - all skills in one searchable namespace
+
+**RULES.md** is a proactive-loading sidecar. Claude reads it for quick context (~300 tokens) without loading the full SKILL.md (~2500 tokens). Create one for any skill likely to be invoked automatically based on context.
+
+Format:
+```markdown
+# Skill Name — Quick Rules
+
+> Load full `SKILL.md` when executing this skill as a formal procedure.
+
+## Core Rules
+- Rule 1 (no examples, no explanation — just the rule)
+- Rule 2
+...10–15 bullets max
+
+## Red Flags (stop and apply skill)
+- Specific situation that requires skill attention
+```
 
 **Separate files for:**
 1. **Heavy reference** (100+ lines) - API docs, comprehensive syntax
@@ -612,6 +630,7 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 - [ ] Address specific baseline failures identified in RED
 - [ ] Code inline OR link to separate file
 - [ ] One excellent example (not multi-language)
+- [ ] **Create `RULES.md` sidecar** — 10–15 distilled rules, no examples, under 400 tokens (see Directory Structure for format). Skip only if skill is already under ~400 tokens total.
 - [ ] Run scenarios WITH skill - verify agents now comply
 
 **REFACTOR Phase - Close Loopholes:**

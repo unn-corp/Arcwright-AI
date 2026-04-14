@@ -119,3 +119,34 @@ Epics & Stories (split pane)
 
 ## PTM
 - `/prepare-to-merge` in-process (both paths)
+
+## Non-tmux Variant
+
+**Claude Code:** Mode [1] sequential for all steps. Review and dev use Agent tool in-process.
+
+**Kiro CLI:** Use the `subagent` tool. Run audit pipeline first, then route to fix path:
+
+**Audit pipeline:**
+```json
+{
+  "task": "Review track audit: [target area]",
+  "stages": [
+    {
+      "name": "review-ar",
+      "role": "arcwright-architect",
+      "prompt_template": "AR + DRY review of: {task}"
+    },
+    {
+      "name": "review-uv",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "UV review of: {task}"
+    },
+    {
+      "name": "review-sr",
+      "role": "arcwright-architect",
+      "prompt_template": "Security review of: {task}"
+    }
+  ]
+}
+```
+All three review stages run in parallel (no `depends_on`). After synthesis and volume gate, route to SMALL or LARGE fix path using the corresponding track's Kiro CLI pipeline.

@@ -1,3 +1,8 @@
+---
+name: tmux-protocol
+description: "tmux pane messaging protocol for multi-agent workflows. Load when $TMUX is set and orchestrating split-pane agents. Covers send-keys, delivery verification, pane spawning, AGENT_SIGNAL protocol, and pane close sequence."
+---
+
 # tmux-protocol
 
 **Auto-load trigger:** Load this skill whenever `$TMUX` is set (tmux is active). Skip entirely if tmux is not active — all sections are tmux-only.

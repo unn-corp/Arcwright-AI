@@ -78,4 +78,24 @@ Load the `playwright-cli` skill if any UI is touched. Verify the change works th
 
 ## Non-tmux Variant
 
-Mode [1] same-conversation for both Quick Dev and DRY+UV gate steps sequentially.
+**Claude Code:** Mode [1] same-conversation for both Quick Dev and DRY+UV gate steps sequentially.
+
+**Kiro CLI:** Use the `subagent` tool to run the pipeline:
+```json
+{
+  "task": "Nano track: [task description]",
+  "stages": [
+    {
+      "name": "dev",
+      "role": "arcwright-quick-flow-solo-dev",
+      "prompt_template": "Implement: {task}. Scope: 1-2 files, <=20 lines. If scope exceeds, signal upgrade to Small."
+    },
+    {
+      "name": "dry-uv-gate",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "DRY+UV review of changes for: {task}. DRY only (no AR at nano scale). UV auto-pass for pure backend.",
+      "depends_on": ["dev"]
+    }
+  ]
+}
+```

@@ -105,5 +105,54 @@ Wait for explicit `[approve]` before running PTM. Do NOT auto-proceed.
 
 ## Non-tmux Variant
 
-Mode [1] sequential for all planning steps.
-Single split pane for UX Design, then same pane reused for Quick Dev.
+**Claude Code:** Mode [1] sequential for all planning steps. Single split pane for UX Design, then same pane reused for Quick Dev.
+
+**Kiro CLI:** Use the `subagent` tool. Planning stages run sequentially, then dev/review/QA as a pipeline:
+```json
+{
+  "task": "Medium track: [task description]",
+  "stages": [
+    {
+      "name": "spec",
+      "role": "arcwright-quick-flow-solo-dev",
+      "prompt_template": "Quick spec for: {task}"
+    },
+    {
+      "name": "research",
+      "role": "arcwright-analyst",
+      "prompt_template": "Research for: {task}",
+      "depends_on": ["spec"]
+    },
+    {
+      "name": "ux",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "UX design for: {task}",
+      "depends_on": ["research"]
+    },
+    {
+      "name": "review-1",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Pre-dev review gate (3-sub: spec+UX) for: {task}",
+      "depends_on": ["ux"]
+    },
+    {
+      "name": "dev",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement per spec, UX design, and review findings: {task}",
+      "depends_on": ["review-1"]
+    },
+    {
+      "name": "review-2",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Final review gate (3-sub) for: {task}",
+      "depends_on": ["dev"]
+    },
+    {
+      "name": "qa",
+      "role": "arcwright-qa",
+      "prompt_template": "QA validation for: {task}",
+      "depends_on": ["review-2"]
+    }
+  ]
+}
+```

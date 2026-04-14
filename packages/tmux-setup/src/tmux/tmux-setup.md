@@ -771,6 +771,7 @@ The status bar contains emoji (💻 🪟 📁 🧮 💾 ⏰ etc.) and Powerline 
 | Icons show as boxes or blank | Install JetBrainsMono NFM; set font in **your terminal emulator** (Cursor/VS Code: `terminal.integrated.fontFamily`; Windows Terminal: `font.face`). WT settings have no effect when running inside Cursor. |
 | Colors all look the same | Ensure `set -ga terminal-overrides ",*256col*:Tc"` is in config; restart terminal |
 | Actions menu goes blank | Confirm `display-popup -E` (capital E flag) in `MouseDown1Status` binding |
+| Actions menu shows garbled 2-column layout | Terminal pane is too narrow — the popup was width-capped. Widen your terminal or pane to ≥ 120 cols. Fixed in latest: popup now uses `95%` width and the Python script adapts `W` to terminal size. Reload config: `Reload` button or `Ctrl+B r`. |
 | Float terminal does nothing | Check `/tmp/tmux_float_size` exists; try `Alt+F` directly |
 | `Alt+V` does nothing / path not typed | Ensure `wl-clipboard` is installed: `sudo apt-get install -y wl-clipboard` |
 | `Alt+V` pastes BMP path but image fails to open | Install ImageMagick for conversion: `sudo apt-get install -y imagemagick` |

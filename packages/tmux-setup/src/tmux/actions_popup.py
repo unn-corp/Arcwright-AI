@@ -15,33 +15,44 @@ HK  = '\033[1;38;2;255;213;116m'
 HT  = '\033[1;38;2;220;224;255m'
 RST = '\033[0m'
 
-W = 26  # cell content width (popup must be >= W*NC + (NC-1)*3 + 5)
+W = 26  # default; recomputed from terminal size after COLS/NC are defined below
 
 # All keys are lowercase. ("---", label) = separator. ("", "") = empty padding.
 COLS = [
-    [("z","  Zoom / unzoom pane"),("p","  Previous window"),("n","  Next window"),
-     ("w","  List windows & sessions"),("a","  New window"),("x","  Kill window"),
-     ("s","  Rename session"),("q","  Kill session"),("d","  Detach"),
-     ("","")],
-    [("h","  Split top / bottom"),("v","  Split left / right"),("k","  Kill pane"),
-     (",","  Rename window"),
-     ("---","Pane Movement"),
-     ("u","  Swap pane \u2190 prev"),("j","  Swap pane \u2192 next"),
-     ("e","  Break to new window"),("m","  Move to window\u2026"),("l","  Pull from window\u2026")],
-    [("f","  Float terminal"),("t","  Scratch terminal (M-i)"),
+    # ── Session ─────────────────────────────────────────────────────────────
+    [("s","  Rename session"),("q","  Kill session"),("d","  Detach"),
+     ("w","  Session chooser"),
+     ("---","Persistence"),
      ("y","  Save session"),("r","  Restore session"),
+     ("",""),("",""),("","")],
+    # ── Window ──────────────────────────────────────────────────────────────
+    [("a","  New window"),("x","  Kill window"),(",","  Rename window"),
+     ("p","  Previous window"),("n","  Next window"),
+     ("",""),("",""),("",""),("",""),("","")],
+    # ── Pane ────────────────────────────────────────────────────────────────
+    [("z","  Zoom / unzoom"),("h","  Split top / bottom"),("v","  Split left / right"),
+     ("k","  Kill pane"),
+     ("---","Movement"),
+     ("u","  Swap \u2190 prev"),("j","  Swap \u2192 next"),
+     ("e","  Break to window"),("m","  Move to window\u2026"),("l","  Pull from window\u2026")],
+    # ── Tools ───────────────────────────────────────────────────────────────
+    [("f","  Float terminal"),("t","  Scratch terminal (M-i)"),
+     ("E","  Neovim (Alt+e)"),("Y","  Yazi file manager"),("G","  Lazygit"),
      ("---","Clipboard"),
      ("c","  Copy mode"),("i","  Paste image"),
-     ("o","  Open URL / file"),("g","  Search in browser"),
-     ("","")],
-    [("E","  Neovim (Alt+e)"),("N","  NvimTree explorer"),
-     ("Y","  Yazi file manager"),("G","  Lazygit"),
-     ("D","  Lazydocker"),
-     ("",""),("",""),("",""),("",""),("","")],
+     ("o","  Open URL / file"),("g","  Search in browser")],
 ]
 
 NR = max(len(c) for c in COLS)
 NC = len(COLS)
+# Recompute W from actual terminal width so the grid fits regardless of popup/pane size.
+# Grid formula: terminal_cols = NC*(W+3) + 1  →  W = (terminal_cols - 1) // NC - 3
+# Clamp to [18, 30]: 18 keeps descriptions readable; 30 avoids sprawl on ultra-wide.
+try:
+    _tcols = os.get_terminal_size().columns
+except OSError:
+    _tcols = 120
+W = max(18, min(30, (_tcols - 1) // NC - 3))
 DATA_Y0 = 5  # 1-indexed terminal row where data row 0 starts
 
 def selectable(c, r):
@@ -74,11 +85,11 @@ def data_row_line(r, sc, sr):
 BSU = '\033[?2026h'   # begin synchronized update (buffer, don't render yet)
 ESU = '\033[?2026l'   # end synchronized update (flush to screen atomically)
 
-HDR_LABELS = [' Window & Session', ' Pane Controls', ' Tools & Clipboard', ' Launch']
+HDR_LABELS = [' Session', ' Window', ' Pane', ' Tools']
 
 def draw(sc, sr):
     """Full initial render."""
-    iw = W * NC + (NC - 1) * 3 + 3
+    iw = W * NC + (NC - 1) * 3 + 2  # border lines = NC*(W+3)+1; title = 2+iw → iw = NC*(W+3)-1
     out = [BSU, "\033[2J\033[H",
            f"{HDR}  {'tmux Actions':<{iw}}{RST}\n",
            hline('\u250c', '\u252c', '\u2510')]

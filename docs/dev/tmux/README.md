@@ -8,14 +8,14 @@ Powerline-style single status bar with clickable buttons and live stats.
 ## Shell Commands
 
 ```bash
-project       # open a new tmux session in your project directory
-project-claude  # same, but immediately launches Claude with --dangerously-skip-permissions
+tmux-ai       # open a new tmux session in your project directory
+tmux-claude   # same, but immediately launches Claude with --dangerously-skip-permissions
 ```
 
 Defined in `~/.bashrc`:
 ```bash
-alias project='tmux new-session -c /path/to/your/project'
-alias project-claude='tmux new-session -c /path/to/your/project "claude --dangerously-skip-permissions"'
+alias tmux-ai='tmux new-session -c /path/to/your/project'
+alias tmux-claude='tmux new-session -c /path/to/your/project "claude --dangerously-skip-permissions"'
 ```
 
 ---
@@ -58,7 +58,7 @@ nvm install --lts
 
 Open **Docker Desktop → Settings → Resources → WSL Integration**, toggle on your Ubuntu distro, click **Apply & Restart**.
 
-> ⚠️ Without this, the `n8n` and `dokploy` MCP servers will fail to connect even though Docker is installed on Windows.
+> ⚠️ Without this, Docker-based MCP servers will fail to connect even though Docker is installed on Windows.
 
 ---
 
@@ -92,7 +92,7 @@ If you prefer SSH keys instead:
 ```bash
 ssh-keygen -t ed25519 -C "you@example.com"
 cat ~/.ssh/id_ed25519.pub   # paste this into GitHub → Settings → SSH Keys
-git remote set-url origin git@github.com:<your-org>/<your-repo>.git
+git remote set-url origin git@github.com:your-org/your-repo.git
 ```
 
 ---
@@ -104,7 +104,7 @@ Tell Claude to "set up my tmux config" and it will:
 - Write `~/.tmux.conf` (full config below)
 - Write all scripts in `~/.config/tmux/bin/`
 - Write the WSL2 `~/.local/bin/xclip` shim
-- Update `~/.bashrc` with your project alias
+- Update `~/.bashrc` with the `squid` alias
 - Download `fzf` binary to `~/.local/bin/fzf`
 - Clone TPM if not present
 - Create `~/.local/bin/xdg-open` symlink → `wslview`
@@ -118,7 +118,6 @@ Tell Claude to "set up my tmux config" and it will:
 | `sudo apt-get install -y wl-clipboard` | Wayland clipboard access for `Alt+V` paste (`wl-paste`) |
 | `sudo apt-get install -y imagemagick` | BMP/JPEG/WEBP → PNG conversion for `Alt+V` paste |
 | `sudo apt-get install -y wslu` | Provides `wslview` — required for tmux-open URL opening in WSL2 |
-| Install gsudo on Windows (see below) | Allows WSL to run elevated PowerShell commands |
 | Press `Ctrl+B I` inside tmux after first launch | TPM plugin install — requires interactive session |
 
 After installing `wslu`, create the `xdg-open` shim (no sudo):
@@ -126,15 +125,6 @@ After installing `wslu`, create the `xdg-open` shim (no sudo):
 ln -sf /usr/bin/wslview ~/.local/bin/xdg-open
 ```
 This is needed because `tmux-open` hard-codes a check for `xdg-open` and errors if not found.
-
-**gsudo (Windows sudo):** Required for any WSL script that needs to run elevated PowerShell. Install on the Windows side:
-```powershell
-winget install gerardog.gsudo
-# or via Scoop:
-scoop install gsudo
-```
-The installer automatically creates a WSL shim at `~/.local/bin/gsudo` that delegates to the Windows binary. If gsudo is not installed when the installer runs, you'll see a warning — install it then re-run the installer to create the shim.
-
 
 ---
 
@@ -229,11 +219,11 @@ tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin
 Single bar at bottom:
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│  terminal content                                                                        │
-│                                                                                          │
-│ ▶ │⚙ Actions│🔄 Reload│  💻session│🪟window│📁path│🧮CPU│💾RAM│⏰time │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------------------------------------+
+|  terminal content                                                                         |
+|                                                                                           |
+|  > | Actions | Reload |  session | window | path | CPU | RAM | time |                    |
++-------------------------------------------------------------------------------------------+
 ```
 
 **Left side** — two clickable pills: Actions (opens full menu) + Reload
@@ -538,6 +528,27 @@ Active pane uses bright border color per pane index; inactive uses dim (`#414559
 
 ---
 
+## Hot Reload (watch-sync.sh)
+
+The `watch-sync.sh` script syncs file changes from the WSL host into the Docker container with ~2-4s latency.
+
+Start each dev session:
+    bash scripts/watch-sync.sh         # foreground (dedicated pane)
+    bash scripts/watch-sync.sh &       # background
+
+Monitor:
+    tail -f /tmp/watch-sync.log
+
+Stop:
+    kill $(cat /tmp/watch-sync.pid)
+
+Configure via env vars:
+    WATCH_CONTAINER=app-frontend-1
+    WATCH_HOST_DIR=./frontend
+    WATCH_CONTAINER_DIR=/app
+
+---
+
 ## Agent Orchestration
 
 When coordinating multiple Claude agents, use **orchestration session files** — not pane title sniffing. Pane titles are overwritten by Claude Code and are unreliable for routing.
@@ -561,9 +572,9 @@ When coordinating multiple Claude agents, use **orchestration session files** �
 ## Active Agents
 | Pane ID | Role        | Status | CWD                     |
 |---------|-------------|--------|-------------------------|
-| %27     | coordinator | idle   | .../your-project            |
-| %31     | backend     | busy   | .../your-project            |
-| %33     | frontend    | idle   | .../your-project            |
+| %27     | coordinator | idle   | .../my-project          |
+| %31     | backend     | busy   | .../my-project          |
+| %33     | frontend    | idle   | .../my-project          |
 
 ## Tasks
 ### TASK-001 · pending · backend
@@ -691,11 +702,7 @@ tmux kill-pane -t <pane_id>
 | `text/html` | Saved to `/tmp/tmux_clipboard_content.html`, path typed |
 | `text/plain` | If it's a valid path: `@path`; otherwise saved to `/tmp/tmux_clipboard_text.txt` |
 
-**Implementation:** `paste_image_wrapper.sh` uses `/usr/bin/wl-paste` (Linux-native Wayland clipboard — no PowerShell/vsock). Files are saved as `/tmp/tmux_clip_YYYYMMDD_HHMMSS.<ext>`. On each run, files from previous days are automatically deleted. The normalized PNG is also written back to the Wayland clipboard via `wl-copy` so subsequent pastes are also clean.
-
-**PNG normalization (WSLg PowerShell fallback):** When `wl-paste` produces empty output (common on WSLg), the script falls back to PowerShell's `System.Windows.Forms.Clipboard::GetImage()`. The raw `Image.Save()` call can produce indexed/palette-mode PNGs that the Anthropic API rejects with `"image format image/png not supported"`. The fix redraws the clipboard image onto a fresh `Format32bppArgb` bitmap before saving, ensuring the output is always standard RGBA PNG.
-
-> **Troubleshooting:** If Claude reports `"Image format image/png not supported"` after pasting a screenshot, your `paste_image_wrapper.sh` is outdated. Re-run the installer (it now always overwrites tmux scripts) or copy the latest version from `docs/dev/paste_image_wrapper.sh`.
+**Implementation:** `paste_image_wrapper.sh` uses `/usr/bin/wl-paste` (Linux-native Wayland clipboard — no PowerShell/vsock). Files are saved as `/tmp/tmux_clip_YYYYMMDD_HHMMSS.<ext>`. On each run, files from previous days are automatically deleted. The PNG is also copied back to the Wayland clipboard so `Ctrl+V` may also work in Claude Code.
 
 **`Ctrl+V` binding** uses `tmux paste-buffer -p` (no trailing newline). Without `-p`, `paste-buffer` appended a newline that auto-submitted the pasted content — fixed.
 
@@ -764,6 +771,7 @@ The status bar contains emoji (💻 🪟 📁 🧮 💾 ⏰ etc.) and Powerline 
 | Icons show as boxes or blank | Install JetBrainsMono NFM; set font in **your terminal emulator** (Cursor/VS Code: `terminal.integrated.fontFamily`; Windows Terminal: `font.face`). WT settings have no effect when running inside Cursor. |
 | Colors all look the same | Ensure `set -ga terminal-overrides ",*256col*:Tc"` is in config; restart terminal |
 | Actions menu goes blank | Confirm `display-popup -E` (capital E flag) in `MouseDown1Status` binding |
+| Actions menu shows garbled 2-column layout | Terminal pane is too narrow — the popup was width-capped. Widen your terminal or pane to ≥ 120 cols. Fixed in latest: popup now uses `95%` width and the Python script adapts `W` to terminal size. Reload config: `Reload` button or `Ctrl+B r`. |
 | Float terminal does nothing | Check `/tmp/tmux_float_size` exists; try `Alt+F` directly |
 | `Alt+V` does nothing / path not typed | Ensure `wl-clipboard` is installed: `sudo apt-get install -y wl-clipboard` |
 | `Alt+V` pastes BMP path but image fails to open | Install ImageMagick for conversion: `sudo apt-get install -y imagemagick` |
@@ -780,6 +788,12 @@ The status bar contains emoji (💻 🪟 📁 🧮 💾 ⏰ etc.) and Powerline 
 | `Alt+V` types nothing | WSL vsock interop (`powershell.exe`) fails in tmux `run-shell` context. The wrapper uses `/usr/bin/wl-paste` (Wayland, Linux-native). Ensure `wl-clipboard` is installed: `sudo apt-get install -y wl-clipboard`. |
 | Right-click opens new pane accidentally | tmux default `MouseDown3Pane` shows a split/kill menu. Fixed with `bind -T root MouseDown3Pane select-pane -t=` in `.tmux.conf`. Do **not** set `rightClickContextMenu: true` in WT — it breaks right-click paste and drag-and-drop. |
 
+## Troubleshooting: Garbled Copy-Paste from tmux
+
+If copied text shows garbage like box-drawing chars (|, -, Unicode squares), the issue is
+UTF-8 encoding in Windows Terminal. Fix: use ASCII-only tables and borders in scripts/docs.
+Set terminal to UTF-8: Windows Terminal Settings > Profile > Advanced > Text encoding: UTF-8.
+
 ---
 
 ## MCP Servers — WSL Setup
@@ -790,7 +804,7 @@ MCP servers work differently depending on their transport type. The project-comm
 
 ### Step 1 — Enable Docker Desktop WSL integration
 
-Two of the three servers (`n8n`, `dokploy`) use `docker exec`. For `docker` to work inside WSL, Docker Desktop must have WSL integration enabled.
+Docker-based MCP servers use `docker exec`. For `docker` to work inside WSL, Docker Desktop must have WSL integration enabled.
 
 1. Open **Docker Desktop → Settings → Resources → WSL Integration**
 2. Toggle on **your Ubuntu distro** (e.g. `Ubuntu` or `Ubuntu-24.04`)
@@ -804,15 +818,10 @@ If you see container output (or an empty table), Docker is wired up. If you get 
 
 ---
 
-### Step 2 — project MCP server (HTTP, localhost:5050)
+### Step 2 — HTTP-based MCP servers
 
-This server is HTTP-based — no Node or Docker config needed. It just requires the backend stack to be running.
+If your project exposes an HTTP MCP endpoint, ensure the backend is running and verify:
 
-```bash
-./scripts/infisical-run docker-compose up -d
-```
-
-Verify the MCP endpoint is live:
 ```bash
 curl -s http://localhost:5050/mcp | head -c 100
 ```
@@ -843,7 +852,7 @@ Example — Acumatica server:
 ```bash
 claude mcp add acumatica -s user -- \
   ~/.nvm/versions/node/v24.14.0/bin/node \
-  "/path/to/mcp/dist/index.js"
+  "/mnt/c/Users/White/Documents/Acumatica MCP/dist/index.js"
 ```
 
 ---
@@ -867,15 +876,13 @@ Start Claude and run:
 ```
 
 You should see all three project servers listed as connected:
-- `project-mcp` — connected (HTTP)
-- `n8n` — connected (docker exec)
-- `dokploy` — connected (docker exec)
+- `my-server` — connected (HTTP)
+- `my-docker-server` — connected (docker exec)
 
 If any server shows as failed, check:
 
-| Server | Common cause | Fix |
-|--------|-------------|-----|
-| `project-mcp` | Backend not running | `./scripts/infisical-run docker-compose up -d` |
-| `n8n` | Docker WSL integration off | Enable in Docker Desktop → WSL Integration |
-| `dokploy` | Container not running | Check `docker ps \| grep dokploy` |
-| Any Node server | Wrong node path in user scope | Re-run `claude mcp add` with correct NVM path |
+| Server type | Common cause | Fix |
+|-------------|-------------|-----|
+| HTTP | Backend not running | Start your backend services |
+| Docker exec | Docker WSL integration off | Enable in Docker Desktop → WSL Integration |
+| Node.js | Wrong node path in user scope | Re-run `claude mcp add` with correct NVM path |
