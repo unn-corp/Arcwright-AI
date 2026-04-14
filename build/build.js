@@ -372,7 +372,7 @@ function generateWorkflowsSteering(steeringDir) {
 // ─── Step 3: bundleTrackCommands ─────────────────────────────────────────────
 
 function bundleTrackCommands() {
-  console.log('🗂️   Bundling track commands → src/.claude/commands/');
+  console.log('🗂️   Bundling slash commands → src/.claude/commands/');
 
   const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
   const commandsDest = path.join(PKG_SRC, '.claude', 'commands');
@@ -382,22 +382,30 @@ function bundleTrackCommands() {
     return;
   }
 
-  const trackFiles = fs.readdirSync(commandsSrc)
-    .filter(f => f.startsWith('arcwright-track-') && f.endsWith('.md'))
+  // Bundle all slash commands: arcwright-track-*, arcwright-migrate, tmux, gsudo
+  const SHIPPED_COMMANDS = [
+    /^arcwright-track-.*\.md$/,
+    /^arcwright-migrate\.md$/,
+    /^tmux\.md$/,
+    /^gsudo\.md$/,
+  ];
+
+  const cmdFiles = fs.readdirSync(commandsSrc)
+    .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
     .sort();
 
-  if (!trackFiles.length) {
-    console.log('  ⚠  No arcwright-track-*.md files found — skipping');
+  if (!cmdFiles.length) {
+    console.log('  ⚠  No slash command files found — skipping');
     return;
   }
 
   fs.mkdirSync(commandsDest, { recursive: true });
 
-  for (const fname of trackFiles) {
+  for (const fname of cmdFiles) {
     copyFile(path.join(commandsSrc, fname), path.join(commandsDest, fname));
   }
 
-  console.log(`  ✓  ${trackFiles.length} arcwright-track-*.md commands copied`);
+  console.log(`  ✓  ${cmdFiles.length} slash commands copied`);
   console.log('');
 }
 
