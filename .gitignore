@@ -5,3 +5,14 @@ dist/
 output/
 *.log
 .DS_Store
+
+# Accidental installs into this workshop repo (run tests with HOME= override or a /tmp dir)
+# NOTE: .claude/commands/ IS source and stays tracked — only installer outputs are ignored
+/.claude/CLAUDE.md
+/.claude/agents/
+/.claude/settings.json
+/.claude/skills/
+/.kiro/
+/_arcwright/_config/
+/_arcwright-output/
+packages/*/package-lock.json
