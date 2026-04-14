@@ -3,7 +3,7 @@ name: 'step-14-finalize'
 description: 'Final polish, output the brief document'
 
 briefTemplateFile: '../templates/brief-template.md'
-bmbCreationsOutputFolder: '{awb_creations_output_folder}'
+awbCreationsOutputFolder: '{awb_creations_output_folder}'
 ---
 
 # Step 14: Finalize
@@ -90,7 +90,7 @@ Fill in all sections with what we've gathered:
 
 ### 3. Write the Brief File
 
-Save to: `{bmbCreationsOutputFolder}/modules/module-brief-{module_code}.md`
+Save to: `{awbCreationsOutputFolder}/modules/module-brief-{module_code}.md`
 
 ### 4. Celebrate and Next Steps
 

@@ -388,6 +388,7 @@ function bundleTrackCommands() {
     /^arcwright-migrate\.md$/,
     /^tmux\.md$/,
     /^gsudo\.md$/,
+    /^team\.md$/,
   ];
 
   const cmdFiles = fs.readdirSync(commandsSrc)

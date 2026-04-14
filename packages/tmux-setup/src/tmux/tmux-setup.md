@@ -513,7 +513,7 @@ Sub-agents spawned from the master orchestrator should run with **all MCP server
 --strict-mcp-config --mcp-config '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp"]}}}'
 ```
 
-**Token savings:** A typical BMAD pipeline with 4–6 spawned agents saves the MCP tool schema load on each agent (~50–200 tokens per MCP server per agent). With 3 MCP servers and 5 agents, this is ~750–3000 tokens per pipeline run.
+**Token savings:** A typical Arcwright pipeline with 4–6 spawned agents saves the MCP tool schema load on each agent (~50–200 tokens per MCP server per agent). With 3 MCP servers and 5 agents, this is ~750–3000 tokens per pipeline run.
 
 ### Cap styles
 
@@ -680,7 +680,7 @@ tmux kill-pane -t <pane_id>
 | Interactive (sm-agent in sprint loop) | When coordinator explicitly sends `/exit` — never self-closes mid-workflow |
 | 🔴 escalation / blocked | Stays open until user resolves blocker, then closes via normal sequence |
 
-**After closing:** Coordinator updates the relevant session file Active Agents table row to `status: closed`. For general multi-agent work this is `.agents/orchestration/session-*.md`; for BMAD workflows this is `_bmad-output/parallel/{session_id}/agent-sessions.md`.
+**After closing:** Coordinator updates the relevant session file Active Agents table row to `status: closed`. For general multi-agent work this is `.agents/orchestration/session-*.md`; for Arcwright workflows this is `_arcwright-output/parallel/{session_id}/agent-sessions.md`.
 
 ---
 
