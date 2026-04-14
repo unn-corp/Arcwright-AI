@@ -1,54 +1,98 @@
 ---
-description: Install or configure tmux for AI agent workflows — runs @arcwright-ai/tmux-setup
+description: tmux pane and session reference — splits, navigation, layouts, resizing, and agent workflow commands
 ---
 
-# /tmux — Install tmux Setup
+# tmux Quick Reference
 
-Run the Arcwright tmux setup to install the full tmux configuration optimized for AI agent workflows.
+## Pane Splits
 
-## What It Installs
+| Action | Command |
+|--------|---------|
+| Split vertical (side by side) | `tmux split-window -h` |
+| Split horizontal (top/bottom) | `tmux split-window -v` |
+| Split in current path | `tmux split-window -h -c "#{pane_current_path}"` |
+| Split and run command | `tmux split-window -h "command"` |
 
-- **Catppuccin Frappe theme** with Powerline status bar
-- **Actions popup** (click `⚙ Actions` on status bar) with 4 columns:
-  - Window & Session controls
-  - Pane Controls (split, swap, move)
-  - Tools & Clipboard (float terminal, paste image, save/restore session)
-  - **Launch column** — Neovim (E or Alt+E), NvimTree (N), Yazi (Y), Lazygit (G), Lazydocker (D)
-- **Pane title sync** — each pane's window name updates from Claude Code's OSC 2 title
-- **Clipboard integration** (WSL2: Windows clipboard; Linux: xclip)
-- **Agent orchestration scripts** — dispatch.sh, float_term.sh, paste wrappers
-- **Status widgets** — CPU, RAM, Claude usage
+## Pane Navigation
 
-## Prerequisites
+| Action | Command |
+|--------|---------|
+| Select pane by ID | `tmux select-pane -t %<id>` |
+| Select pane left/right/up/down | `tmux select-pane -L/R/U/D` |
+| List all panes | `tmux list-panes -a -F "#{session_name}:#{window_index}.#{pane_index} %#{pane_id} #{pane_title}"` |
 
-- tmux 3.4+
-- WSL2 (Windows) or native Linux/macOS
-- Nerd Font (e.g. JetBrainsMono NFM) for Powerline separators
+## Pane Sizing & Layout
 
-## Instructions
+| Action | Command |
+|--------|---------|
+| Even horizontal layout | `tmux select-layout even-horizontal` |
+| Even vertical layout | `tmux select-layout even-vertical` |
+| Tiled (auto-balance all) | `tmux select-layout tiled` |
+| Resize pane (pixels) | `tmux resize-pane -t %<id> -x <cols> -y <rows>` |
 
-Run the interactive installer:
+## Sending Keys to Panes
+
+| Action | Command |
+|--------|---------|
+| Send text + Enter | `tmux send-keys -t %<id> "text" Enter` |
+| Send without Enter | `tmux send-keys -t %<id> "text"` |
+| Send to pane by index | `tmux send-keys -t <session>:<window>.<pane> "text" Enter` |
+
+## Sessions & Windows
+
+| Action | Command |
+|--------|---------|
+| New session | `tmux new-session -s <name>` |
+| List sessions | `tmux list-sessions` |
+| Switch session | `tmux switch-client -t <name>` |
+| New window | `tmux new-window -c "#{pane_current_path}"` |
+| Rename window | `tmux rename-window <name>` |
+| Kill pane | `tmux kill-pane -t %<id>` |
+| Kill session | `tmux kill-session -t <name>` |
+
+## Pane Titles & IDs
+
+| Action | Command |
+|--------|---------|
+| Get active pane ID | `tmux display-message -p "#{pane_id}"` |
+| Set pane title | `printf '\033]2;%s\033\\' "title"` |
+| Get pane title | `tmux display-message -p -t %<id> "#{pane_title}"` |
+| List panes with IDs | `tmux list-panes -F "%#{pane_id} #{pane_index} #{pane_title}"` |
+
+## Agent Workflow Pattern
+
+Spawn a split-pane agent and communicate back to the spawner:
 
 ```bash
-npx @arcwright-ai/tmux-setup
+# 1. Capture spawner pane ID first
+SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
+
+# 2. Spawn agent in new pane
+tmux split-window -h -c "#{pane_current_path}" \
+  "claude --dangerously-skip-permissions '<task>'"
+
+# 3. Agent signals completion back to spawner
+tmux send-keys -t $SPAWNER_PANE "AGENT_SIGNAL::TASK_DONE::agent-name::done" Enter
 ```
 
-The installer will:
-
-1. Check tmux version
-2. Walk through prerequisite install (WSL, tmux, clipboard tools, fzf, TPM, fonts, gh)
-3. Add `tmux-ai` and `tmux-claude` shell aliases to `~/.bashrc`
-4. Install config files: `~/.tmux.conf`, `~/.config/tmux/bin/*.sh`, `colors.conf`
-5. Merge `~/.claude/CLAUDE.md` with tmux-aware agent spawning rules
-
-After install, start tmux with `tmux-ai` or `tmux-claude`, then press `Ctrl+B I` to finish TPM plugin install.
-
-## Alternative — All-in-One
-
-If you have the main Arcwright package installed, you can also run:
+## Pane Close Sequence (agents)
 
 ```bash
-npx @arcwright-ai/agent-orchestration tmux
+# Always send /exit first — lets the agent finish and save state
+tmux send-keys -t %<id> "/exit" Enter
+# Then kill the pane
+tmux kill-pane -t %<id>
 ```
 
-Both paths install the exact same files.
+## Useful Inspection Commands
+
+```bash
+# All panes across all sessions with IDs and titles
+tmux list-panes -a -F "#{session_name}:#{window_index} %#{pane_id} [#{pane_width}x#{pane_height}] #{pane_title}"
+
+# Current pane info
+tmux display-message -p "pane_id=#{pane_id} pane_index=#{pane_index} window=#{window_index}"
+
+# Check if inside tmux
+[ -n "$TMUX" ] && echo "in tmux" || echo "not in tmux"
+```
