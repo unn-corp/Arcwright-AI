@@ -43,6 +43,8 @@ program
   .option('--tmux', 'Set up tmux config (~/.tmux.conf + ~/.config/tmux/ — default when claude-code is selected)')
   .option('--no-tmux', 'Skip tmux setup')
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
+  .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before installing (default when bmad is detected)')
+  .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
   .addHelpText('after', `
 Examples:
   # Interactive install — prompts for your name, detects existing installation
@@ -88,6 +90,8 @@ program
   .option('--tmux', 'Set up tmux config (~/.tmux.conf + ~/.config/tmux/ — default when claude-code is selected)')
   .option('--no-tmux', 'Skip tmux setup')
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
+  .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before updating (default when bmad is detected)')
+  .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
   .addHelpText('after', `
 Examples:
   # Interactive update — shows installed version, preserves your name

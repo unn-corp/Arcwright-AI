@@ -18,6 +18,33 @@ const SRC_DIR = path.join(__dirname, '..', 'src');
 const { setupTmux } = require('./tmuxInstaller');
 const { detectPlatform } = require('./platform');
 
+// ─── bmad detection ───────────────────────────────────────────────────────────
+
+/**
+ * Detect whether the project has bmad artifacts that need migration.
+ * Returns {present: boolean, signals: string[]} where signals lists the
+ * specific paths/patterns found. Used for logging + prompting.
+ */
+function detectBmad(projectRoot) {
+  const signals = [];
+  const check = (rel) => fs.pathExistsSync(path.join(projectRoot, rel));
+
+  if (check('_bmad'))             signals.push('_bmad/');
+  if (check('_bmad-output'))      signals.push('_bmad-output/');
+  if (check('_bmad_output'))      signals.push('_bmad_output/');
+  if (check('_arcwright/bmm'))    signals.push('_arcwright/bmm/ (partial migration)');
+  if (check('_arcwright/bmb'))    signals.push('_arcwright/bmb/ (partial migration)');
+
+  // Check for bmad slash commands
+  const cmdDir = path.join(projectRoot, '.claude', 'commands');
+  if (fs.pathExistsSync(cmdDir)) {
+    const bmadCmds = fs.readdirSync(cmdDir).filter(f => /^bmad-/.test(f));
+    if (bmadCmds.length > 0) signals.push(`${bmadCmds.length} bmad-*.md command file${bmadCmds.length !== 1 ? 's' : ''} in .claude/commands/`);
+  }
+
+  return { present: signals.length > 0, signals };
+}
+
 // Modules available in src/
 const AVAILABLE_MODULES = ['awm', 'awb', 'core', '_memory'];
 
@@ -369,9 +396,11 @@ async function install(opts) {
     dockerCheck = false,  // include docker-type-check skill and /docker-check command
     gitignore = null,  // null | 'full' | 'skills' | 'output-only' | 'none'
     tmux = null,   // null = interactive prompt, true/false = explicit
+    migrateBmad = null,  // null = prompt if bmad detected; true/false = explicit
   } = opts;
   let resolvedGitignore = gitignore;
   let resolvedTmux = typeof tmux === 'boolean' ? tmux : null;
+  let resolvedMigrateBmad = typeof migrateBmad === 'boolean' ? migrateBmad : null;
 
   let isGlobal = opts.global || false;
 
@@ -397,6 +426,37 @@ async function install(opts) {
   }
   const isUpdate = action === 'update' || (action === 'install' && existingManifest != null);
   const effectiveAction = isUpdate ? 'update' : 'install';
+
+  // ── bmad detection (project installs only; skip if already migrated) ──────
+  const bmadDetected = !isGlobal ? detectBmad(projectRoot) : { present: false, signals: [] };
+  // If manifest already records a migration, skip re-prompting unless --migrate-bmad is explicit
+  const alreadyMigrated = existingManifest?.migratedAt != null;
+
+  if (!yes && bmadDetected.present && !alreadyMigrated && resolvedMigrateBmad === null) {
+    const { confirm, isCancel } = require('@clack/prompts');
+    console.log(chalk.yellow('\n  Existing bmad installation detected:'));
+    for (const s of bmadDetected.signals) console.log(chalk.dim(`     - ${s}`));
+    const migrateChoice = await confirm({
+      message: 'Run automatic migration (rename bmad -> arcwright, preserve output dirs)?',
+      initialValue: true,
+    });
+    if (isCancel(migrateChoice)) { process.exit(0); }
+    resolvedMigrateBmad = migrateChoice;
+  }
+
+  // Default for --yes or non-interactive: migrate if detected and not already migrated
+  if (resolvedMigrateBmad === null) {
+    resolvedMigrateBmad = bmadDetected.present && !alreadyMigrated;
+  }
+
+  // ── Run migrate before installing arcwright files ─────────────────────────
+  const manifestExtras = {};
+  if (resolvedMigrateBmad && !isGlobal && bmadDetected.present) {
+    const { migrate } = require('./migrate');
+    const result = migrate(projectRoot, false);
+    console.log(chalk.green(`\n  Migration complete: ${result.actions.filter(a => a.type !== 'skip').length} changes applied`));
+    manifestExtras.migratedAt = new Date().toISOString();
+  }
 
   // ── Interactive prompts ───────────────────────────────────────────────────
   let resolvedUserName = userName;
@@ -700,6 +760,9 @@ async function install(opts) {
     tmux: resolvedTmux,
     gitignore: isGlobal ? null : resolvedGitignore,
     global: isGlobal,
+    // Preserve existing migratedAt if present; add new one if migration ran this session
+    ...(existingManifest?.migratedAt ? { migratedAt: existingManifest.migratedAt } : {}),
+    ...manifestExtras,
   };
 
   const manifestDir = isGlobal
