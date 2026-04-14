@@ -282,6 +282,12 @@ function generateAgentsSteering(steeringDir) {
   }
 
   const lines = [
+    '---',
+    'inclusion: always',
+    'name: arcwright-core',
+    'description: Arcwright agent registry and usage reference',
+    '---',
+    '',
     '# Arcwright — Available Agents',
     '',
     'This project uses Arcwright for structured AI-native development workflows.',
@@ -313,7 +319,9 @@ function generateAgentsSteering(steeringDir) {
 }
 
 /**
- * Walk awm/workflows/ and core/workflows/ and generate a reference steering doc.
+ * Walk awm/workflows/ and core/workflows/ subdirectories and generate a
+ * reference steering doc. Each subdirectory is a workflow; we read its
+ * README.md, workflow.yaml, or first .md file to extract a title.
  */
 function generateWorkflowsSteering(steeringDir) {
   const workflowDirs = [
@@ -322,6 +330,12 @@ function generateWorkflowsSteering(steeringDir) {
   ];
 
   const lines = [
+    '---',
+    'inclusion: auto',
+    'name: arcwright-workflows',
+    'description: Arcwright workflow tracks, task sizing, and orchestration guidance. Loaded when users ask about workflows, tracks, or task complexity.',
+    '---',
+    '',
     '# Arcwright — Available Workflows',
     '',
     'Arcwright provides structured workflow tracks for different task scales.',
@@ -330,29 +344,60 @@ function generateWorkflowsSteering(steeringDir) {
 
   let total = 0;
 
+  /** Try to extract a human title from a workflow directory. */
+  function getWorkflowTitle(workflowDir, dirName) {
+    // Try README.md first
+    const candidates = ['README.md', 'workflow.yaml', 'workflow.yml'];
+    for (const candidate of candidates) {
+      const candidatePath = path.join(workflowDir, candidate);
+      if (fs.existsSync(candidatePath)) {
+        const content = fs.readFileSync(candidatePath, 'utf8');
+        const heading  = content.match(/^#\s+(.+)/m);
+        if (heading) return heading[1].trim();
+        const yamlName = content.match(/^name:\s*["']?([^"'\n]+)/m);
+        if (yamlName) return yamlName[1].trim();
+        const yamlTitle = content.match(/^title:\s*["']?([^"'\n]+)/m);
+        if (yamlTitle) return yamlTitle[1].trim();
+        const yamlDesc = content.match(/^description:\s*["']?([^"'\n]+)/m);
+        if (yamlDesc) return yamlDesc[1].trim();
+      }
+    }
+    // Fallback: try the first .md file in the directory
+    const mdFiles = fs.readdirSync(workflowDir).filter(f => f.endsWith('.md')).sort();
+    if (mdFiles.length > 0) {
+      const content = fs.readFileSync(path.join(workflowDir, mdFiles[0]), 'utf8');
+      const heading = content.match(/^#\s+(.+)/m);
+      if (heading) return heading[1].trim();
+    }
+    // Last resort: title-case the directory name
+    return dirName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
   for (const { label, dir } of workflowDirs) {
     if (!fs.existsSync(dir)) {
       lines.push(`## ${label}`, '', '_Directory not found._', '');
       continue;
     }
 
-    const files = fs.readdirSync(dir).filter(f => f.endsWith('.md') || f.endsWith('.yaml') || f.endsWith('.yml')).sort();
+    // List subdirectories — each is a workflow
+    const subdirs = fs.readdirSync(dir, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .sort();
+
     lines.push(`## ${label}`);
     lines.push('');
 
-    if (!files.length) {
-      lines.push('_No workflow files found._');
+    if (!subdirs.length) {
+      lines.push('_No workflow directories found._');
       lines.push('');
       continue;
     }
 
-    for (const fname of files) {
-      const content  = fs.readFileSync(path.join(dir, fname), 'utf8');
-      // Extract title from first # heading or YAML title field
-      const heading  = content.match(/^#\s+(.+)/m);
-      const yamlTitle = content.match(/^title:\s*["']?([^"'\n]+)/m);
-      const title    = (heading && heading[1]) || (yamlTitle && yamlTitle[1]) || fname.replace(/\.(md|ya?ml)$/, '');
-      lines.push(`- **\`${fname}\`** — ${title.trim()}`);
+    for (const dirName of subdirs) {
+      const workflowDir = path.join(dir, dirName);
+      const title = getWorkflowTitle(workflowDir, dirName);
+      lines.push(`- **\`${dirName}/\`** — ${title}`);
       total++;
     }
 
@@ -367,6 +412,85 @@ function generateWorkflowsSteering(steeringDir) {
   const dest = path.join(steeringDir, 'arcwright-workflows.md');
   writeFile(dest, lines.join('\n'));
   console.log(`  ✓  .kiro/steering/arcwright-workflows.md  (${total} workflows catalogued)`);
+}
+
+// ─── Step 2b: bundleKiroAgents ───────────────────────────────────────────────
+
+/**
+ * Read each .claude/commands/*.md and write a Kiro-compatible subagent file
+ * at src/.kiro/agents/{name}.md with name+description frontmatter.
+ * Body is identical to the Claude slash command body.
+ */
+function bundleKiroAgents() {
+  const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
+  const agentsDest   = path.join(PKG_SRC, '.kiro', 'agents');
+
+  if (!fs.existsSync(commandsSrc)) {
+    console.log('  ⚠  .claude/commands/ not found — skipping Kiro agents');
+    return;
+  }
+
+  const SHIPPED_COMMANDS = [
+    /^arcwright-track-.*\.md$/,
+    /^arcwright-migrate\.md$/,
+    /^tmux\.md$/,
+    /^gsudo\.md$/,
+    /^team\.md$/,
+  ];
+
+  const cmdFiles = fs.readdirSync(commandsSrc)
+    .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
+    .sort();
+
+  if (!cmdFiles.length) {
+    console.log('  ⚠  No slash command files found — skipping Kiro agents');
+    return;
+  }
+
+  fs.mkdirSync(agentsDest, { recursive: true });
+
+  /**
+   * Parse YAML frontmatter from a markdown file.
+   * Returns { description, body } where body is everything after the closing ---.
+   */
+  function parseFrontmatter(content) {
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+    if (!fmMatch) {
+      // No frontmatter — body is the whole file
+      return { description: null, body: content };
+    }
+    const fmBlock = fmMatch[1];
+    const body    = fmMatch[2];
+
+    // Extract description field (handles quoted and unquoted values)
+    const descMatch = fmBlock.match(/^description:\s*["']?(.*?)["']?\s*$/m);
+    const description = descMatch ? descMatch[1].trim() : null;
+
+    return { description, body };
+  }
+
+  let generated = 0;
+  for (const fname of cmdFiles) {
+    const srcPath  = path.join(commandsSrc, fname);
+    const name     = fname.replace(/\.md$/, '');
+    const raw      = fs.readFileSync(srcPath, 'utf8');
+
+    const { description, body } = parseFrontmatter(raw);
+
+    // Fallback: extract description from first heading subtitle (## line)
+    let desc = description;
+    if (!desc) {
+      const headingMatch = body.match(/^##\s+(.+)/m);
+      desc = headingMatch ? headingMatch[1].trim() : `Arcwright slash command: ${name}`;
+    }
+
+    const kiroContent = `---\nname: ${name}\ndescription: ${desc}\n---\n\n${body.trimStart()}`;
+    writeFile(path.join(agentsDest, fname), kiroContent);
+    generated++;
+  }
+
+  console.log(`  ✓  .kiro/agents/  (${generated} subagents generated) → src/.kiro/agents/`);
+  console.log('');
 }
 
 // ─── Step 3: bundleTrackCommands ─────────────────────────────────────────────
@@ -491,6 +615,7 @@ console.log('🔨  Arcwright Build\n');
 
 buildGenericPackage();
 buildKiroAssets();
+bundleKiroAgents();
 bundleTrackCommands();
 bundleTmuxSetup();
 verifyNoLeaks();

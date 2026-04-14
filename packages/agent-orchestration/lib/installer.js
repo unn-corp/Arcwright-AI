@@ -43,7 +43,7 @@ const PLATFORMS = {
   },
   'kiro': {
     label: 'Kiro',
-    agentDir: null,
+    agentDir: '.kiro/agents',
     skillsDir: '.kiro/skills',
     steeringDir: '.kiro/steering',
     hooksDir: '.kiro/hooks',
@@ -206,6 +206,7 @@ async function writeFilesManifest(arcwrightDir, entries) {
 async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
   const kiroHooksSrc = path.join(SRC_DIR, '.kiro', 'hooks');
+  const kiroAgentsSrc = path.join(SRC_DIR, '.kiro', 'agents');
 
   const skillsDest = isGlobal
     ? resolveToolPath('kiro', '.kiro/skills', isGlobal, homes, platform)
@@ -216,6 +217,9 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
   const hooksDest = isGlobal
     ? resolveToolPath('kiro', '.kiro/hooks', isGlobal, homes, platform)
     : path.join(projectRoot, '.kiro', 'hooks');
+  const agentsDest = isGlobal
+    ? resolveToolPath('kiro', '.kiro/agents', isGlobal, homes, platform)
+    : path.join(projectRoot, '.kiro', 'agents');
 
   // Copy skills (same format as Claude Code skills — SKILL.md files are compatible)
   const agentSkillsSrc = path.join(SRC_DIR, '.agents', 'skills');
@@ -237,6 +241,18 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     await fs.copy(kiroSteeringSrc, steeringDest, { overwrite: true });
     const steeringFiles = await fs.readdir(kiroSteeringSrc);
     console.log(chalk.green(`  ✓ .kiro/steering/ (${steeringFiles.length} files)`));
+  }
+
+  // Copy Kiro subagents (.kiro/agents/ — native Kiro slash commands)
+  if (await fs.pathExists(kiroAgentsSrc)) {
+    await fs.ensureDir(agentsDest);
+    const allAgentFiles = (await fs.readdir(kiroAgentsSrc)).filter(f => f.endsWith('.md'));
+    const agentFiles = resolvedTeams ? allAgentFiles : allAgentFiles.filter(f => f !== 'team.md');
+    for (const f of agentFiles) {
+      await fs.copy(path.join(kiroAgentsSrc, f), path.join(agentsDest, f), { overwrite: true });
+    }
+    const teamNote = !resolvedTeams ? chalk.dim(` (skipped /team)`) : '';
+    console.log(chalk.green(`  ✓ .kiro/agents/ (${agentFiles.length} subagents)`) + teamNote);
   }
 
   // Copy hooks (project-level only, not global)
