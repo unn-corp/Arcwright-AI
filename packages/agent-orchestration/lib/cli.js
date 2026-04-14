@@ -39,6 +39,7 @@ program
   .option('-y, --yes', 'Skip interactive prompts and accept all defaults', false)
   .option('-g, --global', 'Install to global config dirs (~/.claude/, ~/.kiro/, etc.)')
   .option('--no-teams', 'Skip agent team skills and /team command (saves 17 team-* skills)')
+  .option('--docker-check', 'Install /docker-check and docker-type-check skill (runs tsc inside Docker dev container)')
   .addHelpText('after', `
 Examples:
   # Interactive install — prompts for your name, detects existing installation
@@ -75,6 +76,7 @@ program
   .option('-y, --yes', 'Skip interactive prompts', false)
   .option('-g, --global', 'Update global config dirs (~/.claude/, ~/.kiro/, etc.)')
   .option('--no-teams', 'Skip agent team skills and /team command')
+  .option('--docker-check', 'Install /docker-check and docker-type-check skill')
   .addHelpText('after', `
 Examples:
   # Interactive update — shows installed version, preserves your name

@@ -436,6 +436,18 @@ function bundleKiroAgents() {
     /^tmux\.md$/,
     /^gsudo\.md$/,
     /^team\.md$/,
+    /^dry\.md$/,
+    /^dry-loop\.md$/,
+    /^ux-audit\.md$/,
+    /^ux-loop\.md$/,
+    /^security-review\.md$/,
+    /^sec-loop\.md$/,
+    /^design\.md$/,
+    /^playwright\.md$/,
+    /^audit-site\.md$/,
+    /^diagram\.md$/,
+    /^triage\.md$/,
+    /^docker-check\.md$/,
   ];
 
   const cmdFiles = fs.readdirSync(commandsSrc)
@@ -506,13 +518,25 @@ function bundleTrackCommands() {
     return;
   }
 
-  // Bundle all slash commands: arcwright-track-*, arcwright-migrate, tmux, gsudo
+  // Bundle all slash commands: arcwright-track-*, arcwright-migrate, tmux, gsudo, and utility commands
   const SHIPPED_COMMANDS = [
     /^arcwright-track-.*\.md$/,
     /^arcwright-migrate\.md$/,
     /^tmux\.md$/,
     /^gsudo\.md$/,
     /^team\.md$/,
+    /^dry\.md$/,
+    /^dry-loop\.md$/,
+    /^ux-audit\.md$/,
+    /^ux-loop\.md$/,
+    /^security-review\.md$/,
+    /^sec-loop\.md$/,
+    /^design\.md$/,
+    /^playwright\.md$/,
+    /^audit-site\.md$/,
+    /^diagram\.md$/,
+    /^triage\.md$/,
+    /^docker-check\.md$/,
   ];
 
   const cmdFiles = fs.readdirSync(commandsSrc)

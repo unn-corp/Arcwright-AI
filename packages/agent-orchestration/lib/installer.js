@@ -203,7 +203,7 @@ async function writeFilesManifest(arcwrightDir, entries) {
 
 // ─── Kiro config writer ───────────────────────────────────────────────────────
 
-async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true) {
+async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
   const kiroHooksSrc = path.join(SRC_DIR, '.kiro', 'hooks');
   const kiroAgentsSrc = path.join(SRC_DIR, '.kiro', 'agents');
@@ -225,13 +225,23 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
   const agentSkillsSrc = path.join(SRC_DIR, '.agents', 'skills');
   if (await fs.pathExists(agentSkillsSrc)) {
     await fs.ensureDir(skillsDest);
-    const filter = resolvedTeams
-      ? undefined
-      : (src) => !/[/\\]team-[^/\\]+[/\\]?$/.test(src) && !/[/\\]team-[^/\\]+[/\\]/.test(src);
+    const filter = (src) => {
+      if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
+      if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
+      return true;
+    };
     await fs.copy(agentSkillsSrc, skillsDest, { overwrite: true, filter });
     const allSkillFiles = await glob('**/*', { cwd: agentSkillsSrc, nodir: true });
-    const skillFiles = resolvedTeams ? allSkillFiles : allSkillFiles.filter(f => !/^team-/.test(f));
-    const teamNote = !resolvedTeams ? chalk.dim(` (skipped ${allSkillFiles.length - skillFiles.length} team-* files)`) : '';
+    const skillFiles = allSkillFiles.filter(f => {
+      if (!resolvedTeams && /^team-/.test(f)) return false;
+      if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
+      return true;
+    });
+    const skippedCount = allSkillFiles.length - skillFiles.length;
+    const skipNotes = [];
+    if (!resolvedTeams) skipNotes.push('team-*');
+    if (!resolvedDockerCheck) skipNotes.push('docker-type-check');
+    const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
     console.log(chalk.green(`  ✓ .kiro/skills/ (${skillFiles.length} files)`) + teamNote);
   }
 
@@ -247,11 +257,18 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
   if (await fs.pathExists(kiroAgentsSrc)) {
     await fs.ensureDir(agentsDest);
     const allAgentFiles = (await fs.readdir(kiroAgentsSrc)).filter(f => f.endsWith('.md'));
-    const agentFiles = resolvedTeams ? allAgentFiles : allAgentFiles.filter(f => f !== 'team.md');
+    const agentFiles = allAgentFiles.filter(f => {
+      if (!resolvedTeams && f === 'team.md') return false;
+      if (!resolvedDockerCheck && f === 'docker-check.md') return false;
+      return true;
+    });
     for (const f of agentFiles) {
       await fs.copy(path.join(kiroAgentsSrc, f), path.join(agentsDest, f), { overwrite: true });
     }
-    const teamNote = !resolvedTeams ? chalk.dim(` (skipped /team)`) : '';
+    const skipNotes = [];
+    if (!resolvedTeams) skipNotes.push('/team');
+    if (!resolvedDockerCheck) skipNotes.push('/docker-check');
+    const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
     console.log(chalk.green(`  ✓ .kiro/agents/ (${agentFiles.length} subagents)`) + teamNote);
   }
 
@@ -276,6 +293,7 @@ async function install(opts) {
     action = 'install',
     yes = false,
     teams = true,  // include team-* skills and /team command
+    dockerCheck = false,  // include docker-type-check skill and /docker-check command
   } = opts;
 
   let isGlobal = opts.global || false;
@@ -308,6 +326,7 @@ async function install(opts) {
 
   let resolvedTools = tools ? tools.split(',').map(t => t.trim()).filter(t => t !== 'none') : ['claude-code'];
   let resolvedTeams = teams !== false;
+  let resolvedDockerCheck = dockerCheck === true;
 
   if (!yes) {
     const { intro, text, multiselect, select, confirm, outro, isCancel, cancel } = require('@clack/prompts');
@@ -387,6 +406,14 @@ async function install(opts) {
     if (isCancel(teamsChoice)) { process.exit(0); }
     resolvedTeams = teamsChoice;
 
+    // Docker type-check opt-in — docker-type-check skill + /docker-check command
+    const dockerCheckChoice = await confirm({
+      message: 'Install /docker-check? (runs TypeScript type-check inside the project\'s Docker container — only useful if your project has a Dockerfile with tsc)',
+      initialValue: existingManifest?.dockerCheck === true,
+    });
+    if (isCancel(dockerCheckChoice)) { process.exit(0); }
+    resolvedDockerCheck = dockerCheckChoice;
+
     outro(`${isUpdate ? 'Updating' : 'Installing'} Arcwright...`);
   }
 
@@ -451,23 +478,30 @@ async function install(opts) {
       : path.join(projectRoot, '.agents', 'skills');
     await fs.ensureDir(destSkills);
 
-    // Filter team-* skills if teams were declined
-    const filter = resolvedTeams
-      ? undefined
-      : (src) => !/[/\\]team-[^/\\]+[/\\]?$/.test(src) && !/[/\\]team-[^/\\]+[/\\]/.test(src);
+    // Filter team-* skills if teams were declined; filter docker-type-check if not opted in
+    const filter = (src) => {
+      if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
+      if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
+      return true;
+    };
 
     await fs.copy(pkgSkillsSrc, destSkills, { overwrite: true, filter });
     const allSkillFiles = await glob('**/*', { cwd: pkgSkillsSrc, nodir: true });
-    const skillFiles = resolvedTeams
-      ? allSkillFiles
-      : allSkillFiles.filter(f => !/^team-/.test(f));
+    const skillFiles = allSkillFiles.filter(f => {
+      if (!resolvedTeams && /^team-/.test(f)) return false;
+      if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
+      return true;
+    });
     for (const rel of skillFiles) {
       const content = await fs.readFile(path.join(pkgSkillsSrc, rel));
       newFileEntries.push({ relPath: path.join('.agents/skills', rel).replace(/\\/g, '/'), hash: sha256(content) });
     }
     installedCount += skillFiles.length;
-    const skippedTeams = allSkillFiles.length - skillFiles.length;
-    const teamNote = skippedTeams > 0 ? chalk.dim(` (skipped ${skippedTeams} team-* files)`) : '';
+    const skippedCount = allSkillFiles.length - skillFiles.length;
+    const skipNotes = [];
+    if (!resolvedTeams) skipNotes.push('team-*');
+    if (!resolvedDockerCheck) skipNotes.push('docker-type-check');
+    const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
     console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`) + teamNote);
   }
 
@@ -517,7 +551,7 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro') continue; // handled separately below
-    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams);
+    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
     }
@@ -525,7 +559,7 @@ async function install(opts) {
 
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
-    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams);
+    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck);
   }
 
   // ── tmux setup (claude-code only, project installs only) ──────────────────
@@ -545,6 +579,7 @@ async function install(opts) {
     modules: [...modulesToInstall],
     tools: resolvedTools,
     teams: resolvedTeams,
+    dockerCheck: resolvedDockerCheck,
     global: isGlobal,
   };
 
@@ -641,7 +676,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
-async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true) {
+async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false) {
   const stubEntries = [];
   const platformCfg = PLATFORMS[tool];
   if (!platformCfg) {
@@ -732,15 +767,22 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         : path.join(projectRoot, '.claude', 'commands');
       await fs.ensureDir(cmdDest);
       const allFiles = (await fs.readdir(cmdSrc)).filter(f => f.endsWith('.md'));
-      const files = resolvedTeams ? allFiles : allFiles.filter(f => f !== 'team.md');
+      const files = allFiles.filter(f => {
+        if (!resolvedTeams && f === 'team.md') return false;
+        if (!resolvedDockerCheck && f === 'docker-check.md') return false;
+        return true;
+      });
       let installed = 0;
       for (const f of files) {
         await fs.copy(path.join(cmdSrc, f), path.join(cmdDest, f), { overwrite: true });
         installed++;
       }
       if (installed) {
-        const teamNote = resolvedTeams ? '' : chalk.dim(' (skipped /team)');
-        console.log(chalk.green(`  ✓ ${installed} slash commands → .claude/commands/`) + teamNote);
+        const skipNotes = [];
+        if (!resolvedTeams) skipNotes.push('/team');
+        if (!resolvedDockerCheck) skipNotes.push('/docker-check');
+        const skipNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
+        console.log(chalk.green(`  ✓ ${installed} slash commands → .claude/commands/`) + skipNote);
       }
     }
   }

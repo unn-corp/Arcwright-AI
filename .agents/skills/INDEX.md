@@ -383,12 +383,12 @@ Process, methodology, and review skills that enforce standards or guide workflow
 - **Used by:** squid-master (security context)
 - **Description:** Web application security best practices — HTTPS, CORS, XSS, SQL injection, CSRF, rate limiting, and OWASP Top 10 implementation guidance.
 
-### triage-feedback
-- **Location:** `.agents/skills/triage-feedback/`
-- **Trigger:** When user invokes `/triage-feedback` with a feedback ID (FB-####)
-- **Slash command:** `/triage-feedback`
-- **Used by:** squid-master, any dev agent
-- **Description:** Fetch a production feedback report by user-facing ID, investigate the codebase, triage complexity (trivial/moderate/difficult), fix accordingly, commit, and push.
+### triage
+- **Location:** `.agents/skills/triage/`
+- **Trigger:** When user invokes `/triage` with a task description
+- **Slash command:** `/triage`
+- **Used by:** any agent, master orchestrator
+- **Description:** Score a task description across 6 complexity dimensions and recommend the appropriate Arcwright track (nano/small/compact/medium/extended/large/rv) with a rationale and the exact slash command to run.
 
 ### security-review
 - **Location:** `.agents/skills/security-review/`
