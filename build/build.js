@@ -481,6 +481,75 @@ function bundleKiroAgents() {
     return { description, body };
   }
 
+  /**
+   * Kiro subagent tool declarations (confirmed from https://kiro.dev/docs/chat/subagents/)
+   * Kiro does NOT have a "useSubagent" tool. Subagent delegation happens via:
+   *   - Direct prompt instruction: "Use the <name> subagent to..."
+   *   - Slash command invocation: /<name> [task]
+   * The `tools` frontmatter field controls which tools the subagent can access.
+   *
+   * Track commands need broad access (read, write, shell) since they orchestrate
+   * multi-step flows. Utility commands get more restricted access.
+   */
+  const TOOLS_BY_PATTERN = {
+    'arcwright-track':    ['read', 'write', 'shell', 'web', '@builtin'],
+    'team':               ['read', 'write', 'shell', '@builtin'],
+    'arcwright-migrate':  ['read', 'write', 'shell'],
+    'dry':                ['read', 'write', 'shell'],
+    'ux-audit':           ['read', 'write', 'shell', 'web'],
+    'ux-loop':            ['read', 'write', 'shell', 'web'],
+    'security-review':    ['read', 'write', 'shell'],
+    'sec-loop':           ['read', 'write', 'shell'],
+    'design':             ['read', 'write', 'web'],
+    'playwright':         ['read', 'write', 'shell'],
+    'audit-site':         ['read', 'write', 'web'],
+    'diagram':            ['read', 'write'],
+    'triage':             ['read'],
+    'docker-check':       ['read', 'shell'],
+    'tmux':               ['read', 'write', 'shell'],
+    'gsudo':              ['shell'],
+  };
+
+  /**
+   * Subagent delegation note added to track and team commands.
+   * Kiro's delegation model: instruct the model to invoke named subagents
+   * via natural language or slash commands — no special tool required.
+   */
+  const SUBAGENT_DELEGATION_BODY = `
+## Subagent Delegation
+
+This agent orchestrates specialist subagents. In Kiro, delegation works by
+instructing the model to use a named subagent:
+
+- Type: "Use the arcwright-dev subagent to implement the feature"
+- Or use a slash command directly: \`/arcwright-dev [task]\`
+
+Available specialist subagents (installed to \`.kiro/agents/\`):
+- \`arcwright-analyst\` — requirements elicitation, research
+- \`arcwright-architect\` — system design, technical decisions
+- \`arcwright-dev\` — implementation
+- \`arcwright-pm\` — product management, PRDs
+- \`arcwright-qa\` — testing, validation
+- \`arcwright-sm\` — scrum master, sprint management
+- \`arcwright-tech-writer\` — documentation
+- \`arcwright-ux-designer\` — interface design, accessibility
+
+Delegate each stage of the workflow to the appropriate specialist rather than
+doing all work in a single agent context.
+`;
+
+  function resolveTools(name) {
+    for (const [pattern, toolList] of Object.entries(TOOLS_BY_PATTERN)) {
+      if (name.startsWith(pattern) || name === pattern) {
+        return toolList;
+      }
+    }
+    return ['read', 'write', 'shell'];
+  }
+
+  const isTrackOrTeam = (name) =>
+    name.startsWith('arcwright-track') || name === 'team';
+
   let generated = 0;
   for (const fname of cmdFiles) {
     const srcPath  = path.join(commandsSrc, fname);
@@ -496,7 +565,11 @@ function bundleKiroAgents() {
       desc = headingMatch ? headingMatch[1].trim() : `Arcwright slash command: ${name}`;
     }
 
-    const kiroContent = `---\nname: ${name}\ndescription: ${desc}\n---\n\n${body.trimStart()}`;
+    const tools = resolveTools(name);
+    const toolsYaml = `tools: [${tools.join(', ')}]`;
+    const delegationSection = isTrackOrTeam(name) ? SUBAGENT_DELEGATION_BODY : '';
+
+    const kiroContent = `---\nname: ${name}\ndescription: ${desc}\n${toolsYaml}\n---\n\n${body.trimStart()}${delegationSection}`;
     writeFile(path.join(agentsDest, fname), kiroContent);
     generated++;
   }

@@ -173,6 +173,36 @@ Cross-platform: Windows (WSL2), Linux, macOS.
 
 WSL2 dual-home aware — terminal tools (Claude Code, Gemini) use the Linux home (`~`); GUI IDEs (Kiro, Cursor, Windsurf, Cline, Copilot) use the Windows home (`/mnt/c/Users/<name>`).
 
+### Install Flags
+
+| Flag | Default | What it does |
+|------|---------|--------------|
+| `--yes`, `-y` | false | Skip interactive prompts, accept all defaults |
+| `--global`, `-g` | false | Install to `~/.arcwright` / `~/.claude/` / `~/.kiro/` |
+| `--directory <path>`, `-d` | cwd | Target project root |
+| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,cursor,windsurf,cline,github-copilot,gemini` |
+| `--modules <ids>` | `awm,awb,core,_memory` | Which modules to install |
+| `--user-name <name>` | prompted | Your name (written into config.yaml) |
+| `--output-folder <path>` | `_arcwright-output` | Where Arcwright writes output artifacts |
+| `--no-teams` | teams included | Skip the 17 team-* skills and `/team` command |
+| `--docker-check` | not installed | Opt in to `/docker-check` and the `docker-type-check` skill |
+| `--gitignore <mode>` | prompted | One of: `full`, `skills`, `output-only`, `none` (see gitignore section below) |
+
+### Gitignore Options
+
+When you install into a project (not `--global`), the installer asks how you want Arcwright files handled in git:
+
+| Mode | What's committed | What's ignored |
+|------|------------------|----------------|
+| `output-only` | Everything Arcwright (config, skills, commands) | `_arcwright-output/` only — your work output (recommended) |
+| `skills` | `_arcwright/`, commands, steering — everything except skills | `_arcwright-output/`, `.agents/skills/`, `.kiro/skills/` |
+| `full` | Nothing Arcwright-related | `_arcwright/`, `.agents/skills/`, `.claude/agents/`, `.claude/commands/arcwright-*.md`, `.kiro/agents/`, `.kiro/skills/`, `.kiro/steering/arcwright-*.md`, `_arcwright-output/` |
+| `none` | Everything | Nothing — commit it all, no `.gitignore` changes |
+
+The installer **never** commits to git on your behalf. It only writes to `.gitignore` (appending or replacing a managed block, never overwriting unrelated entries). Use `--gitignore <mode>` for non-interactive installs.
+
+Global installs skip gitignore logic entirely since they write to `~/` config dirs outside your project.
+
 ---
 
 ## tmux Setup

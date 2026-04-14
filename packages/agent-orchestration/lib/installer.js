@@ -281,6 +281,79 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
   }
 }
 
+// ─── Gitignore writer ─────────────────────────────────────────────────────────
+
+/**
+ * Append (or replace) a managed Arcwright block in .gitignore.
+ * Uses sentinel comments to idempotently update on re-run.
+ * NEVER runs git add or git commit — only writes the file.
+ *
+ * Modes:
+ *   'full'        — ignore all Arcwright-installed dirs/files
+ *   'skills'      — ignore only _arcwright-output/ and .agents/skills/
+ *   'output-only' — ignore only _arcwright-output/ (recommended default)
+ *   'none'        — no-op (caller skips this call)
+ */
+async function updateGitignore(projectRoot, mode, chalk) {
+  const gitignorePath = path.join(projectRoot, '.gitignore');
+  const START = '# ─── Arcwright installation ──────────────────────────────────────────';
+  const END   = '# ─── end arcwright ───────────────────────────────────────────────────';
+
+  const BLOCKS = {
+    'full': [
+      '_arcwright/',
+      '_arcwright-output/',
+      '.agents/skills/',
+      '.claude/commands/arcwright-*.md',
+      '.claude/commands/tmux.md',
+      '.claude/commands/gsudo.md',
+      '.claude/commands/team.md',
+      '.claude/commands/dry*.md',
+      '.claude/commands/ux-*.md',
+      '.claude/commands/security-review.md',
+      '.claude/commands/sec-loop.md',
+      '.claude/commands/design.md',
+      '.claude/commands/playwright.md',
+      '.claude/commands/audit-site.md',
+      '.claude/commands/diagram.md',
+      '.claude/commands/triage.md',
+      '.claude/commands/docker-check.md',
+      '.claude/agents/arcwright-*.md',
+      '.kiro/agents/',
+      '.kiro/skills/',
+      '.kiro/steering/arcwright-*.md',
+    ],
+    'skills': [
+      '_arcwright-output/',
+      '.agents/skills/',
+      '.kiro/skills/',
+    ],
+    'output-only': [
+      '_arcwright-output/',
+    ],
+    'none': [],
+  };
+
+  const entries = BLOCKS[mode] || [];
+  if (entries.length === 0) return;
+
+  const newBlock = `${START}\n${entries.join('\n')}\n${END}\n`;
+
+  let existing = '';
+  try { existing = fs.readFileSync(gitignorePath, 'utf8'); } catch { /* no .gitignore yet */ }
+
+  // Replace existing block if present, else append
+  const blockRe = new RegExp(`${escapeRe(START)}[\\s\\S]*?${escapeRe(END)}\\n?`, 'm');
+  const updated = blockRe.test(existing)
+    ? existing.replace(blockRe, newBlock)
+    : (existing.trimEnd() + (existing ? '\n\n' : '') + newBlock);
+
+  fs.writeFileSync(gitignorePath, updated, 'utf8');
+  console.log(chalk.green(`  ✓ .gitignore updated (mode: ${mode})`));
+}
+
+function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
 // ─── Install ─────────────────────────────────────────────────────────────────
 
 async function install(opts) {
@@ -294,7 +367,9 @@ async function install(opts) {
     yes = false,
     teams = true,  // include team-* skills and /team command
     dockerCheck = false,  // include docker-type-check skill and /docker-check command
+    gitignore = null,  // null | 'full' | 'skills' | 'output-only' | 'none'
   } = opts;
+  let resolvedGitignore = gitignore;
 
   let isGlobal = opts.global || false;
 
@@ -413,6 +488,22 @@ async function install(opts) {
     });
     if (isCancel(dockerCheckChoice)) { process.exit(0); }
     resolvedDockerCheck = dockerCheckChoice;
+
+    // Gitignore mode — only for project installs (global installs don't touch .gitignore)
+    if (!isGlobal && resolvedGitignore === null) {
+      const gitignoreChoice = await select({
+        message: 'How should Arcwright files be handled in git?',
+        options: [
+          { value: 'output-only', label: 'Commit config + skills, ignore only _arcwright-output/ (recommended)' },
+          { value: 'skills',      label: 'Commit config, ignore _arcwright-output/ and .agents/skills/' },
+          { value: 'full',        label: 'Ignore everything Arcwright installed' },
+          { value: 'none',        label: 'Do not modify .gitignore — I will handle it' },
+        ],
+        initialValue: existingManifest?.gitignore || 'output-only',
+      });
+      if (isCancel(gitignoreChoice)) { process.exit(0); }
+      resolvedGitignore = gitignoreChoice;
+    }
 
     outro(`${isUpdate ? 'Updating' : 'Installing'} Arcwright...`);
   }
@@ -567,6 +658,15 @@ async function install(opts) {
     await setupTmux(projectRoot, chalk, platform);
   }
 
+  // ── Gitignore update (project installs only, not global) ─────────────────
+  // For --yes with no --gitignore flag, default to 'output-only'
+  if (!isGlobal) {
+    if (resolvedGitignore === null) resolvedGitignore = 'output-only';
+    if (resolvedGitignore !== 'none') {
+      await updateGitignore(projectRoot, resolvedGitignore, chalk);
+    }
+  }
+
   // ── Manifest write ────────────────────────────────────────────────────────
   const now = new Date().toISOString();
   const manifest = {
@@ -580,6 +680,7 @@ async function install(opts) {
     tools: resolvedTools,
     teams: resolvedTeams,
     dockerCheck: resolvedDockerCheck,
+    gitignore: isGlobal ? null : resolvedGitignore,
     global: isGlobal,
   };
 
@@ -871,6 +972,11 @@ function buildArcwrightRulesEntry(modules) {
     'To use an agent, load its `.md` file and follow its activation instructions.',
     'Agent configs are in `_arcwright/{module}/config.yaml`.',
     'Skills are in `.agents/skills/` and `_arcwright/_memory/skills/`.',
+    '',
+    'To update Arcwright: `npx @arcwright-ai/agent-orchestration update`',
+    'To toggle agent teams: add `--no-teams` or run update again and choose differently at the prompt.',
+    'To enable Docker type-check: add `--docker-check`.',
+    'To modify gitignore behavior on next update: add `--gitignore full|skills|output-only|none`.',
     '',
   ].join('\n');
 }

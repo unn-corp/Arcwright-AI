@@ -40,6 +40,7 @@ program
   .option('-g, --global', 'Install to global config dirs (~/.claude/, ~/.kiro/, etc.)')
   .option('--no-teams', 'Skip agent team skills and /team command (saves 17 team-* skills)')
   .option('--docker-check', 'Install /docker-check and docker-type-check skill (runs tsc inside Docker dev container)')
+  .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .addHelpText('after', `
 Examples:
   # Interactive install — prompts for your name, detects existing installation
@@ -59,6 +60,11 @@ Examples:
 
   # Global install (applies to all projects)
   npx @arcwright-ai/agent-orchestration --global --yes
+
+  # Install with gitignore mode set (skips the gitignore prompt)
+  npx @arcwright-ai/agent-orchestration --yes --gitignore output-only
+  npx @arcwright-ai/agent-orchestration --yes --gitignore full
+  npx @arcwright-ai/agent-orchestration --yes --gitignore none
 `)
   .action(async (opts) => {
     const { install } = require('./installer');
@@ -77,6 +83,7 @@ program
   .option('-g, --global', 'Update global config dirs (~/.claude/, ~/.kiro/, etc.)')
   .option('--no-teams', 'Skip agent team skills and /team command')
   .option('--docker-check', 'Install /docker-check and docker-type-check skill')
+  .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .addHelpText('after', `
 Examples:
   # Interactive update — shows installed version, preserves your name
@@ -87,6 +94,9 @@ Examples:
 
   # Update and add Kiro support
   npx @arcwright-ai/agent-orchestration update --tools claude-code,kiro --yes
+
+  # Update with explicit gitignore mode
+  npx @arcwright-ai/agent-orchestration update --yes --gitignore skills
 `)
   .action(async (opts) => {
     const { install } = require('./installer');
