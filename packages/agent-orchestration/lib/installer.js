@@ -368,8 +368,10 @@ async function install(opts) {
     teams = true,  // include team-* skills and /team command
     dockerCheck = false,  // include docker-type-check skill and /docker-check command
     gitignore = null,  // null | 'full' | 'skills' | 'output-only' | 'none'
+    tmux = null,   // null = interactive prompt, true/false = explicit
   } = opts;
   let resolvedGitignore = gitignore;
+  let resolvedTmux = typeof tmux === 'boolean' ? tmux : null;
 
   let isGlobal = opts.global || false;
 
@@ -489,6 +491,16 @@ async function install(opts) {
     if (isCancel(dockerCheckChoice)) { process.exit(0); }
     resolvedDockerCheck = dockerCheckChoice;
 
+    // tmux setup opt-in — runs for both project and global installs (tmux config is always global)
+    if (resolvedTools.includes('claude-code') && resolvedTmux === null) {
+      const tmuxChoice = await confirm({
+        message: 'Set up tmux config? (writes ~/.tmux.conf + ~/.config/tmux/ — for AI agent workflows with Claude Code)',
+        initialValue: existingManifest?.tmux !== false,
+      });
+      if (isCancel(tmuxChoice)) { process.exit(0); }
+      resolvedTmux = tmuxChoice;
+    }
+
     // Gitignore mode — only for project installs (global installs don't touch .gitignore)
     if (!isGlobal && resolvedGitignore === null) {
       const gitignoreChoice = await select({
@@ -506,6 +518,11 @@ async function install(opts) {
     }
 
     outro(`${isUpdate ? 'Updating' : 'Installing'} Arcwright...`);
+  }
+
+  // Finalize resolvedTmux — default to true when claude-code is selected (both project + global)
+  if (resolvedTmux === null) {
+    resolvedTmux = resolvedTools.includes('claude-code');
   }
 
   const selectedModules = modules.split(',').map(m => m.trim()).filter(Boolean);
@@ -653,8 +670,8 @@ async function install(opts) {
     await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck);
   }
 
-  // ── tmux setup (claude-code only, project installs only) ──────────────────
-  if (!isGlobal && resolvedTools.includes('claude-code')) {
+  // ── tmux setup (claude-code only; runs for both project and global installs) ─
+  if (resolvedTmux && resolvedTools.includes('claude-code')) {
     await setupTmux(projectRoot, chalk, platform);
   }
 
@@ -680,6 +697,7 @@ async function install(opts) {
     tools: resolvedTools,
     teams: resolvedTeams,
     dockerCheck: resolvedDockerCheck,
+    tmux: resolvedTmux,
     gitignore: isGlobal ? null : resolvedGitignore,
     global: isGlobal,
   };

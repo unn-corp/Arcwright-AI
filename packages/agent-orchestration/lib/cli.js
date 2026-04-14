@@ -40,6 +40,8 @@ program
   .option('-g, --global', 'Install to global config dirs (~/.claude/, ~/.kiro/, etc.)')
   .option('--no-teams', 'Skip agent team skills and /team command (saves 17 team-* skills)')
   .option('--docker-check', 'Install /docker-check and docker-type-check skill (runs tsc inside Docker dev container)')
+  .option('--tmux', 'Set up tmux config (~/.tmux.conf + ~/.config/tmux/ — default when claude-code is selected)')
+  .option('--no-tmux', 'Skip tmux setup')
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .addHelpText('after', `
 Examples:
@@ -83,6 +85,8 @@ program
   .option('-g, --global', 'Update global config dirs (~/.claude/, ~/.kiro/, etc.)')
   .option('--no-teams', 'Skip agent team skills and /team command')
   .option('--docker-check', 'Install /docker-check and docker-type-check skill')
+  .option('--tmux', 'Set up tmux config (~/.tmux.conf + ~/.config/tmux/ — default when claude-code is selected)')
+  .option('--no-tmux', 'Skip tmux setup')
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .addHelpText('after', `
 Examples:
