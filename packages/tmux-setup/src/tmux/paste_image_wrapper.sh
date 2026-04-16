@@ -9,6 +9,7 @@
 # $1 = pane_id (e.g. %0)
 
 PANE="${1:-}"
+PANE_TTY="${2:-}"
 WL_PASTE="/usr/bin/wl-paste"
 WL_TIMEOUT=2
 
@@ -22,13 +23,61 @@ RAWFILE="/tmp/tmux_clip_${TIMESTAMP}_raw"
 SVGFILE="/tmp/tmux_clip_${TIMESTAMP}.svg"
 HTMLFILE="/tmp/tmux_clip_${TIMESTAMP}.html"
 
-send_path() {
-    [ -n "$1" ] && [ -n "$PANE" ] && tmux send-keys -t "$PANE" "$1"
+# Inject text into pane — tries tmux socket first, falls back to TIOCSTI if socket is dead.
+# When PANE_TTY is empty (old binding or socket-dead self-discovery), scan /proc for the
+# pane shell process by matching TMUX_PANE env var and reading its stdin PTY.
+_tmux_server_pid() { echo "$TMUX" | cut -d, -f2; }
+
+_find_pane_tty() {
+    local target="$1" spid
+    spid=$(_tmux_server_pid)
+    [ -z "$spid" ] && return 1
+    for dir in /proc/*/; do
+        local pid="${dir%/}"; pid="${pid##*/}"
+        [[ "$pid" =~ ^[0-9]+$ ]] || continue
+        local ppid
+        ppid=$(awk '/^PPid:/{print $2}' "$dir/status" 2>/dev/null)
+        [ "$ppid" = "$spid" ] || continue
+        local pane_env
+        pane_env=$(tr '\0' '\n' < "$dir/environ" 2>/dev/null | grep "^TMUX_PANE=$target$")
+        [ -n "$pane_env" ] || continue
+        local tty
+        tty=$(readlink "$dir/fd/0" 2>/dev/null)
+        [[ "$tty" == /dev/pts/* ]] && echo "$tty" && return 0
+    done
+    return 1
 }
 
-send_text() {
-    [ -n "$1" ] && [ -n "$PANE" ] && tmux send-keys -t "$PANE" $'\e[200~'"$1"$'\e[201~'
+_tiocsti() {
+    local tty="$1" text="$2"
+    [ -z "$tty" ] || [ -z "$text" ] && return 1
+    python3 -c "
+import fcntl, termios, sys
+with open(sys.argv[1], 'wb') as f:
+    for c in sys.argv[2].encode():
+        fcntl.ioctl(f, termios.TIOCSTI, bytes([c]))
+" "$tty" "$text" 2>/dev/null
 }
+
+_send() {
+    local text="$1" esc_pre="$2" esc_post="$3"
+    [ -z "$text" ] && return 1
+    local full="${esc_pre}${text}${esc_post}"
+    # Try tmux socket
+    if [ -n "$PANE" ]; then
+        if [ -n "$esc_pre" ]; then
+            tmux send-keys -t "$PANE" "$esc_pre$text$esc_post" 2>/dev/null && return 0
+        else
+            tmux send-keys -t "$PANE" "$text" 2>/dev/null && return 0
+        fi
+    fi
+    # Socket dead — find pane TTY and inject via TIOCSTI
+    local tty="${PANE_TTY:-$(_find_pane_tty "$PANE")}"
+    _tiocsti "$tty" "$full"
+}
+
+send_path() { _send "$1" "" ""; }
+send_text() { _send "$1" $'\e[200~' $'\e[201~'; }
 
 # ── Try wl-paste first (fast when WSLg works) ───────────────────────────────
 TYPES=$(timeout "$WL_TIMEOUT" "$WL_PASTE" --list-types 2>/dev/null)
