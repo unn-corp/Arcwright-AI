@@ -35,7 +35,7 @@ COLS = [
      ("o","  Open URL / file"),("g","  Search in browser"),
      ("R","  Recenter layout")],
     [("E","  Neovim (M-e)"),("N","  NvimTree"),("Y","  Yazi file manager"),("G","  Lazygit"),
-     ("D","  Lazydocker"),("",""),("",""),("",""),("",""),("","")],
+     ("D","  Lazydocker"),("C","  WSL cleanup"),("",""),("",""),("",""),("","")],
 ]
 
 NR = max(len(c) for c in COLS)
@@ -182,6 +182,7 @@ def execute(key):
         'Y': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' yazi"),
         'G': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' lazygit"),
         'D': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' lazydocker"),
+        'C': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'bash ~/.config/tmux/bin/wsl_cleanup.sh; read -p \"Press Enter to close\"'"),
     }
     if key in dispatch:
         dispatch[key]()

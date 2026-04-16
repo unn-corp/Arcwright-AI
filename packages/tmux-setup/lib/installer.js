@@ -79,6 +79,26 @@ async function setupTmux(projectRoot, chalk) {
   console.log('    ' + chalk.cyan('sudo apt update && sudo apt install gh -y'));
   console.log('    ' + chalk.dim('    Then authenticate: gh auth login'));
 
+  console.log('');
+  console.log(chalk.bold.yellow('  ✦ WSL2 memory optimization (recommended for AI workloads):'));
+  console.log(chalk.dim('     Prevents RAM bloat from orphaned AI processes and browser instances.\n'));
+  console.log('  ' + chalk.white('⑪ Allow passwordless sudo for memory tuning') + chalk.dim(' (enables WSL Cleanup button to drop pagecache):'));
+  console.log('    ' + chalk.cyan("echo 'hite ALL=(root) NOPASSWD: /usr/sbin/sysctl' | sudo tee /etc/sudoers.d/wsl-memory && sudo chmod 440 /etc/sudoers.d/wsl-memory"));
+  console.log('    ' + chalk.dim('    Replace "hite" with your WSL username if different'));
+  console.log('  ' + chalk.white('⑫ Fix tmux socket dir on WSL restart') + chalk.dim(' (prevents "server not found" after reboot):'));
+  console.log('    ' + chalk.cyan("sudo tee /etc/wsl.conf > /dev/null << 'EOF'"));
+  console.log('    ' + chalk.dim('[boot]'));
+  console.log('    ' + chalk.dim('command = mkdir -p /tmp/tmux-1000 && chmod 700 /tmp/tmux-1000 && chown hite:hite /tmp/tmux-1000 && find /tmp/tmux-1000 -maxdepth 1 -type s -delete && chmod 1777 /tmp'));
+  console.log('    ' + chalk.dim('systemd=true'));
+  console.log('    ' + chalk.dim('[user]'));
+  console.log('    ' + chalk.dim('default=hite'));
+  console.log('    ' + chalk.cyan('EOF'));
+  console.log('    ' + chalk.dim('    Replace "hite" with your WSL username if different'));
+  console.log('  ' + chalk.white('⑬ Enable gradual memory reclaim') + chalk.dim(' (add to Windows %USERPROFILE%\\.wslconfig):'));
+  console.log('    ' + chalk.cyan('[wsl2]'));
+  console.log('    ' + chalk.cyan('autoMemoryReclaim=gradual'));
+  console.log('    ' + chalk.dim('    Then run: wsl --shutdown (from PowerShell) to apply'));
+
   console.log('\n' + chalk.dim('  Complete the manual steps above, then press Enter to continue with config file installation.'));
   await ask(chalk.yellow('  Press Enter to continue → '));
 
@@ -166,6 +186,7 @@ async function setupTmux(projectRoot, chalk) {
     ['ram_usage.sh',           path.join(tmuxBin, 'ram_usage.sh')],
     ['claude_usage.sh',        path.join(tmuxBin, 'claude_usage.sh')],
     ['watch-sync.sh',          path.join(tmuxBin, 'watch-sync.sh')],
+    ['bin/wsl_cleanup.sh',     path.join(tmuxBin, 'wsl_cleanup.sh')],
     ['xclip',                  xclipPath],
   ];
 
