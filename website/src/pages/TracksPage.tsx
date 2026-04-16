@@ -20,9 +20,14 @@ export default function TracksPage() {
               Interactive Workflow Canvas
             </h2>
             <p className="font-sans text-muted text-sm mt-1">
-              {viewMode === 'canvas'
-                ? 'Scroll-zoom · drag to pan · click a track header to select.'
-                : 'All 6 tracks expanded. Scroll horizontally within each row.'}
+              {viewMode === 'canvas' ? (
+                <>
+                  <span className="hidden md:inline">Scroll-zoom · drag to pan · click a track header to select.</span>
+                  <span className="md:hidden">Tap a track to view its steps.</span>
+                </>
+              ) : (
+                'All 6 tracks expanded. Scroll horizontally within each row.'
+              )}
             </p>
           </div>
           {/* View toggle */}

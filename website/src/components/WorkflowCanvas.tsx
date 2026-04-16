@@ -545,8 +545,8 @@ export default function WorkflowCanvas({ viewMode = 'canvas' }: { viewMode?: 'ca
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Legend + tmux notice row */}
-      <div className="flex flex-wrap items-center gap-4 flex-shrink-0 px-6">
+      {/* Legend + tmux notice row — desktop only */}
+      <div className="hidden md:flex flex-wrap items-center gap-4 flex-shrink-0 px-6">
         <div className="bg-surface border border-surface-light px-3 py-2 text-[10px] font-mono text-muted">
           <span className="text-cta font-semibold">tmux:</span>{' '}
           <span className="text-[#CA9EE6]">pane</span> = split-pane ·{' '}
@@ -608,9 +608,9 @@ export default function WorkflowCanvas({ viewMode = 'canvas' }: { viewMode?: 'ca
       </div>
 
       {/* Mobile: tab switcher */}
-      <div className="md:hidden">
+      <div className="md:hidden flex-1 min-h-0 flex flex-col overflow-hidden">
         {/* Tab bar */}
-        <div className="flex overflow-x-auto gap-1 mb-4 pb-1">
+        <div className="flex overflow-x-auto gap-1 px-4 mb-2 pb-1 flex-shrink-0">
           {workflows.map((track, idx) => (
             <button
               key={track.id}
@@ -634,7 +634,7 @@ export default function WorkflowCanvas({ viewMode = 'canvas' }: { viewMode?: 'ca
 
         {/* Active track header */}
         <div
-          className="px-4 py-3 mb-0"
+          className="px-4 py-3 mb-0 flex-shrink-0"
           style={{ backgroundColor: activeTrack.headerBg }}
         >
           <div className="flex items-center justify-between">
@@ -652,7 +652,7 @@ export default function WorkflowCanvas({ viewMode = 'canvas' }: { viewMode?: 'ca
         </div>
 
         {/* Active track steps */}
-        <div className="bg-bg/40 border border-surface-light p-3">
+        <div className="bg-bg/40 border-x border-b border-surface-light p-3 flex-1 overflow-y-auto">
           <MobileTrackView track={activeTrack} />
         </div>
       </div>
