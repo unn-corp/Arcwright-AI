@@ -378,10 +378,6 @@ function RowsView() {
 // 6 columns × 208px + 5 gaps × 8px (gap-2 = 8px between columns)
 const CONTENT_WIDTH = 6 * 208 + 5 * 8; // = 1288px
 
-function fitScale(containerWidth: number) {
-  return Math.min(1.6, Math.max(0.35, containerWidth / CONTENT_WIDTH));
-}
-
 export default function WorkflowCanvas({ viewMode = 'canvas' }: { viewMode?: 'canvas' | 'rows' }) {
   const [selectedTrack, setSelectedTrack] = useState(0);
   const activeTrack = workflows[selectedTrack];
