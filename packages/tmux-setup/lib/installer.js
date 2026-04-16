@@ -79,26 +79,6 @@ async function setupTmux(projectRoot, chalk) {
   console.log('    ' + chalk.cyan('sudo apt update && sudo apt install gh -y'));
   console.log('    ' + chalk.dim('    Then authenticate: gh auth login'));
 
-  console.log('');
-  console.log(chalk.bold.yellow('  ✦ WSL2 memory optimization (recommended for AI workloads):'));
-  console.log(chalk.dim('     Prevents RAM bloat from orphaned AI processes and browser instances.\n'));
-  console.log('  ' + chalk.white('⑪ Allow passwordless sudo for memory tuning') + chalk.dim(' (enables WSL Cleanup button to drop pagecache):'));
-  console.log('    ' + chalk.cyan("echo 'hite ALL=(root) NOPASSWD: /usr/sbin/sysctl' | sudo tee /etc/sudoers.d/wsl-memory && sudo chmod 440 /etc/sudoers.d/wsl-memory"));
-  console.log('    ' + chalk.dim('    Replace "hite" with your WSL username if different'));
-  console.log('  ' + chalk.white('⑫ Fix tmux socket dir on WSL restart') + chalk.dim(' (prevents "server not found" after reboot):'));
-  console.log('    ' + chalk.cyan("sudo tee /etc/wsl.conf > /dev/null << 'EOF'"));
-  console.log('    ' + chalk.dim('[boot]'));
-  console.log('    ' + chalk.dim('command = mkdir -p /tmp/tmux-1000 && chmod 700 /tmp/tmux-1000 && chown hite:hite /tmp/tmux-1000 && find /tmp/tmux-1000 -maxdepth 1 -type s -delete && chmod 1777 /tmp'));
-  console.log('    ' + chalk.dim('systemd=true'));
-  console.log('    ' + chalk.dim('[user]'));
-  console.log('    ' + chalk.dim('default=hite'));
-  console.log('    ' + chalk.cyan('EOF'));
-  console.log('    ' + chalk.dim('    Replace "hite" with your WSL username if different'));
-  console.log('  ' + chalk.white('⑬ Enable gradual memory reclaim') + chalk.dim(' (add to Windows %USERPROFILE%\\.wslconfig):'));
-  console.log('    ' + chalk.cyan('[wsl2]'));
-  console.log('    ' + chalk.cyan('autoMemoryReclaim=gradual'));
-  console.log('    ' + chalk.dim('    Then run: wsl --shutdown (from PowerShell) to apply'));
-
   console.log('\n' + chalk.dim('  Complete the manual steps above, then press Enter to continue with config file installation.'));
   await ask(chalk.yellow('  Press Enter to continue → '));
 
@@ -221,6 +201,94 @@ async function setupTmux(projectRoot, chalk) {
 
   // Write / merge global ~/.claude/CLAUDE.md with tmux-aware agent spawning rules
   await writeGlobalClaudeMd(chalk);
+
+  // ── Step 5: WSL2 optimizations ────────────────────────────────────────────
+  const isWsl = !!(process.env.WSL_DISTRO_NAME || await fs.pathExists('/proc/sys/fs/binfmt_misc/WSLInterop'));
+  if (isWsl) {
+    console.log('\n' + chalk.bold('Step 5 — WSL2 memory optimizations'));
+    console.log(chalk.dim('  Prevents RAM bloat from orphaned AI processes and TMux socket corruption.\n'));
+
+    const applyWsl = await ask(chalk.yellow('  Apply WSL2 memory optimizations? (Y/n): '));
+    if (!applyWsl.toLowerCase().startsWith('n')) {
+      const username = os.userInfo().username;
+
+      // ── 5a: .wslconfig (Windows-side) ────────────────────────────────────
+      try {
+        const winProfile = execSync('powershell.exe -NoProfile -Command "$env:USERPROFILE"', { stdio: 'pipe' })
+          .toString().trim().replace(/\r/g, '');
+        const winHome = execSync(`wslpath "${winProfile}"`, { stdio: 'pipe' }).toString().trim();
+        const wslConfigPath = path.join(winHome, '.wslconfig');
+
+        let wslConfigContent = (await fs.pathExists(wslConfigPath))
+          ? await fs.readFile(wslConfigPath, 'utf8')
+          : '';
+
+        if (/autoMemoryReclaim\s*=/i.test(wslConfigContent)) {
+          wslConfigContent = wslConfigContent.replace(/autoMemoryReclaim\s*=\s*\S+/i, 'autoMemoryReclaim=gradual');
+          console.log(chalk.green('  ✓ .wslconfig — updated autoMemoryReclaim=gradual'));
+        } else if (/^\[wsl2\]/im.test(wslConfigContent)) {
+          wslConfigContent = wslConfigContent.replace(/(\[wsl2\])/i, '$1\nautoMemoryReclaim=gradual');
+          console.log(chalk.green('  ✓ .wslconfig — added autoMemoryReclaim=gradual to [wsl2]'));
+        } else {
+          wslConfigContent = wslConfigContent.trimEnd() + '\n\n[wsl2]\nautoMemoryReclaim=gradual\n';
+          console.log(chalk.green('  ✓ .wslconfig — created [wsl2] section with autoMemoryReclaim=gradual'));
+        }
+
+        await fs.writeFile(wslConfigPath, wslConfigContent, 'utf8');
+        console.log(chalk.dim(`    ${wslConfigPath}`));
+        console.log(chalk.dim('    Run "wsl --shutdown" from PowerShell to apply.'));
+      } catch (e) {
+        console.log(chalk.yellow('  ⚠  Could not update .wslconfig (Windows path detection failed)'));
+        console.log(chalk.dim('     Add manually to %USERPROFILE%\\.wslconfig:  autoMemoryReclaim=gradual'));
+      }
+
+      // ── 5b: /etc/wsl.conf (boot command + user) ──────────────────────────
+      const bootCmd = `mkdir -p /tmp/tmux-1000 && chmod 700 /tmp/tmux-1000 && chown ${username}:${username} /tmp/tmux-1000 && find /tmp/tmux-1000 -maxdepth 1 -type s -delete && chmod 1777 /tmp`;
+      const wslConfContent = `[boot]\ncommand = ${bootCmd}\nsystemd=true\n\n[user]\ndefault=${username}\n`;
+
+      // Check if already configured correctly
+      let existingWslConf = '';
+      try { existingWslConf = await fs.readFile('/etc/wsl.conf', 'utf8'); } catch {}
+      const alreadyConfigured = existingWslConf.includes('tmux-1000') && existingWslConf.includes(username);
+
+      if (alreadyConfigured) {
+        console.log(chalk.dim('  ○ /etc/wsl.conf — already configured'));
+      } else {
+        try {
+          const tmpWslConf = `/tmp/.arcwright_wsl_conf_${Date.now()}`;
+          await fs.writeFile(tmpWslConf, wslConfContent, 'utf8');
+          execSync(`sudo cp "${tmpWslConf}" /etc/wsl.conf && sudo chmod 644 /etc/wsl.conf`, { stdio: 'inherit' });
+          await fs.remove(tmpWslConf);
+          console.log(chalk.green('  ✓ /etc/wsl.conf — tmux socket dir fix applied'));
+        } catch {
+          console.log(chalk.yellow('  ⚠  Could not write /etc/wsl.conf (sudo failed or denied)'));
+          console.log(chalk.dim(`     Add manually: command = ${bootCmd}`));
+        }
+      }
+
+      // ── 5c: sudoers rule for passwordless sysctl ─────────────────────────
+      const sudoersPath = '/etc/sudoers.d/wsl-memory';
+      const sudoersLine = `${username} ALL=(root) NOPASSWD: /usr/sbin/sysctl\n`;
+      let existingSudoers = '';
+      try { existingSudoers = await fs.readFile(sudoersPath, 'utf8'); } catch {}
+
+      if (existingSudoers.includes(username) && existingSudoers.includes('sysctl')) {
+        console.log(chalk.dim('  ○ sudoers — wsl-memory rule already present'));
+      } else {
+        try {
+          const tmpSudoers = `/tmp/.arcwright_sudoers_${Date.now()}`;
+          await fs.writeFile(tmpSudoers, sudoersLine, 'utf8');
+          execSync(`sudo cp "${tmpSudoers}" "${sudoersPath}" && sudo chmod 440 "${sudoersPath}"`, { stdio: 'inherit' });
+          await fs.remove(tmpSudoers);
+          console.log(chalk.green('  ✓ /etc/sudoers.d/wsl-memory — passwordless sysctl enabled'));
+          console.log(chalk.dim('    WSL Cleanup button will now drop pagecache without a password prompt.'));
+        } catch {
+          console.log(chalk.yellow('  ⚠  Could not write sudoers rule (sudo failed or denied)'));
+          console.log(chalk.dim(`     Add manually: echo '${sudoersLine.trim()}' | sudo tee /etc/sudoers.d/wsl-memory && sudo chmod 440 /etc/sudoers.d/wsl-memory`));
+        }
+      }
+    }
+  }
 
   console.log('\n' + chalk.bold.green('✓ tmux setup complete!'));
   console.log(chalk.dim('  Start tmux and press Ctrl+B I to finish TPM plugin install.'));
