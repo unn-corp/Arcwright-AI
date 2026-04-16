@@ -56,7 +56,7 @@ function StepCard({ step, index }: { step: WorkflowStep; index: number }) {
       <div className="px-3 pt-2.5 pb-1.5">
         <div className="flex items-start justify-between gap-2 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-mono text-xs text-muted/50 flex-shrink-0 tabular-nums w-4 text-right">
+            <span className="font-mono text-xs text-muted/70 flex-shrink-0 tabular-nums w-4 text-right">
               {index + 1}.
             </span>
             <span className={`font-mono text-sm font-semibold leading-tight break-words ${styles.labelColor}`}>
@@ -70,7 +70,7 @@ function StepCard({ step, index }: { step: WorkflowStep; index: number }) {
           )}
         </div>
         {step.description && (
-          <div className="font-sans text-xs italic text-muted/60 mt-1 leading-tight pl-5">
+          <div className="font-sans text-xs italic text-muted/90 mt-1 leading-tight pl-5">
             {step.description}
           </div>
         )}
@@ -79,15 +79,15 @@ function StepCard({ step, index }: { step: WorkflowStep; index: number }) {
       {/* Always-visible details */}
       <div className="px-3 pb-2.5 space-y-1.5 border-t border-surface-light/40">
         {step.agent && (
-          <div className="font-mono text-xs text-muted/70 mt-1.5">{step.agent}</div>
+          <div className="font-mono text-xs text-muted/90 mt-1.5">{step.agent}</div>
         )}
         {step.subAgents && step.subAgents.length > 0 && (
           <div>
-            <span className="font-mono text-[10px] text-muted/60 tracking-wider">Sub-agents</span>
+            <span className="font-mono text-[10px] text-muted/80 tracking-wider">Sub-agents</span>
             <ul className="mt-0.5 space-y-0.5">
               {step.subAgents.map(sa => (
-                <li key={sa} className="font-mono text-[11px] text-foreground/80 flex items-start gap-1">
-                  <span className="text-muted/40 flex-shrink-0">•</span>{sa}
+                <li key={sa} className="font-mono text-[11px] text-foreground/90 flex items-start gap-1">
+                  <span className="text-muted/70 flex-shrink-0">•</span>{sa}
                 </li>
               ))}
             </ul>
@@ -95,11 +95,11 @@ function StepCard({ step, index }: { step: WorkflowStep; index: number }) {
         )}
         {step.inputs && step.inputs.length > 0 && (
           <div>
-            <span className="font-mono text-[10px] text-muted/60 tracking-wider">In</span>
+            <span className="font-mono text-[10px] text-muted/80 tracking-wider">In</span>
             <ul className="mt-0.5 space-y-0.5">
               {step.inputs.map(inp => (
-                <li key={inp} className="font-mono text-[11px] text-foreground/75 flex items-start gap-1">
-                  <span className="text-[#8CAAEE]/60 flex-shrink-0">→</span>{inp}
+                <li key={inp} className="font-mono text-[11px] text-foreground/90 flex items-start gap-1">
+                  <span className="text-[#8CAAEE]/80 flex-shrink-0">→</span>{inp}
                 </li>
               ))}
             </ul>
@@ -107,18 +107,18 @@ function StepCard({ step, index }: { step: WorkflowStep; index: number }) {
         )}
         {step.outputs && step.outputs.length > 0 && (
           <div>
-            <span className="font-mono text-[10px] text-muted/60 tracking-wider">Out</span>
+            <span className="font-mono text-[10px] text-muted/80 tracking-wider">Out</span>
             <ul className="mt-0.5 space-y-0.5">
               {step.outputs.map(out => (
-                <li key={out} className="font-mono text-[11px] text-foreground/75 flex items-start gap-1">
-                  <span className="text-cta/60 flex-shrink-0">←</span>{out}
+                <li key={out} className="font-mono text-[11px] text-foreground/90 flex items-start gap-1">
+                  <span className="text-cta/80 flex-shrink-0">←</span>{out}
                 </li>
               ))}
             </ul>
           </div>
         )}
         {step.note && (
-          <div className="font-sans text-[11px] text-muted/50 italic leading-tight">{step.note}</div>
+          <div className="font-sans text-[11px] text-muted/80 italic leading-tight">{step.note}</div>
         )}
         {step.loopTarget && (
           <div className="font-mono text-[11px] text-[#fbbf24]">loop → {step.loopTarget}</div>
@@ -257,7 +257,7 @@ function RowStepCard({ step, index }: { step: WorkflowStep; index: number }) {
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 min-w-0">
-            <span className="font-mono text-sm text-muted/50 flex-shrink-0 tabular-nums mt-0.5">{index + 1}.</span>
+            <span className="font-mono text-sm text-muted/70 flex-shrink-0 tabular-nums mt-0.5">{index + 1}.</span>
             <span className={`font-mono text-base font-semibold leading-tight ${styles.labelColor}`}>
               {step.label}
             </span>
@@ -269,7 +269,7 @@ function RowStepCard({ step, index }: { step: WorkflowStep; index: number }) {
           )}
         </div>
         {step.description && (
-          <p className="font-sans text-sm italic text-muted/60 mt-1.5 leading-snug pl-5">
+          <p className="font-sans text-sm italic text-muted/90 mt-1.5 leading-snug pl-5">
             {step.description}
           </p>
         )}
@@ -278,15 +278,15 @@ function RowStepCard({ step, index }: { step: WorkflowStep; index: number }) {
       {/* Details */}
       <div className="px-4 pb-3 space-y-2 border-t border-surface-light/40">
         {step.agent && (
-          <div className="font-mono text-sm text-muted/70 mt-2">{step.agent}</div>
+          <div className="font-mono text-sm text-muted/90 mt-2">{step.agent}</div>
         )}
         {step.subAgents && step.subAgents.length > 0 && (
           <div>
-            <div className="font-mono text-xs text-muted/60 uppercase tracking-wider mb-1">Sub-agents</div>
+            <div className="font-mono text-xs text-muted/80 uppercase tracking-wider mb-1">Sub-agents</div>
             <ul className="space-y-0.5">
               {step.subAgents.map(sa => (
-                <li key={sa} className="font-mono text-sm text-foreground/80 flex items-start gap-1.5">
-                  <span className="text-muted/40 flex-shrink-0">•</span>{sa}
+                <li key={sa} className="font-mono text-sm text-foreground/90 flex items-start gap-1.5">
+                  <span className="text-muted/70 flex-shrink-0">•</span>{sa}
                 </li>
               ))}
             </ul>
@@ -294,11 +294,11 @@ function RowStepCard({ step, index }: { step: WorkflowStep; index: number }) {
         )}
         {step.inputs && step.inputs.length > 0 && (
           <div>
-            <div className="font-mono text-xs text-muted/60 uppercase tracking-wider mb-1">In</div>
+            <div className="font-mono text-xs text-muted/80 uppercase tracking-wider mb-1">In</div>
             <ul className="space-y-0.5">
               {step.inputs.map(inp => (
-                <li key={inp} className="font-mono text-sm text-foreground/75 flex items-start gap-1.5">
-                  <span className="text-[#8CAAEE]/60 flex-shrink-0">→</span>{inp}
+                <li key={inp} className="font-mono text-sm text-foreground/90 flex items-start gap-1.5">
+                  <span className="text-[#8CAAEE]/80 flex-shrink-0">→</span>{inp}
                 </li>
               ))}
             </ul>
@@ -306,18 +306,18 @@ function RowStepCard({ step, index }: { step: WorkflowStep; index: number }) {
         )}
         {step.outputs && step.outputs.length > 0 && (
           <div>
-            <div className="font-mono text-xs text-muted/60 uppercase tracking-wider mb-1">Out</div>
+            <div className="font-mono text-xs text-muted/80 uppercase tracking-wider mb-1">Out</div>
             <ul className="space-y-0.5">
               {step.outputs.map(out => (
-                <li key={out} className="font-mono text-sm text-foreground/75 flex items-start gap-1.5">
-                  <span className="text-cta/60 flex-shrink-0">←</span>{out}
+                <li key={out} className="font-mono text-sm text-foreground/90 flex items-start gap-1.5">
+                  <span className="text-cta/80 flex-shrink-0">←</span>{out}
                 </li>
               ))}
             </ul>
           </div>
         )}
         {step.note && (
-          <p className="font-sans text-sm text-muted/50 italic leading-snug">{step.note}</p>
+          <p className="font-sans text-sm text-muted/80 italic leading-snug">{step.note}</p>
         )}
         {step.loopTarget && (
           <div className="font-mono text-sm text-[#fbbf24]">loop → {step.loopTarget}</div>
