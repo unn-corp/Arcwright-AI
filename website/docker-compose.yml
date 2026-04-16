@@ -3,12 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "3080:80"
     restart: unless-stopped
+    networks:
+      - dokploy-network
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 5s
+
+networks:
+  dokploy-network:
+    external: true
