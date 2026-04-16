@@ -6,7 +6,9 @@ import WorkflowCanvas from '../components/WorkflowCanvas';
 export type ViewMode = 'canvas' | 'rows';
 
 export default function TracksPage() {
-  const [viewMode, setViewMode] = useState<ViewMode>('rows');
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    window.innerWidth < 768 ? 'canvas' : 'rows'
+  );
 
   return (
     <div className="pt-16">
