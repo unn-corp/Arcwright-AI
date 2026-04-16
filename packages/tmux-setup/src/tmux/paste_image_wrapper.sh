@@ -48,21 +48,10 @@ _find_pane_tty() {
     return 1
 }
 
-_tiocsti() {
-    local tty="$1" text="$2"
-    [ -z "$tty" ] || [ -z "$text" ] && return 1
-    python3 -c "
-import fcntl, termios, sys
-with open(sys.argv[1], 'wb') as f:
-    for c in sys.argv[2].encode():
-        fcntl.ioctl(f, termios.TIOCSTI, bytes([c]))
-" "$tty" "$text" 2>/dev/null
-}
 
 _send() {
     local text="$1" esc_pre="$2" esc_post="$3"
     [ -z "$text" ] && return 1
-    local full="${esc_pre}${text}${esc_post}"
     # Try tmux socket
     if [ -n "$PANE" ]; then
         if [ -n "$esc_pre" ]; then
@@ -71,9 +60,12 @@ _send() {
             tmux send-keys -t "$PANE" "$text" 2>/dev/null && return 0
         fi
     fi
-    # Socket dead — find pane TTY and inject via TIOCSTI
+    # Socket dead — copy to Windows clipboard and show inline notification in the pane
+    printf '%s' "$text" | clip.exe 2>/dev/null
     local tty="${PANE_TTY:-$(_find_pane_tty "$PANE")}"
-    _tiocsti "$tty" "$full"
+    if [ -n "$tty" ]; then
+        printf '\r\n\033[33m[socket dead — path in clipboard, press Ctrl+V: %s]\033[0m\r\n' "$text" > "$tty" 2>/dev/null
+    fi
 }
 
 send_path() { _send "$1" "" ""; }
