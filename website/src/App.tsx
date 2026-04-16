@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Nav from './components/Nav';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -34,6 +34,22 @@ function useScrollReveal() {
   }, []);
 }
 
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} className="page-enter">
+      <Routes location={location}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/tracks" element={<TracksPage />} />
+        <Route path="/teams" element={<TeamsPage />} />
+        <Route path="/agents" element={<AgentsPage />} />
+        <Route path="/skills" element={<SkillsPage />} />
+        <Route path="/tmux" element={<TmuxPage />} />
+      </Routes>
+    </div>
+  );
+}
+
 function Layout() {
   useScrollReveal();
   return (
@@ -49,14 +65,7 @@ function Layout() {
       <Nav />
 
       <main id="main">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/tracks" element={<TracksPage />} />
-          <Route path="/teams" element={<TeamsPage />} />
-          <Route path="/agents" element={<AgentsPage />} />
-          <Route path="/skills" element={<SkillsPage />} />
-          <Route path="/tmux" element={<TmuxPage />} />
-        </Routes>
+        <AnimatedRoutes />
       </main>
 
       <Footer />
