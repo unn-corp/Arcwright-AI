@@ -1,0 +1,383 @@
+- generic [ref=e3]:
+  - link "Skip to workflow tracks" [ref=e4] [cursor=pointer]:
+    - /url: "#tracks"
+  - navigation [ref=e5]:
+    - generic [ref=e7]:
+      - link "arcwright" [ref=e8] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e9]: arcwright
+      - link "View on GitHub" [ref=e11] [cursor=pointer]:
+        - /url: https://github.com/UNN-Devotek/Arcwright-AI
+        - img [ref=e12]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]: Claude Code · Kiro · Cursor · Windsurf · Cline · Copilot · Gemini
+      - heading "AI-native agile workflow orchestration" [level=1] [ref=e18]:
+        - text: AI-native agile
+        - text: workflow orchestration
+      - paragraph [ref=e19]: Specialist agents, workflow tracks, and a 53-skill library — installed into any project in one command. Pick a track, the orchestrator does the rest.
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]: $
+          - code [ref=e23]: npx @arcwright-ai/agent-orchestration
+        - button "Copy install command" [ref=e24] [cursor=pointer]:
+          - img [ref=e25]
+      - generic [ref=e28]:
+        - link "View on GitHub" [ref=e29] [cursor=pointer]:
+          - /url: https://github.com/UNN-Devotek/Arcwright-AI
+          - img [ref=e30]
+          - text: View on GitHub
+        - link "npm package" [ref=e32] [cursor=pointer]:
+          - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+          - text: npm package
+          - img [ref=e33]
+    - generic [ref=e37]: scroll
+  - generic [ref=e38]: Fetching latest content from GitHub…
+  - generic [ref=e41]:
+    - generic [ref=e42]:
+      - heading "Workflow Tracks" [level=2] [ref=e43]
+      - paragraph [ref=e44]: Pick the track sized to your task. The orchestrator handles the rest.
+    - table [ref=e46]:
+      - rowgroup [ref=e47]:
+        - row "Command Scope" [ref=e48]:
+          - columnheader "Command" [ref=e49]
+          - columnheader "Scope" [ref=e50]
+      - rowgroup [ref=e51]:
+        - row "/arcwright-track-nano 1–2 files, ≤20 lines" [ref=e52]:
+          - cell "/arcwright-track-nano" [ref=e53]:
+            - code [ref=e54]: /arcwright-track-nano
+          - cell "1–2 files, ≤20 lines" [ref=e55]
+        - row "/arcwright-track-small 2–4 files" [ref=e56]:
+          - cell "/arcwright-track-small" [ref=e57]:
+            - code [ref=e58]: /arcwright-track-small
+          - cell "2–4 files" [ref=e59]
+        - row "/arcwright-track-compact 4–8 files" [ref=e60]:
+          - cell "/arcwright-track-compact" [ref=e61]:
+            - code [ref=e62]: /arcwright-track-compact
+          - cell "4–8 files" [ref=e63]
+        - row "/arcwright-track-medium 6–12 files" [ref=e64]:
+          - cell "/arcwright-track-medium" [ref=e65]:
+            - code [ref=e66]: /arcwright-track-medium
+          - cell "6–12 files" [ref=e67]
+        - row "/arcwright-track-extended 10–16 files" [ref=e68]:
+          - cell "/arcwright-track-extended" [ref=e69]:
+            - code [ref=e70]: /arcwright-track-extended
+          - cell "10–16 files" [ref=e71]
+        - row "/arcwright-track-large 12+ files" [ref=e72]:
+          - cell "/arcwright-track-large" [ref=e73]:
+            - code [ref=e74]: /arcwright-track-large
+          - cell "12+ files" [ref=e75]
+        - row "/arcwright-track-rv Any" [ref=e76]:
+          - cell "/arcwright-track-rv" [ref=e77]:
+            - code [ref=e78]: /arcwright-track-rv
+          - cell "Any" [ref=e79]
+  - generic [ref=e81]:
+    - generic [ref=e82]:
+      - heading "Agent Teams" [level=2] [ref=e83]
+      - paragraph [ref=e84]:
+        - text: 17 pre-built team compositions. Use
+        - code [ref=e85]: /team
+        - text: for the interactive selector.
+    - generic [ref=e86]:
+      - heading "Development" [level=3] [ref=e87]
+      - generic [ref=e88]:
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - generic [ref=e91]: The Foundry
+            - code [ref=e92]: /arch-dev
+          - paragraph [ref=e93]: Architect designs approach, Dev implements, Architect spot-checks — for non-trivial features needing upfront design
+          - generic [ref=e94]: Architect + Dev
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]: The Engine Room
+            - code [ref=e98]: /full-dev
+          - paragraph [ref=e99]: Main dev loop with QA validation; Architect available for complex decisions
+          - generic [ref=e100]: Dev + QA + on-call Architect
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]: Dev + QA Loop
+            - code [ref=e104]: /dev-qa
+          - paragraph [ref=e105]: "Iterative: Dev implements, QA validates with playwright-cli, failures loop back to Dev"
+          - generic [ref=e106]: Dev + QA
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - generic [ref=e109]: The Forge
+            - code [ref=e110]: /tdd
+          - paragraph [ref=e111]: "TDD: QA writes failing tests first, Dev implements to green, QA verifies"
+          - generic [ref=e112]: QA + Dev
+    - generic [ref=e113]:
+      - heading "Review" [level=3] [ref=e114]
+      - generic [ref=e115]:
+        - generic [ref=e116]:
+          - generic [ref=e117]:
+            - generic [ref=e118]: Review + Fix Loop
+            - code [ref=e119]: /review
+          - paragraph [ref=e120]: Architect and UX review concurrently, batched findings go to Dev, loop until clean
+          - generic [ref=e121]: Architect + UX + Dev
+        - generic [ref=e122]:
+          - generic [ref=e123]:
+            - generic [ref=e124]: The Crucible
+            - code [ref=e125]: /audit
+          - paragraph [ref=e126]: Full audit with three specialists running concurrently; Security has final sign-off
+          - generic [ref=e127]: Architect + UX + Security
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]: The Vault
+            - code [ref=e131]: /sec-qa
+          - paragraph [ref=e132]: Security finds vulnerabilities, Dev remediates, QA closes the exploit path, Security signs off
+          - generic [ref=e133]: Security + Dev + QA
+    - generic [ref=e134]:
+      - heading "Planning" [level=3] [ref=e135]
+      - generic [ref=e136]:
+        - generic [ref=e137]:
+          - generic [ref=e138]:
+            - generic [ref=e139]: War Room
+            - code [ref=e140]: /blueprint
+          - paragraph [ref=e141]: Strategic planning before any build — PRDs, research, architecture
+          - generic [ref=e142]: PM + Analyst + Architect
+        - generic [ref=e143]:
+          - generic [ref=e144]:
+            - generic [ref=e145]: Recon Pod
+            - code [ref=e146]: /research
+          - paragraph [ref=e147]: Analyst researches, PM synthesizes briefs, Tech Writer documents outputs
+          - generic [ref=e148]: Analyst + PM + Tech Writer
+        - generic [ref=e149]:
+          - generic [ref=e150]:
+            - generic [ref=e151]: The Blueprint Room
+            - code [ref=e152]: /ux-arch
+          - paragraph [ref=e153]: Design artifacts only — no implementation, no iterative loop
+          - generic [ref=e154]: UX + Architect
+    - generic [ref=e155]:
+      - heading "Specialist" [level=3] [ref=e156]
+      - generic [ref=e157]:
+        - generic [ref=e158]:
+          - generic [ref=e159]:
+            - generic [ref=e160]: The Strike Team
+            - code [ref=e161]: /sprint
+          - paragraph [ref=e162]: SM manages sprint queue, Dev implements stories in sequence, QA validates each before SM marks done
+          - generic [ref=e163]: SM + Dev + QA
+        - generic [ref=e164]:
+          - generic [ref=e165]:
+            - generic [ref=e166]: The Library
+            - code [ref=e167]: /docs
+          - paragraph [ref=e168]: Tech Writer drafts, Architect reviews for technical accuracy
+          - generic [ref=e169]: Tech Writer + Architect
+        - generic [ref=e170]:
+          - generic [ref=e171]:
+            - generic [ref=e172]: The Atelier
+            - code [ref=e173]: /ux-qa
+          - paragraph [ref=e174]: UX Designer implements (writes code), QA validates live UI with playwright-cli, loop until clean
+          - generic [ref=e175]: UX Designer + QA
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - generic [ref=e178]: Rapid Response
+            - code [ref=e179]: /hotfix
+          - paragraph [ref=e180]: Emergency fix — max 4 files, isolated subsystem, Security reviews before merge
+          - generic [ref=e181]: Dev + Security
+    - generic [ref=e182]:
+      - heading "Solo" [level=3] [ref=e183]
+      - generic [ref=e184]:
+        - generic [ref=e185]:
+          - generic [ref=e186]:
+            - generic [ref=e187]: Ghost
+            - code [ref=e188]: /solo-dev
+          - paragraph [ref=e189]: Sequential task queue; dev signals completion each time
+          - generic [ref=e190]: Single quick-flow-solo-dev
+        - generic [ref=e191]:
+          - generic [ref=e192]:
+            - generic [ref=e193]: The Oracle
+            - code [ref=e194]: /solo-arch
+          - paragraph [ref=e195]: Architecture analysis, design proposals, prototyping — with full dev skill access
+          - generic [ref=e196]: Single Architect
+        - generic [ref=e197]:
+          - generic [ref=e198]:
+            - generic [ref=e199]: The Inquisitor
+            - code [ref=e200]: /solo-qa
+          - paragraph [ref=e201]: Regression runs, playwright-cli sessions, pass/fail reports
+          - generic [ref=e202]: Single QA
+  - generic [ref=e204]:
+    - generic [ref=e205]:
+      - heading "Specialist Agents" [level=2] [ref=e206]
+      - paragraph [ref=e207]: 8 named specialists coordinate across tracks and teams.
+    - generic [ref=e208]:
+      - generic [ref=e209]:
+        - img [ref=e211]
+        - generic [ref=e214]:
+          - generic [ref=e215]: Analyst
+          - generic [ref=e216]: Requirements & Research
+      - generic [ref=e217]:
+        - img [ref=e219]
+        - generic [ref=e222]:
+          - generic [ref=e223]: Architect
+          - generic [ref=e224]: System Design
+      - generic [ref=e225]:
+        - img [ref=e227]
+        - generic [ref=e231]:
+          - generic [ref=e232]: Developer
+          - generic [ref=e233]: Implementation
+      - generic [ref=e234]:
+        - img [ref=e236]
+        - generic [ref=e239]:
+          - generic [ref=e240]: PM
+          - generic [ref=e241]: Product Management
+      - generic [ref=e242]:
+        - img [ref=e244]
+        - generic [ref=e247]:
+          - generic [ref=e248]: QA
+          - generic [ref=e249]: Testing & Validation
+      - generic [ref=e250]:
+        - img [ref=e252]
+        - generic [ref=e256]:
+          - generic [ref=e257]: Scrum Master
+          - generic [ref=e258]: Sprint Management
+      - generic [ref=e259]:
+        - img [ref=e261]
+        - generic [ref=e263]:
+          - generic [ref=e264]: Tech Writer
+          - generic [ref=e265]: Documentation
+      - generic [ref=e266]:
+        - img [ref=e268]
+        - generic [ref=e272]:
+          - generic [ref=e273]: UX Designer
+          - generic [ref=e274]: Interface Design
+  - generic [ref=e276]:
+    - generic [ref=e277]:
+      - heading "Supported IDEs" [level=2] [ref=e278]
+      - paragraph [ref=e279]: One install command. Works across every major AI coding environment.
+    - generic [ref=e280]:
+      - generic [ref=e281]:
+        - img [ref=e282]
+        - generic [ref=e284]: Claude Code
+      - generic [ref=e285]:
+        - img [ref=e286]
+        - generic [ref=e288]: Kiro
+      - generic [ref=e289]:
+        - img [ref=e290]
+        - generic [ref=e292]: Cursor
+      - generic [ref=e293]:
+        - img [ref=e294]
+        - generic [ref=e296]: Windsurf
+      - generic [ref=e297]:
+        - img [ref=e298]
+        - generic [ref=e300]: Cline
+      - generic [ref=e301]:
+        - img [ref=e302]
+        - generic [ref=e304]: GitHub Copilot
+      - generic [ref=e305]:
+        - img [ref=e306]
+        - generic [ref=e308]: Gemini
+    - generic [ref=e309]:
+      - generic [ref=e310]: Multi-IDE install
+      - code [ref=e313]: npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor
+      - paragraph [ref=e314]:
+        - text: "Supports:"
+        - generic [ref=e315]:
+          - code [ref=e316]: claude-code
+          - text: ","
+        - generic [ref=e317]:
+          - code [ref=e318]: kiro
+          - text: ","
+        - generic [ref=e319]:
+          - code [ref=e320]: cursor
+          - text: ","
+        - generic [ref=e321]:
+          - code [ref=e322]: windsurf
+          - text: ","
+        - generic [ref=e323]:
+          - code [ref=e324]: cline
+          - text: ","
+        - generic [ref=e325]:
+          - code [ref=e326]: github-copilot
+          - text: ","
+        - code [ref=e328]: gemini
+  - generic [ref=e330]:
+    - generic [ref=e331]:
+      - heading "tmux Setup" [level=2] [ref=e332]
+      - paragraph [ref=e333]: Standalone tmux configuration optimised for AI agent workflows. Split panes, live agent output, coordinated signals.
+    - generic [ref=e334]:
+      - generic [ref=e335]:
+        - generic [ref=e341]: arcwright — tmux
+        - generic [ref=e342]:
+          - generic [ref=e343]: $ npx @arcwright-ai/tmux-setup
+          - generic [ref=e344]: ✓ Catppuccin Frappe theme applied
+          - generic [ref=e345]: ✓ Pane title sync enabled
+          - generic [ref=e346]: ✓ Clipboard integration (WSL2 → Windows)
+          - generic [ref=e347]: ✓ Actions popup installed
+          - generic [ref=e348]: ✓ Agent orchestration scripts ready
+          - generic [ref=e349]: ─── Arcwright · 2 panes ────────────────────
+          - generic [ref=e350]:
+            - generic [ref=e351]:
+              - generic [ref=e352]: ▸ architect-agent
+              - generic [ref=e353]: Designing system…
+            - generic [ref=e354]:
+              - generic [ref=e355]: ▸ dev-agent
+              - generic [ref=e356]: Waiting for spec…
+      - generic [ref=e357]:
+        - generic [ref=e358]:
+          - img [ref=e360]
+          - generic [ref=e364]:
+            - generic [ref=e365]: Catppuccin Frappe theme
+            - generic [ref=e366]: Powerline status bar, Nerd Font optimised
+        - generic [ref=e367]:
+          - img [ref=e369]
+          - generic [ref=e371]:
+            - generic [ref=e372]: Agent orchestration scripts
+            - generic [ref=e373]: dispatch.sh, float_term.sh, watch-sync.sh
+        - generic [ref=e374]:
+          - img [ref=e376]
+          - generic [ref=e379]:
+            - generic [ref=e380]: Pane title sync
+            - generic [ref=e381]: Auto-updates from Claude Code's OSC 2 title
+        - generic [ref=e382]:
+          - img [ref=e384]
+          - generic [ref=e386]:
+            - generic [ref=e387]: Actions popup
+            - generic [ref=e388]: Window, pane, clipboard, and launch shortcuts
+        - generic [ref=e389]:
+          - generic [ref=e390]: Standalone install
+          - code [ref=e391]: npx @arcwright-ai/tmux-setup
+  - generic [ref=e394]:
+    - img [ref=e396]
+    - generic [ref=e401]:
+      - heading "Migrating from bmad?" [level=3] [ref=e402]
+      - paragraph [ref=e403]: One command renames all bmad directories, modules, and commands to the arcwright namespace — with a 7-step verification pass included.
+      - generic [ref=e404]:
+        - code [ref=e405]: /arcwright-migrate
+        - img [ref=e406]
+        - code [ref=e408]: "--dry-run first"
+  - contentinfo [ref=e409]:
+    - generic [ref=e410]:
+      - generic [ref=e411]:
+        - generic [ref=e412]:
+          - generic [ref=e413]: arcwright
+          - paragraph [ref=e414]: AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
+        - generic [ref=e415]:
+          - heading "Packages" [level=4] [ref=e416]
+          - generic [ref=e417]:
+            - link "@arcwright-ai/agent-orchestration Agents, skills, workflows, IDE configs" [ref=e418] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+              - img [ref=e419]
+              - generic [ref=e423]:
+                - generic [ref=e424]: "@arcwright-ai/agent-orchestration"
+                - generic [ref=e425]: Agents, skills, workflows, IDE configs
+            - link "@arcwright-ai/tmux-setup tmux config + scripts for AI workflows" [ref=e426] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/tmux-setup
+              - img [ref=e427]
+              - generic [ref=e431]:
+                - generic [ref=e432]: "@arcwright-ai/tmux-setup"
+                - generic [ref=e433]: tmux config + scripts for AI workflows
+        - generic [ref=e434]:
+          - heading "Links" [level=4] [ref=e435]
+          - generic [ref=e436]:
+            - link "GitHub Repository" [ref=e437] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI
+              - img [ref=e438]
+              - text: GitHub Repository
+              - img [ref=e440]
+            - link "Documentation" [ref=e444] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI/blob/main/README.md
+              - img [ref=e445]
+              - text: Documentation
+      - generic [ref=e449]:
+        - paragraph [ref=e450]: MIT License — open source, free forever
+        - paragraph [ref=e451]: arcwright.space

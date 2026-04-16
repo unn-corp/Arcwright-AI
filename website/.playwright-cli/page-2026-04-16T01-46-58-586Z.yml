@@ -1,0 +1,418 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - navigation [ref=e5]:
+    - generic [ref=e7]:
+      - link "arcwright /ai" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: arcwright
+        - generic [ref=e10]: /ai
+      - generic [ref=e11]:
+        - link "Tracks" [ref=e12] [cursor=pointer]:
+          - /url: /tracks
+        - link "Teams" [ref=e13] [cursor=pointer]:
+          - /url: /teams
+        - link "Agents" [ref=e14] [cursor=pointer]:
+          - /url: /agents
+        - link "Skills" [ref=e15] [cursor=pointer]:
+          - /url: /skills
+          - text: Skills
+        - link "IDEs" [ref=e17] [cursor=pointer]:
+          - /url: /ides
+        - link "tmux" [ref=e18] [cursor=pointer]:
+          - /url: /tmux
+      - generic [ref=e19]:
+        - link "View on GitHub" [ref=e20] [cursor=pointer]:
+          - /url: https://github.com/UNN-Devotek/Arcwright-AI
+          - img [ref=e21]
+        - link "View on npm" [ref=e23] [cursor=pointer]:
+          - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+          - img [ref=e24]
+          - text: npm
+          - img [ref=e28]
+  - main [ref=e32]:
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - heading "Skill Library" [level=2] [ref=e37]
+        - paragraph [ref=e38]: 54 skills installed alongside agents and workflow tracks. Each skill is a focused context module that specialists invoke when needed.
+      - generic [ref=e39]:
+        - button "All54" [ref=e40] [cursor=pointer]
+        - button "Frontend3" [ref=e41] [cursor=pointer]
+        - button "Backend9" [ref=e42] [cursor=pointer]
+        - button "DevOps4" [ref=e43] [cursor=pointer]
+        - button "Workflow3" [ref=e44] [cursor=pointer]
+        - button "Quality5" [ref=e45] [cursor=pointer]
+        - button "Security2" [ref=e46] [cursor=pointer]
+        - button "Design4" [ref=e47] [cursor=pointer]
+        - button "Teams17" [ref=e48] [cursor=pointer]
+        - button "Tracks7" [ref=e49] [cursor=pointer]
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - code [ref=e53]: frontend-responsive-design-standards
+            - generic [ref=e54]: Frontend
+          - generic [ref=e55]: Frontend Responsive Design
+          - paragraph [ref=e56]: Build responsive, mobile-first layouts with accessibility and performance in mind.
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - code [ref=e59]: react-expert
+            - generic [ref=e60]: Frontend
+          - generic [ref=e61]: React Expert
+          - paragraph [ref=e62]: Advanced React patterns, hooks, performance optimisation, and component design.
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - code [ref=e65]: nextjs-app-router-patterns
+            - generic [ref=e66]: Frontend
+          - generic [ref=e67]: Next.js App Router
+          - paragraph [ref=e68]: Next.js 14+ App Router conventions, server components, and streaming patterns.
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - code [ref=e71]: ui-ux-pro-custom
+            - generic [ref=e72]: Design
+          - generic [ref=e73]: UI/UX Pro
+          - paragraph [ref=e74]: Design intelligence for UI/UX decisions, component specs, and visual hierarchy.
+        - generic [ref=e75]:
+          - generic [ref=e76]:
+            - code [ref=e77]: ux-audit
+            - generic [ref=e78]: Design
+          - generic [ref=e79]: UX Audit
+          - paragraph [ref=e80]: Systematic audit of UI/UX for accessibility, usability, and design consistency.
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - code [ref=e83]: excalidraw-dark-standard
+            - generic [ref=e84]: Design
+          - generic [ref=e85]: Excalidraw Dark Standard
+          - paragraph [ref=e86]: Master orchestrator for dark-theme Excalidraw diagram generation.
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - code [ref=e89]: excalidraw-diagram-generator
+            - generic [ref=e90]: Design
+          - generic [ref=e91]: Excalidraw Diagram Generator
+          - paragraph [ref=e92]: Generate structured Excalidraw diagrams for architecture, flows, and wireframes.
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - code [ref=e95]: typescript-best-practices
+            - generic [ref=e96]: Backend
+          - generic [ref=e97]: TypeScript Best Practices
+          - paragraph [ref=e98]: Type-safe TypeScript patterns, strict mode, generics, and utility types.
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - code [ref=e101]: python-backend
+            - generic [ref=e102]: Backend
+          - generic [ref=e103]: Python Backend
+          - paragraph [ref=e104]: Production Python backend patterns with FastAPI, async, and dependency injection.
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - code [ref=e107]: python-fundamentals
+            - generic [ref=e108]: Backend
+          - generic [ref=e109]: Python Fundamentals
+          - paragraph [ref=e110]: Core Python syntax, data structures, and idiomatic patterns.
+        - generic [ref=e111]:
+          - generic [ref=e112]:
+            - code [ref=e113]: python-performance
+            - generic [ref=e114]: Backend
+          - generic [ref=e115]: Python Performance
+          - paragraph [ref=e116]: Profiling, Cython, async concurrency, and memory optimisation for Python.
+        - generic [ref=e117]:
+          - generic [ref=e118]:
+            - code [ref=e119]: java-fundamentals
+            - generic [ref=e120]: Backend
+          - generic [ref=e121]: Java Fundamentals
+          - paragraph [ref=e122]: Core Java programming patterns, OOP, collections, and standard library.
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - code [ref=e125]: java-performance
+            - generic [ref=e126]: Backend
+          - generic [ref=e127]: Java Performance
+          - paragraph [ref=e128]: JVM tuning, GC strategies, profiling, and high-throughput Java patterns.
+        - generic [ref=e129]:
+          - generic [ref=e130]:
+            - code [ref=e131]: postgresql-optimization
+            - generic [ref=e132]: Backend
+          - generic [ref=e133]: PostgreSQL Optimization
+          - paragraph [ref=e134]: Query planning, indexing strategies, partitioning, and connection pooling.
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - code [ref=e137]: redis-best-practices
+            - generic [ref=e138]: Backend
+          - generic [ref=e139]: Redis Best Practices
+          - paragraph [ref=e140]: Data structures, caching patterns, pub/sub, and cluster configuration for Redis.
+        - generic [ref=e141]:
+          - generic [ref=e142]:
+            - code [ref=e143]: websocket-engineer
+            - generic [ref=e144]: Backend
+          - generic [ref=e145]: WebSocket Engineer
+          - paragraph [ref=e146]: Real-time bidirectional communication patterns, reconnect logic, and scaling.
+        - generic [ref=e147]:
+          - generic [ref=e148]:
+            - code [ref=e149]: docker-type-check
+            - generic [ref=e150]: DevOps
+          - generic [ref=e151]: Docker Type-Check
+          - paragraph [ref=e152]: Run TypeScript type-checks in isolated Docker containers for CI accuracy.
+        - generic [ref=e153]:
+          - generic [ref=e154]:
+            - code [ref=e155]: tmux-protocol
+            - generic [ref=e156]: DevOps
+          - generic [ref=e157]: tmux Protocol
+          - paragraph [ref=e158]: "Agent orchestration via tmux: spawn, signal, verify, and coordinate panes."
+        - generic [ref=e159]:
+          - generic [ref=e160]:
+            - code [ref=e161]: playwright-cli
+            - generic [ref=e162]: DevOps
+          - generic [ref=e163]: Playwright CLI
+          - paragraph [ref=e164]: Browser automation, screenshot comparison, and E2E test execution via Playwright.
+        - generic [ref=e165]:
+          - generic [ref=e166]:
+            - code [ref=e167]: gsudo
+            - generic [ref=e168]: DevOps
+          - generic [ref=e169]: gsudo
+          - paragraph [ref=e170]: Windows privilege escalation for WSL2 — run commands with elevated permissions.
+        - generic [ref=e171]:
+          - generic [ref=e172]:
+            - code [ref=e173]: systematic-debugging
+            - generic [ref=e174]: Quality
+          - generic [ref=e175]: Systematic Debugging
+          - paragraph [ref=e176]: Structured approach to diagnosing bugs, failures, and unexpected behavior.
+        - generic [ref=e177]:
+          - generic [ref=e178]:
+            - code [ref=e179]: clean-code-standards
+            - generic [ref=e180]: Quality
+          - generic [ref=e181]: Clean Code Standards
+          - paragraph [ref=e182]: 23 DRY/SOLID rules applied across the codebase for maintainability.
+        - generic [ref=e183]:
+          - generic [ref=e184]:
+            - code [ref=e185]: dry
+            - generic [ref=e186]: Quality
+          - generic [ref=e187]: DRY
+          - paragraph [ref=e188]: Single-pass DRY/SOLID review and auto-fix for duplication and coupling.
+        - generic [ref=e189]:
+          - generic [ref=e190]:
+            - code [ref=e191]: audit-website
+            - generic [ref=e192]: Quality
+          - generic [ref=e193]: Audit Website
+          - paragraph [ref=e194]: Comprehensive website audit covering SEO, performance, accessibility, and UX.
+        - generic [ref=e195]:
+          - generic [ref=e196]:
+            - code [ref=e197]: security-best-practices
+            - generic [ref=e198]: Security
+          - generic [ref=e199]: Security Best Practices
+          - paragraph [ref=e200]: Proactive security patterns for auth, input validation, SQL, and file operations.
+        - generic [ref=e201]:
+          - generic [ref=e202]:
+            - code [ref=e203]: security-review
+            - generic [ref=e204]: Security
+          - generic [ref=e205]: Security Review
+          - paragraph [ref=e206]: OWASP-based single-pass security code review with auto-remediation guidance.
+        - generic [ref=e207]:
+          - generic [ref=e208]:
+            - code [ref=e209]: subagent-driven-development
+            - generic [ref=e210]: Quality
+          - generic [ref=e211]: Subagent-Driven Development
+          - paragraph [ref=e212]: Execute implementation tasks by orchestrating focused sub-agent pipelines.
+        - generic [ref=e213]:
+          - generic [ref=e214]:
+            - code [ref=e215]: project-context
+            - generic [ref=e216]: Workflow
+          - generic [ref=e217]: Project Context
+          - paragraph [ref=e218]: Scan the project for existing context before starting any workflow task.
+        - generic [ref=e219]:
+          - generic [ref=e220]:
+            - code [ref=e221]: triage
+            - generic [ref=e222]: Workflow
+          - generic [ref=e223]: Triage
+          - paragraph [ref=e224]: Analyse a task description and route it to the appropriate track or team.
+        - generic [ref=e225]:
+          - generic [ref=e226]:
+            - code [ref=e227]: writing-skills
+            - generic [ref=e228]: Workflow
+          - generic [ref=e229]: Writing Skills
+          - paragraph [ref=e230]: "Create new structured documents: specs, PRDs, architecture notes, user stories."
+        - generic [ref=e231]:
+          - generic [ref=e232]:
+            - code [ref=e233]: team-arch-dev
+            - generic [ref=e234]: Teams
+          - generic [ref=e235]: "Team: arch-dev"
+          - paragraph [ref=e236]: Architect designs approach, Dev implements. For non-trivial features needing upfront design.
+        - generic [ref=e237]:
+          - generic [ref=e238]:
+            - code [ref=e239]: team-audit
+            - generic [ref=e240]: Teams
+          - generic [ref=e241]: "Team: audit"
+          - paragraph [ref=e242]: Full audit with Architect, UX, and Security running concurrently.
+        - generic [ref=e243]:
+          - generic [ref=e244]:
+            - code [ref=e245]: team-blueprint
+            - generic [ref=e246]: Teams
+          - generic [ref=e247]: "Team: blueprint"
+          - paragraph [ref=e248]: Strategic planning before any build — PRDs, research, architecture.
+        - generic [ref=e249]:
+          - generic [ref=e250]:
+            - code [ref=e251]: team-dev-qa
+            - generic [ref=e252]: Teams
+          - generic [ref=e253]: "Team: dev-qa"
+          - paragraph [ref=e254]: Iterative Dev + QA loop with playwright-cli validation.
+        - generic [ref=e255]:
+          - generic [ref=e256]:
+            - code [ref=e257]: team-docs
+            - generic [ref=e258]: Teams
+          - generic [ref=e259]: "Team: docs"
+          - paragraph [ref=e260]: Tech Writer drafts, Architect reviews for technical accuracy.
+        - generic [ref=e261]:
+          - generic [ref=e262]:
+            - code [ref=e263]: team-full-dev
+            - generic [ref=e264]: Teams
+          - generic [ref=e265]: "Team: full-dev"
+          - paragraph [ref=e266]: Main dev loop with QA validation; Architect available on-call.
+        - generic [ref=e267]:
+          - generic [ref=e268]:
+            - code [ref=e269]: team-hotfix
+            - generic [ref=e270]: Teams
+          - generic [ref=e271]: "Team: hotfix"
+          - paragraph [ref=e272]: Emergency fix — max 4 files, isolated subsystem, Security reviews before merge.
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - code [ref=e275]: team-research
+            - generic [ref=e276]: Teams
+          - generic [ref=e277]: "Team: research"
+          - paragraph [ref=e278]: Analyst researches, PM synthesizes briefs, Tech Writer documents outputs.
+        - generic [ref=e279]:
+          - generic [ref=e280]:
+            - code [ref=e281]: team-review
+            - generic [ref=e282]: Teams
+          - generic [ref=e283]: "Team: review"
+          - paragraph [ref=e284]: Architect and UX review concurrently, batched findings go to Dev until clean.
+        - generic [ref=e285]:
+          - generic [ref=e286]:
+            - code [ref=e287]: team-sec-qa
+            - generic [ref=e288]: Teams
+          - generic [ref=e289]: "Team: sec-qa"
+          - paragraph [ref=e290]: Security finds vulnerabilities, Dev remediates, QA closes the exploit path.
+        - generic [ref=e291]:
+          - generic [ref=e292]:
+            - code [ref=e293]: team-solo-arch
+            - generic [ref=e294]: Teams
+          - generic [ref=e295]: "Team: solo-arch"
+          - paragraph [ref=e296]: Architect working solo with tools. For design-only or readonly audit tasks.
+        - generic [ref=e297]:
+          - generic [ref=e298]:
+            - code [ref=e299]: team-solo-dev
+            - generic [ref=e300]: Teams
+          - generic [ref=e301]: "Team: solo-dev"
+          - paragraph [ref=e302]: Developer working solo. For well-scoped tasks that do not need review.
+        - generic [ref=e303]:
+          - generic [ref=e304]:
+            - code [ref=e305]: team-solo-qa
+            - generic [ref=e306]: Teams
+          - generic [ref=e307]: "Team: solo-qa"
+          - paragraph [ref=e308]: QA working solo. For writing test suites or validating a known-good implementation.
+        - generic [ref=e309]:
+          - generic [ref=e310]:
+            - code [ref=e311]: team-sprint
+            - generic [ref=e312]: Teams
+          - generic [ref=e313]: "Team: sprint"
+          - paragraph [ref=e314]: SM manages sprint queue, Dev implements stories, QA validates each before SM marks done.
+        - generic [ref=e315]:
+          - generic [ref=e316]:
+            - code [ref=e317]: team-tdd
+            - generic [ref=e318]: Teams
+          - generic [ref=e319]: "Team: tdd"
+          - paragraph [ref=e320]: QA writes failing tests first, Dev implements to green, QA verifies.
+        - generic [ref=e321]:
+          - generic [ref=e322]:
+            - code [ref=e323]: team-ux-arch
+            - generic [ref=e324]: Teams
+          - generic [ref=e325]: "Team: ux-arch"
+          - paragraph [ref=e326]: Design artifacts only — UX and Architect with no implementation loop.
+        - generic [ref=e327]:
+          - generic [ref=e328]:
+            - code [ref=e329]: team-ux-qa
+            - generic [ref=e330]: Teams
+          - generic [ref=e331]: "Team: ux-qa"
+          - paragraph [ref=e332]: UX Designer implements UI code, QA validates live with playwright-cli.
+        - generic [ref=e333]:
+          - generic [ref=e334]:
+            - code [ref=e335]: track-nano
+            - generic [ref=e336]: Tracks
+          - generic [ref=e337]: "Track: Nano"
+          - paragraph [ref=e338]: Nano track workflow — direct to dev, no spec, scope guard at 20 lines.
+        - generic [ref=e339]:
+          - generic [ref=e340]:
+            - code [ref=e341]: track-small
+            - generic [ref=e342]: Tracks
+          - generic [ref=e343]: "Track: Small"
+          - paragraph [ref=e344]: Small track workflow — Spec → Dev → 3-sub Review Gate → QA.
+        - generic [ref=e345]:
+          - generic [ref=e346]:
+            - code [ref=e347]: track-compact
+            - generic [ref=e348]: Tracks
+          - generic [ref=e349]: "Track: Compact"
+          - paragraph [ref=e350]: Compact track workflow — optional research before Dev, same 3-sub gate.
+        - generic [ref=e351]:
+          - generic [ref=e352]:
+            - code [ref=e353]: track-medium
+            - generic [ref=e354]: Tracks
+          - generic [ref=e355]: "Track: Medium"
+          - paragraph [ref=e356]: Medium track workflow — full spec, research, UX, two review gates.
+        - generic [ref=e357]:
+          - generic [ref=e358]:
+            - code [ref=e359]: track-extended
+            - generic [ref=e360]: Tracks
+          - generic [ref=e361]: "Track: Extended"
+          - paragraph [ref=e362]: Extended track workflow — PRD-driven, UX + arch notes, sprint plan, two gates.
+        - generic [ref=e363]:
+          - generic [ref=e364]:
+            - code [ref=e365]: track-large
+            - generic [ref=e366]: Tracks
+          - generic [ref=e367]: "Track: Large"
+          - paragraph [ref=e368]: Large track workflow — full planning, epics/stories loop, parallel research.
+        - generic [ref=e369]:
+          - generic [ref=e370]:
+            - code [ref=e371]: track-rv
+            - generic [ref=e372]: Tracks
+          - generic [ref=e373]: "Track: Review"
+          - paragraph [ref=e374]: Review track — audit-first, synthesizes findings, routes to appropriate fix path.
+  - generic [ref=e377]:
+    - img [ref=e379]
+    - generic [ref=e384]:
+      - heading "Migrating from bmad?" [level=3] [ref=e385]
+      - paragraph [ref=e386]: One command renames all bmad directories, modules, and commands to the arcwright namespace — with a 7-step verification pass included.
+      - generic [ref=e387]:
+        - code [ref=e388]: /arcwright-migrate
+        - img [ref=e389]
+        - code [ref=e391]: "--dry-run first"
+  - contentinfo [ref=e392]:
+    - generic [ref=e393]:
+      - generic [ref=e394]:
+        - generic [ref=e395]:
+          - generic [ref=e396]: arcwright
+          - paragraph [ref=e397]: AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
+        - generic [ref=e398]:
+          - heading "Packages" [level=4] [ref=e399]
+          - generic [ref=e400]:
+            - link "@arcwright-ai/agent-orchestration Agents, skills, workflows, IDE configs" [ref=e401] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+              - img [ref=e402]
+              - generic [ref=e406]:
+                - generic [ref=e407]: "@arcwright-ai/agent-orchestration"
+                - generic [ref=e408]: Agents, skills, workflows, IDE configs
+            - link "@arcwright-ai/tmux-setup tmux config + scripts for AI workflows" [ref=e409] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/tmux-setup
+              - img [ref=e410]
+              - generic [ref=e414]:
+                - generic [ref=e415]: "@arcwright-ai/tmux-setup"
+                - generic [ref=e416]: tmux config + scripts for AI workflows
+        - generic [ref=e417]:
+          - heading "Links" [level=4] [ref=e418]
+          - generic [ref=e419]:
+            - link "GitHub Repository" [ref=e420] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI
+              - img [ref=e421]
+              - text: GitHub Repository
+              - img [ref=e423]
+            - link "Documentation" [ref=e427] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI/blob/main/README.md
+              - img [ref=e428]
+              - text: Documentation
+      - generic [ref=e432]:
+        - paragraph [ref=e433]: MIT License — open source, free forever
+        - paragraph [ref=e434]: arcwright.space

@@ -1,0 +1,210 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - navigation [ref=e5]:
+    - generic [ref=e7]:
+      - link "arcwright /ai" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: arcwright
+        - generic [ref=e10]: /ai
+      - generic [ref=e11]:
+        - link "Tracks" [ref=e12] [cursor=pointer]:
+          - /url: /tracks
+        - link "Teams" [ref=e13] [cursor=pointer]:
+          - /url: /teams
+        - link "Agents" [ref=e14] [cursor=pointer]:
+          - /url: /agents
+          - text: Agents
+        - link "Skills" [ref=e16] [cursor=pointer]:
+          - /url: /skills
+        - link "IDEs" [ref=e17] [cursor=pointer]:
+          - /url: /ides
+        - link "tmux" [ref=e18] [cursor=pointer]:
+          - /url: /tmux
+      - generic [ref=e19]:
+        - link "View on GitHub" [ref=e20] [cursor=pointer]:
+          - /url: https://github.com/UNN-Devotek/Arcwright-AI
+          - img [ref=e21]
+        - link "View on npm" [ref=e23] [cursor=pointer]:
+          - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+          - img [ref=e24]
+          - text: npm
+          - img [ref=e28]
+  - main [ref=e32]:
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - heading "Specialist Agents" [level=2] [ref=e37]
+        - paragraph [ref=e38]: 8 named specialists coordinate across tracks and teams.
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - img [ref=e43]
+            - generic [ref=e46]:
+              - generic [ref=e47]: Analyst
+              - generic [ref=e48]: Requirements & Research
+          - paragraph [ref=e49]: Conducts deep codebase exploration, competitive research, and technical domain analysis. Produces structured research reports that feed into specs, PRDs, and architecture decisions. Runs in-process, often in parallel with other analysts on Medium/Extended/Large tracks.
+          - generic [ref=e50]:
+            - generic [ref=e51]: Key skills
+            - generic [ref=e52]:
+              - generic [ref=e53]: systematic-debugging
+              - generic [ref=e54]: project-context
+              - generic [ref=e55]: typescript-best-practices
+          - generic [ref=e56]:
+            - generic [ref=e57]: "Pairs with:"
+            - text: PM, Architect, Developer
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - img [ref=e61]
+            - generic [ref=e66]:
+              - generic [ref=e67]: Architect
+              - generic [ref=e68]: System Design
+          - paragraph [ref=e69]: Designs system architecture, writes architecture notes and readiness checks. Reviews code for structural integrity, DRY violations, and implementation feasibility. Key reviewer in every Review Gate's AR+DRY sub-task.
+          - generic [ref=e70]:
+            - generic [ref=e71]: Key skills
+            - generic [ref=e72]:
+              - generic [ref=e73]: clean-code-standards
+              - generic [ref=e74]: typescript-best-practices
+              - generic [ref=e75]: systematic-debugging
+          - generic [ref=e76]:
+            - generic [ref=e77]: "Pairs with:"
+            - text: Developer, PM, QA
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - img [ref=e81]
+            - generic [ref=e85]:
+              - generic [ref=e86]: Developer
+              - generic [ref=e87]: Implementation
+          - paragraph [ref=e88]: Full-stack implementation agent. Handles code changes from quick fixes (quick-flow-solo-dev) to full feature implementations (dev-agent). Reads specs, UX designs, and architecture notes before writing code.
+          - generic [ref=e89]:
+            - generic [ref=e90]: Key skills
+            - generic [ref=e91]:
+              - generic [ref=e92]: typescript-best-practices
+              - generic [ref=e93]: react-expert
+              - generic [ref=e94]: systematic-debugging
+              - generic [ref=e95]: security-review
+          - generic [ref=e96]:
+            - generic [ref=e97]: "Pairs with:"
+            - text: QA, Architect, UX Designer
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - img [ref=e101]
+            - generic [ref=e104]:
+              - generic [ref=e105]: PM
+              - generic [ref=e106]: Product Management
+          - paragraph [ref=e107]: Writes Product Briefs, PRDs, and synthesizes research into actionable requirements. Routes tasks through triage and decides which workflow track to use. Manages the master orchestrator session.
+          - generic [ref=e108]:
+            - generic [ref=e109]: Key skills
+            - generic [ref=e110]:
+              - generic [ref=e111]: project-context
+              - generic [ref=e112]: triage
+          - generic [ref=e113]:
+            - generic [ref=e114]: "Pairs with:"
+            - text: Analyst, Scrum Master, Architect
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - img [ref=e118]
+            - generic [ref=e121]:
+              - generic [ref=e122]: QA
+              - generic [ref=e123]: Testing & Validation
+          - paragraph [ref=e124]: Writes Playwright .spec.ts test files, validates code changes, and runs the test loop. Uses playwright-cli for browser automation and screenshot comparison. Loops back to Developer on failures.
+          - generic [ref=e125]:
+            - generic [ref=e126]: Key skills
+            - generic [ref=e127]:
+              - generic [ref=e128]: playwright-cli
+              - generic [ref=e129]: systematic-debugging
+              - generic [ref=e130]: typescript-best-practices
+          - generic [ref=e131]:
+            - generic [ref=e132]: "Pairs with:"
+            - text: Developer, UX Designer
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - img [ref=e136]
+            - generic [ref=e140]:
+              - generic [ref=e141]: Scrum Master
+              - generic [ref=e142]: Sprint Management
+          - paragraph [ref=e143]: Decomposes PRDs into epics and user stories. Creates sprint plans, manages the per-story dev loop on Large tracks, and marks stories done after QA validates each.
+          - generic [ref=e144]:
+            - generic [ref=e145]: Key skills
+            - generic [ref=e146]:
+              - generic [ref=e147]: project-context
+              - generic [ref=e148]: triage
+          - generic [ref=e149]:
+            - generic [ref=e150]: "Pairs with:"
+            - text: PM, Developer, Architect
+        - generic [ref=e151]:
+          - generic [ref=e152]:
+            - img [ref=e154]
+            - generic [ref=e156]:
+              - generic [ref=e157]: Tech Writer
+              - generic [ref=e158]: Documentation
+          - paragraph [ref=e159]: Drafts technical documentation, README content, and inline code comments. Runs on /docs team alongside Architect for technical accuracy review.
+          - generic [ref=e160]:
+            - generic [ref=e161]: Key skills
+            - generic [ref=e162]:
+              - generic [ref=e163]: writing-skills
+              - generic [ref=e164]: project-context
+          - generic [ref=e165]:
+            - generic [ref=e166]: "Pairs with:"
+            - text: Architect, PM
+        - generic [ref=e167]:
+          - generic [ref=e168]:
+            - img [ref=e170]
+            - generic [ref=e174]:
+              - generic [ref=e175]: UX Designer
+              - generic [ref=e176]: Interface Design
+          - paragraph [ref=e177]: Creates UX design documents, component specs, and visual hierarchy notes. Also acts as a reviewer (UV = UX Validation) in Review Gates. On the ux-qa team, implements UI code and validates with playwright-cli.
+          - generic [ref=e178]:
+            - generic [ref=e179]: Key skills
+            - generic [ref=e180]:
+              - generic [ref=e181]: frontend-responsive-design-standards
+              - generic [ref=e182]: react-expert
+              - generic [ref=e183]: ui-ux-pro-custom
+              - generic [ref=e184]: ux-audit
+          - generic [ref=e185]:
+            - generic [ref=e186]: "Pairs with:"
+            - text: Developer, Architect, QA
+  - generic [ref=e189]:
+    - img [ref=e191]
+    - generic [ref=e196]:
+      - heading "Migrating from bmad?" [level=3] [ref=e197]
+      - paragraph [ref=e198]: One command renames all bmad directories, modules, and commands to the arcwright namespace — with a 7-step verification pass included.
+      - generic [ref=e199]:
+        - code [ref=e200]: /arcwright-migrate
+        - img [ref=e201]
+        - code [ref=e203]: "--dry-run first"
+  - contentinfo [ref=e204]:
+    - generic [ref=e205]:
+      - generic [ref=e206]:
+        - generic [ref=e207]:
+          - generic [ref=e208]: arcwright
+          - paragraph [ref=e209]: AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
+        - generic [ref=e210]:
+          - heading "Packages" [level=4] [ref=e211]
+          - generic [ref=e212]:
+            - link "@arcwright-ai/agent-orchestration Agents, skills, workflows, IDE configs" [ref=e213] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+              - img [ref=e214]
+              - generic [ref=e218]:
+                - generic [ref=e219]: "@arcwright-ai/agent-orchestration"
+                - generic [ref=e220]: Agents, skills, workflows, IDE configs
+            - link "@arcwright-ai/tmux-setup tmux config + scripts for AI workflows" [ref=e221] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/tmux-setup
+              - img [ref=e222]
+              - generic [ref=e226]:
+                - generic [ref=e227]: "@arcwright-ai/tmux-setup"
+                - generic [ref=e228]: tmux config + scripts for AI workflows
+        - generic [ref=e229]:
+          - heading "Links" [level=4] [ref=e230]
+          - generic [ref=e231]:
+            - link "GitHub Repository" [ref=e232] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI
+              - img [ref=e233]
+              - text: GitHub Repository
+              - img [ref=e235]
+            - link "Documentation" [ref=e239] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI/blob/main/README.md
+              - img [ref=e240]
+              - text: Documentation
+      - generic [ref=e244]:
+        - paragraph [ref=e245]: MIT License — open source, free forever
+        - paragraph [ref=e246]: arcwright.space

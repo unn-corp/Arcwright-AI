@@ -76,51 +76,6 @@ const PLATFORMS = {
     rulesFile: null,  // Kiro uses steering files, not a single rules file
     rulesMarker: null,
   },
-  'cursor': {
-    label: 'Cursor',
-    agentDir: '.cursor/rules',
-    skillsDir: null,
-    steeringDir: null,
-    hooksDir: null,
-    rulesFile: '.cursor/rules/arcwright.mdc',
-    rulesMarker: '## Arcwright',
-  },
-  'windsurf': {
-    label: 'Windsurf',
-    agentDir: null,
-    skillsDir: null,
-    steeringDir: null,
-    hooksDir: null,
-    rulesFile: '.windsurfrules',
-    rulesMarker: '## Arcwright',
-  },
-  'cline': {
-    label: 'Cline',
-    agentDir: null,
-    skillsDir: null,
-    steeringDir: null,
-    hooksDir: null,
-    rulesFile: '.clinerules',
-    rulesMarker: '## Arcwright',
-  },
-  'github-copilot': {
-    label: 'GitHub Copilot',
-    agentDir: '.github/copilot-instructions.d',
-    skillsDir: null,
-    steeringDir: null,
-    hooksDir: null,
-    rulesFile: '.github/copilot-instructions.md',
-    rulesMarker: '## Arcwright',
-  },
-  'gemini': {
-    label: 'Gemini CLI',
-    agentDir: null,
-    skillsDir: null,
-    steeringDir: null,
-    hooksDir: null,
-    rulesFile: 'GEMINI.md',
-    rulesMarker: '## Arcwright',
-  },
 };
 
 // ─── Cross-platform home resolution ──────────────────────────────────────────
@@ -150,7 +105,7 @@ function getHomes(platform) {
  * Terminal-based tools use Linux home (even on WSL).
  * GUI IDE tools use Windows home when on WSL.
  */
-const TERMINAL_TOOLS = ['claude-code', 'gemini'];
+const TERMINAL_TOOLS = ['claude-code'];
 
 function resolveToolPath(tool, relativePath, isGlobal, homes, platform) {
   if (!isGlobal) return null; // caller handles project paths
@@ -171,21 +126,6 @@ const GLOBAL_PATHS = {
     agents: '.kiro/agents',
     skills: '.kiro/skills',
     steering: '.kiro/steering',
-  },
-  'cursor': {
-    rules: '.cursor/rules/arcwright.mdc',
-  },
-  'windsurf': {
-    rules: '.codeium/windsurf/globalRules/arcwright.md',
-  },
-  'cline': {
-    rules: '.clinerules',
-  },
-  'github-copilot': {
-    rules: '.github/copilot-instructions.md',
-  },
-  'gemini': {
-    rules: 'GEMINI.md',
   },
 };
 
@@ -538,11 +478,6 @@ async function install(opts) {
       options: [
         { value: 'claude-code',     label: 'Claude Code',     hint: 'agents, CLAUDE.md, settings.json, tmux setup' },
         { value: 'kiro',            label: 'Kiro (IDE + CLI)', hint: '.kiro/skills/, .kiro/steering/' },
-        { value: 'cursor',          label: 'Cursor',          hint: '.cursor/rules/arcwright.mdc' },
-        { value: 'windsurf',        label: 'Windsurf',        hint: '.windsurfrules' },
-        { value: 'cline',           label: 'Cline',           hint: '.clinerules' },
-        { value: 'github-copilot',  label: 'GitHub Copilot',  hint: '.github/copilot-instructions.md' },
-        { value: 'gemini',          label: 'Gemini CLI',      hint: 'GEMINI.md' },
       ],
       initialValues: existingManifest?.tools || ['claude-code'],
       required: false,
@@ -1035,11 +970,6 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
 
 function getFileHeader(tool) {
   switch (tool) {
-    case 'cursor':       return '# Cursor Rules — Arcwright\n';
-    case 'windsurf':     return '# Windsurf Rules — Arcwright\n';
-    case 'cline':        return '# Cline Rules — Arcwright\n';
-    case 'github-copilot': return '# GitHub Copilot Instructions — Arcwright\n';
-    case 'gemini':       return '# Gemini CLI Configuration — Arcwright\n';
     default:             return '# Claude Code Configuration — Arcwright\n';
   }
 }

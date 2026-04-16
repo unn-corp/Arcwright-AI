@@ -12,11 +12,6 @@ const pkg = require('../package.json');
 const SUPPORTED_TOOLS = [
   'claude-code',
   'kiro',
-  'cursor',
-  'windsurf',
-  'cline',
-  'github-copilot',
-  'gemini',
 ].join(', ');
 
 const program = new Command();
@@ -57,7 +52,7 @@ Examples:
   npx @arcwright-ai/agent-orchestration --no-teams --yes
 
   # Install with specific IDEs
-  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor --yes
+  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro --yes
 
   # Install into a specific directory
   npx @arcwright-ai/agent-orchestration --directory /path/to/project --yes
@@ -133,17 +128,12 @@ program
       ['Platform ID',      'Label',            'Rules file',                        'Agent stubs'],
       ['claude-code',      'Claude Code',       '.claude/CLAUDE.md',                 '.claude/agents/'],
       ['kiro',             'Kiro (IDE + CLI)',   '.kiro/steering/*.md',               '.kiro/skills/'],
-      ['cursor',           'Cursor',            '.cursor/rules/arcwright.mdc',        '—'],
-      ['windsurf',         'Windsurf',          '.windsurfrules',                    '—'],
-      ['cline',            'Cline',             '.clinerules',                       '—'],
-      ['github-copilot',   'GitHub Copilot',    '.github/copilot-instructions.md',   '—'],
-      ['gemini',           'Gemini CLI',        'GEMINI.md',                         '—'],
     ];
     const widths = rows[0].map((_, i) => Math.max(...rows.map(r => r[i].length)));
     for (const row of rows) {
       console.log('  ' + row.map((cell, i) => cell.padEnd(widths[i])).join('   '));
     }
-    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor\n');
+    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro\n');
   });
 
 // ─── tmux ─────────────────────────────────────────────────────────────────────

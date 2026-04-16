@@ -1,0 +1,175 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - navigation [ref=e5]:
+    - generic [ref=e7]:
+      - link "arcwright /ai" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: arcwright
+        - generic [ref=e10]: /ai
+      - generic [ref=e11]:
+        - link "Tracks" [ref=e12] [cursor=pointer]:
+          - /url: /tracks
+        - link "Teams" [ref=e13] [cursor=pointer]:
+          - /url: /teams
+        - link "Agents" [ref=e14] [cursor=pointer]:
+          - /url: /agents
+        - link "Skills" [ref=e15] [cursor=pointer]:
+          - /url: /skills
+        - link "IDEs" [ref=e16] [cursor=pointer]:
+          - /url: /ides
+          - text: IDEs
+        - link "tmux" [ref=e18] [cursor=pointer]:
+          - /url: /tmux
+      - generic [ref=e19]:
+        - link "View on GitHub" [ref=e20] [cursor=pointer]:
+          - /url: https://github.com/UNN-Devotek/Arcwright-AI
+          - img [ref=e21]
+        - link "View on npm" [ref=e23] [cursor=pointer]:
+          - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+          - img [ref=e24]
+          - text: npm
+          - img [ref=e28]
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - heading "Supported IDEs" [level=2] [ref=e37]
+          - paragraph [ref=e38]: One install command. Works across every major AI coding environment.
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - img [ref=e41]
+            - generic [ref=e43]: Claude Code
+          - generic [ref=e44]:
+            - img [ref=e45]
+            - generic [ref=e47]: Kiro
+          - generic [ref=e48]:
+            - img [ref=e49]
+            - generic [ref=e51]: Cursor
+          - generic [ref=e52]:
+            - img [ref=e53]
+            - generic [ref=e55]: Windsurf
+          - generic [ref=e56]:
+            - img [ref=e57]
+            - generic [ref=e59]: Cline
+          - generic [ref=e60]:
+            - img [ref=e61]
+            - generic [ref=e63]: GitHub Copilot
+          - generic [ref=e64]:
+            - img [ref=e65]
+            - generic [ref=e67]: Gemini
+        - generic [ref=e68]:
+          - generic [ref=e69]: Multi-IDE install
+          - code [ref=e72]: npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor
+          - paragraph [ref=e73]:
+            - text: "Supports:"
+            - generic [ref=e74]:
+              - code [ref=e75]: claude-code
+              - text: ","
+            - generic [ref=e76]:
+              - code [ref=e77]: kiro
+              - text: ","
+            - generic [ref=e78]:
+              - code [ref=e79]: cursor
+              - text: ","
+            - generic [ref=e80]:
+              - code [ref=e81]: windsurf
+              - text: ","
+            - generic [ref=e82]:
+              - code [ref=e83]: cline
+              - text: ","
+            - generic [ref=e84]:
+              - code [ref=e85]: github-copilot
+              - text: ","
+            - code [ref=e87]: gemini
+      - generic [ref=e89]:
+        - generic [ref=e90]:
+          - heading "tmux Setup" [level=2] [ref=e91]
+          - paragraph [ref=e92]: Standalone tmux configuration optimised for AI agent workflows. Split panes, live agent output, coordinated signals.
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - generic [ref=e100]: arcwright — tmux
+            - generic [ref=e101]:
+              - generic [ref=e102]: $ npx @arcwright-ai/tmux-setup
+              - generic [ref=e103]: ✓ Catppuccin Frappe theme applied
+              - generic [ref=e104]: ✓ Pane title sync enabled
+              - generic [ref=e105]: ✓ Clipboard integration (WSL2 → Windows)
+              - generic [ref=e106]: ✓ Actions popup installed
+              - generic [ref=e107]: ✓ Agent orchestration scripts ready
+              - generic [ref=e108]: ─── Arcwright · 2 panes ────────────────────
+              - generic [ref=e109]:
+                - generic [ref=e110]:
+                  - generic [ref=e111]: ▸ architect-agent
+                  - generic [ref=e112]: Designing system…
+                - generic [ref=e113]:
+                  - generic [ref=e114]: ▸ dev-agent
+                  - generic [ref=e115]: Waiting for spec…
+          - generic [ref=e116]:
+            - generic [ref=e117]:
+              - img [ref=e119]
+              - generic [ref=e123]:
+                - generic [ref=e124]: Catppuccin Frappe theme
+                - generic [ref=e125]: Powerline status bar, Nerd Font optimised
+            - generic [ref=e126]:
+              - img [ref=e128]
+              - generic [ref=e130]:
+                - generic [ref=e131]: Agent orchestration scripts
+                - generic [ref=e132]: dispatch.sh, float_term.sh, watch-sync.sh
+            - generic [ref=e133]:
+              - img [ref=e135]
+              - generic [ref=e138]:
+                - generic [ref=e139]: Pane title sync
+                - generic [ref=e140]: Auto-updates from Claude Code's OSC 2 title
+            - generic [ref=e141]:
+              - img [ref=e143]
+              - generic [ref=e145]:
+                - generic [ref=e146]: Actions popup
+                - generic [ref=e147]: Window, pane, clipboard, and launch shortcuts
+            - generic [ref=e148]:
+              - generic [ref=e149]: Standalone install
+              - code [ref=e150]: npx @arcwright-ai/tmux-setup
+  - generic [ref=e153]:
+    - img [ref=e155]
+    - generic [ref=e160]:
+      - heading "Migrating from bmad?" [level=3] [ref=e161]
+      - paragraph [ref=e162]: One command renames all bmad directories, modules, and commands to the arcwright namespace — with a 7-step verification pass included.
+      - generic [ref=e163]:
+        - code [ref=e164]: /arcwright-migrate
+        - img [ref=e165]
+        - code [ref=e167]: "--dry-run first"
+  - contentinfo [ref=e168]:
+    - generic [ref=e169]:
+      - generic [ref=e170]:
+        - generic [ref=e171]:
+          - generic [ref=e172]: arcwright
+          - paragraph [ref=e173]: AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
+        - generic [ref=e174]:
+          - heading "Packages" [level=4] [ref=e175]
+          - generic [ref=e176]:
+            - link "@arcwright-ai/agent-orchestration Agents, skills, workflows, IDE configs" [ref=e177] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+              - img [ref=e178]
+              - generic [ref=e182]:
+                - generic [ref=e183]: "@arcwright-ai/agent-orchestration"
+                - generic [ref=e184]: Agents, skills, workflows, IDE configs
+            - link "@arcwright-ai/tmux-setup tmux config + scripts for AI workflows" [ref=e185] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/tmux-setup
+              - img [ref=e186]
+              - generic [ref=e190]:
+                - generic [ref=e191]: "@arcwright-ai/tmux-setup"
+                - generic [ref=e192]: tmux config + scripts for AI workflows
+        - generic [ref=e193]:
+          - heading "Links" [level=4] [ref=e194]
+          - generic [ref=e195]:
+            - link "GitHub Repository" [ref=e196] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI
+              - img [ref=e197]
+              - text: GitHub Repository
+              - img [ref=e199]
+            - link "Documentation" [ref=e203] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI/blob/main/README.md
+              - img [ref=e204]
+              - text: Documentation
+      - generic [ref=e208]:
+        - paragraph [ref=e209]: MIT License — open source, free forever
+        - paragraph [ref=e210]: arcwright.space

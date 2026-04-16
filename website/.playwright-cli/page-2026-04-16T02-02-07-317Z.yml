@@ -1,0 +1,639 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - navigation [ref=e5]:
+    - generic [ref=e7]:
+      - link "arcwright /ai" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: arcwright
+        - generic [ref=e10]: /ai
+      - generic [ref=e11]:
+        - link "Tracks" [ref=e12] [cursor=pointer]:
+          - /url: /tracks
+          - text: Tracks
+        - link "Teams" [ref=e14] [cursor=pointer]:
+          - /url: /teams
+        - link "Agents" [ref=e15] [cursor=pointer]:
+          - /url: /agents
+        - link "Skills" [ref=e16] [cursor=pointer]:
+          - /url: /skills
+        - link "IDEs" [ref=e17] [cursor=pointer]:
+          - /url: /ides
+        - link "tmux" [ref=e18] [cursor=pointer]:
+          - /url: /tmux
+      - generic [ref=e19]:
+        - link "View on GitHub" [ref=e20] [cursor=pointer]:
+          - /url: https://github.com/UNN-Devotek/Arcwright-AI
+          - img [ref=e21]
+        - link "View on npm" [ref=e23] [cursor=pointer]:
+          - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+          - img [ref=e24]
+          - text: npm
+          - img [ref=e28]
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - heading "Workflow Tracks" [level=2] [ref=e37]
+          - paragraph [ref=e38]: Pick the track sized to your task. The orchestrator handles the rest.
+        - table [ref=e40]:
+          - rowgroup [ref=e41]:
+            - row "Command Scope Pipeline" [ref=e42]:
+              - columnheader "Command" [ref=e43]
+              - columnheader "Scope" [ref=e44]
+              - columnheader "Pipeline" [ref=e45]
+          - rowgroup [ref=e46]:
+            - row "/arcwright-track-nano 1–2 files, ≤20 lines Direct to Dev, no spec overhead" [ref=e47]:
+              - cell "/arcwright-track-nano" [ref=e48]:
+                - code [ref=e49]: /arcwright-track-nano
+              - cell "1–2 files, ≤20 lines" [ref=e50]
+              - cell "Direct to Dev, no spec overhead" [ref=e51]
+            - row "/arcwright-track-small 2–4 files Spec → Dev → Review → QA" [ref=e52]:
+              - cell "/arcwright-track-small" [ref=e53]:
+                - code [ref=e54]: /arcwright-track-small
+              - cell "2–4 files" [ref=e55]
+              - cell "Spec → Dev → Review → QA" [ref=e56]
+            - row "/arcwright-track-compact 4–8 files Optional Research → Dev → Review → QA" [ref=e57]:
+              - cell "/arcwright-track-compact" [ref=e58]:
+                - code [ref=e59]: /arcwright-track-compact
+              - cell "4–8 files" [ref=e60]
+              - cell "Optional Research → Dev → Review → QA" [ref=e61]
+            - row "/arcwright-track-medium 6–12 files Spec → Research → UX → Review Gate → Dev → Final Gate → QA" [ref=e62]:
+              - cell "/arcwright-track-medium" [ref=e63]:
+                - code [ref=e64]: /arcwright-track-medium
+              - cell "6–12 files" [ref=e65]
+              - cell "Spec → Research → UX → Review Gate → Dev → Final Gate → QA" [ref=e66]
+            - row "/arcwright-track-extended 10–16 files PRD + arch notes, 2 review gates" [ref=e67]:
+              - cell "/arcwright-track-extended" [ref=e68]:
+                - code [ref=e69]: /arcwright-track-extended
+              - cell "10–16 files" [ref=e70]
+              - cell "PRD + arch notes, 2 review gates" [ref=e71]
+            - row "/arcwright-track-large 12+ files Full planning, epic loop, parallel research, final gates" [ref=e72]:
+              - cell "/arcwright-track-large" [ref=e73]:
+                - code [ref=e74]: /arcwright-track-large
+              - cell "12+ files" [ref=e75]
+              - cell "Full planning, epic loop, parallel research, final gates" [ref=e76]
+            - row "/arcwright-track-rv Any Audit → synthesize findings → route to fix path" [ref=e77]:
+              - cell "/arcwright-track-rv" [ref=e78]:
+                - code [ref=e79]: /arcwright-track-rv
+              - cell "Any" [ref=e80]
+              - cell "Audit → synthesize findings → route to fix path" [ref=e81]
+      - generic [ref=e83]:
+        - generic [ref=e84]:
+          - heading "Interactive Workflow Canvas" [level=2] [ref=e85]
+          - paragraph [ref=e86]: All 6 tracks side by side. Click a track header to select it, click any step card to expand inputs, outputs, and sub-agent details.
+        - generic [ref=e87]:
+          - paragraph [ref=e89]:
+            - text: "tmux mode: When"
+            - code [ref=e90]: $TMUX
+            - text: "is set, split-pane agents spawn in new panes. Fallback (no tmux): all split-pane steps run in-process."
+          - generic [ref=e91]:
+            - generic [ref=e94]: Normal step
+            - generic [ref=e97]: Review Gate
+            - generic [ref=e100]: User Approval / HALT
+            - generic [ref=e103]: /prepare-to-merge
+            - generic [ref=e106]: Scope guard / optional
+            - generic [ref=e109]: Loop step
+            - generic [ref=e110]:
+              - generic [ref=e111]: pane
+              - generic [ref=e112]: split-pane agent
+            - generic [ref=e113]:
+              - generic [ref=e114]: proc
+              - generic [ref=e115]: in-process agent
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - button "[N] 0–1 Nano ≤20 lines, 1–2 files" [pressed] [ref=e119] [cursor=pointer]:
+                - generic [ref=e120]:
+                  - generic [ref=e121]: "[N]"
+                  - generic [ref=e122]: 0–1
+                - generic [ref=e123]: Nano
+                - generic [ref=e124]: ≤20 lines, 1–2 files
+              - generic [ref=e125]:
+                - generic [ref=e126]:
+                  - button "1. Quick Dev pane quick-flow-solo-dev" [ref=e128] [cursor=pointer]:
+                    - generic [ref=e129]:
+                      - generic [ref=e130]:
+                        - generic [ref=e131]: "1."
+                        - generic [ref=e132]: Quick Dev
+                      - generic [ref=e133]: pane
+                    - generic [ref=e134]: quick-flow-solo-dev
+                  - generic [ref=e136]: ↓
+                - generic [ref=e137]:
+                  - button "2. Scope Guard If >20 lines → HALT, upgrade to Small" [ref=e139] [cursor=pointer]:
+                    - generic [ref=e141]:
+                      - generic [ref=e142]: "2."
+                      - generic [ref=e143]: Scope Guard
+                    - generic [ref=e144]: If >20 lines → HALT, upgrade to Small
+                  - generic [ref=e146]: ↓
+                - generic [ref=e147]:
+                  - button "3. DRY + UV Gate proc review agent Findings → quick-dev loop" [ref=e149] [cursor=pointer]:
+                    - generic [ref=e150]:
+                      - generic [ref=e151]:
+                        - generic [ref=e152]: "3."
+                        - generic [ref=e153]: DRY + UV Gate
+                      - generic [ref=e154]: proc
+                    - generic [ref=e155]: review agent
+                    - generic [ref=e156]: Findings → quick-dev loop
+                  - generic [ref=e158]: ↓
+                - generic [ref=e159]:
+                  - button "4. USER APPROVAL" [ref=e161] [cursor=pointer]:
+                    - generic [ref=e163]:
+                      - generic [ref=e164]: "4."
+                      - generic [ref=e165]: USER APPROVAL
+                  - generic [ref=e167]: ↓
+                - button "5. /prepare-to-merge proc" [ref=e170] [cursor=pointer]:
+                  - generic [ref=e171]:
+                    - generic [ref=e172]:
+                      - generic [ref=e173]: "5."
+                      - generic [ref=e174]: /prepare-to-merge
+                    - generic [ref=e175]: proc
+            - generic [ref=e176]:
+              - button "[S] 2 Small 2–4 files" [ref=e177] [cursor=pointer]:
+                - generic [ref=e178]:
+                  - generic [ref=e179]: "[S]"
+                  - generic [ref=e180]: "2"
+                - generic [ref=e181]: Small
+                - generic [ref=e182]: 2–4 files
+              - generic [ref=e183]:
+                - generic [ref=e184]:
+                  - button "1. Quick Spec proc quick-flow-solo-dev" [ref=e186] [cursor=pointer]:
+                    - generic [ref=e187]:
+                      - generic [ref=e188]:
+                        - generic [ref=e189]: "1."
+                        - generic [ref=e190]: Quick Spec
+                      - generic [ref=e191]: proc
+                    - generic [ref=e192]: quick-flow-solo-dev
+                  - generic [ref=e194]: ↓
+                - generic [ref=e195]:
+                  - button "2. Quick Dev pane quick-flow-solo-dev" [ref=e197] [cursor=pointer]:
+                    - generic [ref=e198]:
+                      - generic [ref=e199]:
+                        - generic [ref=e200]: "2."
+                        - generic [ref=e201]: Quick Dev
+                      - generic [ref=e202]: pane
+                    - generic [ref=e203]: quick-flow-solo-dev
+                  - generic [ref=e205]: ↓
+                - generic [ref=e206]:
+                  - button "3. Review Gate proc review agent" [ref=e208] [cursor=pointer]:
+                    - generic [ref=e209]:
+                      - generic [ref=e210]:
+                        - generic [ref=e211]: "3."
+                        - generic [ref=e212]: Review Gate
+                      - generic [ref=e213]: proc
+                    - generic [ref=e214]: review agent
+                  - generic [ref=e216]: ↓
+                - generic [ref=e217]:
+                  - button "4. QA Tests pane qa-agent" [ref=e219] [cursor=pointer]:
+                    - generic [ref=e220]:
+                      - generic [ref=e221]:
+                        - generic [ref=e222]: "4."
+                        - generic [ref=e223]: QA Tests
+                      - generic [ref=e224]: pane
+                    - generic [ref=e225]: qa-agent
+                  - generic [ref=e227]: ↓
+                - generic [ref=e228]:
+                  - button "5. USER APPROVAL" [ref=e230] [cursor=pointer]:
+                    - generic [ref=e232]:
+                      - generic [ref=e233]: "5."
+                      - generic [ref=e234]: USER APPROVAL
+                  - generic [ref=e236]: ↓
+                - button "6. /prepare-to-merge proc" [ref=e239] [cursor=pointer]:
+                  - generic [ref=e240]:
+                    - generic [ref=e241]:
+                      - generic [ref=e242]: "6."
+                      - generic [ref=e243]: /prepare-to-merge
+                    - generic [ref=e244]: proc
+            - generic [ref=e245]:
+              - button "[C] 3 Compact 4–8 files" [ref=e246] [cursor=pointer]:
+                - generic [ref=e247]:
+                  - generic [ref=e248]: "[C]"
+                  - generic [ref=e249]: "3"
+                - generic [ref=e250]: Compact
+                - generic [ref=e251]: 4–8 files
+              - generic [ref=e252]:
+                - generic [ref=e253]:
+                  - button "1. Quick Spec proc quick-flow-solo-dev" [ref=e255] [cursor=pointer]:
+                    - generic [ref=e256]:
+                      - generic [ref=e257]:
+                        - generic [ref=e258]: "1."
+                        - generic [ref=e259]: Quick Spec
+                      - generic [ref=e260]: proc
+                    - generic [ref=e261]: quick-flow-solo-dev
+                  - generic [ref=e263]: ↓
+                - generic [ref=e264]:
+                  - button "2. Quick Research proc analyst-agent Optional" [ref=e266] [cursor=pointer]:
+                    - generic [ref=e267]:
+                      - generic [ref=e268]:
+                        - generic [ref=e269]: "2."
+                        - generic [ref=e270]: Quick Research
+                      - generic [ref=e271]: proc
+                    - generic [ref=e272]: analyst-agent
+                    - generic [ref=e273]: Optional
+                  - generic [ref=e275]: ↓
+                - generic [ref=e276]:
+                  - button "3. Quick Dev pane quick-flow-solo-dev" [ref=e278] [cursor=pointer]:
+                    - generic [ref=e279]:
+                      - generic [ref=e280]:
+                        - generic [ref=e281]: "3."
+                        - generic [ref=e282]: Quick Dev
+                      - generic [ref=e283]: pane
+                    - generic [ref=e284]: quick-flow-solo-dev
+                  - generic [ref=e286]: ↓
+                - generic [ref=e287]:
+                  - button "4. Review Gate proc review agent" [ref=e289] [cursor=pointer]:
+                    - generic [ref=e290]:
+                      - generic [ref=e291]:
+                        - generic [ref=e292]: "4."
+                        - generic [ref=e293]: Review Gate
+                      - generic [ref=e294]: proc
+                    - generic [ref=e295]: review agent
+                  - generic [ref=e297]: ↓
+                - generic [ref=e298]:
+                  - button "5. QA Tests pane qa-agent" [ref=e300] [cursor=pointer]:
+                    - generic [ref=e301]:
+                      - generic [ref=e302]:
+                        - generic [ref=e303]: "5."
+                        - generic [ref=e304]: QA Tests
+                      - generic [ref=e305]: pane
+                    - generic [ref=e306]: qa-agent
+                  - generic [ref=e308]: ↓
+                - generic [ref=e309]:
+                  - button "6. USER APPROVAL" [ref=e311] [cursor=pointer]:
+                    - generic [ref=e313]:
+                      - generic [ref=e314]: "6."
+                      - generic [ref=e315]: USER APPROVAL
+                  - generic [ref=e317]: ↓
+                - button "7. /prepare-to-merge proc" [ref=e320] [cursor=pointer]:
+                  - generic [ref=e321]:
+                    - generic [ref=e322]:
+                      - generic [ref=e323]: "7."
+                      - generic [ref=e324]: /prepare-to-merge
+                    - generic [ref=e325]: proc
+            - generic [ref=e326]:
+              - button "[M] 4–5 Medium 6–12 files" [ref=e327] [cursor=pointer]:
+                - generic [ref=e328]:
+                  - generic [ref=e329]: "[M]"
+                  - generic [ref=e330]: 4–5
+                - generic [ref=e331]: Medium
+                - generic [ref=e332]: 6–12 files
+              - generic [ref=e333]:
+                - generic [ref=e334]:
+                  - button "1. Quick Spec proc quick-flow-solo-dev" [ref=e336] [cursor=pointer]:
+                    - generic [ref=e337]:
+                      - generic [ref=e338]:
+                        - generic [ref=e339]: "1."
+                        - generic [ref=e340]: Quick Spec
+                      - generic [ref=e341]: proc
+                    - generic [ref=e342]: quick-flow-solo-dev
+                  - generic [ref=e344]: ↓
+                - generic [ref=e345]:
+                  - button "2. Research proc analyst-agent ×1–2" [ref=e347] [cursor=pointer]:
+                    - generic [ref=e348]:
+                      - generic [ref=e349]:
+                        - generic [ref=e350]: "2."
+                        - generic [ref=e351]: Research
+                      - generic [ref=e352]: proc
+                    - generic [ref=e353]: analyst-agent ×1–2
+                  - generic [ref=e355]: ↓
+                - generic [ref=e356]:
+                  - button "3. UX Design pane ux-designer-agent" [ref=e358] [cursor=pointer]:
+                    - generic [ref=e359]:
+                      - generic [ref=e360]:
+                        - generic [ref=e361]: "3."
+                        - generic [ref=e362]: UX Design
+                      - generic [ref=e363]: pane
+                    - generic [ref=e364]: ux-designer-agent
+                  - generic [ref=e366]: ↓
+                - generic [ref=e367]:
+                  - button "4. Review Gate 1 proc review agent Spec + UX review" [ref=e369] [cursor=pointer]:
+                    - generic [ref=e370]:
+                      - generic [ref=e371]:
+                        - generic [ref=e372]: "4."
+                        - generic [ref=e373]: Review Gate 1
+                      - generic [ref=e374]: proc
+                    - generic [ref=e375]: review agent
+                    - generic [ref=e376]: Spec + UX review
+                  - generic [ref=e378]: ↓
+                - generic [ref=e379]:
+                  - button "5. Quick Dev pane quick-flow-solo-dev" [ref=e381] [cursor=pointer]:
+                    - generic [ref=e382]:
+                      - generic [ref=e383]:
+                        - generic [ref=e384]: "5."
+                        - generic [ref=e385]: Quick Dev
+                      - generic [ref=e386]: pane
+                    - generic [ref=e387]: quick-flow-solo-dev
+                  - generic [ref=e389]: ↓
+                - generic [ref=e390]:
+                  - button "6. Final Review Gate proc review agent" [ref=e392] [cursor=pointer]:
+                    - generic [ref=e393]:
+                      - generic [ref=e394]:
+                        - generic [ref=e395]: "6."
+                        - generic [ref=e396]: Final Review Gate
+                      - generic [ref=e397]: proc
+                    - generic [ref=e398]: review agent
+                  - generic [ref=e400]: ↓
+                - generic [ref=e401]:
+                  - button "7. QA Tests pane qa-agent" [ref=e403] [cursor=pointer]:
+                    - generic [ref=e404]:
+                      - generic [ref=e405]:
+                        - generic [ref=e406]: "7."
+                        - generic [ref=e407]: QA Tests
+                      - generic [ref=e408]: pane
+                    - generic [ref=e409]: qa-agent
+                  - generic [ref=e411]: ↓
+                - generic [ref=e412]:
+                  - button "8. USER APPROVAL" [ref=e414] [cursor=pointer]:
+                    - generic [ref=e416]:
+                      - generic [ref=e417]: "8."
+                      - generic [ref=e418]: USER APPROVAL
+                  - generic [ref=e420]: ↓
+                - button "9. /prepare-to-merge proc" [ref=e423] [cursor=pointer]:
+                  - generic [ref=e424]:
+                    - generic [ref=e425]:
+                      - generic [ref=e426]: "9."
+                      - generic [ref=e427]: /prepare-to-merge
+                    - generic [ref=e428]: proc
+            - generic [ref=e429]:
+              - button "[E] 6–7 Extended 10–16 files" [ref=e430] [cursor=pointer]:
+                - generic [ref=e431]:
+                  - generic [ref=e432]: "[E]"
+                  - generic [ref=e433]: 6–7
+                - generic [ref=e434]: Extended
+                - generic [ref=e435]: 10–16 files
+              - generic [ref=e436]:
+                - generic [ref=e437]:
+                  - button "1. Quick Spec proc quick-flow-solo-dev" [ref=e439] [cursor=pointer]:
+                    - generic [ref=e440]:
+                      - generic [ref=e441]:
+                        - generic [ref=e442]: "1."
+                        - generic [ref=e443]: Quick Spec
+                      - generic [ref=e444]: proc
+                    - generic [ref=e445]: quick-flow-solo-dev
+                  - generic [ref=e447]: ↓
+                - generic [ref=e448]:
+                  - button "2. Research ×2 proc analyst-agent ×2 Codebase + domain" [ref=e450] [cursor=pointer]:
+                    - generic [ref=e451]:
+                      - generic [ref=e452]:
+                        - generic [ref=e453]: "2."
+                        - generic [ref=e454]: Research ×2
+                      - generic [ref=e455]: proc
+                    - generic [ref=e456]: analyst-agent ×2
+                    - generic [ref=e457]: Codebase + domain
+                  - generic [ref=e459]: ↓
+                - generic [ref=e460]:
+                  - button "3. Create PRD pane pm-agent" [ref=e462] [cursor=pointer]:
+                    - generic [ref=e463]:
+                      - generic [ref=e464]:
+                        - generic [ref=e465]: "3."
+                        - generic [ref=e466]: Create PRD
+                      - generic [ref=e467]: pane
+                    - generic [ref=e468]: pm-agent
+                  - generic [ref=e470]: ↓
+                - generic [ref=e471]:
+                  - button "4. UX + Arch + Sprint pane ux-designer → architect Sequential" [ref=e473] [cursor=pointer]:
+                    - generic [ref=e474]:
+                      - generic [ref=e475]:
+                        - generic [ref=e476]: "4."
+                        - generic [ref=e477]: UX + Arch + Sprint
+                      - generic [ref=e478]: pane
+                    - generic [ref=e479]: ux-designer → architect
+                    - generic [ref=e480]: Sequential
+                  - generic [ref=e482]: ↓
+                - generic [ref=e483]:
+                  - button "5. Review Gate 1 proc review agent Plans review" [ref=e485] [cursor=pointer]:
+                    - generic [ref=e486]:
+                      - generic [ref=e487]:
+                        - generic [ref=e488]: "5."
+                        - generic [ref=e489]: Review Gate 1
+                      - generic [ref=e490]: proc
+                    - generic [ref=e491]: review agent
+                    - generic [ref=e492]: Plans review
+                  - generic [ref=e494]: ↓
+                - generic [ref=e495]:
+                  - button "6. Dev pane dev-agent" [ref=e497] [cursor=pointer]:
+                    - generic [ref=e498]:
+                      - generic [ref=e499]:
+                        - generic [ref=e500]: "6."
+                        - generic [ref=e501]: Dev
+                      - generic [ref=e502]: pane
+                    - generic [ref=e503]: dev-agent
+                  - generic [ref=e505]: ↓
+                - generic [ref=e506]:
+                  - button "7. Review Gate 2 proc review agent Code review" [ref=e508] [cursor=pointer]:
+                    - generic [ref=e509]:
+                      - generic [ref=e510]:
+                        - generic [ref=e511]: "7."
+                        - generic [ref=e512]: Review Gate 2
+                      - generic [ref=e513]: proc
+                    - generic [ref=e514]: review agent
+                    - generic [ref=e515]: Code review
+                  - generic [ref=e517]: ↓
+                - generic [ref=e518]:
+                  - button "8. QA Tests pane qa-agent" [ref=e520] [cursor=pointer]:
+                    - generic [ref=e521]:
+                      - generic [ref=e522]:
+                        - generic [ref=e523]: "8."
+                        - generic [ref=e524]: QA Tests
+                      - generic [ref=e525]: pane
+                    - generic [ref=e526]: qa-agent
+                  - generic [ref=e528]: ↓
+                - generic [ref=e529]:
+                  - button "9. USER APPROVAL" [ref=e531] [cursor=pointer]:
+                    - generic [ref=e533]:
+                      - generic [ref=e534]: "9."
+                      - generic [ref=e535]: USER APPROVAL
+                  - generic [ref=e537]: ↓
+                - button "10. /prepare-to-merge proc" [ref=e540] [cursor=pointer]:
+                  - generic [ref=e541]:
+                    - generic [ref=e542]:
+                      - generic [ref=e543]: "10."
+                      - generic [ref=e544]: /prepare-to-merge
+                    - generic [ref=e545]: proc
+            - generic [ref=e546]:
+              - button "[L] 8+ Large 12+ files" [ref=e547] [cursor=pointer]:
+                - generic [ref=e548]:
+                  - generic [ref=e549]: "[L]"
+                  - generic [ref=e550]: 8+
+                - generic [ref=e551]: Large
+                - generic [ref=e552]: 12+ files
+              - generic [ref=e553]:
+                - generic [ref=e554]:
+                  - button "1. Product Brief pane pm-agent" [ref=e556] [cursor=pointer]:
+                    - generic [ref=e557]:
+                      - generic [ref=e558]:
+                        - generic [ref=e559]: "1."
+                        - generic [ref=e560]: Product Brief
+                      - generic [ref=e561]: pane
+                    - generic [ref=e562]: pm-agent
+                  - generic [ref=e564]: ↓
+                - generic [ref=e565]:
+                  - button "2. Research ×3 (parallel) pane analyst-agent ×3 MR + DR + TR in parallel" [ref=e567] [cursor=pointer]:
+                    - generic [ref=e568]:
+                      - generic [ref=e569]:
+                        - generic [ref=e570]: "2."
+                        - generic [ref=e571]: Research ×3 (parallel)
+                      - generic [ref=e572]: pane
+                    - generic [ref=e573]: analyst-agent ×3
+                    - generic [ref=e574]: MR + DR + TR in parallel
+                  - generic [ref=e576]: ↓
+                - generic [ref=e577]:
+                  - button "3. Create PRD pane pm-agent" [ref=e579] [cursor=pointer]:
+                    - generic [ref=e580]:
+                      - generic [ref=e581]:
+                        - generic [ref=e582]: "3."
+                        - generic [ref=e583]: Create PRD
+                      - generic [ref=e584]: pane
+                    - generic [ref=e585]: pm-agent
+                  - generic [ref=e587]: ↓
+                - generic [ref=e588]:
+                  - button "4. Planning Gate proc review agent 2-sub spec review" [ref=e590] [cursor=pointer]:
+                    - generic [ref=e591]:
+                      - generic [ref=e592]:
+                        - generic [ref=e593]: "4."
+                        - generic [ref=e594]: Planning Gate
+                      - generic [ref=e595]: proc
+                    - generic [ref=e596]: review agent
+                    - generic [ref=e597]: 2-sub spec review
+                  - generic [ref=e599]: ↓
+                - generic [ref=e600]:
+                  - button "5. UX + Architecture (parallel) pane ux-designer + architect Parallel" [ref=e602] [cursor=pointer]:
+                    - generic [ref=e603]:
+                      - generic [ref=e604]:
+                        - generic [ref=e605]: "5."
+                        - generic [ref=e606]: UX + Architecture (parallel)
+                      - generic [ref=e607]: pane
+                    - generic [ref=e608]: ux-designer + architect
+                    - generic [ref=e609]: Parallel
+                  - generic [ref=e611]: ↓
+                - generic [ref=e612]:
+                  - button "6. Design Gate proc review agent 2-sub design review" [ref=e614] [cursor=pointer]:
+                    - generic [ref=e615]:
+                      - generic [ref=e616]:
+                        - generic [ref=e617]: "6."
+                        - generic [ref=e618]: Design Gate
+                      - generic [ref=e619]: proc
+                    - generic [ref=e620]: review agent
+                    - generic [ref=e621]: 2-sub design review
+                  - generic [ref=e623]: ↓
+                - generic [ref=e624]:
+                  - button "7. Epics & Stories pane sm-agent" [ref=e626] [cursor=pointer]:
+                    - generic [ref=e627]:
+                      - generic [ref=e628]:
+                        - generic [ref=e629]: "7."
+                        - generic [ref=e630]: Epics & Stories
+                      - generic [ref=e631]: pane
+                    - generic [ref=e632]: sm-agent
+                  - generic [ref=e634]: ↓
+                - generic [ref=e635]:
+                  - button "8. Readiness Check proc architect-agent Impl. readiness verdict" [ref=e637] [cursor=pointer]:
+                    - generic [ref=e638]:
+                      - generic [ref=e639]:
+                        - generic [ref=e640]: "8."
+                        - generic [ref=e641]: Readiness Check
+                      - generic [ref=e642]: proc
+                    - generic [ref=e643]: architect-agent
+                    - generic [ref=e644]: Impl. readiness verdict
+                  - generic [ref=e646]: ↓
+                - generic [ref=e647]:
+                  - button "9. Sprint Plan pane sm-agent" [ref=e649] [cursor=pointer]:
+                    - generic [ref=e650]:
+                      - generic [ref=e651]:
+                        - generic [ref=e652]: "9."
+                        - generic [ref=e653]: Sprint Plan
+                      - generic [ref=e654]: pane
+                    - generic [ref=e655]: sm-agent
+                  - generic [ref=e657]: ↓
+                - generic [ref=e658]:
+                  - button "10. USER APPROVAL Before epic loop" [ref=e660] [cursor=pointer]:
+                    - generic [ref=e662]:
+                      - generic [ref=e663]: "10."
+                      - generic [ref=e664]: USER APPROVAL
+                    - generic [ref=e665]: Before epic loop
+                  - generic [ref=e667]: ↓
+                - generic [ref=e668]:
+                  - button "11. Per-Story Loop pane dev-agent + qa-agent Loop until all stories done" [ref=e670] [cursor=pointer]:
+                    - generic [ref=e671]:
+                      - generic [ref=e672]:
+                        - generic [ref=e673]: "11."
+                        - generic [ref=e674]: Per-Story Loop
+                      - generic [ref=e675]: pane
+                    - generic [ref=e676]: dev-agent + qa-agent
+                    - generic [ref=e677]: Loop until all stories done
+                  - generic [ref=e679]: ↓
+                - generic [ref=e680]:
+                  - button "12. Final Review Gate proc review agent" [ref=e682] [cursor=pointer]:
+                    - generic [ref=e683]:
+                      - generic [ref=e684]:
+                        - generic [ref=e685]: "12."
+                        - generic [ref=e686]: Final Review Gate
+                      - generic [ref=e687]: proc
+                    - generic [ref=e688]: review agent
+                  - generic [ref=e690]: ↓
+                - generic [ref=e691]:
+                  - button "13. Full QA Suite pane qa-agent" [ref=e693] [cursor=pointer]:
+                    - generic [ref=e694]:
+                      - generic [ref=e695]:
+                        - generic [ref=e696]: "13."
+                        - generic [ref=e697]: Full QA Suite
+                      - generic [ref=e698]: pane
+                    - generic [ref=e699]: qa-agent
+                  - generic [ref=e701]: ↓
+                - generic [ref=e702]:
+                  - button "14. USER APPROVAL Final" [ref=e704] [cursor=pointer]:
+                    - generic [ref=e706]:
+                      - generic [ref=e707]: "14."
+                      - generic [ref=e708]: USER APPROVAL
+                    - generic [ref=e709]: Final
+                  - generic [ref=e711]: ↓
+                - button "15. /prepare-to-merge proc" [ref=e714] [cursor=pointer]:
+                  - generic [ref=e715]:
+                    - generic [ref=e716]:
+                      - generic [ref=e717]: "15."
+                      - generic [ref=e718]: /prepare-to-merge
+                    - generic [ref=e719]: proc
+          - paragraph [ref=e720]: Click a track header to highlight it. Click any step to expand its details.
+  - generic [ref=e723]:
+    - img [ref=e725]
+    - generic [ref=e730]:
+      - heading "Migrating from bmad?" [level=3] [ref=e731]
+      - paragraph [ref=e732]: One command renames all bmad directories, modules, and commands to the arcwright namespace — with a 7-step verification pass included.
+      - generic [ref=e733]:
+        - code [ref=e734]: /arcwright-migrate
+        - img [ref=e735]
+        - code [ref=e737]: "--dry-run first"
+  - contentinfo [ref=e738]:
+    - generic [ref=e739]:
+      - generic [ref=e740]:
+        - generic [ref=e741]:
+          - generic [ref=e742]: arcwright
+          - paragraph [ref=e743]: AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
+        - generic [ref=e744]:
+          - heading "Packages" [level=4] [ref=e745]
+          - generic [ref=e746]:
+            - link "@arcwright-ai/agent-orchestration Agents, skills, workflows, IDE configs" [ref=e747] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/agent-orchestration
+              - img [ref=e748]
+              - generic [ref=e752]:
+                - generic [ref=e753]: "@arcwright-ai/agent-orchestration"
+                - generic [ref=e754]: Agents, skills, workflows, IDE configs
+            - link "@arcwright-ai/tmux-setup tmux config + scripts for AI workflows" [ref=e755] [cursor=pointer]:
+              - /url: https://www.npmjs.com/package/@arcwright-ai/tmux-setup
+              - img [ref=e756]
+              - generic [ref=e760]:
+                - generic [ref=e761]: "@arcwright-ai/tmux-setup"
+                - generic [ref=e762]: tmux config + scripts for AI workflows
+        - generic [ref=e763]:
+          - heading "Links" [level=4] [ref=e764]
+          - generic [ref=e765]:
+            - link "GitHub Repository" [ref=e766] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI
+              - img [ref=e767]
+              - text: GitHub Repository
+              - img [ref=e769]
+            - link "Documentation" [ref=e773] [cursor=pointer]:
+              - /url: https://github.com/UNN-Devotek/Arcwright-AI/blob/main/README.md
+              - img [ref=e774]
+              - text: Documentation
+      - generic [ref=e778]:
+        - paragraph [ref=e779]: MIT License — open source, free forever
+        - paragraph [ref=e780]: arcwright.space
