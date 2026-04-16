@@ -15,12 +15,7 @@ export default function SyncBadge({ timestamp, loading, error }: SyncBadgeProps)
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-3 text-xs font-mono text-accent-peach/80">
-        <span className="w-1.5 h-1.5 rounded-full bg-accent-peach/60" aria-hidden="true" />
-        Using cached content — GitHub unavailable
-      </div>
-    );
+    return null;
   }
 
   return (
