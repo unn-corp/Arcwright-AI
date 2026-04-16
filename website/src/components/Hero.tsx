@@ -59,7 +59,7 @@ export default function Hero() {
 
         {/* Subheading */}
         <p className="font-sans text-lg sm:text-xl text-muted max-w-2xl mx-auto mb-4 leading-relaxed">
-          Specialist agents, workflow tracks, and a 53-skill library — installed into Claude Code and Kiro in one command.
+          Structured specialist agents, workflow tracks, and an extensive skill library.
           Pick a track, the orchestrator does the rest.
         </p>
 
