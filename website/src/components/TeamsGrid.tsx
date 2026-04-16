@@ -30,26 +30,28 @@ const CATEGORY_STYLES: Record<TeamCategory, { border: string; badge: string; tex
 
 const CATEGORIES: TeamCategory[] = ['Development', 'Review', 'Planning', 'Specialist', 'Solo'];
 
-export default function TeamsGrid() {
+export default function TeamsGrid({ hideHeader }: { hideHeader?: boolean } = {}) {
   return (
     <section id="teams" className="pt-6 pb-16 px-4 sm:px-6 bg-surface/20">
       <div className="max-w-7xl mx-auto">
-        <div className="reveal mb-12 text-center">
-          <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Agent Teams
-          </h2>
-          <p className="font-sans text-muted max-w-xl mx-auto">
-            17 pre-built team compositions. Use{' '}
-            <code className="font-mono text-xs bg-surface px-1.5 py-0.5 text-cta">/team</code>
-            {' '}for the interactive selector.
-          </p>
-        </div>
+        {!hideHeader && (
+          <div className="mb-12 text-center">
+            <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
+              Agent Teams
+            </h2>
+            <p className="font-sans text-muted max-w-xl mx-auto">
+              17 pre-built team compositions. Use{' '}
+              <code className="font-mono text-xs bg-surface px-1.5 py-0.5 text-cta">/team</code>
+              {' '}for the interactive selector.
+            </p>
+          </div>
+        )}
 
         {CATEGORIES.map(category => {
           const categoryTeams = teams.filter(t => t.category === category);
           const styles = CATEGORY_STYLES[category];
           return (
-            <div key={category} className="reveal mb-10">
+            <div key={category} className="mb-10">
               <h3 className={`font-mono text-sm font-semibold uppercase tracking-widest mb-4 ${styles.text}`}>
                 {category}
               </h3>

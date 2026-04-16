@@ -94,6 +94,52 @@ body {
   animation: copySuccess 0.3s ease-in-out;
 }
 
+/* Track column scrollbars */
+.track-col-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #333333 #1a1a1a;
+}
+.track-col-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.track-col-scroll::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+.track-col-scroll::-webkit-scrollbar-thumb {
+  background: #333333;
+}
+.track-col-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d97757;
+}
+
+/* Rows view horizontal scrollbars */
+.rows-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #333333 transparent;
+}
+.rows-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.rows-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rows-scroll::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 2px;
+}
+.rows-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d97757;
+}
+
+/* Interactive canvas grab cursor */
+.canvas-grab {
+  cursor: grab;
+  user-select: none;
+}
+.canvas-grab[data-grabbing] {
+  cursor: grabbing;
+}
+
 /* Scroll reveal */
 .reveal {
   opacity: 0;

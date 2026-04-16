@@ -29,8 +29,8 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="font-mono font-bold text-xl text-cta mb-3">arcwright</div>
-            <p className="font-sans text-sm text-muted leading-relaxed max-w-xs">
-              AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
+            <p className="font-sans text-sm text-muted/80 leading-relaxed max-w-xs">
+              AI-native agile workflow orchestration for Claude Code and Kiro.
             </p>
           </div>
 

@@ -77,7 +77,7 @@ export const agents: Agent[] = [
     icon: 'Layers',
     description:
       'Creates UX design documents, component specs, and visual hierarchy notes. Also acts as a reviewer (UV = UX Validation) in Review Gates. On the ux-qa team, implements UI code and validates with playwright-cli.',
-    primarySkills: ['frontend-responsive-design-standards', 'react-expert', 'ui-ux-pro-custom', 'ux-audit'],
+    primarySkills: ['frontend-responsive-design-standards', 'react-expert', 'design', 'ux-audit'],
     collaboratesWith: ['Developer', 'Architect', 'QA'],
   },
 ];

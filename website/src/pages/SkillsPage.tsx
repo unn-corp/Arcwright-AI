@@ -20,21 +20,28 @@ export default function SkillsPage() {
 
   return (
     <div className="pt-16">
-      <section className="pt-6 pb-16 px-4 sm:px-6">
+      {/* Page header */}
+      <section className="px-4 sm:px-6 pt-12 pb-8 border-b border-surface-light bg-surface/20">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="reveal mb-12 text-center">
-            <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Skill Library
-            </h2>
-            <p className="font-sans text-muted max-w-xl mx-auto">
-              {skills.length} skills installed alongside agents and workflow tracks. Each skill is a
-              focused context module that specialists invoke when needed.
-            </p>
+          <div className="flex items-baseline gap-3 mb-3">
+            <span className="font-mono text-cta text-sm">_arcwright</span>
+            <span className="font-mono text-muted/40 text-sm">→</span>
+            <span className="font-mono text-muted text-sm">skills library</span>
           </div>
+          <h1 className="font-mono text-4xl sm:text-5xl font-bold text-foreground mb-4">
+            Skill Library
+          </h1>
+          <p className="font-sans text-muted text-lg max-w-2xl leading-relaxed">
+            {skills.length} focused context modules — installed alongside agents and workflow tracks.
+            Specialists invoke them automatically when the task domain matches.
+          </p>
+        </div>
+      </section>
 
+      <section className="pt-8 pb-16 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
           {/* Category filter tabs */}
-          <div className="flex flex-wrap gap-2 mb-8 justify-center">
+          <div className="flex flex-wrap gap-2 mb-8">
             <button
               onClick={() => setActiveCategory('all')}
               className={`font-mono text-xs px-3 py-1.5 border transition-all duration-200 cursor-pointer ${

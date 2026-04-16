@@ -15,20 +15,22 @@ function AgentIcon({ name, ...props }: { name: string } & LucideProps) {
   return <Icon {...props} />;
 }
 
-export default function AgentsGrid() {
+export default function AgentsGrid({ hideHeader }: { hideHeader?: boolean } = {}) {
   return (
     <section id="agents" className="pt-6 pb-16 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="reveal mb-12 text-center">
-          <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Specialist Agents
-          </h2>
-          <p className="font-sans text-muted max-w-xl mx-auto">
-            8 named specialists coordinate across tracks and teams.
-          </p>
-        </div>
+        {!hideHeader && (
+          <div className="mb-12 text-center">
+            <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
+              Specialist Agents
+            </h2>
+            <p className="font-sans text-muted max-w-xl mx-auto">
+              8 named specialists coordinate across tracks and teams.
+            </p>
+          </div>
+        )}
 
-        <div className="reveal grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {agents.map(agent => (
             <div
               key={agent.name}
@@ -55,14 +57,14 @@ export default function AgentsGrid() {
               {/* Primary skills */}
               {agent.primarySkills.length > 0 && (
                 <div>
-                  <div className="font-mono text-[9px] text-muted/50 uppercase tracking-wider mb-1.5">
+                  <div className="font-mono text-[10px] text-muted/60 uppercase tracking-wider mb-1.5">
                     Key skills
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {agent.primarySkills.map(skill => (
                       <span
                         key={skill}
-                        className="font-mono text-[9px] px-1.5 py-0.5 bg-cta/10 text-cta/80 border border-cta/20"
+                        className="font-mono text-[10px] px-1.5 py-0.5 bg-cta/10 text-cta/80 border border-cta/20"
                       >
                         {skill}
                       </span>
@@ -74,10 +76,10 @@ export default function AgentsGrid() {
               {/* Collaborates with */}
               {agent.collaboratesWith.length > 0 && (
                 <div className="pt-2 border-t border-surface-light">
-                  <span className="font-mono text-[9px] text-muted/50 uppercase tracking-wider">
+                  <span className="font-mono text-[10px] text-muted/60 uppercase tracking-wider">
                     Pairs with:{' '}
                   </span>
-                  <span className="font-sans text-[10px] text-muted">
+                  <span className="font-sans text-xs text-muted/80">
                     {agent.collaboratesWith.join(', ')}
                   </span>
                 </div>

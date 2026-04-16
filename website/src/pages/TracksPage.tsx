@@ -1,23 +1,56 @@
+import { useState } from 'react';
+import { Columns3, Rows3 } from 'lucide-react';
 import TracksTable from '../components/TracksTable';
 import WorkflowCanvas from '../components/WorkflowCanvas';
 
+export type ViewMode = 'canvas' | 'rows';
+
 export default function TracksPage() {
+  const [viewMode, setViewMode] = useState<ViewMode>('rows');
+
   return (
     <div className="pt-16">
-      {/* Canvas — full viewport height */}
-      <section className="h-[calc(100vh-4rem)] flex flex-col bg-surface/10 border-b border-surface-light">
-        <div className="flex-shrink-0 px-6 pt-6 pb-3 flex items-end justify-between gap-4">
+      {/* Canvas */}
+      <section className="flex flex-col bg-surface/10 border-b border-surface-light">
+        <div className="flex-shrink-0 px-6 pt-6 pb-3 flex items-center justify-between gap-4">
           <div>
             <h2 className="font-mono text-2xl font-bold text-foreground">
               Interactive Workflow Canvas
             </h2>
             <p className="font-sans text-muted text-sm mt-1">
-              All 6 tracks side by side. Click a track header to select it, click any step to expand details.
+              {viewMode === 'canvas'
+                ? 'Scroll-zoom · drag to pan · click a track header to select.'
+                : 'All 6 tracks expanded. Scroll horizontally within each row.'}
             </p>
           </div>
+          {/* View toggle */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={() => setViewMode('canvas')}
+              title="Column canvas view"
+              className={`p-2 border transition-colors duration-150 cursor-pointer ${
+                viewMode === 'canvas'
+                  ? 'bg-cta/10 border-cta/40 text-cta'
+                  : 'bg-surface border-surface-light text-muted hover:text-foreground hover:border-muted/40'
+              }`}
+            >
+              <Columns3 size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('rows')}
+              title="Horizontal rows view"
+              className={`p-2 border transition-colors duration-150 cursor-pointer ${
+                viewMode === 'rows'
+                  ? 'bg-cta/10 border-cta/40 text-cta'
+                  : 'bg-surface border-surface-light text-muted hover:text-foreground hover:border-muted/40'
+              }`}
+            >
+              <Rows3 size={16} />
+            </button>
+          </div>
         </div>
-        <div className="flex-1 overflow-auto px-6 pb-6">
-          <WorkflowCanvas />
+        <div className="pb-4">
+          <WorkflowCanvas viewMode={viewMode} />
         </div>
       </section>
 

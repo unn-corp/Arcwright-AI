@@ -11,6 +11,7 @@ export type StepMode = 'split-pane' | 'in-process';
 export interface WorkflowStep {
   label: string;
   type: StepType;
+  description?: string;
   agent?: string;
   mode?: StepMode;
   inputs?: string[];
@@ -47,6 +48,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Dev',
         type: 'normal',
+        description: 'Solo dev agent reads the task and implements the change directly with no planning phase.',
         agent: 'quick-flow-solo-dev',
         mode: 'split-pane',
         inputs: ['task', 'branch', 'session'],
@@ -55,12 +57,14 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Scope Guard',
         type: 'scope-guard',
+        description: 'Automated check — if the diff exceeds 20 lines, halt and re-triage to Small track.',
         note: 'If >20 lines → HALT, upgrade to Small',
         optional: false,
       },
       {
         label: 'DRY + UV Gate',
         type: 'review-gate',
+        description: 'Architect checks for DRY violations; UX Designer validates visual correctness. Findings loop back to dev.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (DRY)', 'ux-designer (UV)'],
@@ -70,10 +74,12 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'USER APPROVAL',
         type: 'approval',
+        description: 'You review the diff and give a thumbs-up before anything is merged.',
       },
       {
         label: '/prepare-to-merge',
         type: 'merge',
+        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
         mode: 'in-process',
       },
     ],
@@ -91,6 +97,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Spec',
         type: 'normal',
+        description: 'Dev agent writes a one-page spec covering scope, approach, and acceptance criteria.',
         agent: 'quick-flow-solo-dev',
         mode: 'in-process',
         outputs: ['quick-spec.md'],
@@ -98,6 +105,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Dev',
         type: 'normal',
+        description: 'Dev agent implements from the spec in a split pane, signaling completion when done.',
         agent: 'quick-flow-solo-dev',
         mode: 'split-pane',
         inputs: ['quick-spec.md'],
@@ -106,6 +114,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Review Gate',
         type: 'review-gate',
+        description: 'Three sub-agents review in parallel — architecture, UX, and security. Batched findings sent to dev for fixes.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
@@ -114,6 +123,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'QA Tests',
         type: 'normal',
+        description: 'QA agent writes Playwright .spec.ts tests and validates all acceptance criteria pass.',
         agent: 'qa-agent',
         mode: 'split-pane',
         outputs: ['.spec.ts'],
@@ -121,10 +131,12 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'USER APPROVAL',
         type: 'approval',
+        description: 'You review the diff and test results before merge is permitted.',
       },
       {
         label: '/prepare-to-merge',
         type: 'merge',
+        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
         mode: 'in-process',
       },
     ],
@@ -142,6 +154,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Spec',
         type: 'normal',
+        description: 'Dev agent writes a one-page spec covering scope, approach, and acceptance criteria.',
         agent: 'quick-flow-solo-dev',
         mode: 'in-process',
         outputs: ['quick-spec.md'],
@@ -149,6 +162,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Research',
         type: 'normal',
+        description: 'Analyst agent does a targeted codebase sweep to surface relevant patterns or APIs before dev starts.',
         agent: 'analyst-agent',
         mode: 'in-process',
         outputs: ['research-report.md'],
@@ -158,6 +172,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Dev',
         type: 'normal',
+        description: 'Dev agent implements from the spec (+ optional research) in a split pane.',
         agent: 'quick-flow-solo-dev',
         mode: 'split-pane',
         outputs: ['code on branch'],
@@ -165,6 +180,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Review Gate',
         type: 'review-gate',
+        description: 'Architecture, UX, and security sub-agents review in parallel. Findings loop back to dev.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
@@ -173,6 +189,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'QA Tests',
         type: 'normal',
+        description: 'QA agent writes Playwright .spec.ts tests and validates all acceptance criteria pass.',
         agent: 'qa-agent',
         mode: 'split-pane',
         outputs: ['.spec.ts'],
@@ -180,10 +197,12 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'USER APPROVAL',
         type: 'approval',
+        description: 'You review the diff and test results before merge is permitted.',
       },
       {
         label: '/prepare-to-merge',
         type: 'merge',
+        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
         mode: 'in-process',
       },
     ],
@@ -201,6 +220,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Spec',
         type: 'normal',
+        description: 'Dev agent writes a one-page spec covering scope, approach, and acceptance criteria.',
         agent: 'quick-flow-solo-dev',
         mode: 'in-process',
         outputs: ['quick-spec.md'],
@@ -208,6 +228,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Research',
         type: 'normal',
+        description: 'One or two analyst agents explore the codebase and domain to inform design and implementation.',
         agent: 'analyst-agent ×1–2',
         mode: 'in-process',
         outputs: ['research-report.md'],
@@ -215,6 +236,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'UX Design',
         type: 'normal',
+        description: 'UX Designer produces component specs, layout notes, and interaction guidelines.',
         agent: 'ux-designer-agent',
         mode: 'split-pane',
         outputs: ['ux-design.md'],
@@ -222,6 +244,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Review Gate 1',
         type: 'review-gate',
+        description: 'Three sub-agents review the spec and UX design before any code is written.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
@@ -231,6 +254,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Dev',
         type: 'normal',
+        description: 'Dev agent implements from approved spec + UX design in a split pane.',
         agent: 'quick-flow-solo-dev',
         mode: 'split-pane',
         outputs: ['code on branch'],
@@ -238,6 +262,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Final Review Gate',
         type: 'review-gate',
+        description: 'Three sub-agents review the completed implementation before QA.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
@@ -246,6 +271,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'QA Tests',
         type: 'normal',
+        description: 'QA agent writes Playwright .spec.ts tests and validates all acceptance criteria pass.',
         agent: 'qa-agent',
         mode: 'split-pane',
         outputs: ['.spec.ts'],
@@ -253,10 +279,12 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'USER APPROVAL',
         type: 'approval',
+        description: 'You review the diff and test results before merge is permitted.',
       },
       {
         label: '/prepare-to-merge',
         type: 'merge',
+        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
         mode: 'in-process',
       },
     ],
@@ -274,6 +302,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Quick Spec',
         type: 'normal',
+        description: 'Dev agent writes a structured spec to anchor the research and planning phases.',
         agent: 'quick-flow-solo-dev',
         mode: 'in-process',
         outputs: ['quick-spec.md'],
@@ -281,6 +310,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Research ×2',
         type: 'normal',
+        description: 'Two analyst agents run in parallel — one on the codebase, one on domain/external context.',
         agent: 'analyst-agent ×2',
         mode: 'in-process',
         note: 'Codebase + domain',
@@ -289,6 +319,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Create PRD',
         type: 'normal',
+        description: 'PM agent synthesizes the spec and research into a full Product Requirements Document.',
         agent: 'pm-agent',
         mode: 'split-pane',
         outputs: ['prd.md'],
@@ -296,6 +327,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'UX + Arch + Sprint',
         type: 'normal',
+        description: 'UX Designer creates component specs, then Architect produces architecture notes and sprint plan.',
         agent: 'ux-designer → architect',
         mode: 'split-pane',
         note: 'Sequential',
@@ -304,6 +336,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Review Gate 1',
         type: 'review-gate',
+        description: 'Three sub-agents review the full plan set (PRD, UX, arch) before any code is written.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
@@ -313,6 +346,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Dev',
         type: 'normal',
+        description: 'Dev agent implements the full feature set from the approved planning artifacts.',
         agent: 'dev-agent',
         mode: 'split-pane',
         inputs: ['prd.md', 'ux-design.md', 'arch-notes.md', 'sprint-plan.md'],
@@ -321,6 +355,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Review Gate 2',
         type: 'review-gate',
+        description: 'Three sub-agents review the completed implementation for quality, UX, and security.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
@@ -330,6 +365,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'QA Tests',
         type: 'normal',
+        description: 'QA agent writes Playwright .spec.ts tests and validates all acceptance criteria pass.',
         agent: 'qa-agent',
         mode: 'split-pane',
         outputs: ['.spec.ts'],
@@ -337,10 +373,12 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'USER APPROVAL',
         type: 'approval',
+        description: 'You review all artifacts and the final diff before merge is permitted.',
       },
       {
         label: '/prepare-to-merge',
         type: 'merge',
+        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
         mode: 'in-process',
       },
     ],
@@ -358,6 +396,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Product Brief',
         type: 'normal',
+        description: 'PM agent interviews the orchestrator to produce a concise vision and success-criteria document.',
         agent: 'pm-agent',
         mode: 'split-pane',
         outputs: ['product-brief.md'],
@@ -365,6 +404,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Research ×3 (parallel)',
         type: 'normal',
+        description: 'Three analyst agents run simultaneously: market research, domain research, and technical research.',
         agent: 'analyst-agent ×3',
         mode: 'split-pane',
         note: 'MR + DR + TR in parallel',
@@ -373,6 +413,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Create PRD',
         type: 'normal',
+        description: 'PM agent synthesizes brief + all research into a comprehensive Product Requirements Document.',
         agent: 'pm-agent',
         mode: 'split-pane',
         inputs: ['product-brief.md', 'research ×3'],
@@ -381,6 +422,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Planning Gate',
         type: 'review-gate',
+        description: 'Architect and UX Designer review the PRD for feasibility and design alignment before planning.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (DRY)', 'ux-designer (UV)'],
@@ -389,6 +431,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'UX + Architecture (parallel)',
         type: 'normal',
+        description: 'UX Designer and Architect work in parallel split panes to produce design specs and architecture notes.',
         agent: 'ux-designer + architect',
         mode: 'split-pane',
         note: 'Parallel',
@@ -397,6 +440,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Design Gate',
         type: 'review-gate',
+        description: 'Architect and UX Designer cross-review each other\'s artifacts for consistency.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (DRY)', 'ux-designer (UV)'],
@@ -405,6 +449,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Epics & Stories',
         type: 'normal',
+        description: 'Scrum Master decomposes the PRD into epics and individual user story files.',
         agent: 'sm-agent',
         mode: 'split-pane',
         outputs: ['stories/epic-n/story-n.md'],
@@ -412,6 +457,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Readiness Check',
         type: 'normal',
+        description: 'Architect verifies all planning artifacts are complete and gives a green/red implementation verdict.',
         agent: 'architect-agent',
         mode: 'in-process',
         note: 'Impl. readiness verdict',
@@ -419,6 +465,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Sprint Plan',
         type: 'normal',
+        description: 'Scrum Master sequences stories into sprint milestones with dependencies mapped.',
         agent: 'sm-agent',
         mode: 'split-pane',
         outputs: ['sprint-plan.md'],
@@ -426,11 +473,13 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'USER APPROVAL',
         type: 'approval',
+        description: 'You review the full plan set before the implementation epic loop begins.',
         note: 'Before epic loop',
       },
       {
         label: 'Per-Story Loop',
         type: 'loop',
+        description: 'Dev and QA agents cycle through each story: implement → test → loop until all stories are green.',
         agent: 'dev-agent + qa-agent',
         mode: 'split-pane',
         note: 'Loop until all stories done',
@@ -438,6 +487,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Final Review Gate',
         type: 'review-gate',
+        description: 'Full three-sub-agent review of the complete implementation after all stories are done.',
         agent: 'review agent',
         mode: 'in-process',
         subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
@@ -445,6 +495,7 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'Full QA Suite',
         type: 'normal',
+        description: 'QA agent writes and runs a comprehensive Playwright test suite covering all stories.',
         agent: 'qa-agent',
         mode: 'split-pane',
         outputs: ['.spec.ts suite'],
@@ -452,11 +503,77 @@ export const workflows: WorkflowTrack[] = [
       {
         label: 'USER APPROVAL',
         type: 'approval',
+        description: 'Final sign-off — you review the complete feature against the original PRD.',
         note: 'Final',
       },
       {
         label: '/prepare-to-merge',
         type: 'merge',
+        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
+        mode: 'in-process',
+      },
+    ],
+  },
+  {
+    id: 'rv',
+    letter: 'RV',
+    name: 'Review',
+    score: 'gate',
+    scope: 'any PR / diff',
+    headerBg: '#1a1a2e',
+    headerText: '#CA9EE6',
+    accentColor: '#CA9EE6',
+    steps: [
+      {
+        label: 'Load Artefacts',
+        type: 'normal',
+        description: 'Review orchestrator reads the diff, PR description, and any linked spec or story files.',
+        agent: 'review-orchestrator',
+        mode: 'in-process',
+        inputs: ['git diff', 'PR description', 'spec / story (optional)'],
+      },
+      {
+        label: 'Spawn Reviewers (parallel)',
+        type: 'normal',
+        description: 'Three specialist sub-agents are launched simultaneously in split panes — one per review domain.',
+        agent: 'review-orchestrator',
+        mode: 'split-pane',
+        subAgents: ['architect-agent (AR + DRY)', 'ux-designer-agent (UV)', 'security-agent (SR)'],
+        note: 'Parallel split panes',
+      },
+      {
+        label: 'Collect Findings',
+        type: 'review-gate',
+        description: 'Orchestrator waits for all three sub-agents to report back, then deduplicates and severity-ranks findings.',
+        agent: 'review-orchestrator',
+        mode: 'in-process',
+        outputs: ['findings-AR.md', 'findings-UV.md', 'findings-SR.md'],
+      },
+      {
+        label: 'Resolve / Escalate',
+        type: 'normal',
+        description: 'Low / medium findings are passed to dev for fixes. Critical findings are escalated to the user immediately.',
+        agent: 'review-orchestrator',
+        mode: 'in-process',
+        note: 'Critical → USER; others → dev loop',
+      },
+      {
+        label: 'Dev Fix Loop',
+        type: 'loop',
+        description: 'Dev agent applies fixes for non-critical findings. Loop re-runs the three reviewers until all findings are resolved.',
+        agent: 'dev-agent',
+        mode: 'split-pane',
+        loopTarget: 'Spawn Reviewers',
+      },
+      {
+        label: 'USER APPROVAL',
+        type: 'approval',
+        description: 'All findings resolved — you sign off on the review outcome before merge is unblocked.',
+      },
+      {
+        label: '/prepare-to-merge',
+        type: 'merge',
+        description: 'Review gate cleared. Orchestrator runs pre-merge checks and prepares the PR.',
         mode: 'in-process',
       },
     ],

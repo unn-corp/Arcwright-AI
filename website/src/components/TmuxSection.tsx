@@ -7,21 +7,23 @@ const FEATURES = [
   { icon: Terminal, label: 'Actions popup',  detail: 'Window, pane, clipboard, and launch shortcuts' },
 ];
 
-export default function TmuxSection() {
+export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {}) {
   return (
-    <section id="tmux" className="pt-6 pb-16 px-4 sm:px-6">
+    <section id="tmux" className="pt-8 pb-16 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <div className="reveal mb-12 text-center">
-          <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            tmux Setup
-          </h2>
-          <p className="font-sans text-muted max-w-xl mx-auto">
-            Standalone tmux configuration optimised for AI agent workflows.
-            Split panes, live agent output, coordinated signals.
-          </p>
-        </div>
+        {!hideHeader && (
+          <div className="mb-12 text-center">
+            <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
+              tmux Setup
+            </h2>
+            <p className="font-sans text-muted max-w-xl mx-auto">
+              Standalone tmux configuration optimised for AI agent workflows.
+              Split panes, live agent output, coordinated signals.
+            </p>
+          </div>
+        )}
 
-        <div className="reveal grid lg:grid-cols-2 gap-8 items-start">
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
           {/* Terminal mockup */}
           <div className="bg-bg border border-surface-light overflow-hidden shadow-xl">
             <div className="flex items-center gap-2 px-4 py-3 bg-surface border-b border-surface-light">

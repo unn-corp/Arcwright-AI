@@ -3,7 +3,7 @@ import { tracks } from '../data/tracks';
 export default function TracksTable() {
   return (
     <section id="tracks" className="pt-6 pb-16 px-4 sm:px-6 max-w-7xl mx-auto">
-      <div className="reveal">
+      <div>
         <div className="mb-12 text-center">
           <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
             Workflow Tracks

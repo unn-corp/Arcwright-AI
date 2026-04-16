@@ -14,6 +14,7 @@ function GithubIcon({ size = 16, className = '' }: { size?: number; className?: 
 const GITHUB_API = 'https://api.github.com/repos/UNN-Devotek/Arcwright-AI';
 
 const NAV_LINKS = [
+  { label: 'Home', to: '/' },
   { label: 'Tracks', to: '/tracks' },
   { label: 'Teams', to: '/teams' },
   { label: 'Agents', to: '/agents' },

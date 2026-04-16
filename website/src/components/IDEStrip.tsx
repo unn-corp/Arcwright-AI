@@ -5,7 +5,7 @@ export default function IDEStrip() {
   return (
     <section id="ides" className="pt-6 pb-16 px-4 sm:px-6 bg-surface/20">
       <div className="max-w-7xl mx-auto">
-        <div className="reveal mb-12 text-center">
+        <div className="mb-12 text-center">
           <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
             Supported IDEs
           </h2>
@@ -14,7 +14,7 @@ export default function IDEStrip() {
           </p>
         </div>
 
-        <div className="reveal flex flex-wrap justify-center gap-3 sm:gap-4">
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
           {ides.map(ide => (
             <div
               key={ide.id}
@@ -31,7 +31,7 @@ export default function IDEStrip() {
         </div>
 
         {/* Install flags */}
-        <div className="reveal mt-12 bg-surface border border-surface-light p-6 max-w-2xl mx-auto">
+        <div className="mt-12 bg-surface border border-surface-light p-6 max-w-2xl mx-auto">
           <div className="text-xs font-mono text-muted mb-3">Multi-IDE install</div>
           <div className="flex items-center gap-0 bg-bg border border-surface-light overflow-hidden">
             <div className="px-4 py-3 flex-1 overflow-x-auto">

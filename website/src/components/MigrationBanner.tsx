@@ -4,7 +4,7 @@ export default function MigrationBanner() {
   return (
     <section className="py-16 px-4 sm:px-6 bg-surface/20">
       <div className="max-w-3xl mx-auto">
-        <div className="reveal bg-surface border border-accent-peach/30  p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        <div className="bg-surface border border-accent-peach/30  p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
           <div className="w-12 h-12  bg-accent-peach/10 border border-accent-peach/20 flex items-center justify-center flex-shrink-0">
             <RefreshCw size={22} className="text-accent-peach" aria-hidden="true" />
           </div>
