@@ -15,45 +15,31 @@ HK  = '\033[1;38;2;255;213;116m'
 HT  = '\033[1;38;2;220;224;255m'
 RST = '\033[0m'
 
-W = 26  # default; recomputed from terminal size after COLS/NC are defined below
+W = 26  # cell content width (popup must be >= W*3 + 8)
 
 # All keys are lowercase. ("---", label) = separator. ("", "") = empty padding.
 COLS = [
-    # ── Session ─────────────────────────────────────────────────────────────
-    [("s","  Rename session"),("q","  Kill session"),("d","  Detach"),
-     ("w","  Session chooser"),
-     ("---","Persistence"),
-     ("y","  Save session"),("r","  Restore session"),
-     ("",""),("",""),("","")],
-    # ── Window ──────────────────────────────────────────────────────────────
-    [("a","  New window"),("x","  Kill window"),(",","  Rename window"),
-     ("p","  Previous window"),("n","  Next window"),
-     ("",""),("",""),("",""),("",""),("","")],
-    # ── Pane ────────────────────────────────────────────────────────────────
-    [("z","  Zoom / unzoom"),("h","  Split top / bottom"),("v","  Split left / right"),
-     ("k","  Kill pane"),
-     ("---","Movement"),
-     ("u","  Swap \u2190 prev"),("j","  Swap \u2192 next"),
-     ("e","  Break to window"),("m","  Move to window\u2026"),("l","  Pull from window\u2026")],
-    # ── Tools ───────────────────────────────────────────────────────────────
+    [("z","  Zoom / unzoom pane"),("p","  Previous window"),("n","  Next window"),
+     ("w","  List windows & sessions"),("a","  New window"),("x","  Kill window"),
+     ("s","  Rename session"),("q","  Kill session"),("d","  Detach"),
+     ("","")],
+    [("h","  Split top / bottom"),("v","  Split left / right"),("k","  Kill pane"),
+     (",","  Rename window"),
+     ("---","Pane Movement"),
+     ("u","  Swap pane \u2190 prev"),("j","  Swap pane \u2192 next"),
+     ("e","  Break to new window"),("m","  Move to window\u2026"),("l","  Pull from window\u2026")],
     [("f","  Float terminal"),("t","  Scratch terminal (M-i)"),
-     ("E","  Neovim (Alt+e)"),("Y","  Yazi file manager"),("G","  Lazygit"),
+     ("y","  Save session"),("r","  Restore session"),
      ("---","Clipboard"),
      ("c","  Copy mode"),("i","  Paste image"),
-     ("o","  Open URL / file"),("g","  Search in browser")],
+     ("o","  Open URL / file"),("g","  Search in browser"),
+     ("R","  Recenter layout")],
+    [("E","  Neovim (M-e)"),("N","  NvimTree"),("Y","  Yazi file manager"),("G","  Lazygit"),
+     ("D","  Lazydocker"),("",""),("",""),("",""),("",""),("","")],
 ]
 
 NR = max(len(c) for c in COLS)
 NC = len(COLS)
-# Recompute W from actual terminal width so the grid fits regardless of popup/pane size.
-# Grid formula: terminal_cols = NC*(W+3) + 1  →  W = (terminal_cols - 1) // NC - 3
-# Clamp to [18, 30]: 18 keeps descriptions readable; 30 avoids sprawl on ultra-wide.
-try:
-    _tcols = os.get_terminal_size().columns
-except OSError:
-    _tcols = 120
-W = max(18, min(30, (_tcols - 1) // NC - 3))
-DATA_Y0 = 5  # 1-indexed terminal row where data row 0 starts
 
 def selectable(c, r):
     if not (0 <= c < NC and 0 <= r < len(COLS[c])): return False
@@ -73,57 +59,60 @@ def render_cell(c, r, hl):
     return f"{KEY}{k}{TXT}{dp}{RST}"
 
 def hline(l, m, r):
-    seg = '\u2500' * (W + 2)
-    segs = [seg] * NC
-    return f"{DIM}{l}{m.join(segs)}{r}{RST}\n"
+    s = '\u2500' * (W + 2)
+    segs = s + (m + s) * (NC - 1)
+    return f"{DIM}{l}{segs}{r}{RST}\n"
 
 def data_row_line(r, sc, sr):
     cells = [render_cell(c, r, sc == c and sr == r) for c in range(NC)]
     inner = f" {DIM}\u2502{RST} ".join(cells)
     return f"{DIM}\u2502{RST} {inner} {DIM}\u2502{RST}"
 
-BSU = '\033[?2026h'   # begin synchronized update (buffer, don't render yet)
-ESU = '\033[?2026l'   # end synchronized update (flush to screen atomically)
-
-HDR_LABELS = [' Session', ' Window', ' Pane', ' Tools']
+# Row layout: │ SP cell0 SP │ SP cell1 SP │ ... SP │
+# col c content starts at x = 3 + c*(W+3), ends at x = 2 + (c+1)*W + c*3
+# (1-indexed terminal columns, matching SGR mouse report)
+COL_LEFT = [3 + c * (W + 3) for c in range(NC)]
+# Row 1=title 2=top-border 3=header 4=separator, data rows start at row 5
+DATA_Y0 = 5
 
 def draw(sc, sr):
-    """Full initial render."""
-    iw = W * NC + (NC - 1) * 3 + 2  # border lines = NC*(W+3)+1; title = 2+iw → iw = NC*(W+3)-1
-    out = [BSU, "\033[2J\033[H",
+    iw = W * NC + (NC - 1) * 3 + 2
+    out = ["\033[2J\033[H",
            f"{HDR}  {'tmux Actions':<{iw}}{RST}\n",
            hline('\u250c', '\u252c', '\u2510')]
-    hdrs = [f"{HDR}{h:<{W}}{RST}" for h in HDR_LABELS[:NC]]
+    hdr_names = [' Window & Session', ' Pane Controls', ' Tools & Clipboard', ' Launch']
+    hdrs = [f"{HDR}{h:<{W}}{RST}" for h in hdr_names[:NC]]
     inner = f" {DIM}\u2502{RST} ".join(hdrs)
     out.append(f"{DIM}\u2502{RST} {inner} {DIM}\u2502{RST}\n")
     out.append(hline('\u251c', '\u253c', '\u2524'))
     for r in range(NR):
         out.append(data_row_line(r, sc, sr) + "\n")
     out.append(hline('\u2514', '\u2534', '\u2518'))
-    out.append(f"\n{DIM}  \u2191\u2193\u2190\u2192 navigate \u00b7 Enter / click to run \u00b7 Esc cancel{RST}\n")
-    out.append(ESU)
+    out.append(f"\n{DIM}  \u2191\u2193\u2190\u2192 navigate \u00b7 Enter / click to run \u00b7 Esc cancel{RST}")
+    # Park cursor at top-left so subsequent absolute positioning never scrolls
+    out.append("\033[1;1H")
     sys.stdout.write(''.join(out))
     sys.stdout.flush()
 
 def update(old_sc, old_sr, sc, sr):
-    """Redraw only the rows whose highlight state changed."""
-    rows = {old_sr, sr}
-    out = [BSU]
-    for r in sorted(rows):
-        out.append(f"\033[{DATA_Y0 + r};1H\033[2K{data_row_line(r, sc, sr)}")
-    out.append(ESU)
+    # Position once at first data row then write sequentially with \n.
+    # \n → \r\n (ONLCR) so cursor always resets to col 1, avoiding pending-wrap
+    # state that breaks absolute positioning when content fills the line exactly.
+    out = [f"\033[{DATA_Y0};1H"]
+    for r in range(NR):
+        out.append(data_row_line(r, sc, sr))
+        if r < NR - 1:
+            out.append("\n")
+    out.append("\033[1;1H")
     sys.stdout.write(''.join(out))
     sys.stdout.flush()
 
 def x2col(x):
     for c in range(NC):
-        lo = 2 + c * (W + 3)
-        hi = lo + W
-        if lo <= x <= hi:
-            return c
+        if COL_LEFT[c] <= x <= COL_LEFT[c] + W - 1: return c
     return -1
 
-def y2row(y): return y - DATA_Y0
+def y2row(y): return y - 5
 
 def move(sc, sr, dc, dr):
     if dr:
@@ -187,11 +176,12 @@ def execute(key):
         'i': lambda: tmux('run-shell', '-b', f"bash ~/.config/tmux/bin/paste_image_wrapper.sh '{PANE}'"),
         'o': lambda: tmux('run-shell', '-b', 'bash ~/.config/tmux/bin/open_clip.sh url'),
         'g': lambda: tmux('run-shell', '-b', 'bash ~/.config/tmux/bin/open_clip.sh search'),
-        'E': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' nvim"),
-        'N': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' 'nvim +NvimTreeOpen'"),
-        'Y': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' yazi"),
-        'G': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' lazygit"),
-        'D': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd or H}' lazydocker"),
+        'R': lambda: tmux('run-shell', '-b', 'bash ~/.config/tmux/bin/recenter.sh'),
+        'E': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' nvim"),
+        'N': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' 'nvim +NvimTree'"),
+        'Y': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' yazi"),
+        'G': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' lazygit"),
+        'D': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' lazydocker"),
     }
     if key in dispatch:
         dispatch[key]()
@@ -219,8 +209,9 @@ def main():
 
     try:
         set_raw_input(fd)
-        # Clear, hide cursor, enable SGR mouse + motion tracking
-        sys.stdout.write('\033[2J\033[H\033[?25l\033[?1000h\033[?1006h\033[?1003h')
+        # Clear, hide cursor, disable auto-wrap, enable SGR mouse + motion tracking
+        # ?7l = no-auto-wrap: prevents pending-wrap state when content fills line exactly
+        sys.stdout.write('\033[2J\033[H\033[?25l\033[?7l\033[?1000h\033[?1006h\033[?1003h')
         sys.stdout.flush()
         draw(sc, sr)
 
@@ -231,6 +222,14 @@ def main():
             rdy, _, _ = select.select([fd], [], [], 2.0)
             if not rdy: continue
             buf += os.read(fd, 128)
+            # Drain all pending input before processing — collapses rapid motion events
+            # into a single redraw instead of one per mouse-move event.
+            while True:
+                more, _, _ = select.select([fd], [], [], 0)
+                if not more: break
+                buf += os.read(fd, 128)
+
+            nc, nr = sc, sr  # track desired final position across all buffered events
 
             while buf and result is None:
                 ch = buf[0:1]
@@ -249,23 +248,22 @@ def main():
                     seq = buf[:i+1].decode('latin-1', errors='replace')
                     buf = buf[i+1:]
 
-                    nc, nr = sc, sr
-                    if   seq == '\033[A': nc, nr = move(sc, sr, 0, -1)   # up arrow
-                    elif seq == '\033[B': nc, nr = move(sc, sr, 0,  1)   # down arrow
-                    elif seq == '\033[D': nc, nr = move(sc, sr, -1, 0)   # left arrow
-                    elif seq == '\033[C': nc, nr = move(sc, sr,  1, 0)   # right arrow
+                    if   seq == '\033[A': nc, nr = move(nc, nr, 0, -1)   # up arrow
+                    elif seq == '\033[B': nc, nr = move(nc, nr, 0,  1)   # down arrow
+                    elif seq == '\033[D': nc, nr = move(nc, nr, -1, 0)   # left arrow
+                    elif seq == '\033[C': nc, nr = move(nc, nr,  1, 0)   # right arrow
                     else:
                         m = re.match(r'\x1b\[<(\d+);(\d+);(\d+)([Mm])', seq)
                         if m:
                             btn, mx, my, typ = int(m[1]), int(m[2]), int(m[3]), m[4]
                             if btn == 64:                        # scroll up → navigate up
-                                nc, nr = move(sc, sr, 0, -1)
+                                nc, nr = move(nc, nr, 0, -1)
                             elif btn == 65:                      # scroll down → navigate down
-                                nc, nr = move(sc, sr, 0,  1)
+                                nc, nr = move(nc, nr, 0,  1)
                             else:
                                 c2, r2 = x2col(mx), y2row(my)
                                 if c2 >= 0 and 0 <= r2 < NR and selectable(c2, r2):
-                                    if 32 <= btn < 64:           # motion (not scroll) → hover
+                                    if 32 <= btn < 96:           # motion → hover
                                         nc, nr = c2, r2
                                     elif btn == 0 and typ == 'M':  # left click → execute
                                         nc, nr = c2, r2
@@ -274,11 +272,6 @@ def main():
                                             sc, sr = nc, nr
                                             update(old_sc, old_sr, sc, sr)
                                         result = COLS[sc][sr][0]
-
-                    if result is None and (nc != sc or nr != sr):
-                        old_sc, old_sr = sc, sr
-                        sc, sr = nc, nr
-                        update(old_sc, old_sr, sc, sr)
 
                 elif ch in (b'\r', b'\n'):
                     buf = buf[1:]
@@ -296,18 +289,21 @@ def main():
                     for cc in range(NC):
                         for rr in range(len(COLS[cc])):
                             if selectable(cc, rr) and COLS[cc][rr][0] == key_char:
-                                if (cc, rr) != (sc, sr):
-                                    old_sc, old_sr = sc, sr
-                                    sc, sr = cc, rr
-                                    update(old_sc, old_sr, sc, sr)
+                                nc, nr = cc, rr
                                 break
                         else:
                             continue
                         break
 
+            # Single redraw per event batch — replaces per-event update() calls
+            if result is None and (nc != sc or nr != sr):
+                old_sc, old_sr = sc, sr
+                sc, sr = nc, nr
+                update(old_sc, old_sr, sc, sr)
+
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
-        sys.stdout.write('\033[?1003l\033[?1006l\033[?1000l\033[?25h\033[2J\033[H')
+        sys.stdout.write('\033[?1003l\033[?1006l\033[?1000l\033[?7h\033[?25h\033[2J\033[H')
         sys.stdout.flush()
 
     if result:

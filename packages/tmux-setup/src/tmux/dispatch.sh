@@ -4,7 +4,7 @@
 PANE="${2:-}"
 
 case "$1" in
-  reload)  tmux source-file ~/.tmux.conf && tmux display-message "Config reloaded" ;;
+  reload)  tmux source-file ~/.config/tmux/tmux.conf && tmux display-message "Config reloaded" ;;
   actions) ;; # handled inline in tmux.conf MouseDown1Status binding
   *)  exit 0 ;;
 esac
