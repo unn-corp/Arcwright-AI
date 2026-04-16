@@ -13,7 +13,7 @@ export default function TracksPage() {
   return (
     <div className="pt-16">
       {/* Canvas */}
-      <section className="flex flex-col bg-surface/10 border-b border-surface-light">
+      <section className={`flex flex-col bg-surface/10 border-b border-surface-light${viewMode === 'canvas' ? ' h-[calc(100vh-4rem)]' : ''}`}>
         <div className="flex-shrink-0 px-6 pt-6 pb-3 flex items-center justify-between gap-4">
           <div>
             <h2 className="font-mono text-2xl font-bold text-foreground">
@@ -51,7 +51,7 @@ export default function TracksPage() {
             </button>
           </div>
         </div>
-        <div className="pb-4">
+        <div className={viewMode === 'canvas' ? 'flex-1 min-h-0' : 'pb-4'}>
           <WorkflowCanvas viewMode={viewMode} />
         </div>
       </section>

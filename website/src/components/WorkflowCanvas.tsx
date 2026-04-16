@@ -544,7 +544,7 @@ export default function WorkflowCanvas({ viewMode = 'canvas' }: { viewMode?: 'ca
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 h-full">
       {/* Legend + tmux notice row */}
       <div className="flex flex-wrap items-center gap-4 flex-shrink-0 px-6">
         <div className="bg-surface border border-surface-light px-3 py-2 text-[10px] font-mono text-muted">
@@ -559,7 +559,7 @@ export default function WorkflowCanvas({ viewMode = 'canvas' }: { viewMode?: 'ca
       <div
         ref={canvasRef}
         className="hidden md:block relative overflow-hidden canvas-grab"
-        style={{ height: 'min(82vh, 1200px)' }}
+        style={{ height: '100%', minHeight: '400px' }}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
