@@ -68,10 +68,12 @@ async function setupTmux(projectRoot, chalk) {
   console.log('    ' + chalk.dim('    Then inside tmux: press Ctrl+B I to install plugins'));
   console.log('  ' + chalk.white('⑧ fzf') + chalk.dim(' (required for Actions popup menu):'));
   console.log('    ' + chalk.cyan('mkdir -p ~/.local/bin && curl -Lo /tmp/fzf.tar.gz https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz && tar -xzf /tmp/fzf.tar.gz -C ~/.local/bin'));
-  console.log('  ' + chalk.white('⑨ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators):'));
-  console.log('    ' + chalk.dim('    Download JetBrainsMono NFM from https://www.nerdfonts.com/'));
-  console.log('    ' + chalk.dim('    Install JetBrainsMonoNerdFontMono-Regular.ttf to Windows (double-click → Install for all users)'));
-  console.log('    ' + chalk.white('    Cursor/VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM"'));
+  console.log('  ' + chalk.white('⑨ Nerd Fonts') + chalk.dim(' (required for Powerline status bar separators and icons):'));
+  console.log('    ' + chalk.dim('    Download from https://www.nerdfonts.com/ — install both fonts to Windows (double-click → Install for all users):'));
+  console.log('    ' + chalk.dim('    • JetBrainsMonoNerdFontMono-Regular.ttf') + chalk.dim('  ← primary monospace font'));
+  console.log('    ' + chalk.dim('    • SymbolsNerdFontMono-Regular.ttf') + chalk.dim('        ← symbol fallback (fills icon glyphs JetBrainsMono omits)'));
+  console.log('    ' + chalk.dim('    Both are required — the symbol font is the fallback layer that renders icons correctly.'));
+  console.log('    ' + chalk.white('    Cursor/VS Code:') + ' ' + chalk.cyan('"terminal.integrated.fontFamily": "JetBrainsMono NFM, Symbols Nerd Font Mono"'));
   console.log('    ' + chalk.white('    Windows Terminal:') + ' ' + chalk.cyan('"font": { "face": "JetBrainsMono NFM", "builtinGlyphs": false }'));
   console.log('  ' + chalk.white('⑩ GitHub CLI (gh)') + chalk.dim(' (required for PR creation and GitHub operations):'));
   console.log('    ' + chalk.cyan('curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg'));
