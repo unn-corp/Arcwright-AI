@@ -16,3 +16,10 @@ output/
 /_arcwright/_config/
 /_arcwright-output/
 packages/*/package-lock.json
+
+# Screenshot artifacts and playwright session files
+*.png
+*.jpg
+*.jpeg
+.playwright-cli/
+website/.playwright-cli/
