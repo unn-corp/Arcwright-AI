@@ -97,7 +97,7 @@ if [ $WL_OK -eq 0 ] && [ -n "$TYPES" ]; then
         # wl-paste can list image types but write 0 bytes — fall back to Get-Clipboard
         if [ ! -s "$PNGFILE" ]; then
             _WP=$(wslpath -w "$PNGFILE" 2>/dev/null)
-            [ -n "$_WP" ] && powershell.exe -NoProfile -Command "
+            [ -n "$_WP" ] && powershell.exe -NoProfile -STA -Command "
                 Add-Type -AssemblyName System.Drawing
                 \$img = Get-Clipboard -Format Image -ErrorAction SilentlyContinue
                 if (\$img -ne \$null) { \$img.Save('$_WP'); \$img.Dispose() }
@@ -148,7 +148,7 @@ fi
 # Try PowerShell: image then file list (Get-Clipboard handles PNG+BITMAP, Windows Forms only handles BITMAP)
 WINPATH=$(wslpath -w "$PNGFILE" 2>/dev/null)
 if [ -n "$WINPATH" ]; then
-    PS_OUT=$(powershell.exe -NoProfile -Command "
+    PS_OUT=$(powershell.exe -NoProfile -STA -Command "
         Add-Type -AssemblyName System.Drawing
         \$img = Get-Clipboard -Format Image -ErrorAction SilentlyContinue
         if (\$img -ne \$null) {
