@@ -179,7 +179,7 @@ Download from [nerdfonts.com](https://www.nerdfonts.com/). Install both to Windo
 **Windows Terminal** (each profile in `settings.json`):
 ```json
 "font": {
-    "face": "JetBrainsMono NFM",
+    "face": "JetBrainsMono NFM, Symbols Nerd Font Mono",
     "size": 11,
     "builtinGlyphs": false
 }
