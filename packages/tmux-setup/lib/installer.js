@@ -207,14 +207,16 @@ async function setupTmux(projectRoot, chalk) {
   // ── Step 5: WSL2 optimizations ────────────────────────────────────────────
   const isWsl = !!(process.env.WSL_DISTRO_NAME || await fs.pathExists('/proc/sys/fs/binfmt_misc/WSLInterop'));
   if (isWsl) {
-    console.log('\n' + chalk.bold('Step 5 — WSL2 memory optimizations'));
-    console.log(chalk.dim('  Prevents RAM bloat from orphaned AI processes and TMux socket corruption.\n'));
+    console.log('\n' + chalk.bold('Step 5 — WSL2 performance optimizations'));
+    console.log(chalk.dim('  Prevents RAM bloat, CPU spikes, and VHD growth during heavy build/publish ops.\n'));
 
-    const applyWsl = await ask(chalk.yellow('  Apply WSL2 memory optimizations? (Y/n): '));
+    const applyWsl = await ask(chalk.yellow('  Apply WSL2 performance optimizations? (Y/n): '));
     if (!applyWsl.toLowerCase().startsWith('n')) {
       const username = os.userInfo().username;
 
       // ── 5a: .wslconfig (Windows-side) ────────────────────────────────────
+      // Sets: vmIdleTimeout (balloon shrinks on idle), autoMemoryReclaim=dropcache
+      // in [experimental], sparseVhd=true. Does not touch memory/processors/swap.
       try {
         const winProfile = execSync('powershell.exe -NoProfile -Command "$env:USERPROFILE"', { stdio: 'pipe' })
           .toString().trim().replace(/\r/g, '');
@@ -225,23 +227,48 @@ async function setupTmux(projectRoot, chalk) {
           ? await fs.readFile(wslConfigPath, 'utf8')
           : '';
 
+        // Ensure [wsl2] section exists
+        if (!/^\[wsl2\]/im.test(wslConfigContent)) {
+          wslConfigContent = wslConfigContent.trimEnd() + '\n\n[wsl2]\n';
+        }
+
+        // Add vmIdleTimeout if not present (60s idle → balloon shrinks)
+        if (!/vmIdleTimeout\s*=/i.test(wslConfigContent)) {
+          wslConfigContent = wslConfigContent.replace(/(\[wsl2\])/i, '$1\nvmIdleTimeout=60000');
+        }
+
+        // Remove autoMemoryReclaim from [wsl2] if present (moved to [experimental])
+        wslConfigContent = wslConfigContent.replace(/^[ \t]*autoMemoryReclaim\s*=\s*\S+[ \t]*\r?\n?/im, '');
+
+        // Ensure [experimental] section exists
+        if (!/^\[experimental\]/im.test(wslConfigContent)) {
+          wslConfigContent = wslConfigContent.trimEnd() + '\n\n[experimental]\n';
+        }
+
+        // Set autoMemoryReclaim=dropcache in [experimental]
         if (/autoMemoryReclaim\s*=/i.test(wslConfigContent)) {
-          wslConfigContent = wslConfigContent.replace(/autoMemoryReclaim\s*=\s*\S+/i, 'autoMemoryReclaim=gradual');
-          console.log(chalk.green('  ✓ .wslconfig — updated autoMemoryReclaim=gradual'));
-        } else if (/^\[wsl2\]/im.test(wslConfigContent)) {
-          wslConfigContent = wslConfigContent.replace(/(\[wsl2\])/i, '$1\nautoMemoryReclaim=gradual');
-          console.log(chalk.green('  ✓ .wslconfig — added autoMemoryReclaim=gradual to [wsl2]'));
+          wslConfigContent = wslConfigContent.replace(/autoMemoryReclaim\s*=\s*\S+/i, 'autoMemoryReclaim=dropcache');
         } else {
-          wslConfigContent = wslConfigContent.trimEnd() + '\n\n[wsl2]\nautoMemoryReclaim=gradual\n';
-          console.log(chalk.green('  ✓ .wslconfig — created [wsl2] section with autoMemoryReclaim=gradual'));
+          wslConfigContent = wslConfigContent.replace(/(\[experimental\])/i, '$1\nautoMemoryReclaim=dropcache');
+        }
+
+        // Add sparseVhd=true in [experimental] if not present
+        if (!/sparseVhd\s*=/i.test(wslConfigContent)) {
+          wslConfigContent = wslConfigContent.replace(/(\[experimental\])/i, '$1\nsparseVhd=true');
         }
 
         await fs.writeFile(wslConfigPath, wslConfigContent, 'utf8');
+        console.log(chalk.green('  ✓ .wslconfig — vmIdleTimeout=60000, autoMemoryReclaim=dropcache, sparseVhd=true'));
         console.log(chalk.dim(`    ${wslConfigPath}`));
         console.log(chalk.dim('    Run "wsl --shutdown" from PowerShell to apply.'));
       } catch (e) {
         console.log(chalk.yellow('  ⚠  Could not update .wslconfig (Windows path detection failed)'));
-        console.log(chalk.dim('     Add manually to %USERPROFILE%\\.wslconfig:  autoMemoryReclaim=gradual'));
+        console.log(chalk.dim('     Add manually to %USERPROFILE%\\.wslconfig:'));
+        console.log(chalk.dim('       [wsl2]'));
+        console.log(chalk.dim('       vmIdleTimeout=60000'));
+        console.log(chalk.dim('       [experimental]'));
+        console.log(chalk.dim('       autoMemoryReclaim=dropcache'));
+        console.log(chalk.dim('       sparseVhd=true'));
       }
 
       // ── 5b: /etc/wsl.conf (boot command + user) ──────────────────────────
@@ -268,7 +295,34 @@ async function setupTmux(projectRoot, chalk) {
         }
       }
 
-      // ── 5c: sudoers rule for passwordless sysctl ─────────────────────────
+      // ── 5c: /etc/sysctl.d/99-wsl.conf — kernel tuning ───────────────────
+      const sysctlPath = '/etc/sysctl.d/99-wsl.conf';
+      const sysctlContent = [
+        'vm.swappiness=10',
+        'vm.vfs_cache_pressure=50',
+        'fs.inotify.max_user_watches=1048576',
+        'fs.inotify.max_user_instances=512',
+      ].join('\n') + '\n';
+      let existingSysctl = '';
+      try { existingSysctl = await fs.readFile(sysctlPath, 'utf8'); } catch {}
+
+      if (existingSysctl.includes('vm.swappiness') && existingSysctl.includes('inotify')) {
+        console.log(chalk.dim('  ○ /etc/sysctl.d/99-wsl.conf — already configured'));
+      } else {
+        try {
+          const tmpSysctl = `/tmp/.arcwright_sysctl_${Date.now()}`;
+          await fs.writeFile(tmpSysctl, sysctlContent, 'utf8');
+          execSync(`sudo cp "${tmpSysctl}" "${sysctlPath}" && sudo chmod 644 "${sysctlPath}" && sudo sysctl -p "${sysctlPath}"`, { stdio: 'inherit' });
+          await fs.remove(tmpSysctl);
+          console.log(chalk.green('  ✓ /etc/sysctl.d/99-wsl.conf — kernel tuning applied'));
+          console.log(chalk.dim('    swappiness=10, vfs_cache_pressure=50, inotify limits raised'));
+        } catch {
+          console.log(chalk.yellow('  ⚠  Could not write /etc/sysctl.d/99-wsl.conf (sudo failed)'));
+          console.log(chalk.dim(`     Run manually: echo '${sysctlContent.replace(/\n/g, '\\n')}' | sudo tee ${sysctlPath} && sudo sysctl -p ${sysctlPath}`));
+        }
+      }
+
+      // ── 5d: sudoers rule for passwordless sysctl ─────────────────────────
       const sudoersPath = '/etc/sudoers.d/wsl-memory';
       const sudoersLine = `${username} ALL=(root) NOPASSWD: /usr/sbin/sysctl\n`;
       let existingSudoers = '';
