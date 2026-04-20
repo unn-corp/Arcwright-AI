@@ -8,8 +8,10 @@ allowed-tools: Bash, Read, Write
 
 **Auto-load trigger:** Load this skill whenever `$TMUX` is set (tmux is active). Skip entirely if tmux is not active — all sections are tmux-only.
 
-**Spawned agent rule:** Every split-pane agent spawned by this skill MUST include in its startup prompt:
-> "Load `.agents/skills/tmux-protocol/SKILL.md` immediately — you are running inside tmux and must follow the tmux-protocol for messaging, polling, and close."
+**Spawned agent rule:** Every split-pane agent spawned by this skill MUST include in its startup prompt an explicit list of every skill it should load, in order, before starting its task. `tmux-protocol` is always first. Example:
+> "FIRST ACTION — load each of these skills before doing anything else: `.agents/skills/tmux-protocol/SKILL.md`, `.agents/skills/typescript-best-practices/SKILL.md`. You are running inside tmux and must follow the tmux-protocol for messaging, polling, and close."
+
+The spawning agent is responsible for determining which additional skills apply to the task and listing them explicitly. The spawned agent must not guess — it loads exactly what was listed.
 
 ---
 
@@ -23,7 +25,7 @@ Reference this section as a plug-in template library. Replace `<CAPS>` placehold
 # Pattern: type the message first, sleep, then submit with Enter
 # Use this for long prompts so Claude has time to display them before acting
 tmux send-keys -t <PANE_ID> "<MESSAGE>"
-sleep 3
+sleep 8
 tmux send-keys -t <PANE_ID> "" Enter
 ```
 
@@ -70,7 +72,10 @@ SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
 sleep 3
 tmux split-window -h -c "#{pane_current_path}" \
   "claude --dangerously-skip-permissions \
-  'You are the <ROLE> agent. Master pane: $SPAWNER_PANE. Load .agents/skills/tmux-protocol/SKILL.md immediately. <TASK_CONTEXT>'"
+  'You are the <ROLE> agent. Master pane: $SPAWNER_PANE. \
+  FIRST ACTION — load each of these skills before doing anything else: \
+  .agents/skills/tmux-protocol/SKILL.md<, .agents/skills/<SKILL_2>/SKILL.md, ...>. \
+  <TASK_CONTEXT>'"
 sleep 8
 NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
 tmux list-panes | grep -q "$NEW_PANE_ID" || { echo "ERROR: pane spawn failed"; exit 1; }
@@ -89,7 +94,10 @@ SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
 sleep 3
 tmux split-window -v -c "#{pane_current_path}" \
   "claude --dangerously-skip-permissions \
-  'You are the <ROLE> agent. Master pane: $SPAWNER_PANE. Load .agents/skills/tmux-protocol/SKILL.md immediately. <TASK_CONTEXT>'"
+  'You are the <ROLE> agent. Master pane: $SPAWNER_PANE. \
+  FIRST ACTION — load each of these skills before doing anything else: \
+  .agents/skills/tmux-protocol/SKILL.md<, .agents/skills/<SKILL_2>/SKILL.md, ...>. \
+  <TASK_CONTEXT>'"
 sleep 8
 NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
 sleep 6
@@ -138,7 +146,7 @@ tmux capture-pane -t <PANE_ID> -p 2>/dev/null | tail -30 | grep "AGENT_SIGNAL"
 
 ```bash
 tmux send-keys -t <PANE_ID> "STATUS_CHECK: Please emit AGENT_SIGNAL with your current task status."
-sleep 3
+sleep 8
 tmux send-keys -t <PANE_ID> "" Enter
 sleep 15
 tmux capture-pane -t <PANE_ID> -p 2>/dev/null | tail -30 | grep "AGENT_SIGNAL"
@@ -170,7 +178,7 @@ tmux select-layout tiled
 |---|---|
 | `split-window` | `sleep 8` |
 | `send-keys`, `kill-pane`, `select-layout`, `set-option`, `select-pane -T` | `sleep 6` |
-| Delayed-Enter pattern (type then Enter separately) | `sleep 3` between type and Enter |
+| Delayed-Enter pattern (type then Enter separately) | `sleep 6`–`sleep 8` between type and Enter |
 | After sending a status check prompt | `sleep 15` before reading response |
 
 ---
@@ -183,7 +191,7 @@ tmux select-layout tiled
 # For any non-trivial message, prefer this over the inline-Enter form.
 # It lets the pane render the full text before Claude processes it.
 tmux send-keys -t <PANE_ID> "<MESSAGE>"
-sleep 3
+sleep 8
 tmux send-keys -t <PANE_ID> "" Enter
 sleep 6
 ```
@@ -206,7 +214,7 @@ Every `tmux send-keys` dispatch MUST be verified. `send-keys` is fire-and-forget
 ```bash
 # 1. Send (use the delayed-Enter pattern for reliability)
 tmux send-keys -t <PANE_ID> "<MESSAGE>"
-sleep 3
+sleep 8
 tmux send-keys -t <PANE_ID> "" Enter
 sleep 6
 
@@ -215,7 +223,7 @@ DELIVERY=$(tmux capture-pane -t <PANE_ID> -p 2>/dev/null | tail -15)
 if ! echo "$DELIVERY" | grep -q "<UNIQUE_TOKEN>"; then
   echo "⚠️ Delivery unconfirmed to pane <PANE_ID> — retrying once..."
   tmux send-keys -t <PANE_ID> "<MESSAGE>"
-  sleep 3
+  sleep 8
   tmux send-keys -t <PANE_ID> "" Enter
   sleep 6
   DELIVERY2=$(tmux capture-pane -t <PANE_ID> -p 2>/dev/null | tail -15)
@@ -308,7 +316,7 @@ while [ $POLL_COUNT -lt $MAX_POLLS ]; do
     if [ "$STALL_COUNT" -ge 2 ]; then
       echo "⚠️ No activity for $(( STALL_COUNT * 2 )) minutes — sending STATUS_CHECK"
       tmux send-keys -t <PANE_ID> "STATUS_CHECK: Please emit AGENT_SIGNAL with current task status."
-      sleep 3
+      sleep 8
       tmux send-keys -t <PANE_ID> "" Enter
       STALL_COUNT=0
     fi
@@ -338,7 +346,8 @@ sleep 3
 tmux split-window -h -c "#{pane_current_path}" \
   "claude --dangerously-skip-permissions \
   'You are the <ROLE> agent. Master pane: $SPAWNER_PANE. \
-  FIRST ACTION: Load .agents/skills/tmux-protocol/SKILL.md. \
+  FIRST ACTION — load each of these skills before doing anything else: \
+  .agents/skills/tmux-protocol/SKILL.md<, .agents/skills/<SKILL_2>/SKILL.md, ...>. \
   <TASK_CONTEXT>'"
 sleep 8
 NEW_PANE_ID=$(tmux list-panes -F "#{pane_id}" | tail -1)
@@ -355,6 +364,7 @@ After spawning:
 1. Record pane ID + role + CWD in session file Active Agents table
 2. Record `name_source: auto`. If pane had a non-default title before spawn → `name_source: manual` — **NEVER rename a `manual` pane**
 3. Pass `$SPAWNER_PANE` to the spawned agent so it knows where to report back
+4. Always list every skill the agent needs in the `FIRST ACTION` line — tmux-protocol is always first; append additional skills after it (e.g. `systematic-debugging`, `typescript-best-practices`). The spawned agent MUST read all listed skills before starting its task.
 
 ---
 
@@ -376,7 +386,7 @@ for PEER_PANE in $PEER_PANES; do
   if tmux list-panes -a | grep -q "$PEER_PANE"; then
     tmux send-keys -t "$PEER_PANE" \
       "PEER_SIGNAL::<YOUR_ROLE>::<YOUR_PANE_ID>::closing::Task complete. Files modified: <FILE_LIST>. Closing now."
-    sleep 3
+    sleep 8
     tmux send-keys -t "$PEER_PANE" "" Enter
     sleep 6
   fi
