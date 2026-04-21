@@ -35,7 +35,7 @@ COLS = [
      ("o","  Open URL / file"),("g","  Search in browser"),
      ("R","  Recenter layout")],
     [("E","  Neovim (M-e)"),("N","  NvimTree"),("Y","  Yazi file manager"),("G","  Lazygit"),
-     ("D","  Lazydocker"),("C","  WSL cleanup"),("",""),("",""),("",""),("","")],
+     ("D","  Lazydocker"),("C","  WSL cleanup"),("P","  Drop page cache"),("M","  Compact memory"),("",""),("","")],
 ]
 
 NR = max(len(c) for c in COLS)
@@ -183,6 +183,8 @@ def execute(key):
         'G': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' lazygit"),
         'D': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' lazydocker"),
         'C': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'bash ~/.config/tmux/bin/wsl_cleanup.sh; read -p \"Press Enter to close\"'"),
+        'P': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'echo 3 | sudo tee /proc/sys/vm/drop_caches && echo \"Page cache dropped.\" && free -h | grep Mem; read -p \"Press Enter to close\"'"),
+        'M': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'echo 1 | sudo tee /proc/sys/vm/compact_memory && echo \"Memory compacted.\" && free -h | grep Mem; read -p \"Press Enter to close\"'"),
     }
     if key in dispatch:
         dispatch[key]()
