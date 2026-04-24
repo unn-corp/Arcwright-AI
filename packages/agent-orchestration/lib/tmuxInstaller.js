@@ -228,7 +228,6 @@ async function setupTmux(projectRoot, chalk, platform) {
   const FILE_MAP = [
     ['tmux.conf',              tmuxConf],
     ['colors.conf',            colorsConf],
-    ['agent_spawn.sh',         path.join(tmuxBin, 'agent_spawn.sh')],
     ['dispatch.sh',            path.join(tmuxBin, 'dispatch.sh')],
     ['actions_popup.py',       path.join(tmuxBin, 'actions_popup.py')],
     ['actions_popup.sh',       path.join(tmuxBin, 'actions_popup.sh')],
@@ -236,12 +235,14 @@ async function setupTmux(projectRoot, chalk, platform) {
     ['float_term.sh',          path.join(tmuxBin, 'float_term.sh')],
     ['float_init.sh',          path.join(tmuxBin, 'float_init.sh')],
     ['open_clip.sh',           path.join(tmuxBin, 'open_clip.sh')],
+    ['open_path.sh',           path.join(tmuxBin, 'open_path.sh')],
     ['paste_image_wrapper.sh', path.join(tmuxBin, 'paste_image_wrapper.sh')],
     ['paste_clipboard.sh',     path.join(tmuxBin, 'paste_clipboard.sh')],
     ['cpu_usage.sh',           path.join(tmuxBin, 'cpu_usage.sh')],
     ['ram_usage.sh',           path.join(tmuxBin, 'ram_usage.sh')],
     ['claude_usage.sh',        path.join(tmuxBin, 'claude_usage.sh')],
     ['watch-sync.sh',          path.join(tmuxBin, 'watch-sync.sh')],
+    ['bin/wsl_cleanup.sh',     path.join(tmuxBin, 'wsl_cleanup.sh')],
     ['xclip',                  xclipPath],
   ];
 

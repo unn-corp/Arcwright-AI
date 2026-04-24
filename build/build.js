@@ -760,6 +760,81 @@ function bundleTrackCommands() {
   console.log('');
 }
 
+// ─── Step 3b: bundleSpecialistCommands ───────────────────────────────────────
+
+/**
+ * Generate slash command wrappers for each awm/awb specialist agent directly
+ * into src/.claude/commands/arcwright-<slug>.md. Each command activates the
+ * corresponding specialist agent from _arcwright/{module}/agents/.
+ *
+ * This mirrors the Kiro specialist stubs generated in bundleKiroAgents() so
+ * Claude Code users can invoke specialists via `/arcwright-dev` etc.
+ */
+function bundleSpecialistCommands() {
+  console.log('👤  Generating specialist slash commands → src/.claude/commands/');
+
+  const commandsDest = path.join(PKG_SRC, '.claude', 'commands');
+  fs.mkdirSync(commandsDest, { recursive: true });
+
+  const SPECIALIST_MODULES = ['awm', 'awb'];
+  let generated = 0;
+
+  for (const mod of SPECIALIST_MODULES) {
+    const agentsDir = path.join(ARCWRIGHT_SRC, mod, 'agents');
+    if (!fs.existsSync(agentsDir)) continue;
+
+    const agentFiles = [];
+    (function collectMd(dir) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) collectMd(full);
+        else if (entry.name.endsWith('.md')) agentFiles.push(full);
+      }
+    })(agentsDir);
+
+    for (const agentPath of agentFiles) {
+      const raw  = fs.readFileSync(agentPath, 'utf8');
+      const slug = path.basename(agentPath, '.md');
+      const cmdName = `arcwright-${slug}`;
+
+      // Extract description from frontmatter or XML title tag
+      const descMatch    = raw.match(/^description:\s*["']?(.+?)["']?\s*$/m);
+      const xmlTitle     = raw.match(/<agent[^>]+title="([^"]+)"/);
+      const xmlName      = raw.match(/<agent[^>]+name="([^"]+)"/);
+      const desc = (descMatch?.[1] || xmlTitle?.[1] || xmlName?.[1] || `Arcwright ${slug} specialist`).trim();
+
+      // Relative path from _arcwright/ root (handles subdirs like tech-writer/)
+      const relFromArcwright = path.relative(ARCWRIGHT_SRC, agentPath).replace(/\\/g, '/');
+
+      const body = [
+        '---',
+        `name: '${cmdName}'`,
+        `description: '${desc.replace(/'/g, "\\'")}'`,
+        '---',
+        '',
+        `You must fully embody the ${slug} specialist persona and follow all activation instructions exactly. NEVER break character until given an exit command.`,
+        '',
+        '<agent-activation CRITICAL="TRUE">',
+        `1. LOAD the FULL agent file from {project-root}/_arcwright/${relFromArcwright}`,
+        '2. READ its entire contents',
+        '3. EXECUTE every critical_action in order (load all sidecar files)',
+        '4. PRESENT the agent menu',
+        '5. WAIT for user input',
+        '</agent-activation>',
+        '',
+        '$ARGUMENTS',
+        '',
+      ].join('\n');
+
+      writeFile(path.join(commandsDest, `${cmdName}.md`), body);
+      generated++;
+    }
+  }
+
+  console.log(`  ✓  ${generated} specialist slash commands → src/.claude/commands/`);
+  console.log('');
+}
+
 // ─── Step 4: bundleTmuxSetup ──────────────────────────────────────────────────
 
 function bundleTmuxSetup() {
@@ -843,6 +918,7 @@ buildGenericPackage();
 buildKiroAssets();
 bundleKiroAgents();
 bundleTrackCommands();
+bundleSpecialistCommands();
 bundleTmuxSetup();
 verifyNoLeaks();
 
