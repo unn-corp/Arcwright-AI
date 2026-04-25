@@ -346,6 +346,23 @@ async function setupTmux(projectRoot, chalk) {
     }
   }
 
+  // ── Post-install verification ─────────────────────────────────────────────
+  const criticalScripts = FILE_MAP
+    .filter(([, dest]) => dest.endsWith('.sh'))
+    .map(([, dest]) => dest);
+
+  const missing = [];
+  for (const dest of criticalScripts) {
+    if (!await fs.pathExists(dest)) missing.push(dest);
+  }
+
+  if (missing.length > 0) {
+    console.log('\n' + chalk.bold.yellow('⚠  Some scripts were not installed:'));
+    for (const m of missing) console.log(chalk.yellow(`    ${m}`));
+    console.log(chalk.dim('  This can happen when using a cached npx version. Fix:'));
+    console.log('  ' + chalk.cyan('npx @arcwright-ai/tmux-setup@latest'));
+  }
+
   console.log('\n' + chalk.bold.green('✓ tmux setup complete!'));
   console.log(chalk.dim('  Start tmux and press Ctrl+B I to finish TPM plugin install.'));
   console.log('');
