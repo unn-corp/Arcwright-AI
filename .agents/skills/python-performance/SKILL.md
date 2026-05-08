@@ -1,5 +1,5 @@
 ---
-name: Python Performance
+name: python-performance
 description: Master Python optimization techniques, profiling, memory management, and high-performance computing
 version: "2.1.0"
 sasmp_version: "1.3.0"
