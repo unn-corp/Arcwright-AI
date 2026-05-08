@@ -5,17 +5,24 @@ description: "Dev + QA iterative loop — Dev implements, QA validates with play
 
 # Agent Team: Dev + QA
 
-## tmux Protocol
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+>
+> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
 
-If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+## Best Used For
 
+- Standard feature implementation with deterministic pass/fail validation
+- Bug fixes that need regression verification
+- Any task where QA must confirm correctness before master can proceed
+- Sprint execution where each story needs a clean QA sign-off
+- UI changes that need playwright-cli navigation and assertion testing
 
 ## Team Composition
 
 | Role | Agent | Skills |
 |------|-------|--------|
-| Dev | `arcwright-agent-awm-dev` | Full implementation, bug fixes, refactoring |
-| QA | `arcwright-agent-awm-qa` | playwright-cli, spec tests, regression testing |
+| Dev | `arcwright-dev` | Full implementation, bug fixes, refactoring |
+| QA | `arcwright-qa` | playwright-cli, spec tests, regression testing |
 
 ## Purpose
 
@@ -33,13 +40,19 @@ The standard implementation-and-validation team. Dev implements tasks dispatched
 
 ## Spawn Sequence
 
+Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+
 ```bash
 # 1. Split Dev pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in the Dev+QA team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in the Dev+QA team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split QA pane (bottom-right, below Dev)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in the Dev+QA team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in the Dev+QA team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Equalize pane sizes
@@ -51,62 +64,127 @@ sleep 6
 
 > **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
 
-- **Dev**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md`
-- **QA**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md`
+- **Dev**: activate `arcwright-dev`
+- **QA**: activate `arcwright-qa`
 
-## Task Routing Protocol
+## Steps
 
 No task goes to QA until Dev has signaled completion. No next task goes to Dev until QA has signaled pass.
 
-## Iterative Loop
+### 1. Implementation
 
+**What this step does:** Dev implements the task dispatched by master.
+**Inputs:** Task description and acceptance criteria from master
+**Output:** `$STEP_1_OUTPUT` — implementation complete, files changed
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-dev",
+    "prompt": "Implement the following task completely.\n\n## Inputs\nTask: {task_description}\nAcceptance criteria: {criteria}\n\n## Output\nImplementation complete. List all files changed.",
+    "model": "sonnet"
+  }
+}
 ```
-1. Master dispatches implementation task to Dev pane
-   → tmux send-keys -t {dev_pane_id} "TASK-{id}: {description}. Signal TASK_DONE when complete." Enter
 
-2. Dev implements
-   → AGENT_SIGNAL::TASK_DONE::dev::{task_id}::done::{summary}
+Capture result into `$STEP_1_OUTPUT`. Pass to step 2.
 
-3. Master receives Dev TASK_DONE signal
-   → Dispatches QA verification task to QA pane with Dev's summary as context
-   → tmux send-keys -t {qa_pane_id} "TASK-{id}-qa: Verify implementation. Context: {dev_summary}. Run playwright-cli tests. Signal TASK_DONE with pass or fail." Enter
+---
 
-4. QA runs playwright-cli + spec tests
-   → AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}
+#### tmux Variant (when $TMUX is set and user wants visibility)
 
-5a. If PASS:
-    → Master marks task complete, proceeds to next task (back to step 1)
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
 
-5b. If FAIL:
-    → Master re-dispatches fix task to Dev with QA findings attached
-    → tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: QA found failures. Findings: {qa_summary}. Fix and signal TASK_DONE." Enter
-    → Repeat from step 2
+```bash
+tmux send-keys -t {dev_pane_id} "TASK-{id}: {task_description}. Acceptance criteria: {criteria}. Signal TASK_DONE when complete." Enter
 ```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::done::{summary}`
+
+---
+
+### 2. QA Validation
+
+**What this step does:** QA validates the implementation using playwright-cli and spec tests, producing a pass or fail result.
+**Inputs:** `$STEP_1_OUTPUT` (implementation summary from step 1) + acceptance criteria
+**Output:** `$STEP_2_OUTPUT` — pass or fail with findings
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-qa",
+    "prompt": "Verify the implementation against the acceptance criteria. Run playwright-cli tests and spec tests. Produce a pass or fail result with specific findings.\n\n## Inputs\nImplementation context: {$STEP_1_OUTPUT}\nAcceptance criteria: {criteria}\n\n## Output\nPass or fail verdict with: test results summary, specific failures (if any), and affected areas.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_2_OUTPUT`. If pass: task complete. If fail: pass to step 3.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {qa_pane_id} "TASK-{id}-qa: Verify implementation. Context: {$STEP_1_OUTPUT}. Run playwright-cli tests. Signal TASK_DONE with pass or fail." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}`
+
+---
+
+### 3. Fix Pass (conditional — only if step 2 failed)
+
+**What this step does:** Dev fixes QA failures and signals completion to restart the QA loop.
+**Inputs:** `$STEP_2_OUTPUT` (QA findings from step 2)
+**Output:** `$STEP_3_OUTPUT` — fix complete, files changed. Return to step 2.
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-dev",
+    "prompt": "Fix all QA failures. Address each failure specifically.\n\n## Inputs\nQA findings: {$STEP_2_OUTPUT}\n\n## Output\nFix complete. List all files changed and describe each fix.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_3_OUTPUT`. Return to step 2 (QA re-validates). When QA passes: task complete. Final output — no next step.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: QA found failures. Findings: {$STEP_2_OUTPUT}. Fix and signal TASK_DONE." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_changed}`
+
+---
 
 ## Communication Protocol
 
-### Signal Format
-```
-AGENT_SIGNAL::{TYPE}::{FROM_ROLE}::{TASK_ID}::{STATUS}::{DETAIL}
-```
-Types: `READY` | `TASK_START` | `PROGRESS` | `TASK_DONE` | `TASK_BLOCKED` | `FINDING` | `ERROR`
-
-Examples:
-- `AGENT_SIGNAL::TASK_DONE::dev::task-003::done::Auth middleware fixed, 2 files changed`
-- `AGENT_SIGNAL::TASK_DONE::qa::task-003::pass::All 8 playwright assertions green`
-- `AGENT_SIGNAL::TASK_DONE::qa::task-003::fail::Login redirect broken, assertion failed on /dashboard`
-
-### Master Polling Protocol
-After dispatching any task to a pane:
-1. `sleep 8` then begin polling
-2. Every 30s: `tmux capture-pane -t {pane_id} -p | tail -30 | grep "AGENT_SIGNAL"`
-3. On `TASK_DONE`: route next action per Iterative Loop above
-4. On `TASK_BLOCKED`: surface to user immediately
-5. No signal after 2 min: send `tmux send-keys -t {pane_id} "STATUS_CHECK" Enter`, wait 15s, poll once more
-6. Still no signal: mark pane as unresponsive in session file, present recovery options to user
-
-### Heartbeat Rule
-Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}::{task_id}::running::{brief_status}` every 60s.
+See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
 
 ## Team Registration
 
@@ -121,15 +199,6 @@ active_team:
     qa: {pane_id}
 ```
 
-## In-Process Fallback
-
-When `$TMUX` is not set, run agents sequentially using the Agent tool:
-
-1. Spawn Dev agent (Agent tool) with task → wait for full completion → capture output
-2. Spawn QA agent (Agent tool) with task + dev output → wait for full completion → capture result
-3. If QA result is fail: spawn Dev again with QA findings → repeat from step 2
-4. When QA passes: mark task complete and move to next
-
 ## Team Close Protocol
 
 When master needs to close this team:
@@ -137,10 +206,6 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Best Used For
+## Kiro CLI
 
-- Standard feature implementation with deterministic pass/fail validation
-- Bug fixes that need regression verification
-- Any task where QA must confirm correctness before master can proceed
-- Sprint execution where each story needs a clean QA sign-off
-- UI changes that need playwright-cli navigation and assertion testing
+This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.

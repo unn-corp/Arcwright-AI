@@ -5,16 +5,23 @@ description: "Ghost — single quick-flow-solo-dev agent, master queues tasks, d
 
 # Agent Team: Solo Dev — Ghost
 
-## tmux Protocol
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+>
+> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
 
-If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+## Best Used For
 
+- Well-scoped tasks where spec is already clear and review overhead isn't needed
+- Batch of small, independent tasks that can be queued and executed sequentially
+- Nano/small track work where the quick-flow-solo-dev agent's combined spec+dev pass is sufficient
+- Prototyping or exploration tasks where speed matters more than formal review
+- Tasks too small to justify spinning up a multi-agent team
 
 ## Team Composition
 
 | Role | Agent | Skills |
 |------|-------|--------|
-| Solo Dev | `arcwright-agent-awm-quick-flow-solo-dev` | Full-stack implementation, spec writing, autonomous task execution |
+| Solo Dev | `arcwright-quick-flow-solo-dev` | Full-stack implementation, spec writing, autonomous task execution |
 
 ## Purpose
 
@@ -32,9 +39,15 @@ Ghost is a single-agent team for autonomous task execution without review overhe
 
 ## Spawn Sequence
 
+Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+
 ```bash
 # 1. Split Solo Dev pane (right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Solo Dev (Ghost) agent managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-quick-flow-solo-dev.md. Your task queue comes from the master pane. Execute tasks autonomously and completely. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::solo-dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Solo Dev (Ghost) agent managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/quick-flow-solo-dev.md. Your task queue comes from the master pane. Execute tasks autonomously and completely. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::solo-dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Equalize pane sizes
@@ -46,47 +59,52 @@ sleep 6
 
 > **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
 
-- **Solo Dev**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-quick-flow-solo-dev.md`
+- **Solo Dev**: activate `arcwright-quick-flow-solo-dev`
 
-## Task Routing Protocol
+## Steps
 
-Master maintains a task queue. Tasks are dispatched one at a time:
+Master maintains a task queue. Tasks are dispatched one at a time. Repeat step 1 for each queued task.
 
-1. Master dispatches first task to Solo Dev pane
-2. Solo Dev executes autonomously (spec → implement → self-validate)
-3. Solo Dev emits `TASK_DONE` signal
-4. Master polls for signal, receives it, marks task complete
-5. Master dispatches next queued task
-6. Repeat until queue is empty
+### 1. Task Execution
+
+**What this step does:** Solo Dev executes the task autonomously — spec, implement, and self-validate in one pass.
+**Inputs:** Task description and acceptance criteria from master
+**Output:** `$STEP_1_OUTPUT` — task complete with summary. Final output — no next step (repeat for next queued task).
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-quick-flow-solo-dev",
+    "prompt": "Execute this task autonomously and completely. Write a quick spec, implement, and self-validate before finishing.\n\n## Inputs\nTask: {task_description}\nAcceptance criteria: {criteria}\n\n## Output\nTask complete. List all files changed and summarize what was done.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_1_OUTPUT`. Mark task complete. Dispatch next queued task if any. Final output — no next step.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
 
 ```bash
-# Dispatch a task
-tmux send-keys -t {solo_dev_pane_id} "TASK-{id}: {description}. Acceptance criteria: {criteria}. Signal TASK_DONE when complete." Enter
+tmux send-keys -t {solo_dev_pane_id} "TASK-{id}: {task_description}. Acceptance criteria: {criteria}. Signal TASK_DONE when complete." Enter
 ```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::solo-dev::{task_id}::{status}::{summary}`
+
+---
 
 ## Communication Protocol
 
-### Signal Format
-```
-AGENT_SIGNAL::{TYPE}::{FROM_ROLE}::{TASK_ID}::{STATUS}::{DETAIL}
-```
-Types: `READY` | `TASK_START` | `PROGRESS` | `TASK_DONE` | `TASK_BLOCKED` | `FINDING` | `ERROR`
-
-Examples:
-- `AGENT_SIGNAL::TASK_DONE::solo-dev::task-001::done::Footer link updated, 1 file changed`
-- `AGENT_SIGNAL::TASK_BLOCKED::solo-dev::task-002::blocked::Cannot resolve dependency version conflict, need guidance`
-
-### Master Polling Protocol
-After dispatching any task to a pane:
-1. `sleep 8` then begin polling
-2. Every 30s: `tmux capture-pane -t {pane_id} -p | tail -30 | grep "AGENT_SIGNAL"`
-3. On `TASK_DONE`: dispatch next queued task
-4. On `TASK_BLOCKED`: surface to user immediately
-5. No signal after 2 min: send `tmux send-keys -t {pane_id} "STATUS_CHECK" Enter`, wait 15s, poll once more
-6. Still no signal: mark pane as unresponsive in session file, present recovery options to user
-
-### Heartbeat Rule
-Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::solo-dev::{task_id}::running::{brief_status}` every 60s.
+See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
 
 ## Team Registration
 
@@ -100,14 +118,6 @@ active_team:
     solo-dev: {pane_id}
 ```
 
-## In-Process Fallback
-
-When `$TMUX` is not set, run the agent using the Agent tool:
-
-1. Spawn quick-flow-solo-dev agent (Agent tool) with first task → wait for completion
-2. Capture output, mark task complete
-3. Spawn again with next task → repeat until queue empty
-
 ## Team Close Protocol
 
 When master needs to close this team:
@@ -115,10 +125,6 @@ When master needs to close this team:
 2. Kill the pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Best Used For
+## Kiro CLI
 
-- Well-scoped tasks where spec is already clear and review overhead isn't needed
-- Batch of small, independent tasks that can be queued and executed sequentially
-- Nano/small track work where the quick-flow-solo-dev agent's combined spec+dev pass is sufficient
-- Prototyping or exploration tasks where speed matters more than formal review
-- Tasks too small to justify spinning up a multi-agent team
+This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.

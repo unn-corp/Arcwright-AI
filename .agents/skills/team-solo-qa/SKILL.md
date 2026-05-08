@@ -5,16 +5,23 @@ description: "The Inquisitor — single QA agent for regression runs, playwright
 
 # Agent Team: Solo QA — The Inquisitor
 
-## tmux Protocol
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+>
+> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
 
-If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+## Best Used For
 
+- Regression test runs against a deployed environment or after a merge
+- Validating a specific UI flow or API behavior with playwright-cli without any implementation work
+- Pre-release smoke tests to confirm critical paths are intact
+- Generating a structured test report to feed into a triage decision or another team
+- Standalone QA work that doesn't need to be paired with a Dev agent
 
 ## Team Composition
 
 | Role | Agent | Skills |
 |------|-------|--------|
-| QA | `arcwright-agent-awm-qa` | playwright-cli, regression testing, spec tests, pass/fail reporting |
+| QA | `arcwright-qa` | playwright-cli, regression testing, spec tests, pass/fail reporting |
 
 ## Purpose
 
@@ -32,9 +39,15 @@ The Inquisitor is a single QA agent for standalone test execution. No Dev, no Ar
 
 ## Spawn Sequence
 
+Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+
 ```bash
 # 1. Split QA pane (right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent (The Inquisitor) managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md. Use playwright-cli for UI/API testing. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent (The Inquisitor) managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. Use playwright-cli for UI/API testing. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Equalize pane sizes
@@ -46,58 +59,52 @@ sleep 6
 
 > **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
 
-- **QA**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md`
+- **QA**: activate `arcwright-qa`
 
-## Task Routing Protocol
+## Steps
 
-Single agent, no loop. Master queues test tasks and dispatches one at a time:
+Single agent, no loop. Master queues test tasks and dispatches one at a time. Repeat step 1 for each queued task.
 
-1. Master dispatches test task to QA
-2. QA runs tests and produces a structured pass/fail report → `TASK_DONE`
-3. Master receives report, presents to user or routes findings to a fix team
-4. Master dispatches next queued task
+### 1. Test Run
+
+**What this step does:** QA runs tests for the specified scope and produces a structured pass/fail report.
+**Inputs:** Test scope and approach from master
+**Output:** `$STEP_1_OUTPUT` — structured pass/fail report. Final output — no next step.
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-qa",
+    "prompt": "Run tests for the specified scope and produce a structured pass/fail report. Use playwright-cli for UI/API testing as appropriate.\n\n## Inputs\nTest scope: {test_scope}\nTest approach: {playwright-cli|spec-files|both}\n\n## Output\nStructured QA report:\n- Scope: {areas tested}\n- Passed: N\n- Failed: N\n- Failures: list each failure with description\nFinal verdict: PASS or FAIL",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_1_OUTPUT`. Present report to user or route failures to a fix team. Final output — no next step.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
 
 ```bash
-# Dispatch a test task
 tmux send-keys -t {qa_pane_id} "TASK-{id}: {test_scope}. Test approach: {playwright-cli|spec-files|both}. Signal TASK_DONE with pass or fail and a structured report." Enter
 ```
 
-QA report format (emitted before `TASK_DONE`):
-```
-QA REPORT [{task_id}]
-Scope: {areas_tested}
-Passed: {N}
-Failed: {N}
-Failures:
-  - {failure_1_description}
-  - {failure_2_description}
-```
+Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}`
+
+---
 
 ## Communication Protocol
 
-### Signal Format
-```
-AGENT_SIGNAL::{TYPE}::{FROM_ROLE}::{TASK_ID}::{STATUS}::{DETAIL}
-```
-Types: `READY` | `TASK_START` | `PROGRESS` | `TASK_DONE` | `TASK_BLOCKED` | `FINDING` | `ERROR`
-
-Examples:
-- `AGENT_SIGNAL::TASK_DONE::qa::task-090::pass::All 24 regression assertions green`
-- `AGENT_SIGNAL::TASK_DONE::qa::task-091::fail::3 failures — login redirect, pagination, image upload`
-- `AGENT_SIGNAL::PROGRESS::qa::task-090::running::Tested auth flows (8/24), proceeding to dashboard flows`
-
-### Master Polling Protocol
-After dispatching any task to a pane:
-1. `sleep 8` then begin polling
-2. Every 30s: `tmux capture-pane -t {pane_id} -p | tail -30 | grep "AGENT_SIGNAL"`
-3. On `TASK_DONE::pass`: present report to user, dispatch next queued task
-4. On `TASK_DONE::fail`: present report with failures to user for triage decision
-5. On `TASK_BLOCKED`: surface to user immediately
-6. No signal after 2 min: send `tmux send-keys -t {pane_id} "STATUS_CHECK" Enter`, wait 15s, poll once more
-7. Still no signal: mark pane as unresponsive in session file, present recovery options to user
-
-### Heartbeat Rule
-Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::qa::{task_id}::running::{brief_status}` every 60s.
+See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
 
 ## Team Registration
 
@@ -111,14 +118,6 @@ active_team:
     qa: {pane_id}
 ```
 
-## In-Process Fallback
-
-When `$TMUX` is not set, run the agent using the Agent tool:
-
-1. Spawn QA agent (Agent tool) with test task → wait for pass/fail report
-2. Capture report, present to user or route failures to a fix team
-3. Spawn again for next queued task if needed
-
 ## Team Close Protocol
 
 When master needs to close this team:
@@ -126,10 +125,6 @@ When master needs to close this team:
 2. Kill the pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Best Used For
+## Kiro CLI
 
-- Regression test runs against a deployed environment or after a merge
-- Validating a specific UI flow or API behavior with playwright-cli without any implementation work
-- Pre-release smoke tests to confirm critical paths are intact
-- Generating a structured test report to feed into a triage decision or another team
-- Standalone QA work that doesn't need to be paired with a Dev agent
+This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.

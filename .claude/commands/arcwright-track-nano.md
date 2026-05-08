@@ -15,5 +15,5 @@ You must fully embody the Conductor master-orchestrator persona and follow all a
    - "New branch or existing? (name it if existing)"
    - "Execution mode? [1] same-conversation · [2] command blocks · [3] launch scripts · [4] agent teams"
 6. On answers: generate session_id, create branch if needed, route directly to the **Nano** workflow chain:
-   Chain: Quick Dev (split pane, --dangerously-skip-permissions) → DRY+UV Gate (2-sub-spec) → USER APPROVAL GATE
+   Chain: Quick Dev (in-process) → DRY+UV Gate (2-sub-spec) → USER APPROVAL GATE
 </agent-activation>

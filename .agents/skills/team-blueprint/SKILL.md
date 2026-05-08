@@ -5,18 +5,25 @@ description: "War Room — strategic planning council with PM, Analyst, and Arch
 
 # Agent Team: Blueprint — The War Room
 
-## tmux Protocol
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+>
+> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
 
-If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+## Best Used For
 
+- Kicking off a new feature or product area before any code is written
+- Validating technical feasibility of a product idea before committing sprint capacity
+- Creating a full planning package: PRD + research report + architecture notes + sprint plan
+- Large initiatives where poor upfront planning would be costly to unwind
+- Situations where PM, research, and architecture concerns need to be resolved together
 
 ## Team Composition
 
 | Role | Agent | Skills |
 |------|-------|--------|
-| PM | `arcwright-agent-awm-pm` | PRD creation, backlog, sprint planning |
-| Analyst | `arcwright-agent-awm-analyst` | Domain research, market research, competitive analysis |
-| Architect | `arcwright-agent-awm-architect` | Architecture design, feasibility validation, prototype code |
+| PM | `arcwright-pm` | PRD creation, backlog, sprint planning |
+| Analyst | `arcwright-analyst` | Domain research, market research, competitive analysis |
+| Architect | `arcwright-architect` | Architecture design, feasibility validation, prototype code |
 
 ## Purpose
 
@@ -36,17 +43,23 @@ The War Room assembles before any significant build begins. The PM drives the pr
 
 ## Spawn Sequence
 
+Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+
 ```bash
 # 1. Split PM pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the PM agent in the Blueprint (War Room) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-pm.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::pm::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the PM agent in the Blueprint (War Room) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/pm.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::pm::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split Analyst pane (mid-right, below PM)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Analyst agent in the Blueprint (War Room) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-analyst.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::analyst::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Analyst agent in the Blueprint (War Room) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/analyst.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::analyst::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Split Architect pane (bottom-right, below Analyst)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in the Blueprint (War Room) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-architect.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in the Blueprint (War Room) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/architect.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 4. Equalize pane sizes
@@ -58,47 +71,181 @@ sleep 6
 
 > **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
 
-- **PM**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-pm.md`
-- **Analyst**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-analyst.md`
-- **Architect**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-architect.md`
+- **PM**: activate `arcwright-pm`
+- **Analyst**: activate `arcwright-analyst`
+- **Architect**: activate `arcwright-architect`
   - Architect has **full dev skill access** and can invoke any skill in `.agents/skills/` directly, including prototype code to validate assumptions.
 
-## Task Routing Protocol
+## Steps
 
-This team has no iterative loop. Master routes tasks sequentially or in parallel depending on independence:
+### 1. Research + Initial PRD (parallel start)
 
-1. **Parallel start**: Master dispatches research brief to Analyst AND initial PRD stub to PM simultaneously.
-2. **Analyst → PM handoff**: When Analyst emits `TASK_DONE`, master forwards research findings to PM to enrich the PRD.
-3. **PM → Architect handoff**: When PM emits `TASK_DONE` with PRD draft, master forwards to Architect for feasibility review.
-4. **Architect output**: Architect returns architecture notes, technical risks, and any prototype code to master.
-5. **Final synthesis**: Master collates all artifacts (PRD, research report, architecture notes, sprint plan) and presents to user.
+**What this step does:** Analyst conducts domain research while PM drafts the initial PRD stub — both run in parallel since they start from the same brief.
+**Inputs:** Feature brief from master
+**Output:** `$STEP_1_ANALYST_OUTPUT` — research findings; `$STEP_1_PM_OUTPUT` — initial PRD draft
 
-Master dispatches tasks by sending to the relevant pane:
-```bash
-tmux send-keys -t {pm_pane_id} "TASK-001: Draft initial PRD for feature X. Context: {brief}. Signal TASK_DONE when complete." Enter
+---
+
+#### Default: In-Process (Agent tool)
+
+Issue both Agent calls in a single assistant message (parallel fan-out):
+
+```json
+[
+  {
+    "name": "Agent",
+    "input": {
+      "subagent_type": "arcwright-analyst",
+      "prompt": "Conduct domain research for the feature brief. Cover: domain constraints, user needs, competitive landscape, technical feasibility signals, and any relevant prior art.\n\n## Inputs\nFeature brief: {feature_brief}\n\n## Output\nStructured research findings with key insights and recommendations.",
+      "model": "sonnet"
+    }
+  },
+  {
+    "name": "Agent",
+    "input": {
+      "subagent_type": "arcwright-pm",
+      "prompt": "Draft an initial PRD stub for the feature brief. Cover: goals, user stories, acceptance criteria (draft), out-of-scope items, and open questions.\n\n## Inputs\nFeature brief: {feature_brief}\n\n## Output\nInitial PRD draft.",
+      "model": "sonnet"
+    }
+  }
+]
 ```
+
+Capture results into `$STEP_1_ANALYST_OUTPUT` and `$STEP_1_PM_OUTPUT`. Pass both to step 2.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning. Dispatch to both panes simultaneously; wait for both TASK_DONE signals.
+
+```bash
+tmux send-keys -t {analyst_pane_id} "TASK-{id}-research: Research brief: {feature_brief}. Cover domain constraints, user needs, competitive landscape. Signal TASK_DONE with structured findings." Enter
+tmux send-keys -t {pm_pane_id} "TASK-{id}-prd: Draft initial PRD stub for: {feature_brief}. Signal TASK_DONE when complete." Enter
+```
+
+Completion signals (wait for both):
+```
+AGENT_SIGNAL::TASK_DONE::analyst::{task_id}::done::{findings_summary}
+AGENT_SIGNAL::TASK_DONE::pm::{task_id}::done::{prd_summary}
+```
+
+---
+
+### 2. PRD Enrichment
+
+**What this step does:** PM enriches the PRD draft with the Analyst's research findings, producing a complete PRD.
+**Inputs:** `$STEP_1_ANALYST_OUTPUT` (research) + `$STEP_1_PM_OUTPUT` (initial PRD draft)
+**Output:** `$STEP_2_OUTPUT` — complete PRD with research-enriched acceptance criteria
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-pm",
+    "prompt": "Enrich the initial PRD draft with the research findings. Update acceptance criteria, resolve open questions where the research provides answers, and add any research-derived constraints or opportunities.\n\n## Inputs\nInitial PRD draft: {$STEP_1_PM_OUTPUT}\nResearch findings: {$STEP_1_ANALYST_OUTPUT}\n\n## Output\nComplete enriched PRD.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_2_OUTPUT`. Pass to step 3.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {pm_pane_id} "TASK-{id}-enrich: Enrich PRD draft with research findings. Research: {$STEP_1_ANALYST_OUTPUT}. PRD draft: {$STEP_1_PM_OUTPUT}. Signal TASK_DONE with enriched PRD." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::pm::{task_id}::done::PRD enriched`
+
+---
+
+### 3. Architecture Feasibility
+
+**What this step does:** Architect validates technical feasibility of the enriched PRD and produces architecture notes, technical risks, and any prototype code.
+**Inputs:** `$STEP_2_OUTPUT` (enriched PRD) + feature brief
+**Output:** `$STEP_3_OUTPUT` — architecture notes, technical risks, feasibility assessment, any prototype code
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-architect",
+    "prompt": "Validate technical feasibility of the PRD. Produce: architecture notes, technical risks, feasibility assessment. Write any prototype code needed to validate assumptions.\n\n## Inputs\nEnriched PRD: {$STEP_2_OUTPUT}\nFeature brief: {feature_brief}\n\n## Output\nArchitecture notes with technical risks, feasibility verdict, and any prototype code.",
+    "model": "opus"
+  }
+}
+```
+
+Capture result into `$STEP_3_OUTPUT`. Pass to step 4.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {architect_pane_id} "TASK-{id}-arch: Validate feasibility of PRD. PRD: {$STEP_2_OUTPUT}. Brief: {feature_brief}. Produce architecture notes, risks, prototype code if needed. Signal TASK_DONE when complete." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::{feasibility_summary}`
+
+---
+
+### 4. Synthesis
+
+**What this step does:** Master collates all planning artifacts and presents the final package to the user.
+**Inputs:** `$STEP_1_ANALYST_OUTPUT`, `$STEP_2_OUTPUT` (enriched PRD), `$STEP_3_OUTPUT` (architecture notes)
+**Output:** `$STEP_4_OUTPUT` — final planning package. Final output — no next step.
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-pm",
+    "prompt": "Collate all planning artifacts into a final planning package. Summarize the key decisions, open risks, and recommended next steps.\n\n## Inputs\nResearch findings: {$STEP_1_ANALYST_OUTPUT}\nEnriched PRD: {$STEP_2_OUTPUT}\nArchitecture notes: {$STEP_3_OUTPUT}\n\n## Output\nFinal planning package summary with: key decisions, open risks, recommended next steps, and artifact index.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_4_OUTPUT`. Final output — no next step. Present to user.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {pm_pane_id} "TASK-{id}-collate: Collate all planning artifacts. Research: {$STEP_1_ANALYST_OUTPUT}. PRD: {$STEP_2_OUTPUT}. Architecture: {$STEP_3_OUTPUT}. Signal TASK_DONE with final summary." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::pm::{task_id}::done::Planning package complete`
+
+---
 
 ## Communication Protocol
 
-### Signal Format
-```
-AGENT_SIGNAL::{TYPE}::{FROM_ROLE}::{TASK_ID}::{STATUS}::{DETAIL}
-```
-Types: `READY` | `TASK_START` | `PROGRESS` | `TASK_DONE` | `TASK_BLOCKED` | `FINDING` | `ERROR`
-
-Example: `AGENT_SIGNAL::TASK_DONE::pm::task-001::done::PRD v1 complete, 8 acceptance criteria defined`
-
-### Master Polling Protocol
-After dispatching any task to a pane:
-1. `sleep 8` then begin polling
-2. Every 30s: `tmux capture-pane -t {pane_id} -p | tail -30 | grep "AGENT_SIGNAL"`
-3. On `TASK_DONE`: route next action per Task Routing Protocol above
-4. On `TASK_BLOCKED`: surface to user immediately
-5. No signal after 2 min: send `tmux send-keys -t {pane_id} "STATUS_CHECK" Enter`, wait 15s, poll once more
-6. Still no signal: mark pane as unresponsive in session file, present recovery options to user
-
-### Heartbeat Rule
-Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}::{task_id}::running::{brief_status}` every 60s.
+See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
 
 ## Team Registration
 
@@ -114,15 +261,6 @@ active_team:
     architect: {pane_id}
 ```
 
-## In-Process Fallback
-
-When `$TMUX` is not set, run agents sequentially using the Agent tool:
-
-1. Spawn Analyst agent (Agent tool) with research brief → wait for completion → capture research output
-2. Spawn PM agent (Agent tool) with brief + research output → wait for completion → capture PRD draft
-3. Spawn Architect agent (Agent tool) with PRD + brief → wait for completion → capture architecture notes
-4. Collate all outputs and present final planning artifacts to user
-
 ## Team Close Protocol
 
 When master needs to close this team:
@@ -130,10 +268,6 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Best Used For
+## Kiro CLI
 
-- Kicking off a new feature or product area before any code is written
-- Validating technical feasibility of a product idea before committing sprint capacity
-- Creating a full planning package: PRD + research report + architecture notes + sprint plan
-- Large initiatives where poor upfront planning would be costly to unwind
-- Situations where PM, research, and architecture concerns need to be resolved together
+This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.

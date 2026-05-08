@@ -5,17 +5,24 @@ description: "Rapid Response — emergency fix with strict guardrails: max 4 fil
 
 # Agent Team: Hotfix — Rapid Response
 
-## tmux Protocol
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+>
+> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
 
-If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+## Best Used For
 
+- Production incidents requiring immediate targeted remediation
+- Critical bugs in isolated subsystems (null pointer, broken auth check, bad query)
+- Situations where time-to-fix is more important than review completeness
+- Any emergency where the scope is genuinely bounded to 1-4 files in a single subsystem
+- NEVER use for: architectural changes, multi-subsystem refactors, new features, scope > 4 files
 
 ## Team Composition
 
 | Role | Agent | Skills |
 |------|-------|--------|
-| Dev | `arcwright-agent-awm-dev` | Targeted fix, isolated scope |
-| Security | Security reviewer (review agent with security-only sub-spec lens) | Fix review, regression safety check |
+| Dev | `arcwright-dev` | Targeted fix, isolated scope |
+| Security | `arcwright-review-orchestrator` (security lens) | Fix review, regression safety check |
 
 ## Purpose
 
@@ -49,9 +56,15 @@ If any guardrail would be violated, stop and present the user with options: esca
 
 **MUST have received `[emergency]` from user before running these commands.**
 
+Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+
 ```bash
 # 1. Split Dev pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in the Hotfix (Rapid Response) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md. GUARDRAILS: touch MAX 4 files, isolated subsystem only, no cross-cutting changes. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in the Hotfix (Rapid Response) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. GUARDRAILS: touch MAX 4 files, isolated subsystem only, no cross-cutting changes. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split Security pane (bottom-right)
@@ -67,65 +80,102 @@ sleep 6
 
 > **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
 
-- **Dev**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md`
+- **Dev**: activate `arcwright-dev`
   - Constrained: max 4 files, isolated subsystem, no cross-cutting changes.
-- **Security**: Activate review agent with **security-only sub-spec lens**.
+- **Security**: activate with **security-only sub-spec lens**.
   - Focused on: does the fix introduce a security regression or new vulnerability? Not architectural quality.
 
-## Task Routing Protocol
+## Steps
 
-No iterative loop. Linear flow:
+No iterative loop. Linear flow with guardrail gates.
 
+### 1. Guardrail Verification
+
+**What this step does:** Master verifies `[emergency]` confirmation has been received and that the issue fits within guardrails before proceeding.
+**Inputs:** User's `[emergency]` confirmation + issue description
+**Output:** `$STEP_1_OUTPUT` — guardrail check: proceed or escalate
+
+This step is performed by master directly (no Agent spawn needed): confirm `[emergency]` received, confirm issue fits in 1-4 files in a single subsystem. If either check fails, surface options to user.
+
+---
+
+### 2. Emergency Fix
+
+**What this step does:** Dev identifies and implements the fix within guardrail constraints.
+**Inputs:** Issue description + guardrail constraints
+**Output:** `$STEP_2_OUTPUT` — fix complete with files changed, OR guardrail-blocked signal
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-dev",
+    "prompt": "Emergency fix for production issue. GUARDRAILS ARE NON-NEGOTIABLE: touch MAX 4 files, isolated to the specified subsystem only, no cross-cutting changes. If the fix requires violating a guardrail, stop and report which guardrail would be violated and why.\n\n## Inputs\nIssue: {issue_description}\nSubsystem: {subsystem}\nGuardrails: max 4 files, isolated subsystem, no cross-cutting changes\n\n## Output\nFix complete with files changed listed. OR: 'GUARDRAIL_BLOCKED: {reason}' if a guardrail would be violated.",
+    "model": "sonnet"
+  }
+}
 ```
-1. User confirms [emergency] — master verifies guardrails are satisfied
-   (if not: present options to user before proceeding)
 
-2. Master dispatches fix task to Dev
-   → tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: Emergency fix for: {issue}. GUARDRAILS: max 4 files, isolated to {subsystem} only. Signal TASK_DONE when fixed with files changed." Enter
+Capture result into `$STEP_2_OUTPUT`. If `GUARDRAIL_BLOCKED`: surface to user immediately. Otherwise pass to step 3.
 
-3. Dev identifies and fixes the issue
-   → AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_changed}
-   → If guardrail would be violated: AGENT_SIGNAL::TASK_BLOCKED::dev::{task_id}::guardrail::{reason}
+---
 
-4. If guardrail blocked: master surfaces to user for escalation decision
+#### tmux Variant (when $TMUX is set and user wants visibility)
 
-5. If fix complete: master dispatches to Security for fix review
-   → tmux send-keys -t {security_pane_id} "TASK-{id}-review: Review this hotfix for security regressions only. Files changed: {files_changed}. Issue being fixed: {issue}. Signal TASK_DONE::approved or TASK_DONE::blocked." Enter
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
 
-6. Security reviews the fix
-   → AGENT_SIGNAL::TASK_DONE::security::{task_id}::approved::Fix is safe, no security regressions
-   → OR: AGENT_SIGNAL::TASK_DONE::security::{task_id}::blocked::{security_concern}
-
-7a. If Security APPROVED: master proceeds to PTM
-7b. If Security BLOCKED: master surfaces concern to user for decision
-    → User decides: revise fix (re-dispatch to Dev) or escalate
+```bash
+tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: Emergency fix for: {issue}. GUARDRAILS: max 4 files, isolated to {subsystem} only. Signal TASK_DONE when fixed with files changed." Enter
 ```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_changed}` or `AGENT_SIGNAL::TASK_BLOCKED::dev::{task_id}::guardrail::{reason}`
+
+---
+
+### 3. Security Review
+
+**What this step does:** Security reviews the fix for regressions and new vulnerabilities — not architectural quality.
+**Inputs:** `$STEP_2_OUTPUT` (files changed + fix description) + original issue
+**Output:** `$STEP_3_OUTPUT` — approved (proceed to PTM) or blocked (security concern)
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-review-orchestrator",
+    "prompt": "Review this hotfix for security regressions ONLY. Does the fix introduce any: new attack surface, auth bypass, injection opportunity, unsafe data handling, or other security vulnerability? Do NOT review for architectural quality.\n\n## Inputs\nFiles changed: {$STEP_2_OUTPUT}\nIssue being fixed: {issue_description}\n\n## Output\nEither 'Approved: fix is safe, no security regressions introduced.' OR 'Blocked: {specific_security_concern}'",
+    "model": "opus"
+  }
+}
+```
+
+Capture result into `$STEP_3_OUTPUT`. If approved: proceed to PTM. If blocked: surface to user for decision. Final output — no next step.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {security_pane_id} "TASK-{id}-review: Review hotfix for security regressions only. Files changed: {$STEP_2_OUTPUT}. Issue: {issue_description}. Signal TASK_DONE::approved or TASK_DONE::blocked." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::security::{task_id}::approved::Fix is safe, no security regressions` or `AGENT_SIGNAL::TASK_DONE::security::{task_id}::blocked::{security_concern}`
+
+---
 
 ## Communication Protocol
 
-### Signal Format
-```
-AGENT_SIGNAL::{TYPE}::{FROM_ROLE}::{TASK_ID}::{STATUS}::{DETAIL}
-```
-Types: `READY` | `TASK_START` | `PROGRESS` | `TASK_DONE` | `TASK_BLOCKED` | `FINDING` | `ERROR`
-
-Examples:
-- `AGENT_SIGNAL::TASK_DONE::dev::task-hf1::fixed::backend/routes/auth.py — null check added`
-- `AGENT_SIGNAL::TASK_BLOCKED::dev::task-hf1::guardrail::Fix requires 6 files — exceeds 4-file limit`
-- `AGENT_SIGNAL::TASK_DONE::security::task-hf1::approved::Fix is safe — no new attack surface introduced`
-- `AGENT_SIGNAL::TASK_DONE::security::task-hf1::blocked::Null check bypasses rate limit on same code path`
-
-### Master Polling Protocol
-After dispatching any task to a pane:
-1. `sleep 8` then begin polling
-2. Every 30s: `tmux capture-pane -t {pane_id} -p | tail -30 | grep "AGENT_SIGNAL"`
-3. On `TASK_DONE`: route next action per Task Routing Protocol above
-4. On `TASK_BLOCKED`: surface to user immediately — do NOT auto-escalate
-5. No signal after 2 min: send `tmux send-keys -t {pane_id} "STATUS_CHECK" Enter`, wait 15s, poll once more
-6. Still no signal: mark pane as unresponsive in session file, present recovery options to user
-
-### Heartbeat Rule
-Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}::{task_id}::running::{brief_status}` every 60s.
+See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
 
 ## Team Registration
 
@@ -141,17 +191,6 @@ active_team:
     security: {pane_id}
 ```
 
-## In-Process Fallback
-
-When `$TMUX` is not set, run agents sequentially using the Agent tool:
-
-1. Verify `[emergency]` confirmed and guardrails satisfied
-2. Spawn Dev agent (Agent tool) with fix task → wait for completion
-3. If guardrail blocked: surface to user
-4. Spawn Security reviewer (Agent tool) with fix details → wait for approval or block
-5. If approved: proceed to PTM
-6. If blocked: surface to user
-
 ## Team Close Protocol
 
 When master needs to close this team:
@@ -159,10 +198,6 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Best Used For
+## Kiro CLI
 
-- Production incidents requiring immediate targeted remediation
-- Critical bugs in isolated subsystems (null pointer, broken auth check, bad query)
-- Situations where time-to-fix is more important than review completeness
-- Any emergency where the scope is genuinely bounded to 1-4 files in a single subsystem
-- NEVER use for: architectural changes, multi-subsystem refactors, new features, scope > 4 files
+This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.

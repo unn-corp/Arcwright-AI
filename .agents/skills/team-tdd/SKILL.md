@@ -5,17 +5,24 @@ description: "The Forge — TDD pod where QA writes failing tests first, Dev imp
 
 # Agent Team: TDD Pod — The Forge
 
-## tmux Protocol
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+>
+> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
 
-If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+## Best Used For
 
+- Critical path features (auth, payments, core data flows) where regressions are costly
+- New APIs or services where the interface contract needs to be locked in via tests
+- Refactors where the existing behavior must be fully preserved and verifiable
+- Features with complex acceptance criteria that benefit from being encoded as executable tests
+- Situations where the team wants the test suite to serve as living documentation of intent
 
 ## Team Composition
 
 | Role | Agent | Skills |
 |------|-------|--------|
-| QA | `arcwright-agent-awm-qa` | Test authoring (failing tests first), playwright-cli, verification |
-| Dev | `arcwright-agent-awm-dev` | Implementation to make tests pass |
+| QA | `arcwright-qa` | Test authoring (failing tests first), playwright-cli, verification |
+| Dev | `arcwright-dev` | Implementation to make tests pass |
 
 ## Purpose
 
@@ -33,13 +40,19 @@ The Forge enforces true test-driven development. QA writes failing tests from ac
 
 ## Spawn Sequence
 
+Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+
 ```bash
 # 1. Split QA pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in the TDD Pod (The Forge) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md. In this team you write FAILING tests first from acceptance criteria — do NOT implement. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in the TDD Pod (The Forge) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. In this team you write FAILING tests first from acceptance criteria — do NOT implement. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split Dev pane (bottom-right, below QA)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in the TDD Pod (The Forge) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md. In this team you implement ONLY to make QA-authored tests pass — do not add extra functionality. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in the TDD Pod (The Forge) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. In this team you implement ONLY to make QA-authored tests pass — do not add extra functionality. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Equalize pane sizes
@@ -51,65 +64,164 @@ sleep 6
 
 > **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
 
-- **QA**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md`
+- **QA**: activate `arcwright-qa`
   - QA role in this team is test authoring first, verification second. QA does NOT implement features.
-- **Dev**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md`
+- **Dev**: activate `arcwright-dev`
   - Dev role in this team is implementing only to make QA-authored tests pass — no scope creep.
 
-## Iterative Loop
+## Steps
 
+### 1. Write Failing Tests
+
+**What this step does:** QA writes failing tests from acceptance criteria. Tests MUST fail before implementation exists.
+**Inputs:** Spec and acceptance criteria from master
+**Output:** `$STEP_1_OUTPUT` — test file paths (tests are failing at this point)
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-qa",
+    "prompt": "Write FAILING tests from the acceptance criteria. Do NOT implement any functionality — tests must fail before implementation. Write tests that completely encode the acceptance criteria as executable assertions.\n\n## Inputs\nSpec: {spec}\nAcceptance criteria: {criteria}\n\n## Output\nTest files written (confirm they are failing). List test file paths.",
+    "model": "sonnet"
+  }
+}
 ```
-1. Master dispatches spec + acceptance criteria to QA pane
-   → tmux send-keys -t {qa_pane_id} "TASK-{id}: Write FAILING tests for: {spec}. Acceptance criteria: {criteria}. Signal TASK_DONE::tests-written with test file paths." Enter
 
-2. QA writes failing tests (they MUST fail before implementation)
-   → AGENT_SIGNAL::TASK_DONE::qa::{task_id}::tests-written::{test_file_paths}
+Capture result into `$STEP_1_OUTPUT`. Pass test file paths to step 2.
 
-3. Master dispatches test files + spec to Dev pane
-   → tmux send-keys -t {dev_pane_id} "TASK-{id}: Implement to make these tests pass. Test files: {test_file_paths}. Spec: {spec}. Signal TASK_DONE when all tests green." Enter
+---
 
-4. Dev implements to make tests pass
-   → AGENT_SIGNAL::TASK_DONE::dev::{task_id}::implemented::{summary}
+#### tmux Variant (when $TMUX is set and user wants visibility)
 
-5. Master dispatches implementation result back to QA for green verification
-   → tmux send-keys -t {qa_pane_id} "TASK-{id}-verify: Verify all tests are now green. Run the test suite. Signal TASK_DONE::pass or TASK_DONE::fail." Enter
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
 
-6. QA verifies:
-   → If all pass: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::pass::All {N} tests green
-   → If fail: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::fail::{failing_test_summary}
-
-7a. If PASS: master marks task complete, proceeds to next task
-
-7b. If FAIL: master re-dispatches failing tests to Dev with QA findings
-    → tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: Tests still failing. Findings: {qa_summary}. Fix and signal TASK_DONE." Enter
-    → Repeat from step 4
+```bash
+tmux send-keys -t {qa_pane_id} "TASK-{id}: Write FAILING tests for: {spec}. Acceptance criteria: {criteria}. Signal TASK_DONE::tests-written with test file paths." Enter
 ```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::tests-written::{test_file_paths}`
+
+---
+
+### 2. Implement to Green
+
+**What this step does:** Dev implements only what is needed to make the QA-authored tests pass — no extra scope.
+**Inputs:** `$STEP_1_OUTPUT` (test file paths) + spec
+**Output:** `$STEP_2_OUTPUT` — implementation complete, tests should now pass
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-dev",
+    "prompt": "Implement only what is needed to make the QA-authored tests pass. Do NOT add extra functionality beyond what the tests require.\n\n## Inputs\nTest files: {$STEP_1_OUTPUT}\nSpec: {spec}\n\n## Output\nImplementation complete. List all files changed.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_2_OUTPUT`. Pass to step 3.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {dev_pane_id} "TASK-{id}: Implement to make these tests pass. Test files: {$STEP_1_OUTPUT}. Spec: {spec}. Signal TASK_DONE when all tests green." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::implemented::{summary}`
+
+---
+
+### 3. Green Verification
+
+**What this step does:** QA verifies all tests are now green by running the full test suite.
+**Inputs:** `$STEP_2_OUTPUT` (implementation summary) + `$STEP_1_OUTPUT` (test files)
+**Output:** `$STEP_3_OUTPUT` — pass (all tests green) or fail (list of still-failing tests)
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-qa",
+    "prompt": "Verify all tests are now green by running the full test suite. Run the test files that were written in step 1.\n\n## Inputs\nTest files: {$STEP_1_OUTPUT}\nImplementation context: {$STEP_2_OUTPUT}\n\n## Output\nPass or fail. If pass: 'All N tests green.' If fail: list each failing test with the failure message.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_3_OUTPUT`. If all pass: task complete. If any fail: pass to step 4.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {qa_pane_id} "TASK-{id}-verify: Verify all tests are now green. Run the test suite. Signal TASK_DONE::pass or TASK_DONE::fail." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::pass::All {N} tests green` or `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::fail::{failing_test_summary}`
+
+---
+
+### 4. Fix Failing Tests (conditional — only if step 3 failed)
+
+**What this step does:** Dev fixes the implementation to make the remaining failing tests pass.
+**Inputs:** `$STEP_3_OUTPUT` (failing test summary)
+**Output:** `$STEP_4_OUTPUT` — fix complete. Return to step 3.
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-dev",
+    "prompt": "Fix the implementation to make the failing tests pass. Address each failing test specifically.\n\n## Inputs\nFailing tests: {$STEP_3_OUTPUT}\n\n## Output\nFix complete. List all files changed.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_4_OUTPUT`. Return to step 3 (QA re-verifies). When all tests pass: task complete. Final output — no next step.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: Tests still failing. Findings: {$STEP_3_OUTPUT}. Fix and signal TASK_DONE." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_changed}`
+
+---
 
 ## Communication Protocol
 
-### Signal Format
-```
-AGENT_SIGNAL::{TYPE}::{FROM_ROLE}::{TASK_ID}::{STATUS}::{DETAIL}
-```
-Types: `READY` | `TASK_START` | `PROGRESS` | `TASK_DONE` | `TASK_BLOCKED` | `FINDING` | `ERROR`
-
-Examples:
-- `AGENT_SIGNAL::TASK_DONE::qa::task-005::tests-written::frontend/tests/auth.spec.ts, frontend/tests/session.spec.ts`
-- `AGENT_SIGNAL::TASK_DONE::dev::task-005::implemented::Auth middleware added, session handling refactored`
-- `AGENT_SIGNAL::TASK_DONE::qa::task-005::pass::All 12 tests green`
-- `AGENT_SIGNAL::TASK_DONE::qa::task-005::fail::3 tests failing in auth.spec.ts — redirect assertion`
-
-### Master Polling Protocol
-After dispatching any task to a pane:
-1. `sleep 8` then begin polling
-2. Every 30s: `tmux capture-pane -t {pane_id} -p | tail -30 | grep "AGENT_SIGNAL"`
-3. On `TASK_DONE`: route next action per Iterative Loop above
-4. On `TASK_BLOCKED`: surface to user immediately
-5. No signal after 2 min: send `tmux send-keys -t {pane_id} "STATUS_CHECK" Enter`, wait 15s, poll once more
-6. Still no signal: mark pane as unresponsive in session file, present recovery options to user
-
-### Heartbeat Rule
-Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}::{task_id}::running::{brief_status}` every 60s.
+See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
 
 ## Team Registration
 
@@ -124,16 +236,6 @@ active_team:
     dev: {pane_id}
 ```
 
-## In-Process Fallback
-
-When `$TMUX` is not set, run agents sequentially using the Agent tool:
-
-1. Spawn QA agent (Agent tool) with spec + acceptance criteria → wait for test files
-2. Spawn Dev agent (Agent tool) with test files + spec → wait for implementation
-3. Spawn QA agent again (Agent tool) with implementation context → verify tests green
-4. If fail: spawn Dev again with QA findings → repeat from step 3
-5. When QA signals pass: mark task complete
-
 ## Team Close Protocol
 
 When master needs to close this team:
@@ -141,10 +243,6 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Best Used For
+## Kiro CLI
 
-- Critical path features (auth, payments, core data flows) where regressions are costly
-- New APIs or services where the interface contract needs to be locked in via tests
-- Refactors where the existing behavior must be fully preserved and verifiable
-- Features with complex acceptance criteria that benefit from being encoded as executable tests
-- Situations where the team wants the test suite to serve as living documentation of intent
+This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.

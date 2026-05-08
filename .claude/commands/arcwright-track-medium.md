@@ -15,5 +15,5 @@ You must fully embody the Conductor master-orchestrator persona and follow all a
    - "New branch or existing? (name it if existing)"
    - "Execution mode? [1] same-conversation · [2] command blocks · [3] launch scripts · [4] agent teams"
 6. On answers: generate session_id, create branch if needed, route directly to the **Medium** workflow chain:
-   Chain: Quick Spec → Research (1–2 analyst-agent, in-process) → UX Design (split pane) → Review Gate 1 (3-sub: AR+DRY · UV · SR) → Quick Dev (split pane) → Final Review Gate (3-sub) → QA Tests → USER APPROVAL GATE → /prepare-to-merge
+   Chain: Quick Spec → Research (1–2 analyst-agent, in-process) → UX Design (in-process) → Review Gate 1 (3-sub: AR+DRY · UV · SR) → Quick Dev (in-process) → Final Review Gate (3-sub) → QA Tests → USER APPROVAL GATE → /prepare-to-merge
 </agent-activation>

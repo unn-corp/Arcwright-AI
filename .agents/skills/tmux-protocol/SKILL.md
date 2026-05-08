@@ -4,6 +4,8 @@ description: "tmux pane messaging protocol for multi-agent workflows. Load when 
 allowed-tools: Bash, Read, Write
 ---
 
+> **Status: Opt-in observability mode.** This protocol applies only when the user has explicitly opted into split-pane visibility (says "spawn", "open agent", "I want to watch", or similar) AND `$TMUX` is set. Default Arcwright orchestration is in-process — see [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md) for the default protocol.
+
 # tmux-protocol
 
 **Auto-load trigger:** Load this skill whenever `$TMUX` is set (tmux is active). Skip entirely if tmux is not active — all sections are tmux-only.

@@ -5,22 +5,25 @@ description: "The Vault — Security finds vulnerabilities, Dev remediates, QA c
 
 # Agent Team: Security + QA — The Vault
 
-## tmux Protocol
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+>
+> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
 
-If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+## Best Used For
 
-## Available Skills
-
-Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load the full SKILL.md for any that apply before starting work.
-
+- Targeted security hardening of a specific endpoint, module, or auth flow
+- Remediating a reported vulnerability with independent QA verification before sign-off
+- Pre-pentest preparation to close known issues before external review
+- Auth, payment, and admin area security reviews where exploit-path verification is mandatory
+- Any remediation where "the code changed" is insufficient — actual attack surface closure must be confirmed
 
 ## Team Composition
 
 | Role | Agent | Skills |
 |------|-------|--------|
-| Security | Security reviewer (review agent with security-only sub-spec lens) | OWASP, injection, XSS, auth bypass, secrets exposure |
-| QA | `arcwright-agent-awm-qa` | playwright-cli, vulnerability path verification, regression testing |
-| Dev | `arcwright-agent-awm-dev` | Security remediation, patch implementation |
+| Security | `arcwright-review-orchestrator` (security lens) | OWASP, injection, XSS, auth bypass, secrets exposure |
+| QA | `arcwright-qa` | playwright-cli, vulnerability path verification, regression testing |
+| Dev | `arcwright-dev` | Security remediation, patch implementation |
 
 ## Purpose
 
@@ -40,17 +43,23 @@ The Vault is purpose-built for security-first remediation cycles. Security ident
 
 ## Spawn Sequence
 
+Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+
 ```bash
 # 1. Split Security pane (top-right)
 tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Security reviewer in The Vault team managed by Conductor (master-orchestrator). Activate with a security-only review lens: focus exclusively on OWASP Top 10, injection vulnerabilities, XSS, auth bypass, secrets exposure, and insecure data handling. Emit AGENT_SIGNAL::FINDING signals as you discover issues. You have sign-off authority on fixed items. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::security::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split QA pane (mid-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in The Vault team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md. In this team your role is to VERIFY THAT EXPLOIT PATHS ARE CLOSED — not just that code compiles. Use playwright-cli to attempt to trigger vulnerabilities through the live UI and API. Signal pass only when you have confirmed the attack surface is gone. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in The Vault team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. In this team your role is to VERIFY THAT EXPLOIT PATHS ARE CLOSED — not just that code compiles. Use playwright-cli to attempt to trigger vulnerabilities through the live UI and API. Signal pass only when you have confirmed the attack surface is gone. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Split Dev pane (bottom-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in The Vault team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in The Vault team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 4. Equalize pane sizes
@@ -62,71 +71,165 @@ sleep 6
 
 > **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
 
-- **Security**: Activate review agent with **security-only sub-spec lens** (OWASP Top 10, injection, XSS, auth bypass, secrets exposure).
+- **Security**: activate with **security-only sub-spec lens** (OWASP Top 10, injection, XSS, auth bypass, secrets exposure).
   - Security has **sign-off authority** on fixed items.
-- **QA**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-qa.md`
+- **QA**: activate `arcwright-qa`
   - QA's role in this team is **exploit path verification** — must attempt to trigger vulnerabilities through live UI/API, not just run unit tests.
-- **Dev**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-dev.md`
+- **Dev**: activate `arcwright-dev`
 
-## Iterative Loop
+## Steps
 
+### 1. Security Review
+
+**What this step does:** Security reviews the target scope for vulnerabilities and emits findings by severity.
+**Inputs:** Target scope (files/endpoints) from master
+**Output:** `$STEP_1_OUTPUT` — vulnerability findings with severity
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-review-orchestrator",
+    "prompt": "Review the target scope for security vulnerabilities using an OWASP Top 10 lens. Focus on: injection, XSS, auth bypass, IDOR, secrets exposure, insecure data handling. List each finding with severity (critical | major | minor) and exploitation description.\n\n## Inputs\nTarget scope: {target_scope}\n\n## Output\nList of vulnerability findings with severity and exploitation description. If none: 'No findings.'",
+    "model": "opus"
+  }
+}
 ```
-1. Master dispatches security review scope to Security
-   → tmux send-keys -t {security_pane_id} "TASK-{id}-sec: Review target area: {files/endpoints}. Emit FINDING signals per vulnerability. Signal TASK_DONE when review complete." Enter
 
-2. Security reviews and emits findings
-   → AGENT_SIGNAL::FINDING::security::{task_id}::finding::{severity}::{vuln_description}
-   → AGENT_SIGNAL::TASK_DONE::security::{task_id}::complete::{N} findings emitted
+Capture result into `$STEP_1_OUTPUT`. Pass to step 2.
 
-3. Master batches findings, dispatches remediation task to Dev
-   → tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: Remediate these vulnerabilities in priority order. Findings: {findings}. Signal TASK_DONE when patched." Enter
+---
 
-4. Dev remediates
-   → AGENT_SIGNAL::TASK_DONE::dev::{task_id}::patched::{files_changed}
+#### tmux Variant (when $TMUX is set and user wants visibility)
 
-5. Master dispatches QA verification task with the specific exploit paths to test
-   → tmux send-keys -t {qa_pane_id} "TASK-{id}-verify: Verify these exploit paths are CLOSED. Attempt each attack via playwright-cli. Findings to verify: {findings}. Signal TASK_DONE with pass or fail per finding." Enter
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
 
-6. QA attempts to trigger each vulnerability through live UI/API
-   → AGENT_SIGNAL::TASK_DONE::qa::{task_id}::pass::All exploit paths confirmed closed
-   → OR: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::fail::{still-exploitable findings}
-
-7a. If QA FAIL:
-    → Master re-dispatches remaining open paths to Dev for further remediation
-    → Repeat from step 4
-
-7b. If QA PASS:
-    → Master dispatches QA verification result to Security for final sign-off
-    → tmux send-keys -t {security_pane_id} "TASK-{id}-signoff: QA confirmed exploit paths closed. Review QA findings and sign off or escalate. QA report: {qa_summary}" Enter
-    → Security reviews QA result → emits sign-off or escalation
-
-8. Loop exits when Security emits sign-off on all patched vulnerabilities
+```bash
+tmux send-keys -t {security_pane_id} "TASK-{id}-sec: Review target area: {target_scope}. Emit FINDING signals per vulnerability. Signal TASK_DONE when review complete." Enter
 ```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::security::{task_id}::complete::{N} findings emitted`
+
+---
+
+### 2. Remediation
+
+**What this step does:** Dev remediates all vulnerabilities in priority order.
+**Inputs:** `$STEP_1_OUTPUT` (vulnerability findings from step 1)
+**Output:** `$STEP_2_OUTPUT` — patches applied, files changed
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-dev",
+    "prompt": "Remediate all security vulnerabilities in priority order (critical first). Address each finding specifically.\n\n## Inputs\nVulnerability findings: {$STEP_1_OUTPUT}\n\n## Output\nRemediation complete. List all files changed and describe each patch with the vulnerability it closes.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_2_OUTPUT`. Pass to step 3.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: Remediate vulnerabilities in priority order. Findings: {$STEP_1_OUTPUT}. Signal TASK_DONE when patched." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::patched::{files_changed}`
+
+---
+
+### 3. Exploit Path Verification
+
+**What this step does:** QA attempts to trigger each vulnerability through the live UI or API to confirm the exploit path is actually closed.
+**Inputs:** `$STEP_2_OUTPUT` (patches applied) + `$STEP_1_OUTPUT` (original vulnerability findings with exploitation descriptions)
+**Output:** `$STEP_3_OUTPUT` — pass (all exploit paths confirmed closed) or fail (remaining open paths)
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-qa",
+    "prompt": "Verify that each vulnerability's exploit path is CLOSED — not just that code changed. Attempt each attack via playwright-cli through the live UI and API. Signal pass only when the attack surface is confirmed gone.\n\n## Inputs\nVulnerabilities to verify (with exploitation descriptions): {$STEP_1_OUTPUT}\nPatches applied: {$STEP_2_OUTPUT}\n\n## Output\nPass or fail per vulnerability. 'All exploit paths confirmed closed.' OR list of still-exploitable paths with evidence.",
+    "model": "sonnet"
+  }
+}
+```
+
+Capture result into `$STEP_3_OUTPUT`. If all paths closed: pass to step 4. If any still open: return to step 2 with remaining open paths.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {qa_pane_id} "TASK-{id}-verify: Verify exploit paths are CLOSED. Attempt each attack via playwright-cli. Findings to verify: {$STEP_1_OUTPUT}. Signal TASK_DONE with pass or fail per finding." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::pass::All exploit paths confirmed closed` or `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::fail::{still_exploitable}`
+
+---
+
+### 4. Security Sign-Off
+
+**What this step does:** Security reviews QA's verification results and issues final sign-off or escalation.
+**Inputs:** `$STEP_3_OUTPUT` (QA verification results) + `$STEP_1_OUTPUT` (original findings)
+**Output:** `$STEP_4_OUTPUT` — signed off or escalation. Final output — no next step.
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-review-orchestrator",
+    "prompt": "Review the QA verification results and issue final sign-off or escalation on the remediated vulnerabilities.\n\n## Inputs\nQA verification report: {$STEP_3_OUTPUT}\nOriginal findings: {$STEP_1_OUTPUT}\n\n## Output\n'Signed off: all findings remediated and exploit paths confirmed closed.' OR 'Escalation: {remaining_concern}'",
+    "model": "opus"
+  }
+}
+```
+
+Capture result into `$STEP_4_OUTPUT`. If signed off: loop exits, task complete. If escalation: return to step 2. Final output — no next step.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {security_pane_id} "TASK-{id}-signoff: QA confirmed exploit paths closed. Review and sign off or escalate. QA report: {$STEP_3_OUTPUT}" Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::security::{task_id}::signed-off::Remediation verified, all findings closed`
+
+---
 
 ## Communication Protocol
 
-### Signal Format
-```
-AGENT_SIGNAL::{TYPE}::{FROM_ROLE}::{TASK_ID}::{STATUS}::{DETAIL}
-```
-Types: `READY` | `TASK_START` | `PROGRESS` | `TASK_DONE` | `TASK_BLOCKED` | `FINDING` | `ERROR`
-
-Examples:
-- `AGENT_SIGNAL::FINDING::security::task-030::finding::critical::IDOR on /api/users/{id} — no ownership check`
-- `AGENT_SIGNAL::TASK_DONE::qa::task-030::pass::IDOR path tested — /api/users/999 returns 403 as expected`
-- `AGENT_SIGNAL::TASK_DONE::security::task-030::signed-off::Remediation verified, all findings closed`
-
-### Master Polling Protocol
-After dispatching any task to a pane:
-1. `sleep 8` then begin polling
-2. Every 30s: `tmux capture-pane -t {pane_id} -p | tail -30 | grep "AGENT_SIGNAL"`
-3. On `TASK_DONE`: route next action per Iterative Loop above
-4. On `TASK_BLOCKED`: surface to user immediately
-5. No signal after 2 min: send `tmux send-keys -t {pane_id} "STATUS_CHECK" Enter`, wait 15s, poll once more
-6. Still no signal: mark pane as unresponsive in session file, present recovery options to user
-
-### Heartbeat Rule
-Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}::{task_id}::running::{brief_status}` every 60s.
+See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
 
 ## Team Registration
 
@@ -142,17 +245,6 @@ active_team:
     dev: {pane_id}
 ```
 
-## In-Process Fallback
-
-When `$TMUX` is not set, run agents sequentially using the Agent tool:
-
-1. Spawn Security reviewer (Agent tool) with review scope → capture vulnerability findings
-2. Spawn Dev agent (Agent tool) with findings → wait for remediation
-3. Spawn QA agent (Agent tool) with exploit paths to verify → capture verification result
-4. If QA fail: spawn Dev again with remaining open paths → repeat from step 3
-5. If QA pass: spawn Security agent again with QA report → capture sign-off
-6. If Security escalates: repeat from step 2
-
 ## Team Close Protocol
 
 When master needs to close this team:
@@ -160,10 +252,6 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Best Used For
+## Kiro CLI
 
-- Targeted security hardening of a specific endpoint, module, or auth flow
-- Remediating a reported vulnerability with independent QA verification before sign-off
-- Pre-pentest preparation to close known issues before external review
-- Auth, payment, and admin area security reviews where exploit-path verification is mandatory
-- Any remediation where "the code changed" is insufficient — actual attack surface closure must be confirmed
+This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.

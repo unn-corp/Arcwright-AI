@@ -5,17 +5,24 @@ description: "The Blueprint Room — UX and Architect produce design artifacts t
 
 # Agent Team: UX + Architecture — The Blueprint Room
 
-## tmux Protocol
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+>
+> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
 
-If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any pane operations.
+## Best Used For
 
+- Feature design phase before any sprint capacity is committed to implementation
+- Validating that a UX concept is architecturally feasible and API-compatible
+- Designing new API contracts and component specs together so both are coherent
+- Large UI reworks where the architecture needs to adapt to new interaction patterns
+- Situations where design/architecture conflicts need to be resolved before dev begins rather than during
 
 ## Team Composition
 
 | Role | Agent | Skills |
 |------|-------|--------|
-| UX Designer | `arcwright-agent-awm-ux-designer` | Wireframes, component specs, interaction design, full dev skill access |
-| Architect | `arcwright-agent-awm-architect` | API contract validation, data flow design, feasibility, full dev skill access |
+| UX Designer | `arcwright-ux-designer` | Wireframes, component specs, interaction design, full dev skill access |
+| Architect | `arcwright-architect` | API contract validation, data flow design, feasibility, full dev skill access |
 
 ## Purpose
 
@@ -33,13 +40,19 @@ The Blueprint Room is a design-only team — no production code is written, no i
 
 ## Spawn Sequence
 
+Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+
 ```bash
 # 1. Split UX Designer pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the UX Designer agent in The Blueprint Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-ux-designer.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly. This team produces DESIGN ARTIFACTS ONLY — wireframes, component specs, interaction specs. No production code. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::ux::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the UX Designer agent in The Blueprint Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/ux-designer.md. You have full dev skill access. This team produces DESIGN ARTIFACTS ONLY — wireframes, component specs, interaction specs. No production code. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::ux::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 2. Split Architect pane (bottom-right, below UX)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in The Blueprint Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-architect.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly. This team produces DESIGN ARTIFACTS ONLY — API contracts, data flow specs, feasibility notes. No production code. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in The Blueprint Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/architect.md. You have full dev skill access. This team produces DESIGN ARTIFACTS ONLY — API contracts, data flow specs, feasibility notes. No production code. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
 sleep 8
 
 # 3. Equalize pane sizes
@@ -51,50 +64,175 @@ sleep 6
 
 > **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
 
-- **UX Designer**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-ux-designer.md`
+- **UX Designer**: activate `arcwright-ux-designer`
   - Has **full dev skill access** — can invoke any skill in `.agents/skills/` directly, including prototyping tools to validate design assumptions.
-- **Architect**: `Read and activate: {project-root}/.claude/commands/arcwright-agent-awm-architect.md`
+- **Architect**: activate `arcwright-architect`
   - Has **full dev skill access** — can invoke any skill in `.agents/skills/` directly, including writing prototype code to validate feasibility.
 
-## Task Routing Protocol
+## Steps
 
-No iterative loop — this team has a defined forward flow:
+No iterative loop. Defined forward flow with a parallel start and a conflict-resolution gate if needed.
 
-1. **Parallel start**: Master dispatches design brief to UX Designer AND a requirements overview to Architect simultaneously.
-2. **UX output**: UX Designer produces wireframes and component specs → `TASK_DONE`
-3. **Architect validation**: Master forwards UX output to Architect for API contract and data flow validation → Architect emits findings or approval → `TASK_DONE`
-4. **Conflict resolution**: If Architect identifies a design/architecture conflict (e.g., UX requires data not available via current API), master surfaces the conflict to both agents for negotiation. Each proposes a resolution. Master presents options to user if not auto-resolvable.
-5. **Final artifacts**: Master collates all design outputs and presents to user: wireframes, component specs, API contracts, data flow diagrams, integration notes.
+### 1. Parallel Design + Requirements Analysis
 
-Conflict signals:
+**What this step does:** UX Designer produces wireframes and component specs while Architect analyzes requirements for API and data flow implications — both start from the same brief.
+**Inputs:** Design brief and requirements from master
+**Output:** `$STEP_1_UX_OUTPUT` — wireframes + component specs; `$STEP_1_ARCH_OUTPUT` — initial API/data flow analysis
+
+---
+
+#### Default: In-Process (Agent tool)
+
+Issue both Agent calls in a single assistant message (parallel fan-out):
+
+```json
+[
+  {
+    "name": "Agent",
+    "input": {
+      "subagent_type": "arcwright-ux-designer",
+      "prompt": "Produce wireframes and component specifications for the design brief. This is a DESIGN ARTIFACT ONLY — no production code.\n\n## Inputs\nDesign brief: {design_brief}\n\n## Output\nWireframes (text descriptions or ASCII), component specs, and interaction design notes.",
+      "model": "sonnet"
+    }
+  },
+  {
+    "name": "Agent",
+    "input": {
+      "subagent_type": "arcwright-architect",
+      "prompt": "Analyze the requirements for API contract and data flow implications. Identify: what data the UX will need, what API endpoints are required, what data flow patterns apply. Write prototype code to validate assumptions if needed.\n\n## Inputs\nRequirements: {requirements}\nDesign brief: {design_brief}\n\n## Output\nInitial API/data flow analysis: required endpoints, data shapes, feasibility assessment.",
+      "model": "opus"
+    }
+  }
+]
 ```
-AGENT_SIGNAL::FINDING::architect::{task_id}::design-conflict::{description_of_conflict}
+
+Capture results into `$STEP_1_UX_OUTPUT` and `$STEP_1_ARCH_OUTPUT`. Pass both to step 2.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning. Dispatch to both panes simultaneously; wait for both TASK_DONE signals.
+
+```bash
+tmux send-keys -t {ux_pane_id} "TASK-{id}: Produce wireframes and component specs for: {design_brief}. Signal TASK_DONE when complete." Enter
+tmux send-keys -t {architect_pane_id} "TASK-{id}: Analyze requirements for API/data flow implications. Requirements: {requirements}. Signal TASK_DONE when complete." Enter
 ```
+
+Completion signals (wait for both):
+```
+AGENT_SIGNAL::TASK_DONE::ux::{task_id}::done::Wireframes complete for {N} screens
+AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::API analysis complete
+```
+
+---
+
+### 2. Architecture Validation of UX Design
+
+**What this step does:** Architect validates the UX design against API/data flow constraints and identifies any design/architecture conflicts.
+**Inputs:** `$STEP_1_UX_OUTPUT` (wireframes + component specs) + `$STEP_1_ARCH_OUTPUT` (initial analysis) + requirements
+**Output:** `$STEP_2_OUTPUT` — API contracts + data flow specs, approved OR design-conflict signals
+
+---
+
+#### Default: In-Process (Agent tool)
+
+```json
+{
+  "name": "Agent",
+  "input": {
+    "subagent_type": "arcwright-architect",
+    "prompt": "Validate the UX design against API and data flow constraints. Produce: final API contracts, data flow diagrams, integration notes. Identify any design/architecture conflicts where the UX requires data or patterns not available in the current architecture.\n\n## Inputs\nUX wireframes and component specs: {$STEP_1_UX_OUTPUT}\nInitial API analysis: {$STEP_1_ARCH_OUTPUT}\nRequirements: {requirements}\n\n## Output\nAPI contracts, data flow specs, integration notes. If conflicts: list each as 'DESIGN_CONFLICT: {description}'.",
+    "model": "opus"
+  }
+}
+```
+
+Capture result into `$STEP_2_OUTPUT`. If design conflicts found: pass to step 3. Otherwise pass to step 4.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {architect_pane_id} "TASK-{id}-validate: Validate UX design against API constraints. UX output: {$STEP_1_UX_OUTPUT}. Emit FINDING signals for design conflicts. Signal TASK_DONE when complete." Enter
+```
+
+Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::API contracts validated` or `AGENT_SIGNAL::FINDING::architect::{task_id}::design-conflict::{description}`
+
+---
+
+### 3. Conflict Resolution (conditional — only if step 2 found conflicts)
+
+**What this step does:** Master surfaces conflicts to both agents for negotiation. Each proposes a resolution. Master presents options to user if not auto-resolvable.
+**Inputs:** `$STEP_2_OUTPUT` (conflict descriptions) + `$STEP_1_UX_OUTPUT`
+**Output:** `$STEP_3_OUTPUT` — resolved design adjustments. Return to step 2.
+
+This step may require user judgment if both agents cannot auto-resolve. Master presents the conflict and options to the user before proceeding.
+
+---
+
+#### Default: In-Process (Agent tool)
+
+Issue both resolution calls in a single assistant message:
+
+```json
+[
+  {
+    "name": "Agent",
+    "input": {
+      "subagent_type": "arcwright-ux-designer",
+      "prompt": "A design/architecture conflict was identified. Propose a UX-side resolution that addresses the constraint.\n\n## Inputs\nConflict: {design_conflicts_from_step_2}\nOriginal UX design: {$STEP_1_UX_OUTPUT}\n\n## Output\nProposed UX resolution: what UX adjustment would satisfy the architectural constraint.",
+      "model": "sonnet"
+    }
+  },
+  {
+    "name": "Agent",
+    "input": {
+      "subagent_type": "arcwright-architect",
+      "prompt": "A design/architecture conflict was identified. Propose an architecture-side resolution that satisfies the UX need.\n\n## Inputs\nConflict: {design_conflicts_from_step_2}\nOriginal UX design: {$STEP_1_UX_OUTPUT}\n\n## Output\nProposed architecture resolution: what API/data change would satisfy the UX requirement.",
+      "model": "opus"
+    }
+  }
+]
+```
+
+Capture results into `$STEP_3_OUTPUT`. Present both resolution options to user if auto-resolution is not clear. After user selects direction: return to step 2 with resolved design.
+
+---
+
+#### tmux Variant (when $TMUX is set and user wants visibility)
+
+Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+
+```bash
+tmux send-keys -t {ux_pane_id} "CONFLICT-{id}: Architecture conflict found. Propose UX-side resolution. Conflict: {conflict}. Signal TASK_DONE with proposed resolution." Enter
+tmux send-keys -t {architect_pane_id} "CONFLICT-{id}: Design conflict found. Propose architecture-side resolution. Conflict: {conflict}. Signal TASK_DONE with proposed resolution." Enter
+```
+
+Completion signals (wait for both, then present to user for decision):
+```
+AGENT_SIGNAL::TASK_DONE::ux::{task_id}::done::UX resolution proposed
+AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::Architecture resolution proposed
+```
+
+---
+
+### 4. Final Artifact Collation
+
+**What this step does:** Master collates all design outputs and presents the final package to the user.
+**Inputs:** `$STEP_1_UX_OUTPUT`, `$STEP_2_OUTPUT` (architecture validation + contracts)
+**Output:** `$STEP_4_OUTPUT` — final design package. Final output — no next step.
+
+This step is performed by master directly: collate wireframes, component specs, API contracts, data flow diagrams, and integration notes into a final design package and present to user.
+
+---
 
 ## Communication Protocol
 
-### Signal Format
-```
-AGENT_SIGNAL::{TYPE}::{FROM_ROLE}::{TASK_ID}::{STATUS}::{DETAIL}
-```
-Types: `READY` | `TASK_START` | `PROGRESS` | `TASK_DONE` | `TASK_BLOCKED` | `FINDING` | `ERROR`
-
-Examples:
-- `AGENT_SIGNAL::TASK_DONE::ux::task-040::done::Wireframes complete for 4 screens, component spec written`
-- `AGENT_SIGNAL::FINDING::architect::task-040::design-conflict::UX filter requires aggregation endpoint not in current API`
-- `AGENT_SIGNAL::TASK_DONE::architect::task-040::done::API contracts validated, 2 new endpoints specified`
-
-### Master Polling Protocol
-After dispatching any task to a pane:
-1. `sleep 8` then begin polling
-2. Every 30s: `tmux capture-pane -t {pane_id} -p | tail -30 | grep "AGENT_SIGNAL"`
-3. On `TASK_DONE`: route next action per Task Routing Protocol above
-4. On `TASK_BLOCKED` or design-conflict `FINDING`: surface to user for resolution
-5. No signal after 2 min: send `tmux send-keys -t {pane_id} "STATUS_CHECK" Enter`, wait 15s, poll once more
-6. Still no signal: mark pane as unresponsive in session file, present recovery options to user
-
-### Heartbeat Rule
-Agents on tasks expected to take >90s MUST emit `AGENT_SIGNAL::PROGRESS::{role}::{task_id}::running::{brief_status}` every 60s.
+See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
 
 ## Team Registration
 
@@ -109,15 +247,6 @@ active_team:
     architect: {pane_id}
 ```
 
-## In-Process Fallback
-
-When `$TMUX` is not set, run agents sequentially using the Agent tool:
-
-1. Spawn UX Designer agent (Agent tool) with design brief → wait for wireframes + component specs
-2. Spawn Architect agent (Agent tool) with UX output + requirements → wait for API contracts + data flow
-3. If design conflict found: present conflict to user, get resolution direction, re-run affected agents
-4. Collate all artifacts and present to user
-
 ## Team Close Protocol
 
 When master needs to close this team:
@@ -125,10 +254,6 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Best Used For
+## Kiro CLI
 
-- Feature design phase before any sprint capacity is committed to implementation
-- Validating that a UX concept is architecturally feasible and API-compatible
-- Designing new API contracts and component specs together so both are coherent
-- Large UI reworks where the architecture needs to adapt to new interaction patterns
-- Situations where design/architecture conflicts need to be resolved before dev begins rather than during
+This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.

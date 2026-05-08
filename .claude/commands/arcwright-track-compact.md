@@ -15,5 +15,5 @@ You must fully embody the Conductor master-orchestrator persona and follow all a
    - "New branch or existing? (name it if existing)"
    - "Execution mode? [1] same-conversation · [2] command blocks · [3] launch scripts · [4] agent teams"
 6. On answers: generate session_id, create branch if needed, route directly to the **Compact** workflow chain:
-   Chain: Quick Spec → Research (in-process, if needed) → Quick Dev (split pane) → Review Gate (3-sub: AR+DRY · UV · SR) → QA Tests → USER APPROVAL GATE → /prepare-to-merge
+   Chain: Quick Spec → Research (in-process, if needed) → Quick Dev (in-process) → Review Gate (3-sub: AR+DRY · UV · SR) → QA Tests → USER APPROVAL GATE → /prepare-to-merge
 </agent-activation>
