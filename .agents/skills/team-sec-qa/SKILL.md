@@ -7,7 +7,7 @@ description: "The Vault — Security finds vulnerabilities, Dev remediates, QA c
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -252,6 +252,40 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: This pipeline represents one iteration of the Security+QA remediation loop. Re-invoke for additional iterations if QA finds remaining open exploit paths.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Security-first remediation: Security identifies vulnerabilities, Dev remediates, QA verifies exploit paths are closed, Security signs off.",
+  "stages": [
+    {
+      "name": "sec-review",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Review the target scope for security vulnerabilities using an OWASP Top 10 lens. List each finding with severity (critical | major | minor) and exploitation description: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "dev-remediate",
+      "role": "arcwright-dev",
+      "prompt_template": "Remediate all security vulnerabilities in priority order (critical first). Address each finding specifically and describe each patch with the vulnerability it closes: {task}",
+      "depends_on": ["sec-review"]
+    },
+    {
+      "name": "qa-verify-exploits",
+      "role": "arcwright-qa",
+      "prompt_template": "Verify that each vulnerability's exploit path is CLOSED — not just that code changed. Attempt each attack via playwright-cli through the live UI and API. Signal pass only when the attack surface is confirmed gone: {task}",
+      "depends_on": ["dev-remediate"]
+    },
+    {
+      "name": "sec-signoff",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Review the QA verification results and issue final sign-off or escalation on the remediated vulnerabilities: {task}",
+      "depends_on": ["qa-verify-exploits"]
+    }
+  ]
+}
+```

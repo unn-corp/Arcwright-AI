@@ -7,7 +7,7 @@ description: "The Strike Team — SM manages sprint queue, Dev implements storie
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -289,6 +289,46 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: This pipeline represents one story iteration of the sprint loop (initialize queue, implement one story, QA validate, SM mark done). Re-invoke for each subsequent story in the sprint queue.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Execute one sprint story: SM initializes and identifies the story, Dev implements, QA validates, Dev fixes failures, SM marks done.",
+  "stages": [
+    {
+      "name": "sprint-init",
+      "role": "arcwright-sm",
+      "prompt_template": "Initialize the sprint. Review the sprint plan, organize the story queue by priority and dependencies, and identify the first story to implement: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "dev-impl",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement the sprint story completely per the acceptance criteria: {task}",
+      "depends_on": ["sprint-init"]
+    },
+    {
+      "name": "qa-validate",
+      "role": "arcwright-qa",
+      "prompt_template": "Validate the story implementation against acceptance criteria. Use playwright-cli to verify functional behavior: {task}",
+      "depends_on": ["dev-impl"]
+    },
+    {
+      "name": "dev-fix",
+      "role": "arcwright-dev",
+      "prompt_template": "Fix the QA failures for this story: {task}",
+      "depends_on": ["qa-validate"]
+    },
+    {
+      "name": "sm-mark-done",
+      "role": "arcwright-sm",
+      "prompt_template": "Story passed QA. Mark it done and provide the next story from the queue, or signal sprint complete if all stories are done: {task}",
+      "depends_on": ["dev-fix"]
+    }
+  ]
+}
+```

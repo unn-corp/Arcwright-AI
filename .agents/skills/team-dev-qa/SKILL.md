@@ -7,7 +7,7 @@ description: "Dev + QA iterative loop — Dev implements, QA validates with play
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -206,6 +206,34 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: This pipeline represents one iteration of the Dev+QA loop. Re-invoke for additional fix iterations if QA finds failures.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Implement a task and validate it with QA: Dev implements, QA validates, Dev fixes failures.",
+  "stages": [
+    {
+      "name": "dev-impl",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement the following task completely: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "qa-validate",
+      "role": "arcwright-qa",
+      "prompt_template": "Verify the implementation against acceptance criteria. Run playwright-cli tests and spec tests. Produce a pass or fail result: {task}",
+      "depends_on": ["dev-impl"]
+    },
+    {
+      "name": "dev-fix",
+      "role": "arcwright-dev",
+      "prompt_template": "Fix all QA failures found during validation. Address each failure specifically: {task}",
+      "depends_on": ["qa-validate"]
+    }
+  ]
+}
+```

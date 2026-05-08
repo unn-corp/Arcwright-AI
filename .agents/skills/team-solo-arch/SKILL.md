@@ -7,7 +7,7 @@ description: "The Oracle — single Architect with full dev skill access for arc
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -139,6 +139,20 @@ When master needs to close this team:
 2. Kill the pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Run an architecture analysis, design proposal, or feasibility assessment for the given scope.",
+  "stages": [
+    {
+      "name": "architect-task",
+      "role": "arcwright-architect",
+      "prompt_template": "Analyze the architecture question or scope and produce the requested output. Include trade-offs, risks, and recommendations. Write prototype code if needed to validate assumptions: {task}",
+      "depends_on": []
+    }
+  ]
+}
+```

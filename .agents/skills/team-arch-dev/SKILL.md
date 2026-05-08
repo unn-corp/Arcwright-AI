@@ -7,7 +7,7 @@ description: "The Foundry — Architect designs approach, Dev implements, Archit
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -242,6 +242,40 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: This pipeline represents one iteration of the Architect spot-check loop. Re-invoke with remaining findings for additional iterations.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Design, implement, and architect-spot-check a feature: Architect proposes design, Dev implements, Architect validates compliance.",
+  "stages": [
+    {
+      "name": "architect-design",
+      "role": "arcwright-architect",
+      "prompt_template": "Review scope and propose a design approach for: {task}. Include any prototype code needed to validate design assumptions.",
+      "depends_on": []
+    },
+    {
+      "name": "dev-impl",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement the feature according to the architecture design. Follow the design approach exactly: {task}",
+      "depends_on": ["architect-design"]
+    },
+    {
+      "name": "arch-spot-check",
+      "role": "arcwright-architect",
+      "prompt_template": "Spot-check the completed implementation for architectural compliance. Check structural correctness, adherence to design, DRY/SOLID violations, integration pattern correctness: {task}",
+      "depends_on": ["dev-impl"]
+    },
+    {
+      "name": "dev-remediate",
+      "role": "arcwright-dev",
+      "prompt_template": "Fix all findings from the Architect spot-check. Address critical first, then major, then minor: {task}",
+      "depends_on": ["arch-spot-check"]
+    }
+  ]
+}
+```

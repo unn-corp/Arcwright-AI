@@ -7,7 +7,7 @@ description: "War Room — strategic planning council with PM, Analyst, and Arch
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -268,6 +268,44 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Strategic planning: parallel research + initial PRD, enrich PRD with research, validate architecture feasibility, collate final planning package.",
+  "stages": [
+    {
+      "name": "research",
+      "role": "arcwright-analyst",
+      "prompt_template": "Conduct domain research for the feature brief. Cover domain constraints, user needs, competitive landscape, technical feasibility signals, and prior art: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "prd-draft",
+      "role": "arcwright-pm",
+      "prompt_template": "Draft an initial PRD stub for the feature brief. Cover goals, user stories, acceptance criteria (draft), out-of-scope items, and open questions: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "prd-enrich",
+      "role": "arcwright-pm",
+      "prompt_template": "Enrich the initial PRD draft with the research findings. Update acceptance criteria, resolve open questions, and add research-derived constraints or opportunities: {task}",
+      "depends_on": ["research", "prd-draft"]
+    },
+    {
+      "name": "arch-feasibility",
+      "role": "arcwright-architect",
+      "prompt_template": "Validate technical feasibility of the enriched PRD. Produce architecture notes, technical risks, feasibility assessment, and any prototype code needed to validate assumptions: {task}",
+      "depends_on": ["prd-enrich"]
+    },
+    {
+      "name": "synthesis",
+      "role": "arcwright-pm",
+      "prompt_template": "Collate all planning artifacts into a final planning package. Summarize key decisions, open risks, and recommended next steps: {task}",
+      "depends_on": ["arch-feasibility"]
+    }
+  ]
+}
+```

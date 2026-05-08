@@ -7,7 +7,7 @@ description: "The Blueprint Room — UX and Architect produce design artifacts t
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -254,6 +254,40 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: The conflict resolution path (step 3) is conditional on design conflicts being found in step 2. This pipeline models the happy path (no conflicts). If conflicts arise, re-invoke with a conflict-resolution stage inserted between `arch-validate` and `final-collate`.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Design a feature: UX produces wireframes and component specs while Architect analyzes API/data flow, Architect validates compatibility, master collates final design package.",
+  "stages": [
+    {
+      "name": "ux-design",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "Produce wireframes and component specifications for the design brief. This is a DESIGN ARTIFACT ONLY — no production code: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "arch-analysis",
+      "role": "arcwright-architect",
+      "prompt_template": "Analyze the requirements for API contract and data flow implications. Identify what data the UX will need, what API endpoints are required, what data flow patterns apply: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "arch-validate",
+      "role": "arcwright-architect",
+      "prompt_template": "Validate the UX design against API and data flow constraints. Produce final API contracts, data flow specs, integration notes. Identify any design/architecture conflicts: {task}",
+      "depends_on": ["ux-design", "arch-analysis"]
+    },
+    {
+      "name": "ux-conflict-resolve",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "If any design/architecture conflicts were identified, propose a UX-side resolution that addresses the constraint. Otherwise confirm design is compatible: {task}",
+      "depends_on": ["arch-validate"]
+    }
+  ]
+}
+```

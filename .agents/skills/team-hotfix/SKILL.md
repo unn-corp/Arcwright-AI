@@ -7,7 +7,7 @@ description: "Rapid Response — emergency fix with strict guardrails: max 4 fil
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -198,6 +198,26 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Emergency hotfix: Dev fixes production issue within guardrails (max 4 files, isolated subsystem), Security reviews fix before PTM.",
+  "stages": [
+    {
+      "name": "emergency-fix",
+      "role": "arcwright-dev",
+      "prompt_template": "Emergency fix for production issue. GUARDRAILS ARE NON-NEGOTIABLE: touch MAX 4 files, isolated to the specified subsystem only, no cross-cutting changes: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "sec-review",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Review this hotfix for security regressions ONLY. Does the fix introduce any new attack surface, auth bypass, injection opportunity, unsafe data handling, or other security vulnerability? Do NOT review for architectural quality: {task}",
+      "depends_on": ["emergency-fix"]
+    }
+  ]
+}
+```

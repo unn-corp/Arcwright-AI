@@ -7,7 +7,7 @@ description: "Ghost — single quick-flow-solo-dev agent, master queues tasks, d
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -125,6 +125,20 @@ When master needs to close this team:
 2. Kill the pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Execute a well-scoped task autonomously: spec, implement, and self-validate in one pass.",
+  "stages": [
+    {
+      "name": "solo-dev-execute",
+      "role": "arcwright-quick-flow-solo-dev",
+      "prompt_template": "Execute this task autonomously and completely. Write a quick spec, implement, and self-validate before finishing: {task}",
+      "depends_on": []
+    }
+  ]
+}
+```

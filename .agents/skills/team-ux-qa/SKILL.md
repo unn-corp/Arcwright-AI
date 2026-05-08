@@ -7,7 +7,7 @@ description: "The Atelier — UX Designer implements (can write code), QA valida
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -205,6 +205,34 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: This pipeline represents one iteration of the UX+QA loop. Re-invoke for additional revision iterations if QA finds failures.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Design and implement a UI task, then validate it with playwright-cli QA: UX Designer implements, QA validates live UI, UX revises on failure.",
+  "stages": [
+    {
+      "name": "ux-impl",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "Design and implement the UI task. You can write code directly. Implement to meet the acceptance criteria: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "qa-validate",
+      "role": "arcwright-qa",
+      "prompt_template": "Validate the live UI using playwright-cli. Navigate to affected areas and assert visual correctness and functional behavior against acceptance criteria: {task}",
+      "depends_on": ["ux-impl"]
+    },
+    {
+      "name": "ux-revise",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "Revise the UI implementation based on QA findings. Address each failed assertion specifically: {task}",
+      "depends_on": ["qa-validate"]
+    }
+  ]
+}
+```

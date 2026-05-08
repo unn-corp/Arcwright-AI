@@ -699,6 +699,63 @@ tmux select-layout tiled
       }
     })(awmAgentsDir);
 
+    /**
+     * Map an array of Claude Code tool names to Kiro CLI tool identifiers.
+     * Always appends 'code' and 'knowledge' if not already present.
+     * Deduplicates the result (Edit + Write both → fs_write).
+     */
+    function mapClaudeToolsToKiro(claudeTools) {
+      const CLAUDE_TO_KIRO = {
+        'read':          'fs_read',
+        'write':         'fs_write',
+        'edit':          'fs_write',
+        'bash':          'execute_bash',
+        'grep':          'grep',
+        'glob':          'glob',
+        'webfetch':      'web_fetch',
+        'websearch':     'web_search',
+        'agent':         'subagent',
+        'notebookedit':  'fs_write',
+      };
+      const kiroTools = new Set();
+      for (const tool of claudeTools) {
+        const mapped = CLAUDE_TO_KIRO[tool.trim().toLowerCase()];
+        if (mapped) kiroTools.add(mapped);
+      }
+      kiroTools.add('code');
+      kiroTools.add('knowledge');
+      return Array.from(kiroTools);
+    }
+
+    /**
+     * Parse the 'tools:' frontmatter field from a specialist agent .md file.
+     * Handles quoted strings and comma-separated lists.
+     * Returns null if no tools field is found.
+     */
+    function parseAgentTools(raw) {
+      // Match: tools: "Read, Edit, Write" or tools: Read, Edit, Write
+      // Also handles YAML block lists (tools:\n  - Read\n  - Write)
+      const inlineMatch = raw.match(/^---[\s\S]*?^tools:\s*["']?([^"'\n]+?)["']?\s*$/m);
+      if (inlineMatch) {
+        return inlineMatch[1].split(',').map(t => t.trim()).filter(Boolean);
+      }
+      // YAML list form
+      const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      if (fmMatch) {
+        const fmBlock = fmMatch[1];
+        const blockMatch = fmBlock.match(/^tools:\s*\n((?:[ \t]+-[^\n]+\n?)+)/m);
+        if (blockMatch) {
+          return blockMatch[1].split('\n')
+            .map(l => l.replace(/^[ \t]+-\s*/, '').trim())
+            .filter(Boolean);
+        }
+      }
+      return null;
+    }
+
+    /** Default allowedTools when a specialist has no 'tools:' frontmatter. */
+    const DEFAULT_SPECIALIST_ALLOWED = ['fs_read', 'grep', 'glob', 'code', 'knowledge'];
+
     for (const agentPath of agentFiles) {
       const raw = fs.readFileSync(agentPath, 'utf8');
       const slug = path.basename(agentPath, '.md');
@@ -709,12 +766,17 @@ tmux select-layout tiled
 
       const relFromArcwright = path.relative(ARCWRIGHT_SRC, agentPath).replace(/\\/g, '/');
 
+      const claudeTools = parseAgentTools(raw);
+      const allowedTools = claudeTools
+        ? mapClaudeToolsToKiro(claudeTools)
+        : DEFAULT_SPECIALIST_ALLOWED;
+
       const agent = {
         name: kiroName,
         description: desc,
         prompt: `file://_arcwright/${relFromArcwright}`,
-        tools: ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch', 'knowledge'],
-        allowedTools: ['fs_read', 'grep', 'glob', 'code', 'knowledge'],
+        tools: allowedTools,
+        allowedTools,
         resources: ['skill://.kiro/skills/**/SKILL.md'],
       };
 

@@ -7,7 +7,7 @@ description: "The Library — Tech Writer drafts, Architect reviews for technica
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -207,6 +207,34 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: This pipeline represents one iteration of the draft→review→revise loop. Re-invoke for additional revision iterations if the Architect returns needs-revision.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Write and technically review documentation: Tech Writer drafts, Architect reviews for accuracy, Tech Writer revises.",
+  "stages": [
+    {
+      "name": "doc-draft",
+      "role": "arcwright-tech-writer",
+      "prompt_template": "Write documentation for the specified topic. Prioritize clarity, completeness, and correct structure: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "arch-review",
+      "role": "arcwright-architect",
+      "prompt_template": "Review the documentation draft for technical accuracy. Check for wrong API signatures, outdated patterns, missing caveats, inaccurate system behavior descriptions: {task}",
+      "depends_on": ["doc-draft"]
+    },
+    {
+      "name": "doc-revise",
+      "role": "arcwright-tech-writer",
+      "prompt_template": "Revise the documentation draft to fix all technical accuracy issues identified by the Architect. Address each issue specifically: {task}",
+      "depends_on": ["arch-review"]
+    }
+  ]
+}
+```

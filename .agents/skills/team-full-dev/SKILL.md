@@ -7,7 +7,7 @@ description: "The Engine Room — Dev implements, QA validates, Architect availa
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -252,6 +252,42 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: The Architect consultation path (step 1b) is a conditional branch that cannot be expressed as a static Kiro DAG. This pipeline models the direct implementation path. If Dev needs architectural guidance during execution, the orchestrator should invoke an additional `arcwright-architect` stage before `dev-impl` completes.
+
+> Note: This pipeline represents one iteration of the Dev+QA loop. Re-invoke for additional fix iterations if QA finds failures.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Full dev workflow with optional Architect consultation: Dev implements, QA validates, Architect available for complex decisions, Dev fixes failures.",
+  "stages": [
+    {
+      "name": "arch-consult",
+      "role": "arcwright-architect",
+      "prompt_template": "Review the task requirements and provide architectural guidance for any complex decisions (data model, API contract, caching strategy) that Dev may encounter during implementation: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "dev-impl",
+      "role": "arcwright-dev",
+      "prompt_template": "Implement the task completely using the architectural guidance provided. If you encounter a complex decision not covered by the guidance, note it in your output: {task}",
+      "depends_on": ["arch-consult"]
+    },
+    {
+      "name": "qa-validate",
+      "role": "arcwright-qa",
+      "prompt_template": "Verify the implementation against acceptance criteria. Run playwright-cli tests and spec tests: {task}",
+      "depends_on": ["dev-impl"]
+    },
+    {
+      "name": "dev-fix",
+      "role": "arcwright-dev",
+      "prompt_template": "Fix all QA failures. Address each failure specifically: {task}",
+      "depends_on": ["qa-validate"]
+    }
+  ]
+}
+```

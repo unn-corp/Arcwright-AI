@@ -7,7 +7,7 @@ description: "The Crucible — full audit with Architect, UX, and Security runni
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -257,6 +257,46 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: This pipeline represents one iteration of the concurrent-audit + fix + re-audit loop. Re-invoke for additional iterations if re-audit finds remaining findings.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Full concurrent audit: Architect, UX, and Security review simultaneously; Dev fixes all findings; targeted re-audit until Security signs off.",
+  "stages": [
+    {
+      "name": "audit-ar",
+      "role": "arcwright-architect",
+      "prompt_template": "Audit the scope for architectural issues: DRY/SOLID violations, structural problems, integration pattern issues. List each finding with severity (critical | major | minor): {task}",
+      "depends_on": []
+    },
+    {
+      "name": "audit-ux",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "Audit the scope for UX/UI issues: accessibility violations, design token non-compliance, interaction pattern problems, visual inconsistencies. List each finding with severity: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "audit-sec",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Audit the scope for security vulnerabilities using an OWASP Top 10 lens: injection, XSS, auth bypass, secrets exposure, insecure data handling, IDOR. List each finding with severity: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "dev-fix",
+      "role": "arcwright-dev",
+      "prompt_template": "Fix all audit findings in severity order. Critical security findings first, then critical arch/ux, then major, then minor. Tag each fix with its finding severity and originating reviewer: {task}",
+      "depends_on": ["audit-ar", "audit-ux", "audit-sec"]
+    },
+    {
+      "name": "re-audit-sec",
+      "role": "arcwright-review-orchestrator",
+      "prompt_template": "Re-audit ONLY the areas that were fixed for security findings. Confirm original vulnerabilities are closed and no new security issues were introduced. Issue final sign-off or list remaining concerns: {task}",
+      "depends_on": ["dev-fix"]
+    }
+  ]
+}
+```

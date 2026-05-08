@@ -7,7 +7,7 @@ description: "Review + Fix Loop — Architect and UX Designer review concurrentl
 
 > **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
 >
-> **Kiro CLI:** this team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; teams remain Claude Code / tmux for now.
+> **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
 ## Best Used For
 
@@ -250,6 +250,46 @@ When master needs to close this team:
 2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
 3. Clear `active_team` from session-state.md
 
-## Kiro CLI
+## Kiro Pipeline
 
-This team is not currently available as a Kiro `subagent` pipeline. Track-level workflows have Kiro pipelines; team orchestration remains Claude Code / tmux for now. A team-level Kiro DAG is planned for a follow-up release.
+> Note: This pipeline represents one iteration of the review+fix loop. Re-invoke for additional iterations if re-review finds new findings.
+
+Use the `subagent` tool to run this team as a Kiro pipeline.
+
+```json
+{
+  "task": "Concurrent architectural and UX review, batched fix, and targeted re-review until both reviewers signal clean.",
+  "stages": [
+    {
+      "name": "review-ar",
+      "role": "arcwright-architect",
+      "prompt_template": "Review the scope for architectural issues: DRY/SOLID violations, structural problems, integration pattern issues, dead code. List each finding with severity: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "review-ux",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "Review the scope for UX/UI issues: accessibility violations, design token non-compliance, interaction pattern problems, visual inconsistencies. List each finding with severity: {task}",
+      "depends_on": []
+    },
+    {
+      "name": "dev-fix",
+      "role": "arcwright-dev",
+      "prompt_template": "Fix all review findings in priority order (critical first, then major, then minor). Tag each fix with its finding severity and originating reviewer: {task}",
+      "depends_on": ["review-ar", "review-ux"]
+    },
+    {
+      "name": "re-review-ar",
+      "role": "arcwright-architect",
+      "prompt_template": "Re-review ONLY the areas that were just fixed. Confirm architectural findings are resolved and no new issues were introduced: {task}",
+      "depends_on": ["dev-fix"]
+    },
+    {
+      "name": "re-review-ux",
+      "role": "arcwright-ux-designer",
+      "prompt_template": "Re-review ONLY the areas that were just fixed. Confirm UX findings are resolved and no new issues were introduced: {task}",
+      "depends_on": ["dev-fix"]
+    }
+  ]
+}
+```
