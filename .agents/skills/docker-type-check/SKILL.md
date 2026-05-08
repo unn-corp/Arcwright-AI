@@ -1,6 +1,6 @@
 ---
 name: "docker-type-check"
-description: "Set up TypeScript type-checking gates for Next.js/TypeScript projects: pre-commit hook (runs tsc in Docker container) and optional Dockerfile build gate. Prevents broken types reaching CI/CD."
+description: "Docker-based TypeScript type-check gate for Next.js/TS projects — pre-commit hook + optional Dockerfile build gate."
 allowed-tools: Bash(*) Read Write Edit Glob Grep
 ---
 

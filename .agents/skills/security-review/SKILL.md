@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Security code review for vulnerabilities. Use when asked to "security review", "find vulnerabilities", "check for security issues", "audit security", "OWASP review", or review code for injection, XSS, authentication, authorization, cryptography issues. Provides systematic review with confidence-based reporting.
+description: OWASP-aligned security code review — injection, XSS, auth, authorization, cryptography. Use for "security review", "find vulnerabilities", "audit security", or any vulnerability check.
 allowed-tools: Read, Grep, Glob, Bash, Task
 license: LICENSE
 ---

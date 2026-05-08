@@ -1,6 +1,6 @@
 ---
 name: security-best-practices
-description: Implement security best practices for web applications and infrastructure. Use when securing APIs, preventing common vulnerabilities, or implementing security policies. Handles HTTPS, CORS, XSS, SQL Injection, CSRF, rate limiting, and OWASP Top 10.
+description: Web app security best practices — HTTPS, CORS, XSS, SQL injection, CSRF, rate limiting, OWASP Top 10. Use when securing APIs or implementing security policies.
 metadata:
   tags: security, HTTPS, CORS, XSS, SQL-injection, CSRF, OWASP, rate-limiting
   platforms: Claude, ChatGPT, Gemini

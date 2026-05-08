@@ -1,6 +1,6 @@
 ---
 name: tmux-protocol
-description: "tmux pane messaging protocol for multi-agent workflows. Load when $TMUX is set and orchestrating split-pane agents. Covers send-keys, delivery verification, pane spawning, Claude activity detection, polling, cross-pane notification, pane close, AGENT_SIGNAL protocol, and a full command library."
+description: "tmux split-pane orchestration — send-keys, delivery verification, AGENT_SIGNAL, pane lifecycle. Load when user opts into pane visibility AND $TMUX is set."
 allowed-tools: Bash, Read, Write
 ---
 

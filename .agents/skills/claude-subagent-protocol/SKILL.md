@@ -1,6 +1,6 @@
 ---
 name: "claude-subagent-protocol"
-description: "In-process Agent tool orchestration protocol for Arcwright tracks and teams. Defines spawn patterns, handoff context contract, model/mode strategy, failure recovery, and concurrency rules. The default orchestration substrate; tmux-protocol applies only when the user opts into split-pane visibility."
+description: "Default in-process Agent tool orchestration for Arcwright tracks and teams — spawn patterns, handoff contract, model/mode strategy, failure recovery, concurrency."
 allowed-tools: Read, Grep, Glob
 ---
 

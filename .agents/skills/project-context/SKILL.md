@@ -1,6 +1,6 @@
 ---
 name: "project-context"
-description: "Scan the project for existing config, plans, steering docs, and codebase structure before starting any workflow. Project-level config takes precedence over global installation."
+description: "Scan project for config, plans, steering docs, and codebase structure before any workflow. Project beats global."
 allowed-tools: Read, Glob, Grep, Bash
 ---
 

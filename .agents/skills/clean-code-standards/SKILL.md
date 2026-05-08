@@ -1,6 +1,6 @@
 ---
 name: clean-code-standards
-description: DRY/SOLID code quality principles for architectural review — 23 rules across 7 categories. Use when performing a DRY/SOLID review (DR/DRY trigger) or when architect-agent is running a combined AR+PMR+DRY review gate.
+description: DRY/SOLID code quality — 23 rules across 7 categories. Use for DRY/SOLID review (DR trigger) or AR+PMR+DRY review gates.
 version: 1.0.0
 author: arcwright
 tags: [code-quality, solid, dry, architecture, review]
