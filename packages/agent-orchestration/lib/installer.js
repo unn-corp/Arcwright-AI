@@ -975,9 +975,12 @@ function getFileHeader(tool) {
 }
 
 /**
- * Write / merge .claude/settings.json with Arcwright-required env vars.
- * Enables CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS so mode [4] parallel agents
- * work out of the box without manual env setup.
+ * Write / merge .claude/settings.json with Arcwright-required env vars and
+ * skill-listing budget. Enables CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS so mode
+ * [4] parallel agents work out of the box. Bumps skillListingBudgetFraction
+ * to 0.03 (3%) so the 50+ Arcwright skills + user skills don't get truncated
+ * at session start (default 0.01 / 1% drops descriptions for users with many
+ * skills installed).
  * Merges with any existing settings — never overwrites user values.
  */
 async function writeClaudeSettings(claudeDir, chalk) {
@@ -1007,10 +1010,16 @@ async function writeClaudeSettings(claudeDir, chalk) {
     settings.env.CLAUDE_CODE_NO_FLICKER = '1';
   }
 
+  // Bump skill-listing budget so Arcwright's 50+ skills don't get truncated
+  // on session start. Only set if user hasn't customized it already.
+  if (settings.skillListingBudgetFraction === undefined) {
+    settings.skillListingBudgetFraction = 0.03;
+  }
+
   const after = JSON.stringify(settings);
   if (before !== after) {
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
-    console.log(chalk.green('  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1)'));
+    console.log(chalk.green('  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=0.03)'));
   } else {
     console.log(chalk.gray('  ○ .claude/settings.json already up to date'));
   }
