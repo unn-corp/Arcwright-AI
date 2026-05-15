@@ -113,24 +113,81 @@ async function setupTmux(projectRoot, chalk) {
 
   // ── Step 2: Shell aliases ──────────────────────────────────────────────────
   console.log('\n' + chalk.bold('Step 2 — Shell aliases'));
-  const bashrc = path.join(homeDir, '.bashrc');
   const resolvedRoot = path.resolve(projectRoot || process.cwd());
+  const isWslEnv = !!(process.env.WSL_DISTRO_NAME || await fs.pathExists('/proc/sys/fs/binfmt_misc/WSLInterop'));
+
   const tmuxAlias = `alias tmux-ai='tmux new-session -c ${resolvedRoot}'`;
   const tmuxClaudeAlias = `alias tmux-claude='tmux new-session -c ${resolvedRoot} "claude --dangerously-skip-permissions"'`;
-
-  let bashrcContent = '';
-  if (await fs.pathExists(bashrc)) bashrcContent = await fs.readFile(bashrc, 'utf8');
-
   const aliasBlock = `\n# Arcwright tmux shortcuts\n${tmuxAlias}\n${tmuxClaudeAlias}\n`;
-  if (!bashrcContent.includes('tmux-claude')) {
-    const addAliases = await ask(chalk.yellow(`  Add 'tmux-ai' and 'tmux-claude' aliases to ~/.bashrc? (Y/n): `));
-    if (!addAliases.toLowerCase().startsWith('n')) {
+
+  const addAliases = await ask(chalk.yellow(`  Add 'tmux-ai' and 'tmux-claude' shortcuts to shell startup files? (Y/n): `));
+  if (!addAliases.toLowerCase().startsWith('n')) {
+    // ~/.bashrc (Linux / WSL / macOS bash users)
+    const bashrc = path.join(homeDir, '.bashrc');
+    let bashrcContent = '';
+    if (await fs.pathExists(bashrc)) bashrcContent = await fs.readFile(bashrc, 'utf8');
+    if (!bashrcContent.includes('tmux-claude')) {
       await fs.appendFile(bashrc, aliasBlock, 'utf8');
-      console.log(chalk.green('  ✓ Aliases added to ~/.bashrc'));
-      console.log(chalk.dim('  Run: source ~/.bashrc'));
+      console.log(chalk.green(`  ✓ Aliases added to ${bashrc}`));
+    } else {
+      console.log(chalk.dim(`  ○ Aliases already in ${bashrc}`));
     }
-  } else {
-    console.log(chalk.dim('  ○ Aliases already in ~/.bashrc'));
+
+    // ~/.zshrc (macOS default since Catalina; many Linux users)
+    const zshrc = path.join(homeDir, '.zshrc');
+    let zshrcContent = '';
+    if (await fs.pathExists(zshrc)) zshrcContent = await fs.readFile(zshrc, 'utf8');
+    if (!zshrcContent.includes('tmux-claude')) {
+      await fs.appendFile(zshrc, aliasBlock, 'utf8');
+      console.log(chalk.green(`  ✓ Aliases added to ${zshrc}`));
+    } else {
+      console.log(chalk.dim(`  ○ Aliases already in ${zshrc}`));
+    }
+
+    // PowerShell $PROFILE — only on WSL (wraps wsl.exe -- tmux …)
+    if (isWslEnv) {
+      try {
+        const distro = process.env.WSL_DISTRO_NAME || '';
+        const wslRoot = (() => {
+          try {
+            return execSync(`wslpath -w "${resolvedRoot}"`, { stdio: 'pipe' }).toString().trim();
+          } catch { return resolvedRoot; }
+        })();
+        const distroFlag = distro ? `-d ${distro} ` : '';
+        const psBlock = [
+          '',
+          '# Arcwright tmux shortcuts (wraps WSL tmux)',
+          `function tmux-ai     { wsl ${distroFlag}--cd "${resolvedRoot}" -- tmux new-session }`,
+          `function tmux-claude { wsl ${distroFlag}--cd "${resolvedRoot}" -- tmux new-session "claude --dangerously-skip-permissions" }`,
+          '',
+        ].join('\n');
+
+        const profilePathRaw = execSync(
+          'powershell.exe -NoProfile -Command "$PROFILE.CurrentUserAllHosts"',
+          { stdio: 'pipe' }
+        ).toString().trim().replace(/\r/g, '');
+        const profilePathWsl = execSync(`wslpath "${profilePathRaw}"`, { stdio: 'pipe' }).toString().trim();
+
+        await fs.ensureDir(path.dirname(profilePathWsl));
+        let profileContent = '';
+        if (await fs.pathExists(profilePathWsl)) profileContent = await fs.readFile(profilePathWsl, 'utf8');
+        if (!profileContent.includes('function tmux-claude')) {
+          await fs.writeFile(profilePathWsl, profileContent.trimEnd() + '\n' + psBlock, 'utf8');
+          console.log(chalk.green(`  ✓ PowerShell functions added to ${profilePathRaw}`));
+        } else {
+          console.log(chalk.dim(`  ○ PowerShell functions already in ${profilePathRaw}`));
+        }
+        // Suppress unused-var lint:
+        void wslRoot;
+      } catch {
+        console.log(chalk.yellow('  ⚠  Could not write PowerShell profile (Windows path detection failed)'));
+        console.log(chalk.dim('     Add manually to $PROFILE in PowerShell:'));
+        console.log(chalk.dim(`       function tmux-ai     { wsl --cd "${resolvedRoot}" -- tmux new-session }`));
+        console.log(chalk.dim(`       function tmux-claude { wsl --cd "${resolvedRoot}" -- tmux new-session "claude --dangerously-skip-permissions" }`));
+      }
+    }
+
+    console.log(chalk.dim('  Reload your shell (source ~/.bashrc, source ~/.zshrc, or restart PowerShell).'));
   }
 
   // xdg-open → wslview symlink
