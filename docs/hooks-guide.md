@@ -106,9 +106,24 @@ and merges without clobbering existing hooks.
 | SessionStart context | `project-context`, `constitution` |
 | UserPromptSubmit gate | `constitution` |
 
-## Shipping hooks with the installer (future)
+## Seeding hooks with the installer
 
-The installer already writes `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. A follow-up can offer
-an opt-in `--hooks <safe|full|none>` flag that seeds the safety guards (secret-scan, destructive
--command block) and the SessionStart context loader into `.claude/settings.json`. Keep
-quality/typecheck hooks opt-in (they cost time per edit). `// TODO(hooks-installer)`.
+The installer ships a `--hooks <none|safe|full>` flag (default `none`):
+
+```bash
+npx @arcwright-ai/agent-orchestration --hooks safe   # guards + SessionStart context
+npx @arcwright-ai/agent-orchestration --hooks full   # + tsc/pyright typecheck on edits
+```
+
+- **safe** — PreToolUse(Bash) destructive-command guard, PreToolUse(Write|Edit) secret/key-file
+  guard, and a SessionStart context reminder.
+- **full** — `safe` plus a PostToolUse(Write|Edit) typecheck (`tsc --noEmit` / `pyright`).
+
+Guard scripts are copied to `.claude/arcwright-hooks/` (`guard-bash.js`, `guard-write.js`,
+`typecheck.js`). The merge into `.claude/settings.json` is **idempotent** — Arcwright entries
+are tagged and replaced in place, so re-running never duplicates and your own hooks are left
+untouched. The chosen mode is recorded in the manifest and restored on `--yes` updates.
+
+Project installs reference the scripts via `$CLAUDE_PROJECT_DIR` (portable across machines);
+global installs use the absolute `~/.claude/arcwright-hooks/` path. To remove them, run with
+`--hooks none` and delete the `.claude/arcwright-hooks/` directory, or edit `settings.json`.

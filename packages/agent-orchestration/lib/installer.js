@@ -566,9 +566,12 @@ async function install(opts) {
     openrouterLaunchers = null, // legacy alias for modelLaunchers
     modelLaunchers = null, // null = interactive prompt, true/false = explicit
     channel = 'stable', // release channel: 'stable' | 'next'
+    hooks = 'none', // Claude Code hooks to seed: 'none' | 'safe' | 'full'
   } = opts;
   // Validate channel — silently clamp unknown values to 'stable'
   const resolvedChannel = (channel === 'next') ? 'next' : 'stable';
+  // Validate hooks mode — clamp unknown values to 'none'
+  let resolvedHooks = ['none', 'safe', 'full'].includes(hooks) ? hooks : 'none';
   let resolvedGitignore = gitignore;
   let resolvedTmux = typeof tmux === 'boolean' ? tmux : null;
   let resolvedMigrateBmad = typeof migrateBmad === 'boolean' ? migrateBmad : null;
@@ -645,6 +648,10 @@ async function install(opts) {
   let resolvedChannelFinal = resolvedChannel;
   if (manifestFallback && resolvedChannel === 'stable' && existingManifest.channel) {
     resolvedChannelFinal = existingManifest.channel;
+  }
+  // Restore hooks mode from manifest on --yes updates (so re-runs preserve choice).
+  if (manifestFallback && resolvedHooks === 'none' && existingManifest.hooks) {
+    resolvedHooks = existingManifest.hooks;
   }
 
   // Restore userName from manifest on --yes updates (so config.yaml gets the right name
@@ -966,7 +973,7 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro') continue; // handled separately below
-    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm);
+    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
     }
@@ -1069,6 +1076,7 @@ async function install(opts) {
     modelLaunchers: resolvedOpenrouterLaunchers,
     openrouterLaunchers: resolvedOpenrouterLaunchers, // legacy alias, kept for older readers
     channel: resolvedChannelFinal || resolvedChannel,  // release channel: 'stable' | 'next'
+    hooks: resolvedHooks,  // seeded Claude Code hooks: 'none' | 'safe' | 'full'
     gitignore: isGlobal ? null : resolvedGitignore,
     global: isGlobal,
     // Preserve existing migratedAt if present; add new one if migration ran this session
@@ -1173,7 +1181,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
-async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false) {
+async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none') {
   const stubEntries = [];
   const platformCfg = PLATFORMS[tool];
   if (!platformCfg) {
@@ -1303,7 +1311,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     const settingsBase = isGlobal
       ? resolveToolPath('claude-code', '.claude', true, homes, platform)
       : path.join(projectRoot, '.claude');
-    await writeClaudeSettings(settingsBase, chalk);
+    await writeClaudeSettings(settingsBase, chalk, resolvedHooks, isGlobal);
   }
 
   // Write per-agent stubs into agent directory (claude-code only for now)
@@ -1338,7 +1346,7 @@ function getFileHeader(tool) {
  * mid-tier model without pinning a version.
  * Merges with any existing settings — never overwrites user values.
  */
-async function writeClaudeSettings(claudeDir, chalk) {
+async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGlobal = false) {
   const settingsPath = path.join(claudeDir, 'settings.json');
   await fs.ensureDir(claudeDir);
 
@@ -1381,12 +1389,82 @@ async function writeClaudeSettings(claudeDir, chalk) {
     settings.fallbackModel = ['sonnet'];
   }
 
+  // Seed Arcwright hooks (opt-in via --hooks safe|full). Copies guard scripts
+  // and idempotently merges hook entries without clobbering user hooks.
+  if (hooksMode === 'safe' || hooksMode === 'full') {
+    await seedArcwrightHooks(settings, claudeDir, hooksMode, isGlobal);
+  }
+
   const after = JSON.stringify(settings);
   if (before !== after) {
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
-    console.log(chalk.green('  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=0.03, fallbackModel=["sonnet"])'));
+    const hookNote = (hooksMode === 'safe' || hooksMode === 'full') ? `, hooks=${hooksMode}` : '';
+    console.log(chalk.green(`  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=0.03, fallbackModel=["sonnet"]${hookNote})`));
   } else {
     console.log(chalk.gray('  ○ .claude/settings.json already up to date'));
+  }
+}
+
+/**
+ * Copy Arcwright hook guard scripts into <claudeDir>/arcwright-hooks/ and merge
+ * the corresponding hook entries into settings.hooks. Idempotent: Arcwright
+ * entries are identified by the 'arcwright-hooks' marker in their command and
+ * replaced in place, so re-runs never duplicate and user hooks are preserved.
+ *
+ *   safe → PreToolUse(Bash) destructive-command guard
+ *          PreToolUse(Write|Edit) secret/key-file guard
+ *          SessionStart context-load reminder
+ *   full → safe + PostToolUse(Write|Edit) tsc/pyright typecheck
+ */
+async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal) {
+  const srcDir = path.join(__dirname, 'templates', 'hooks');
+  const destDir = path.join(claudeDir, 'arcwright-hooks');
+  await fs.ensureDir(destDir);
+  for (const f of ['guard-bash.js', 'guard-write.js', 'typecheck.js']) {
+    await fs.copy(path.join(srcDir, f), path.join(destDir, f), { overwrite: true });
+  }
+
+  // Command path: absolute for global installs (scripts live in ~/.claude);
+  // $CLAUDE_PROJECT_DIR-relative for project installs so the repo stays portable.
+  const ref = (name) =>
+    isGlobal
+      ? `node ${JSON.stringify(path.join(destDir, name))}`
+      : `node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/${name}"`;
+
+  const MARKER = 'arcwright-hooks';
+  settings.hooks = settings.hooks || {};
+
+  // For one event, drop existing Arcwright entries then append fresh ones.
+  const setEvent = (event, entries) => {
+    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
+    const kept = existing.filter(
+      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some((h) => typeof h.command === 'string' && h.command.includes(MARKER)))
+    );
+    settings.hooks[event] = [...kept, ...entries];
+  };
+
+  const cmd = (command) => ({ type: 'command', command });
+
+  setEvent('PreToolUse', [
+    { matcher: 'Bash', hooks: [cmd(ref('guard-bash.js'))] },
+    { matcher: 'Write|Edit', hooks: [cmd(ref('guard-write.js'))] },
+  ]);
+
+  // SessionStart context reminder — carries the marker so it's replaceable.
+  setEvent('SessionStart', [
+    { hooks: [cmd(`echo "Arcwright: run the project-context scan (arcwright-hooks) and honor CONSTITUTION.md if present."`)] },
+  ]);
+
+  if (mode === 'full') {
+    setEvent('PostToolUse', [
+      { matcher: 'Write|Edit', hooks: [cmd(ref('typecheck.js'))] },
+    ]);
+  } else {
+    // Downgrade safe: strip any prior Arcwright PostToolUse typecheck.
+    setEvent('PostToolUse', []);
+    if (settings.hooks.PostToolUse && settings.hooks.PostToolUse.length === 0) {
+      delete settings.hooks.PostToolUse;
+    }
   }
 }
 
