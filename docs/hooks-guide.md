@@ -108,7 +108,9 @@ and merges without clobbering existing hooks.
 
 ## Seeding hooks with the installer
 
-The installer ships a `--hooks <none|safe|full>` flag (default `none`):
+The installer **prompts** for a hooks mode during interactive setup (alongside the gitignore
+choice). You can also set it non-interactively with the `--hooks <none|safe|full>` flag, which
+skips the prompt (`--yes` defaults to `none`):
 
 ```bash
 npx @arcwright-ai/agent-orchestration --hooks safe   # guards + SessionStart context
