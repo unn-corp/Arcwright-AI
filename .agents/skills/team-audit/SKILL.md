@@ -1,11 +1,11 @@
 ---
 name: "team-audit"
-description: "The Crucible — full audit with Architect, UX, and Security running concurrently; Security has final sign-off"
+description: "The Crucible — full audit with Architect, UX, and Security running concurrently; Security has final sign-off; in-process with agent registry reuse"
 ---
 
 # Agent Team: Full Audit + Fix Loop — The Crucible
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). Spawn-once + reuse via Session Agent Registry. tmux is opt-in visibility only.
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -30,49 +30,46 @@ description: "The Crucible — full audit with Architect, UX, and Security runni
 
 The Crucible is the most thorough audit configuration available. Architect, UX Designer, and Security reviewer run concurrently to maximize coverage and minimize clock time. All findings are aggregated and severity-triaged, with critical security issues addressed first. Security has final sign-off authority — the loop does not exit until Security signals a clean pass on all remediated areas. Use The Crucible before major releases, for legacy code onboarding, or whenever a codebase area needs comprehensive multi-dimensional validation.
 
-## Layout (tmux)
+## Agent Registry
+
+This team uses a Session Agent Registry (see `claude-subagent-protocol` §3) to record live agent IDs and reuse them across steps. Path:
 
 ```
-┌─────────┬───────────┐
-│         │ Architect │
-│ Master  ├───────────┤
-│ (left)  │    UX     │
-│         ├───────────┤
-│         │ Security  │
-├─────────┼───────────┤
-│  (open) │    Dev    │
-└─────────┴───────────┘
+_arcwright-output/sessions/<session-id>/agent-registry.md
 ```
 
-## Spawn Sequence
+Roles in this team (one row per role):
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+| Role | Agent | Notes |
+|------|-------|-------|
+| architect | `arcwright-architect` | Reused for step 3 re-audit if arch findings were addressed |
+| ux | `arcwright-ux-designer` | Reused for step 3 re-audit if ux findings were addressed |
+| security | `arcwright-review-orchestrator` (security lens) | Reused for step 3 re-audit — Security always re-reviews security-tagged findings |
+| dev | `arcwright-dev` | Reused for step 2 fix passes across loop iterations |
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+Spawn-once rule: the first time each role is needed, spawn via `Agent` tool and capture `agentId`. On any subsequent task for the same role (including the next iteration of the fix loop), look up the row in the registry and dispatch via `SendMessage`. The Security agent keeps full prior context — original findings, last re-audit result, sign-off status.
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+## Model Strategy (sonnet-first + permission gate)
 
-```bash
-# 1. Split Architect pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in The Crucible audit team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/architect.md. You have full dev skill access. Emit AGENT_SIGNAL::FINDING signals as you discover issues. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+| Role | Default | Opus |
+|------|---------|------|
+| `arcwright-architect` | sonnet | only with explicit user permission |
+| `arcwright-ux-designer` | sonnet | only with explicit user permission |
+| `arcwright-review-orchestrator` (security lens) | sonnet | only with explicit user permission — Security is **not** a silent-opus default |
+| `arcwright-dev` | sonnet | n/a — code execution; sonnet is sufficient |
 
-# 2. Split UX pane (mid-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the UX Designer agent in The Crucible audit team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/ux-designer.md. You have full dev skill access. Emit AGENT_SIGNAL::FINDING signals as you discover issues. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::ux::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+**Default is sonnet for every spawn.** Before spawning any agent with `model: "opus"` or raising effort, the orchestrator (or this skill) **must ask the user** first (per `claude-subagent-protocol` §6.3). No silent escalation — Security work, despite its stakes, follows the same gate. If the user grants opus for the security role, record the preference and stop asking for the rest of the session.
 
-# 3. Split Security pane (bottom-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Security reviewer in The Crucible audit team managed by Conductor (master-orchestrator). Activate with a security-only review lens: focus exclusively on OWASP Top 10, injection vulnerabilities, XSS, auth bypass, secrets exposure, and insecure data handling. Emit AGENT_SIGNAL::FINDING signals as you discover issues. You have FINAL SIGN-OFF authority. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::security::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+## Spawn-once + Reuse
 
-# 4. Split Dev pane (4th pane — horizontal split from bottom area)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in The Crucible audit team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. You can invoke architect, QA, and security skills from .agents/skills/ inline during fix phases. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+For each step, before issuing the Agent call, check the registry:
 
-# 5. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
-```
+- **Registry miss** (first use of the role in this session) → spawn via `Agent` tool. Capture the returned `agentId` and write a registry row.
+- **Registry hit** (same role, same context) → dispatch via `SendMessage(to: <agentId>, ...)`. The agent already holds the prior context — do not re-feed it.
+
+The Security agent is the load-bearing reuse case for this team: it is re-engaged on every re-audit pass and must know the original findings, the prior re-audit result, and the current sign-off state. Spawning a fresh Security agent loses that context.
+
+For the full spawn / reuse pattern see `claude-subagent-protocol` §4.
 
 ## Agent Activation
 
@@ -99,7 +96,7 @@ sleep 6
 
 #### Default: In-Process (Agent tool)
 
-Issue all three Agent calls in a single assistant message (parallel fan-out):
+All three reviewers are first-time roles. Spawn all three in a single assistant message (parallel fan-out):
 
 ```json
 [
@@ -108,7 +105,7 @@ Issue all three Agent calls in a single assistant message (parallel fan-out):
     "input": {
       "subagent_type": "arcwright-architect",
       "prompt": "Audit the following scope for architectural issues: DRY/SOLID violations, structural problems, integration pattern issues. List each finding with severity (critical | major | minor) and description.\n\n## Inputs\nAudit scope: {audit_scope}\n\n## Output\nList of findings with severity. If none: 'No findings.'",
-      "model": "opus"
+      "model": "sonnet"
     }
   },
   {
@@ -124,32 +121,19 @@ Issue all three Agent calls in a single assistant message (parallel fan-out):
     "input": {
       "subagent_type": "arcwright-review-orchestrator",
       "prompt": "Audit the following scope for security vulnerabilities using an OWASP Top 10 lens: injection, XSS, auth bypass, secrets exposure, insecure data handling, IDOR. List each finding with severity (critical | major | minor).\n\n## Inputs\nAudit scope: {audit_scope}\n\n## Output\nList of security findings with severity. If none: 'No findings.'",
-      "model": "opus"
+      "model": "sonnet"
     }
   }
 ]
 ```
 
-Capture results into `$STEP_1_AR_OUTPUT`, `$STEP_1_UX_OUTPUT`, `$STEP_1_SEC_OUTPUT`. Merge and sort all findings by severity (critical security first, then critical arch/ux, then major, then minor). Pass merged findings to step 2.
+Capture the returned `agentId` for each spawn and write rows to the Session Agent Registry. Capture results into `$STEP_1_AR_OUTPUT`, `$STEP_1_UX_OUTPUT`, `$STEP_1_SEC_OUTPUT`. Merge and sort all findings by severity (critical security first, then critical arch/ux, then major, then minor). Pass merged findings to step 2.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning. Dispatch to all three panes simultaneously; poll for all three TASK_DONE signals before proceeding.
-
-```bash
-tmux send-keys -t {architect_pane_id} "TASK-{id}-ar: Audit scope: {audit_scope}. Emit FINDING signals per issue. Signal TASK_DONE when audit complete." Enter
-tmux send-keys -t {ux_pane_id} "TASK-{id}-ux: Audit scope: {audit_scope}. Emit FINDING signals per issue. Signal TASK_DONE when audit complete." Enter
-tmux send-keys -t {security_pane_id} "TASK-{id}-sec: Audit scope: {audit_scope}. Emit FINDING signals per security issue. Signal TASK_DONE when audit complete." Enter
-```
-
-Completion signals (wait for all three):
-```
-AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::{finding_count}
-AGENT_SIGNAL::TASK_DONE::ux::{task_id}::done::{finding_count}
-AGENT_SIGNAL::TASK_DONE::security::{task_id}::done::{finding_count}
-```
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. In-process flow inside the pane is still governed by `claude-subagent-protocol`.
 
 ---
 
@@ -162,6 +146,8 @@ AGENT_SIGNAL::TASK_DONE::security::{task_id}::done::{finding_count}
 ---
 
 #### Default: In-Process (Agent tool)
+
+`dev` is the first-time role. Spawn via `Agent` tool, capture `agentId`, write the registry row.
 
 ```json
 {
@@ -178,15 +164,9 @@ Capture result into `$STEP_2_OUTPUT`. Pass to step 3.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: Fix findings in priority order. Critical security first. Findings: {merged_findings}. Signal TASK_DONE with files changed." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_changed}`
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section.
 
 ---
 
@@ -200,62 +180,40 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_chang
 
 #### Default: In-Process (Agent tool)
 
-Issue re-audit Agent calls only for reviewers with affected findings. Security always included when security findings were fixed:
+Issue re-audit Agent / SendMessage calls only for reviewers with affected findings. Security is always included when security findings were fixed.
+
+Reuse rule: any reviewer with a row in the registry from step 1 is re-engaged via `SendMessage` with the new re-audit task (do not re-spawn). Security is the load-bearing case here — it must know the original findings, the fixes applied, and the prior re-audit result.
 
 ```json
 [
   {
-    "name": "Agent",
+    "name": "SendMessage",
     "input": {
-      "subagent_type": "arcwright-review-orchestrator",
-      "prompt": "Re-audit ONLY the areas that were fixed for security findings. Confirm the original vulnerabilities are closed and no new security issues were introduced.\n\n## Inputs\nFiles changed: {$STEP_2_OUTPUT}\nOriginal security findings: {$STEP_1_SEC_OUTPUT}\n\n## Output\nClean pass OR new/remaining findings with severity.",
-      "model": "opus"
+      "to": "agent_<security-id>",
+      "prompt": "Re-audit ONLY the areas that were fixed for security findings. Confirm the original vulnerabilities are closed and no new security issues were introduced.\n\n## Inputs\nFiles changed: {$STEP_2_OUTPUT}\nOriginal security findings: {$STEP_1_SEC_OUTPUT}\n\n## Output\nClean pass OR new/remaining findings with severity."
     }
   }
 ]
 ```
 
-Add Architect and/or UX re-audit calls to the array if their findings were also addressed. Capture results into `$STEP_3_OUTPUT`. If Security clean AND all other findings resolved: loop exits, task complete. Otherwise: return to step 2 with remaining findings.
+Add `SendMessage` calls for `architect` and/or `ux` to the array if their findings were also addressed. Capture results into `$STEP_3_OUTPUT`. If Security clean AND all other findings resolved: loop exits, task complete. Otherwise: return to step 2 with remaining findings.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning. Dispatch only to reviewers with affected findings:
-
-```bash
-tmux send-keys -t {security_pane_id} "TASK-{id}-reverify: Re-audit ONLY these affected areas: {affected_areas}. Signal TASK_DONE with clean pass or new findings." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::security::{task_id}::clean::All security findings resolved — sign-off granted`
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section.
 
 ---
 
-## Communication Protocol
+## Team Wind-down
 
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
+In-process wind-down — no pane close:
 
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: audit
-  name: "The Crucible"
-  spawned_at: {ISO8601}
-  panes:
-    architect: {pane_id}
-    ux: {pane_id}
-    security: {pane_id}
-    dev: {pane_id}
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane IDs from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+- Mark a role "done" by stopping further dispatch to that role. The agent becomes idle but is not killed (the user can pick it back up with `SendMessage` later in the session).
+- The Session Agent Registry may be deleted or renamed to `agent-registry.closed.md` when the session ends.
+- Inspect live agents at any time via `claude agents` (or `claude agents --json` for parseable output).
+- There is no `kill-pane` analogue. The wind-down is: stop dispatching, let the session end.
 
 ## Kiro Pipeline
 

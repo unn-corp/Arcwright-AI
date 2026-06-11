@@ -1,10 +1,10 @@
-import { Terminal, Layers, Zap, Eye } from 'lucide-react';
+import { Terminal, Layers, Eye, Scissors } from 'lucide-react';
 
 const FEATURES = [
   { icon: Layers, label: 'Catppuccin Frappe theme', detail: 'Powerline status bar, Nerd Font optimised' },
-  { icon: Zap,    label: 'Agent orchestration scripts', detail: 'dispatch.sh, float_term.sh, watch-sync.sh' },
-  { icon: Eye,    label: 'Pane title sync', detail: "Auto-updates from Claude Code's OSC 2 title" },
-  { icon: Terminal, label: 'Actions popup',  detail: 'Window, pane, clipboard, and launch shortcuts' },
+  { icon: Scissors, label: 'Pane & window mechanics', detail: 'Splits, navigation, layouts, resizing, clipboard integration' },
+  { icon: Eye, label: 'Pane title sync', detail: "Auto-updates from Claude Code's OSC 2 title" },
+  { icon: Terminal, label: 'Actions popup', detail: 'Window, pane, clipboard, and launch shortcuts' },
 ];
 
 export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {}) {
@@ -17,8 +17,8 @@ export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {
               tmux Setup
             </h2>
             <p className="font-sans text-muted max-w-xl mx-auto">
-              Standalone tmux configuration optimised for AI agent workflows.
-              Split panes, live agent output, coordinated signals.
+              A visibility layer for AI agent workflows. tmux provides pane mechanics,
+              live pane titles, and an optional viewing surface for in-process agents.
             </p>
           </div>
         )}
@@ -40,7 +40,7 @@ export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {
               <div className="text-cta">✓ Pane title sync enabled</div>
               <div className="text-cta">✓ Clipboard integration (WSL2 → Windows)</div>
               <div className="text-cta">✓ Actions popup installed</div>
-              <div className="text-cta">✓ Agent orchestration scripts ready</div>
+              <div className="text-cta">✓ Pane mechanics ready (split, navigate, resize)</div>
               <div className="mt-4 text-muted/60">
                 ─── Arcwright · 2 panes ────────────────────
               </div>
@@ -73,6 +73,17 @@ export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {
                 </div>
               </div>
             ))}
+
+            <div className="mt-2 bg-bg border border-surface-light p-4">
+              <div className="text-xs font-mono text-muted mb-2">Note</div>
+              <p className="font-sans text-xs text-muted leading-relaxed">
+                tmux is a <span className="text-foreground">visibility tool</span>, not a spawn
+                mechanism. The in-process <code className="font-mono text-foreground">Agent</code> tool +{' '}
+                <code className="font-mono text-foreground">SendMessage</code> flow is the canonical
+                orchestration substrate. tmux panes are an opt-in viewing surface. See the{' '}
+                <code className="font-mono text-cta/80">tmux</code> skill.
+              </p>
+            </div>
 
             <div className="mt-2 bg-bg border border-surface-light p-4">
               <div className="text-xs font-mono text-muted mb-2">Standalone install</div>

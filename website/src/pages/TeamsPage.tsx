@@ -15,9 +15,10 @@ export default function TeamsPage() {
             Agent Teams
           </h1>
           <p className="font-sans text-muted text-lg max-w-2xl leading-relaxed">
-            17 pre-built team compositions for every phase of development. Each team is a
-            tmux split-pane layout — specialist agents that stay alive across tasks and
-            communicate via session files.
+            17 pre-built team compositions for every phase of development. Each team is an
+            in-process orchestration — specialist agents that stay alive across tasks and
+            reuse context via SendMessage and the Session Agent Registry. tmux pane
+            visibility is an optional add-on.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             {[

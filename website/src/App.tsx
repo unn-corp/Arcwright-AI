@@ -3,10 +3,10 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Nav from './components/Nav';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
-import TracksPage from './pages/TracksPage';
 import TeamsPage from './pages/TeamsPage';
 import AgentsPage from './pages/AgentsPage';
 import SkillsPage from './pages/SkillsPage';
+import WorkflowsPage from './pages/WorkflowsPage';
 import TmuxPage from './pages/TmuxPage';
 
 function useScrollReveal() {
@@ -40,10 +40,10 @@ function AnimatedRoutes() {
     <div key={location.pathname} className="page-enter">
       <Routes location={location}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/tracks" element={<TracksPage />} />
         <Route path="/teams" element={<TeamsPage />} />
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/skills" element={<SkillsPage />} />
+        <Route path="/workflows" element={<WorkflowsPage />} />
         <Route path="/tmux" element={<TmuxPage />} />
       </Routes>
     </div>

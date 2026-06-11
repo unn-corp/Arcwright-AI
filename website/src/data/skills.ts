@@ -198,7 +198,7 @@ export const skills: Skill[] = [
   {
     name: 'Triage',
     slug: 'triage',
-    description: 'Analyse a task description and route it to the appropriate track or team.',
+    description: 'Workflow router — recommends a runtime for a task: plain in-process agent(s), an ultracode workflow, or a /goal loop.',
     category: 'workflow',
   },
   {

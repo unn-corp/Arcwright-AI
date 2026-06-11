@@ -1,11 +1,11 @@
 ---
 name: "team-ux-arch"
-description: "The Blueprint Room — UX and Architect produce design artifacts together; no implementation, no iterative loop"
+description: "The Blueprint Room — UX and Architect produce design artifacts together; in-process with agent registry reuse, no implementation, no iterative loop"
 ---
 
 # Agent Team: UX + Architecture — The Blueprint Room
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). Spawn-once + reuse via Session Agent Registry. tmux is opt-in visibility only.
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -28,37 +28,52 @@ description: "The Blueprint Room — UX and Architect produce design artifacts t
 
 The Blueprint Room is a design-only team — no production code is written, no iterative implementation loop runs. The UX Designer produces wireframes and component specifications; the Architect validates API contracts and data flow against the proposed design. Master mediates any design/architecture conflicts. Output is design artifacts only: wireframes, component specs, API contracts, data flow diagrams, and integration notes. Use this team to design a feature fully before handing it off to a dev team, or to validate that a UX design is architecturally feasible before building begins.
 
-## Layout (tmux)
+## Agent Registry
+
+This team uses a Session Agent Registry (see `claude-subagent-protocol` §3) to record live agent IDs and reuse them across steps. Path:
 
 ```
-┌─────────┬───────────┐
-│         │    UX     │
-│ Master  ├───────────┤
-│ (left)  │ Architect │
-└─────────┴───────────┘
+_arcwright-output/sessions/<session-id>/agent-registry.md
 ```
 
-## Spawn Sequence
+Roles in this team (one row per role):
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+| Role | Agent | Notes |
+|------|-------|-------|
+| ux | `arcwright-ux-designer` | Reused for step 1 design and (conditionally) step 3 conflict resolution |
+| architect | `arcwright-architect` | Reused for step 1 API analysis, step 2 validation, and (conditionally) step 3 conflict resolution |
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+Spawn-once rule: the first time each role is needed, spawn via `Agent` tool and capture `agentId`. On any subsequent task for the same role, look up the row in the registry and dispatch via `SendMessage` to that ID. The agent resumes with full prior context.
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+## Model Strategy (sonnet-first + permission gate)
 
-```bash
-# 1. Split UX Designer pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the UX Designer agent in The Blueprint Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/ux-designer.md. You have full dev skill access. This team produces DESIGN ARTIFACTS ONLY — wireframes, component specs, interaction specs. No production code. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::ux::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+| Role | Default | Opus |
+|------|---------|------|
+| `arcwright-ux-designer` | sonnet | only with explicit user permission |
+| `arcwright-architect` | sonnet | only with explicit user permission (deep design judgment) |
 
-# 2. Split Architect pane (bottom-right, below UX)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in The Blueprint Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/architect.md. You have full dev skill access. This team produces DESIGN ARTIFACTS ONLY — API contracts, data flow specs, feasibility notes. No production code. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+**Default is sonnet for every spawn.** Before spawning any agent with `model: "opus"` or raising effort, the orchestrator (or this skill) **must ask the user** first (per `claude-subagent-protocol` §6.3). No silent escalation.
 
-# 3. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
+## Spawn-once + Reuse
+
+For each step, before issuing the Agent call, check the registry:
+
+- **Registry miss** (first use of the role in this session) → spawn via `Agent` tool. Capture the returned `agentId` and write a registry row.
+- **Registry hit** (same role, same context) → dispatch via `SendMessage(to: <agentId>, ...)`. The agent already holds the prior context — do not re-feed it.
+
+Example SendMessage (re-engage existing architect for step 2 validation):
+
+```json
+{
+  "name": "SendMessage",
+  "input": {
+    "to": "agent_<architect-id>",
+    "prompt": "Validate the UX design against API and data flow constraints. Produce: final API contracts, data flow diagrams, integration notes. Identify any design/architecture conflicts where the UX requires data or patterns not available in the current architecture.\n\n## Inputs\nUX wireframes and component specs: {$STEP_1_UX_OUTPUT}\nInitial API analysis: {$STEP_1_ARCH_OUTPUT}\nRequirements: {requirements}\n\n## Output\nAPI contracts, data flow specs, integration notes. If conflicts: list each as 'DESIGN_CONFLICT: {description}'."
+  }
+}
 ```
+
+For the full spawn / reuse pattern see `claude-subagent-protocol` §4.
 
 ## Agent Activation
 
@@ -83,7 +98,7 @@ No iterative loop. Defined forward flow with a parallel start and a conflict-res
 
 #### Default: In-Process (Agent tool)
 
-Issue both Agent calls in a single assistant message (parallel fan-out):
+Check the registry: both `ux` and `architect` are first-time roles. Spawn both in a single assistant message (parallel fan-out):
 
 ```json
 [
@@ -100,30 +115,19 @@ Issue both Agent calls in a single assistant message (parallel fan-out):
     "input": {
       "subagent_type": "arcwright-architect",
       "prompt": "Analyze the requirements for API contract and data flow implications. Identify: what data the UX will need, what API endpoints are required, what data flow patterns apply. Write prototype code to validate assumptions if needed.\n\n## Inputs\nRequirements: {requirements}\nDesign brief: {design_brief}\n\n## Output\nInitial API/data flow analysis: required endpoints, data shapes, feasibility assessment.",
-      "model": "opus"
+      "model": "sonnet"
     }
   }
 ]
 ```
 
-Capture results into `$STEP_1_UX_OUTPUT` and `$STEP_1_ARCH_OUTPUT`. Pass both to step 2.
+Capture the returned `agentId` for each spawn and write rows to the Session Agent Registry. Capture results into `$STEP_1_UX_OUTPUT` and `$STEP_1_ARCH_OUTPUT`. Pass both to step 2.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning. Dispatch to both panes simultaneously; wait for both TASK_DONE signals.
-
-```bash
-tmux send-keys -t {ux_pane_id} "TASK-{id}: Produce wireframes and component specs for: {design_brief}. Signal TASK_DONE when complete." Enter
-tmux send-keys -t {architect_pane_id} "TASK-{id}: Analyze requirements for API/data flow implications. Requirements: {requirements}. Signal TASK_DONE when complete." Enter
-```
-
-Completion signals (wait for both):
-```
-AGENT_SIGNAL::TASK_DONE::ux::{task_id}::done::Wireframes complete for {N} screens
-AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::API analysis complete
-```
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. In-process flow inside the pane is still governed by `claude-subagent-protocol`.
 
 ---
 
@@ -137,30 +141,25 @@ AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::API analysis complete
 
 #### Default: In-Process (Agent tool)
 
+`architect` is already in the registry from step 1 — dispatch via `SendMessage` (re-engage the existing architect with the new validation task). Do not re-spawn.
+
 ```json
 {
-  "name": "Agent",
+  "name": "SendMessage",
   "input": {
-    "subagent_type": "arcwright-architect",
-    "prompt": "Validate the UX design against API and data flow constraints. Produce: final API contracts, data flow diagrams, integration notes. Identify any design/architecture conflicts where the UX requires data or patterns not available in the current architecture.\n\n## Inputs\nUX wireframes and component specs: {$STEP_1_UX_OUTPUT}\nInitial API analysis: {$STEP_1_ARCH_OUTPUT}\nRequirements: {requirements}\n\n## Output\nAPI contracts, data flow specs, integration notes. If conflicts: list each as 'DESIGN_CONFLICT: {description}'.",
-    "model": "opus"
+    "to": "agent_<architect-id>",
+    "prompt": "Validate the UX design against API and data flow constraints. Produce: final API contracts, data flow diagrams, integration notes. Identify any design/architecture conflicts where the UX requires data or patterns not available in the current architecture.\n\n## Inputs\nUX wireframes and component specs: {$STEP_1_UX_OUTPUT}\nInitial API analysis: {$STEP_1_ARCH_OUTPUT}\nRequirements: {requirements}\n\n## Output\nAPI contracts, data flow specs, integration notes. If conflicts: list each as 'DESIGN_CONFLICT: {description}'."
   }
 }
 ```
 
-Capture result into `$STEP_2_OUTPUT`. If design conflicts found: pass to step 3. Otherwise pass to step 4.
+Capture the Agent tool return value into `$STEP_2_OUTPUT`. If design conflicts found: pass to step 3. Otherwise pass to step 4.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {architect_pane_id} "TASK-{id}-validate: Validate UX design against API constraints. UX output: {$STEP_1_UX_OUTPUT}. Emit FINDING signals for design conflicts. Signal TASK_DONE when complete." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::API contracts validated` or `AGENT_SIGNAL::FINDING::architect::{task_id}::design-conflict::{description}`
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section.
 
 ---
 
@@ -176,24 +175,22 @@ This step may require user judgment if both agents cannot auto-resolve. Master p
 
 #### Default: In-Process (Agent tool)
 
-Issue both resolution calls in a single assistant message:
+Both `ux` and `architect` are in the registry from step 1 — dispatch both via `SendMessage` in a single assistant message. Do not re-spawn.
 
 ```json
 [
   {
-    "name": "Agent",
+    "name": "SendMessage",
     "input": {
-      "subagent_type": "arcwright-ux-designer",
-      "prompt": "A design/architecture conflict was identified. Propose a UX-side resolution that addresses the constraint.\n\n## Inputs\nConflict: {design_conflicts_from_step_2}\nOriginal UX design: {$STEP_1_UX_OUTPUT}\n\n## Output\nProposed UX resolution: what UX adjustment would satisfy the architectural constraint.",
-      "model": "sonnet"
+      "to": "agent_<ux-id>",
+      "prompt": "A design/architecture conflict was identified. Propose a UX-side resolution that addresses the constraint.\n\n## Inputs\nConflict: {design_conflicts_from_step_2}\nOriginal UX design: {$STEP_1_UX_OUTPUT}\n\n## Output\nProposed UX resolution: what UX adjustment would satisfy the architectural constraint."
     }
   },
   {
-    "name": "Agent",
+    "name": "SendMessage",
     "input": {
-      "subagent_type": "arcwright-architect",
-      "prompt": "A design/architecture conflict was identified. Propose an architecture-side resolution that satisfies the UX need.\n\n## Inputs\nConflict: {design_conflicts_from_step_2}\nOriginal UX design: {$STEP_1_UX_OUTPUT}\n\n## Output\nProposed architecture resolution: what API/data change would satisfy the UX requirement.",
-      "model": "opus"
+      "to": "agent_<architect-id>",
+      "prompt": "A design/architecture conflict was identified. Propose an architecture-side resolution that satisfies the UX need.\n\n## Inputs\nConflict: {design_conflicts_from_step_2}\nOriginal UX design: {$STEP_1_UX_OUTPUT}\n\n## Output\nProposed architecture resolution: what API/data change would satisfy the UX requirement."
     }
   }
 ]
@@ -203,20 +200,9 @@ Capture results into `$STEP_3_OUTPUT`. Present both resolution options to user i
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {ux_pane_id} "CONFLICT-{id}: Architecture conflict found. Propose UX-side resolution. Conflict: {conflict}. Signal TASK_DONE with proposed resolution." Enter
-tmux send-keys -t {architect_pane_id} "CONFLICT-{id}: Design conflict found. Propose architecture-side resolution. Conflict: {conflict}. Signal TASK_DONE with proposed resolution." Enter
-```
-
-Completion signals (wait for both, then present to user for decision):
-```
-AGENT_SIGNAL::TASK_DONE::ux::{task_id}::done::UX resolution proposed
-AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::Architecture resolution proposed
-```
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section.
 
 ---
 
@@ -230,29 +216,14 @@ This step is performed by master directly: collate wireframes, component specs, 
 
 ---
 
-## Communication Protocol
+## Team Wind-down
 
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
+In-process wind-down — no pane close:
 
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: ux-arch
-  name: "The Blueprint Room"
-  spawned_at: {ISO8601}
-  panes:
-    ux: {pane_id}
-    architect: {pane_id}
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane IDs from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+- Mark a role "done" by stopping further dispatch to that role. The agent becomes idle but is not killed (the user can pick it back up with `SendMessage` later in the session).
+- The Session Agent Registry may be deleted or renamed to `agent-registry.closed.md` when the session ends.
+- Inspect live agents at any time via `claude agents` (or `claude agents --json` for parseable output).
+- There is no `kill-pane` analogue. The wind-down is: stop dispatching, let the session end.
 
 ## Kiro Pipeline
 

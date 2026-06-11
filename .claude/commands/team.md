@@ -1,19 +1,14 @@
 ---
-description: Choose and spawn an agent team — 17 pre-built compositions; runs as tmux split panes when $TMUX is set, or as in-process Agent tool calls when not
+description: Choose and spawn an agent team — 17 pre-built compositions, running in-process via the Agent tool + SendMessage reuse. tmux split-pane visibility is opt-in only.
 ---
 
 # /team — Spawn an Agent Team
 
 Arcwright provides 17 pre-built agent teams. Each team is a coordinated group of specialist agents working toward a specific kind of outcome.
 
-Teams run in one of two modes, automatically chosen by context:
+**Default mode is in-process** — every team runs via the `Agent` tool with `SendMessage` reuse (governed by a Session Agent Registry, as defined in the [`claude-subagent-protocol`](../.agents/skills/claude-subagent-protocol/SKILL.md) skill). tmux split-pane visibility is **opt-in only** — only when the user explicitly asks for it (e.g. "spawn", "open agents", "I want to watch") AND `$TMUX` is set. The pane is a viewing surface; the in-process orchestration inside it is still governed by the protocol skill.
 
-| Mode | When | How it works |
-|------|------|--------------|
-| **Split-pane (tmux)** | `$TMUX` is set — user is inside tmux | Each teammate gets its own tmux pane running `claude --dangerously-skip-permissions`. Agents stay alive across tasks, communicate via `tmux send-keys`, and coordinate through a session file at `.agents/orchestration/session-*.md`. User observes all panes live. |
-| **In-process (Agent tool)** | `$TMUX` is not set, or task is fully autonomous | Each teammate runs as an `Agent` tool invocation from the master orchestrator. Agents run sequentially; the master passes completed output as structured handoff context to the next agent. No user observation, no parallelism — best for scripted/batch work. |
-
-Both modes use the **same team composition and protocol** — only the spawning mechanism differs. The team's SKILL.md contains both spawn sequences.
+The old `tmux-protocol` skill (AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling) is retired. Do not reintroduce those signals.
 
 ## Instructions
 
@@ -21,26 +16,22 @@ Both modes use the **same team composition and protocol** — only the spawning 
 
 Present the table below to the user and ask which team they want to spawn. If they describe a goal instead of picking a team, suggest the best-fit team based on the descriptions.
 
-### Step 2: Detect Mode
+### Step 2: Load the Team Skill
 
-```bash
-[ -n "$TMUX" ] && echo "split-pane" || echo "in-process"
-```
+Read `.agents/skills/team-{code}/SKILL.md` for the full spawn protocol, agent chain, registry path, model/policy, and wind-down rules.
 
-If `$TMUX` is set, you'll use split-pane mode. Otherwise, in-process. (The user can override by saying "spawn" or "open agents" — that forces split-pane mode if they want to install/run tmux first.)
+### Step 3: (Opt-in) tmux pane visibility
 
-### Step 3: Load the Team Skill
+If the user has explicitly asked for split-pane visibility AND `$TMUX` is set, also read `.agents/skills/tmux/SKILL.md` (the "Watching agents in panes (opt-in)" section) for pane mechanics. The in-process flow inside each pane is still governed by the team skill + `claude-subagent-protocol`. If the user did not ask for pane visibility, skip this step — in-process is the path.
 
-Read `.agents/skills/team-{code}/SKILL.md` (or `.kiro/skills/team-{code}/SKILL.md`) for the full spawn protocol, pane layout / agent chain, communication rules, and report-back sequence.
+### Step 4: Spawn the Team
 
-### Step 4: Load tmux-protocol (split-pane mode only)
-
-If running in split-pane mode, also read `.agents/skills/tmux-protocol/SKILL.md` before spawning any pane. This contains the message delivery protocol, pane close sequence, and AGENT_SIGNAL format.
-
-### Step 5: Spawn the Team
-
-- **Split-pane:** follow the tmux spawn sequence in the skill — `tmux split-window -h -c '#{pane_current_path}' "claude --dangerously-skip-permissions '<agent prompt>'"`. Register each pane in the session file Active Agents table. Never route by pane title — use the session file.
-- **In-process:** follow the in-process chain in the skill — invoke each teammate via the `Agent` tool with the handoff context from the previous agent. The master orchestrator owns the loop.
+- **Default (in-process):** follow the in-process chain in the skill. For each role in the team:
+  - If the role is not yet in the Session Agent Registry → invoke the `Agent` tool, capture the returned `agentId`, write a row to `_arcwright-output/sessions/<session-id>/agent-registry.md`.
+  - If the role is already in the registry and the task is on the same scope → `SendMessage(to: <agentId>, ...)` to reuse the existing agent.
+  - Pass handoff context from prior step outputs into the next prompt's `## Inputs` section.
+  - The master orchestrator owns the loop. Sequential handoff is blocking — wait for each Agent call to return before proceeding.
+- **Opt-in (tmux):** open a tmux pane for each role per the team skill's tmux variant block, and register the panes in the session file. Pane content is still driven by the in-process flow above.
 
 ---
 
@@ -96,7 +87,7 @@ If running in split-pane mode, also read `.agents/skills/tmux-protocol/SKILL.md`
 User: /team
 You: Which team would you like to spawn? Here are the 17 options... [present table]
 User: arch-dev
-You: [Reads .agents/skills/team-arch-dev/SKILL.md, loads tmux-protocol, spawns the Architect and Dev panes per the skill's spawn sequence]
+You: [Reads .agents/skills/team-arch-dev/SKILL.md, follows the in-process chain: spawn Architect, spawn Dev, pass handoff via ## Inputs, update the Session Agent Registry after each spawn]
 ```
 
 If the user passes a team code as an argument (e.g. `/team arch-dev`), skip the selection step and go straight to loading that team's skill.

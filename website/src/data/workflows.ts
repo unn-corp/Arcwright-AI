@@ -1,581 +1,74 @@
-export type StepType =
-  | 'normal'
-  | 'review-gate'
-  | 'approval'
-  | 'merge'
-  | 'scope-guard'
-  | 'loop';
+// Workflow data for the website. Replaces the retired "track" system (nano /
+// small / compact / medium / extended / large / rv) with four native
+// orchestration runtimes plus an opt-in tmux visibility layer. See
+// `.agents/skills/triage/SKILL.md` and `.agents/skills/claude-subagent-protocol/SKILL.md`.
 
-export type StepMode = 'split-pane' | 'in-process';
+export type WorkflowCategory = 'router' | 'runtime' | 'loop' | 'visibility';
 
-export interface WorkflowStep {
-  label: string;
-  type: StepType;
-  description?: string;
-  agent?: string;
-  mode?: StepMode;
-  inputs?: string[];
-  outputs?: string[];
-  subAgents?: string[];
-  optional?: boolean;
-  loopTarget?: string;
-  note?: string;
-}
-
-export interface WorkflowTrack {
-  id: string;
-  letter: string;
+export interface Workflow {
+  slug: string;
   name: string;
-  score: string;
-  scope: string;
-  headerBg: string;
-  headerText: string;
-  accentColor: string;
-  steps: WorkflowStep[];
+  category: WorkflowCategory;
+  trigger: string;          // command or trigger phrase
+  description: string;      // 1-2 sentence summary
+  bestFor: string;          // heuristic — when to reach for it
+  icon?: string;            // lucide icon hint
 }
 
-export const workflows: WorkflowTrack[] = [
+export const workflows: Workflow[] = [
   {
-    id: 'nano',
-    letter: 'N',
-    name: 'Nano',
-    score: '0–1',
-    scope: '≤20 lines, 1–2 files',
-    headerBg: '#1a3d24',
-    headerText: '#86efac',
-    accentColor: '#86efac',
-    steps: [
-      {
-        label: 'Quick Dev',
-        type: 'normal',
-        description: 'Solo dev agent reads the task and implements the change directly with no planning phase.',
-        agent: 'quick-flow-solo-dev',
-        mode: 'split-pane',
-        inputs: ['task', 'branch', 'session'],
-        outputs: ['code on branch'],
-      },
-      {
-        label: 'Scope Guard',
-        type: 'scope-guard',
-        description: 'Automated check — if the diff exceeds 20 lines, halt and re-triage to Small track.',
-        note: 'If >20 lines → HALT, upgrade to Small',
-        optional: false,
-      },
-      {
-        label: 'DRY + UV Gate',
-        type: 'review-gate',
-        description: 'Architect checks for DRY violations; UX Designer validates visual correctness. Findings loop back to dev.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (DRY)', 'ux-designer (UV)'],
-        note: 'Findings → quick-dev loop',
-        loopTarget: 'Quick Dev',
-      },
-      {
-        label: 'USER APPROVAL',
-        type: 'approval',
-        description: 'You review the diff and give a thumbs-up before anything is merged.',
-      },
-      {
-        label: '/prepare-to-merge',
-        type: 'merge',
-        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
-        mode: 'in-process',
-      },
-    ],
+    slug: 'triage',
+    name: '/triage — Workflow Router',
+    category: 'router',
+    trigger: '/triage "<task>"',
+    description:
+      'Given a task, recommends the best runtime: plain in-process agent(s), an ultracode dynamic workflow, or a /goal loop. The entry point for ambiguous tasks.',
+    bestFor:
+      'Tasks where the right approach (single agent / multi-stage / loop) is unclear. Use this first.',
+    icon: 'compass',
   },
   {
-    id: 'small',
-    letter: 'S',
-    name: 'Small',
-    score: '2',
-    scope: '2–4 files',
-    headerBg: '#162d4a',
-    headerText: '#93c5fd',
-    accentColor: '#93c5fd',
-    steps: [
-      {
-        label: 'Quick Spec',
-        type: 'normal',
-        description: 'Dev agent writes a one-page spec covering scope, approach, and acceptance criteria.',
-        agent: 'quick-flow-solo-dev',
-        mode: 'in-process',
-        outputs: ['quick-spec.md'],
-      },
-      {
-        label: 'Quick Dev',
-        type: 'normal',
-        description: 'Dev agent implements from the spec in a split pane, signaling completion when done.',
-        agent: 'quick-flow-solo-dev',
-        mode: 'split-pane',
-        inputs: ['quick-spec.md'],
-        outputs: ['code on branch'],
-      },
-      {
-        label: 'Review Gate',
-        type: 'review-gate',
-        description: 'Three sub-agents review in parallel — architecture, UX, and security. Batched findings sent to dev for fixes.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
-        loopTarget: 'Quick Dev',
-      },
-      {
-        label: 'QA Tests',
-        type: 'normal',
-        description: 'QA agent writes Playwright .spec.ts tests and validates all acceptance criteria pass.',
-        agent: 'qa-agent',
-        mode: 'split-pane',
-        outputs: ['.spec.ts'],
-      },
-      {
-        label: 'USER APPROVAL',
-        type: 'approval',
-        description: 'You review the diff and test results before merge is permitted.',
-      },
-      {
-        label: '/prepare-to-merge',
-        type: 'merge',
-        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
-        mode: 'in-process',
-      },
-    ],
+    slug: 'in-process',
+    name: 'Plain In-Process Agent',
+    category: 'runtime',
+    trigger: 'Agent tool + SendMessage',
+    description:
+      'Spawn a specialist sub-agent in-process; reuse it across follow-up work via SendMessage and the Session Agent Registry. Default for small-to-medium focused work.',
+    bestFor:
+      '1-10 files, single role or 2-3 disjoint roles, clear deliverable, no unknown-size discovery.',
+    icon: 'cpu',
   },
   {
-    id: 'compact',
-    letter: 'C',
-    name: 'Compact',
-    score: '3',
-    scope: '4–8 files',
-    headerBg: '#112a2a',
-    headerText: '#5eead4',
-    accentColor: '#5eead4',
-    steps: [
-      {
-        label: 'Quick Spec',
-        type: 'normal',
-        description: 'Dev agent writes a one-page spec covering scope, approach, and acceptance criteria.',
-        agent: 'quick-flow-solo-dev',
-        mode: 'in-process',
-        outputs: ['quick-spec.md'],
-      },
-      {
-        label: 'Quick Research',
-        type: 'normal',
-        description: 'Analyst agent does a targeted codebase sweep to surface relevant patterns or APIs before dev starts.',
-        agent: 'analyst-agent',
-        mode: 'in-process',
-        outputs: ['research-report.md'],
-        optional: true,
-        note: 'Optional',
-      },
-      {
-        label: 'Quick Dev',
-        type: 'normal',
-        description: 'Dev agent implements from the spec (+ optional research) in a split pane.',
-        agent: 'quick-flow-solo-dev',
-        mode: 'split-pane',
-        outputs: ['code on branch'],
-      },
-      {
-        label: 'Review Gate',
-        type: 'review-gate',
-        description: 'Architecture, UX, and security sub-agents review in parallel. Findings loop back to dev.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
-        loopTarget: 'Quick Dev',
-      },
-      {
-        label: 'QA Tests',
-        type: 'normal',
-        description: 'QA agent writes Playwright .spec.ts tests and validates all acceptance criteria pass.',
-        agent: 'qa-agent',
-        mode: 'split-pane',
-        outputs: ['.spec.ts'],
-      },
-      {
-        label: 'USER APPROVAL',
-        type: 'approval',
-        description: 'You review the diff and test results before merge is permitted.',
-      },
-      {
-        label: '/prepare-to-merge',
-        type: 'merge',
-        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
-        mode: 'in-process',
-      },
-    ],
+    slug: 'ultracode',
+    name: 'ultracode Dynamic Workflow',
+    category: 'runtime',
+    trigger: 'ultracode <pipeline>',
+    description:
+      'Multi-stage and parallel work with explicit dependencies between stages. Stages fan out concurrently; dependent stages wait. For "I have a big problem and a clear shape."',
+    bestFor:
+      '12+ files, multi-stage, dependencies between stages; or unknown-size discovery (audits, sweeps) with loop-until-dry.',
+    icon: 'workflow',
   },
   {
-    id: 'medium',
-    letter: 'M',
-    name: 'Medium',
-    score: '4–5',
-    scope: '6–12 files',
-    headerBg: '#332800',
-    headerText: '#fde68a',
-    accentColor: '#fde68a',
-    steps: [
-      {
-        label: 'Quick Spec',
-        type: 'normal',
-        description: 'Dev agent writes a one-page spec covering scope, approach, and acceptance criteria.',
-        agent: 'quick-flow-solo-dev',
-        mode: 'in-process',
-        outputs: ['quick-spec.md'],
-      },
-      {
-        label: 'Research',
-        type: 'normal',
-        description: 'One or two analyst agents explore the codebase and domain to inform design and implementation.',
-        agent: 'analyst-agent ×1–2',
-        mode: 'in-process',
-        outputs: ['research-report.md'],
-      },
-      {
-        label: 'UX Design',
-        type: 'normal',
-        description: 'UX Designer produces component specs, layout notes, and interaction guidelines.',
-        agent: 'ux-designer-agent',
-        mode: 'split-pane',
-        outputs: ['ux-design.md'],
-      },
-      {
-        label: 'Review Gate 1',
-        type: 'review-gate',
-        description: 'Three sub-agents review the spec and UX design before any code is written.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
-        note: 'Spec + UX review',
-        loopTarget: 'Quick Spec',
-      },
-      {
-        label: 'Quick Dev',
-        type: 'normal',
-        description: 'Dev agent implements from approved spec + UX design in a split pane.',
-        agent: 'quick-flow-solo-dev',
-        mode: 'split-pane',
-        outputs: ['code on branch'],
-      },
-      {
-        label: 'Final Review Gate',
-        type: 'review-gate',
-        description: 'Three sub-agents review the completed implementation before QA.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
-        loopTarget: 'Quick Dev',
-      },
-      {
-        label: 'QA Tests',
-        type: 'normal',
-        description: 'QA agent writes Playwright .spec.ts tests and validates all acceptance criteria pass.',
-        agent: 'qa-agent',
-        mode: 'split-pane',
-        outputs: ['.spec.ts'],
-      },
-      {
-        label: 'USER APPROVAL',
-        type: 'approval',
-        description: 'You review the diff and test results before merge is permitted.',
-      },
-      {
-        label: '/prepare-to-merge',
-        type: 'merge',
-        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
-        mode: 'in-process',
-      },
-    ],
+    slug: 'goal',
+    name: '/goal Loop',
+    category: 'loop',
+    trigger: '/goal <condition>',
+    description:
+      'Keep working until a verification condition is true. Use when the completion condition is a check (tests pass, no type errors, lint clean), not a single deliverable.',
+    bestFor:
+      'Fix-all-N issues, make-X-pass loops, code-quality convergence.',
+    icon: 'target',
   },
   {
-    id: 'extended',
-    letter: 'E',
-    name: 'Extended',
-    score: '6–7',
-    scope: '10–16 files',
-    headerBg: '#331f00',
-    headerText: '#fdba74',
-    accentColor: '#fdba74',
-    steps: [
-      {
-        label: 'Quick Spec',
-        type: 'normal',
-        description: 'Dev agent writes a structured spec to anchor the research and planning phases.',
-        agent: 'quick-flow-solo-dev',
-        mode: 'in-process',
-        outputs: ['quick-spec.md'],
-      },
-      {
-        label: 'Research ×2',
-        type: 'normal',
-        description: 'Two analyst agents run in parallel — one on the codebase, one on domain/external context.',
-        agent: 'analyst-agent ×2',
-        mode: 'in-process',
-        note: 'Codebase + domain',
-        outputs: ['research-codebase.md', 'research-domain.md'],
-      },
-      {
-        label: 'Create PRD',
-        type: 'normal',
-        description: 'PM agent synthesizes the spec and research into a full Product Requirements Document.',
-        agent: 'pm-agent',
-        mode: 'split-pane',
-        outputs: ['prd.md'],
-      },
-      {
-        label: 'UX + Arch + Sprint',
-        type: 'normal',
-        description: 'UX Designer creates component specs, then Architect produces architecture notes and sprint plan.',
-        agent: 'ux-designer → architect',
-        mode: 'split-pane',
-        note: 'Sequential',
-        outputs: ['ux-design.md', 'arch-notes.md', 'sprint-plan.md'],
-      },
-      {
-        label: 'Review Gate 1',
-        type: 'review-gate',
-        description: 'Three sub-agents review the full plan set (PRD, UX, arch) before any code is written.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
-        note: 'Plans review',
-        loopTarget: 'UX + Arch + Sprint',
-      },
-      {
-        label: 'Dev',
-        type: 'normal',
-        description: 'Dev agent implements the full feature set from the approved planning artifacts.',
-        agent: 'dev-agent',
-        mode: 'split-pane',
-        inputs: ['prd.md', 'ux-design.md', 'arch-notes.md', 'sprint-plan.md'],
-        outputs: ['code on branch'],
-      },
-      {
-        label: 'Review Gate 2',
-        type: 'review-gate',
-        description: 'Three sub-agents review the completed implementation for quality, UX, and security.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
-        note: 'Code review',
-        loopTarget: 'Dev',
-      },
-      {
-        label: 'QA Tests',
-        type: 'normal',
-        description: 'QA agent writes Playwright .spec.ts tests and validates all acceptance criteria pass.',
-        agent: 'qa-agent',
-        mode: 'split-pane',
-        outputs: ['.spec.ts'],
-      },
-      {
-        label: 'USER APPROVAL',
-        type: 'approval',
-        description: 'You review all artifacts and the final diff before merge is permitted.',
-      },
-      {
-        label: '/prepare-to-merge',
-        type: 'merge',
-        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
-        mode: 'in-process',
-      },
-    ],
-  },
-  {
-    id: 'large',
-    letter: 'L',
-    name: 'Large',
-    score: '8+',
-    scope: '12+ files',
-    headerBg: '#331010',
-    headerText: '#fca5a5',
-    accentColor: '#fca5a5',
-    steps: [
-      {
-        label: 'Product Brief',
-        type: 'normal',
-        description: 'PM agent interviews the orchestrator to produce a concise vision and success-criteria document.',
-        agent: 'pm-agent',
-        mode: 'split-pane',
-        outputs: ['product-brief.md'],
-      },
-      {
-        label: 'Research ×3 (parallel)',
-        type: 'normal',
-        description: 'Three analyst agents run simultaneously: market research, domain research, and technical research.',
-        agent: 'analyst-agent ×3',
-        mode: 'split-pane',
-        note: 'MR + DR + TR in parallel',
-        outputs: ['research-mr.md', 'research-dr.md', 'research-tr.md'],
-      },
-      {
-        label: 'Create PRD',
-        type: 'normal',
-        description: 'PM agent synthesizes brief + all research into a comprehensive Product Requirements Document.',
-        agent: 'pm-agent',
-        mode: 'split-pane',
-        inputs: ['product-brief.md', 'research ×3'],
-        outputs: ['prd.md'],
-      },
-      {
-        label: 'Planning Gate',
-        type: 'review-gate',
-        description: 'Architect and UX Designer review the PRD for feasibility and design alignment before planning.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (DRY)', 'ux-designer (UV)'],
-        note: '2-sub spec review',
-      },
-      {
-        label: 'UX + Architecture (parallel)',
-        type: 'normal',
-        description: 'UX Designer and Architect work in parallel split panes to produce design specs and architecture notes.',
-        agent: 'ux-designer + architect',
-        mode: 'split-pane',
-        note: 'Parallel',
-        outputs: ['ux-design.md', 'arch-notes.md'],
-      },
-      {
-        label: 'Design Gate',
-        type: 'review-gate',
-        description: 'Architect and UX Designer cross-review each other\'s artifacts for consistency.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (DRY)', 'ux-designer (UV)'],
-        note: '2-sub design review',
-      },
-      {
-        label: 'Epics & Stories',
-        type: 'normal',
-        description: 'Scrum Master decomposes the PRD into epics and individual user story files.',
-        agent: 'sm-agent',
-        mode: 'split-pane',
-        outputs: ['stories/epic-n/story-n.md'],
-      },
-      {
-        label: 'Readiness Check',
-        type: 'normal',
-        description: 'Architect verifies all planning artifacts are complete and gives a green/red implementation verdict.',
-        agent: 'architect-agent',
-        mode: 'in-process',
-        note: 'Impl. readiness verdict',
-      },
-      {
-        label: 'Sprint Plan',
-        type: 'normal',
-        description: 'Scrum Master sequences stories into sprint milestones with dependencies mapped.',
-        agent: 'sm-agent',
-        mode: 'split-pane',
-        outputs: ['sprint-plan.md'],
-      },
-      {
-        label: 'USER APPROVAL',
-        type: 'approval',
-        description: 'You review the full plan set before the implementation epic loop begins.',
-        note: 'Before epic loop',
-      },
-      {
-        label: 'Per-Story Loop',
-        type: 'loop',
-        description: 'Dev and QA agents cycle through each story: implement → test → loop until all stories are green.',
-        agent: 'dev-agent + qa-agent',
-        mode: 'split-pane',
-        note: 'Loop until all stories done',
-      },
-      {
-        label: 'Final Review Gate',
-        type: 'review-gate',
-        description: 'Full three-sub-agent review of the complete implementation after all stories are done.',
-        agent: 'review agent',
-        mode: 'in-process',
-        subAgents: ['architect (AR+DRY)', 'ux-designer (UV)', 'security (SR)'],
-      },
-      {
-        label: 'Full QA Suite',
-        type: 'normal',
-        description: 'QA agent writes and runs a comprehensive Playwright test suite covering all stories.',
-        agent: 'qa-agent',
-        mode: 'split-pane',
-        outputs: ['.spec.ts suite'],
-      },
-      {
-        label: 'USER APPROVAL',
-        type: 'approval',
-        description: 'Final sign-off — you review the complete feature against the original PRD.',
-        note: 'Final',
-      },
-      {
-        label: '/prepare-to-merge',
-        type: 'merge',
-        description: 'Orchestrator runs pre-merge checks, updates changelog, and prepares the PR.',
-        mode: 'in-process',
-      },
-    ],
-  },
-  {
-    id: 'rv',
-    letter: 'RV',
-    name: 'Review',
-    score: 'gate',
-    scope: 'any PR / diff',
-    headerBg: '#1a1a2e',
-    headerText: '#CA9EE6',
-    accentColor: '#CA9EE6',
-    steps: [
-      {
-        label: 'Load Artefacts',
-        type: 'normal',
-        description: 'Review orchestrator reads the diff, PR description, and any linked spec or story files.',
-        agent: 'review-orchestrator',
-        mode: 'in-process',
-        inputs: ['git diff', 'PR description', 'spec / story (optional)'],
-      },
-      {
-        label: 'Spawn Reviewers (parallel)',
-        type: 'normal',
-        description: 'Three specialist sub-agents are launched simultaneously in split panes — one per review domain.',
-        agent: 'review-orchestrator',
-        mode: 'split-pane',
-        subAgents: ['architect-agent (AR + DRY)', 'ux-designer-agent (UV)', 'security-agent (SR)'],
-        note: 'Parallel split panes',
-      },
-      {
-        label: 'Collect Findings',
-        type: 'review-gate',
-        description: 'Orchestrator waits for all three sub-agents to report back, then deduplicates and severity-ranks findings.',
-        agent: 'review-orchestrator',
-        mode: 'in-process',
-        outputs: ['findings-AR.md', 'findings-UV.md', 'findings-SR.md'],
-      },
-      {
-        label: 'Resolve / Escalate',
-        type: 'normal',
-        description: 'Low / medium findings are passed to dev for fixes. Critical findings are escalated to the user immediately.',
-        agent: 'review-orchestrator',
-        mode: 'in-process',
-        note: 'Critical → USER; others → dev loop',
-      },
-      {
-        label: 'Dev Fix Loop',
-        type: 'loop',
-        description: 'Dev agent applies fixes for non-critical findings. Loop re-runs the three reviewers until all findings are resolved.',
-        agent: 'dev-agent',
-        mode: 'split-pane',
-        loopTarget: 'Spawn Reviewers',
-      },
-      {
-        label: 'USER APPROVAL',
-        type: 'approval',
-        description: 'All findings resolved — you sign off on the review outcome before merge is unblocked.',
-      },
-      {
-        label: '/prepare-to-merge',
-        type: 'merge',
-        description: 'Review gate cleared. Orchestrator runs pre-merge checks and prepares the PR.',
-        mode: 'in-process',
-      },
-    ],
+    slug: 'tmux-opt-in',
+    name: 'tmux Opt-In Visibility',
+    category: 'visibility',
+    trigger: 'tmux split-pane (when $TMUX is set)',
+    description:
+      'Watch agents work in split panes. PURELY a viewing surface — the in-process Agent tool + SendMessage flow inside the pane is still governed by claude-subagent-protocol. Add to whichever runtime above was chosen, not as a primary mode.',
+    bestFor:
+      'When you want to see what agents are doing, or want a long-running task visible while you do other work.',
+    icon: 'eye',
   },
 ];

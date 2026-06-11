@@ -1,11 +1,11 @@
 ---
 name: "team-docs"
-description: "The Library — Tech Writer drafts, Architect reviews for technical accuracy, lightweight iterative loop"
+description: "The Library — in-process Tech Writer drafts, Architect reviews for technical accuracy, lightweight revise loop. Spawn-once + SendMessage reuse; sonnet-first with opus permission-gated on Architect."
 ---
 
 # Agent Team: Docs + Arch Review — The Library
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Agent` tool + `SendMessage` reuse with a Session Agent Registry is the canonical path. tmux split-pane is opt-in visibility only (see the [tmux](../tmux/SKILL.md) skill).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -28,45 +28,61 @@ description: "The Library — Tech Writer drafts, Architect reviews for technica
 
 The Library ensures documentation is both readable and technically accurate. Tech Writer drafts; Architect reviews for technical correctness — wrong API signatures, outdated patterns, missing caveats, or inaccurate descriptions of system behavior. Master routes drafts from Tech Writer to Architect for sign-off. The loop is lightweight: draft → review → revise → approve. Use this team when documentation quality matters enough to have an independent technical accuracy review before publishing.
 
-## Layout (tmux)
+## Agent Registry
+
+The Session Agent Registry replaces the old `session-state.md` pane-ID table. Record every role that has a live agent so subsequent tasks reuse the same agent via `SendMessage` (full prior context) instead of spawning fresh.
+
+**Registry path:**
 
 ```
-┌─────────┬───────────┐
-│         │  Writer   │
-│ Master  ├───────────┤
-│ (left)  │ Architect │
-└─────────┴───────────┘
+_arcwright-output/sessions/<session-id>/agent-registry.md
 ```
 
-## Spawn Sequence
+**Initial state for this team:**
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+| Role | Agent ID | Spawned | Last Task | Notes |
+|------|----------|---------|-----------|-------|
+| tech-writer | *(set on first spawn)* | *(ISO ts)* | documentation draft | reused on revision (step 3) |
+| architect | *(set on first spawn)* | *(ISO ts)* | technical accuracy review | reused on re-review loops |
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+**Lifecycle:**
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+- First task for a role → orchestrator spawns via `Agent` tool → captures the returned `agentId` → writes a row to the registry → dispatches the task.
+- Subsequent tasks for the same role → orchestrator reads the registry, finds the row, dispatches via `SendMessage(to: agentId, ...)`.
+- On session wind-down, the registry may be deleted or renamed to `agent-registry.closed.md`.
 
-```bash
-# 1. Split Tech Writer pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Tech Writer agent in The Library team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/tech-writer.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+See [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) §3 for the full format and §3.4 for the spawn-vs-reuse decision rule.
 
-# 2. Split Architect pane (bottom-right, below Tech Writer)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in The Library team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/architect.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly. In this team your role is technical accuracy review of documentation drafts. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+## Spawn-once + Reuse
 
-# 3. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
+Two roles, lightweight loop. Tech Writer spawns once and is reused on each revision; Architect spawns once and is reused on each re-review. No third role.
+
+| Step | Role | Action | Notes |
+|------|------|--------|-------|
+| 1. Documentation draft | tech-writer | **Spawn** (first use) | Sequential start. |
+| 2. Technical accuracy review | architect | **Spawn** (first use) | Sequential after draft. |
+| 3. Revision (conditional) | tech-writer | **Reuse** — `SendMessage` to the registry's tech-writer ID | Only if step 2 returned needs-revision. |
+| 2'. Re-review (loop) | architect | **Reuse** — `SendMessage` to the registry's architect ID | Loop until approved. |
+
+For full spawn JSON and SendMessage JSON, see `claude-subagent-protocol` §4.
+
+## Model and Mode Strategy
+
+**Sonnet is the default for every role.** The Architect role is the historical reason to consider `opus`; even so, the orchestrator must ask the user before any `opus` spawn (see `claude-subagent-protocol` §6.3 for the permission-before-opus gate).
+
+| Role | Default model | Opus allowed? | Notes |
+|------|---------------|---------------|-------|
+| `arcwright-tech-writer` | `sonnet` | No | Drafting + revision; sonnet is sufficient. |
+| `arcwright-architect` | `sonnet` | Yes — with explicit user permission | Technical accuracy review; deeper reasoning helps. **Ask the user before spawning architect on opus.** |
+
+Format the permission question as in `claude-subagent-protocol` §6.3:
+
+```
+This task may benefit from opus on the Architect spawn (deeper reasoning). Default is sonnet.
+Switch this spawn to opus? (yes / no / always-yes-for-this-session)
 ```
 
-## Agent Activation
-
-> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
-
-- **Tech Writer**: activate `arcwright-tech-writer`
-- **Architect**: activate `arcwright-architect`
-  - Has **full dev skill access** — can invoke any skill in `.agents/skills/` directly, including code reading to verify documentation accuracy.
+Do not silently escalate. If the user says "no", spawn sonnet.
 
 ## Steps
 
@@ -77,35 +93,24 @@ Lightweight draft → review → revise → approve cycle.
 **What this step does:** Tech Writer produces the initial documentation draft for the topic.
 **Inputs:** Documentation topic and source material from master
 **Output:** `$STEP_1_OUTPUT` — documentation draft (file path or inline content)
-
----
-
-#### Default: In-Process (Agent tool)
+**Spawn vs reuse:** **Spawn** — first use of the tech-writer role in this session.
 
 ```json
 {
   "name": "Agent",
   "input": {
     "subagent_type": "arcwright-tech-writer",
-    "prompt": "Write documentation for the specified topic. Prioritize clarity, completeness, and correct structure. Include all relevant details from the source material.\n\n## Inputs\nTopic: {topic}\nSource material: {source_material}\n\n## Output\nDocumentation draft. Write to file if path specified, otherwise return inline.",
+    "prompt": "Write documentation for the specified topic. Prioritize clarity, completeness, and correct structure. Include all relevant details from the source material.\n\n## Inputs\nTopic: {topic}\nSource material: {source_material}\n\n## Output\nDocumentation draft. Write to _arcwright-output/features/{slug}/docs/draft.md (or as otherwise specified).",
     "model": "sonnet"
   }
 }
 ```
 
+After this call returns, write the tech-writer's `agentId` to the Session Agent Registry.
+
+> **6 KB guard:** if the source material is large, write it to a file under `_arcwright-output/features/{slug}/...` and pass the path in `## Inputs` (see `claude-subagent-protocol` §7.3).
+
 Capture result into `$STEP_1_OUTPUT`. Pass to step 2.
-
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {writer_pane_id} "TASK-{id}: Write documentation for: {topic}. Context: {source_material}. Signal TASK_DONE with draft location." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::draft::{file_path}`
 
 ---
 
@@ -114,35 +119,24 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::draft::{fil
 **What this step does:** Architect reviews the draft for technical correctness — wrong API signatures, outdated patterns, missing caveats, inaccurate system behavior descriptions.
 **Inputs:** `$STEP_1_OUTPUT` (documentation draft from step 1)
 **Output:** `$STEP_2_OUTPUT` — approved, or needs-revision with specific inaccuracies listed
-
----
-
-#### Default: In-Process (Agent tool)
+**Spawn vs reuse:** **Spawn** — first use of the architect role in this session.
 
 ```json
 {
   "name": "Agent",
   "input": {
     "subagent_type": "arcwright-architect",
-    "prompt": "Review this documentation draft for technical accuracy. Check for: wrong API signatures, outdated patterns, missing important caveats, inaccurate descriptions of system behavior, and any factual errors.\n\n## Inputs\nDocumentation draft: {$STEP_1_OUTPUT}\n\n## Output\nEither 'Approved: documentation is technically accurate.' OR 'Needs revision: ' followed by a numbered list of inaccuracies with specific corrections.",
-    "model": "opus"
+    "prompt": "Review this documentation draft for technical accuracy. Check for: wrong API signatures, outdated patterns, missing important caveats, inaccurate descriptions of system behavior, and any factual errors.\n\n## Inputs\nDocumentation draft: {$STEP_1_OUTPUT}\n\n## Output\nEither 'Approved: documentation is technically accurate.' OR 'Needs revision: ' followed by a numbered list of inaccuracies with specific corrections. Write to _arcwright-output/features/{slug}/docs/review.md.",
+    "model": "sonnet"
   }
 }
 ```
 
+After this call returns, write the architect's `agentId` to the Session Agent Registry.
+
+> **Permission gate:** if the orchestrator intends to spawn with `model: "opus"`, ask the user first per `claude-subagent-protocol` §6.3. Default is `sonnet`.
+
 Capture result into `$STEP_2_OUTPUT`. If approved: documentation complete. If needs-revision: pass to step 3.
-
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {architect_pane_id} "TASK-{id}-review: Review documentation draft for technical accuracy. Draft: {$STEP_1_OUTPUT}. Emit FINDING signals for inaccuracies. Signal TASK_DONE::approved or TASK_DONE::needs-revision." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::{task_id}::approved` or `AGENT_SIGNAL::TASK_DONE::architect::{task_id}::needs-revision::{summary}`
 
 ---
 
@@ -150,62 +144,45 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::{task_id}::approved` or 
 
 **What this step does:** Tech Writer revises the draft based on the Architect's findings.
 **Inputs:** `$STEP_2_OUTPUT` (Architect findings) + `$STEP_1_OUTPUT` (original draft)
-**Output:** `$STEP_3_OUTPUT` — revised draft. Return to step 2.
-
----
-
-#### Default: In-Process (Agent tool)
+**Output:** `$STEP_3_OUTPUT` — revised draft
+**Spawn vs reuse:** **Reuse** — `SendMessage` to the tech-writer's `agentId` in the registry. The tech-writer retains the original draft context.
 
 ```json
 {
-  "name": "Agent",
+  "name": "SendMessage",
   "input": {
-    "subagent_type": "arcwright-tech-writer",
-    "prompt": "Revise the documentation draft to fix all technical accuracy issues identified by the Architect. Address each issue specifically.\n\n## Inputs\nArchitect findings: {$STEP_2_OUTPUT}\nOriginal draft: {$STEP_1_OUTPUT}\n\n## Output\nRevised documentation draft.",
-    "model": "sonnet"
+    "to": "<tech-writer agentId from registry>",
+    "prompt": "Re-engage the existing Tech Writer agent.\n\n## Inputs\nArchitect findings: {$STEP_2_OUTPUT}\nOriginal draft: {$STEP_1_OUTPUT}\n\n## Output\nRevised documentation draft. Write to _arcwright-output/features/{slug}/docs/draft-v{n}.md (or as otherwise specified)."
   }
 }
 ```
 
-Capture result into `$STEP_3_OUTPUT`. Return to step 2 (Architect re-reviews). When Architect approves: documentation complete. Final output — no next step.
+> **Note:** when reusing, do not re-feed prior context into the prompt; reference only the new delta (the Architect's findings). The tech-writer already knows the original draft from step 1.
+
+Capture result into `$STEP_3_OUTPUT`. Return to step 2 (Architect re-reviews via another `SendMessage` to the same architect `agentId`). When Architect approves: documentation complete. Final output — no next step.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+## Team Wind-down
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+There is no pane to close. The in-process wind-down is:
 
-```bash
-tmux send-keys -t {writer_pane_id} "TASK-{id}-revise: Revise draft based on technical review. Issues: {$STEP_2_OUTPUT}. Signal TASK_DONE when revised." Enter
-```
+1. Mark each role "done" in the orchestrator's loop — stop dispatching tasks to that role.
+2. The agent becomes idle. It is **not** killed; the user can re-engage with `SendMessage` later in the session.
+3. On session end, the orchestrator may rename the registry to `agent-registry.closed.md` for the historical record.
+4. To inspect what's still alive, run `claude agents` (or `claude agents --json` for parseable output).
 
-Completion signal: `AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::revised::{file_path}`
-
----
+See `claude-subagent-protocol` §12 for the full wind-down model.
 
 ## Communication Protocol
 
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
+Default is in-process. The Agent tool return value is the sole completion signal for every step — no `AGENT_SIGNAL`, no `STEP COMPLETE`, no polling. See `claude-subagent-protocol` §11 for the full no-legacy-signals rule.
 
-## Team Registration
+For opt-in pane visibility (the `tmux` skill's "Watching agents in panes" section), `AGENT_SIGNAL::TASK_DONE::...` is still allowed **inside that opt-in block** — but it does not apply to the default in-process flow.
 
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: docs
-  name: "The Library"
-  spawned_at: {ISO8601}
-  panes:
-    tech-writer: {pane_id}
-    architect: {pane_id}
-```
+#### tmux Variant (opt-in — only when user explicitly requests pane visibility AND $TMUX is set)
 
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane IDs from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+For opt-in pane visibility, see the [`tmux`](../tmux/SKILL.md) skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it is still governed by this skill. Do not use this variant by default.
 
 ## Kiro Pipeline
 

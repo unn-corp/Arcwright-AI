@@ -1,11 +1,11 @@
 ---
 name: "team-solo-arch"
-description: "The Oracle — single Architect with full dev skill access for architecture analysis, design proposals, and prototyping"
+description: "The Oracle — single Architect agent in-process via the Session Agent Registry. Architecture analysis, design proposals, and prototyping with sonnet-first + permission-before-opus. tmux opt-in visibility only."
 ---
 
 # Agent Team: Solo Architect — The Oracle
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Architect` role is spawned once and recorded in the Session Agent Registry; subsequent asks reuse that agent via `SendMessage`. tmux split-pane variant is opt-in only (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -28,46 +28,57 @@ description: "The Oracle — single Architect with full dev skill access for arc
 
 The Oracle is a single-agent architecture team. The Architect receives a question, scope, or design problem and produces architecture analysis, design proposals, and recommendations. The Architect has full dev skill access and can write prototype code to validate assumptions. Output is recommendations and architecture notes — not production-ready implementation. Use The Oracle when you need architectural guidance, a second opinion on a design decision, or a feasibility assessment before committing to a direction.
 
-## Layout (tmux)
+## Spawn-once + Reuse
+
+The Oracle is a single-role team. The first task for the `architect` role spawns the agent via the `Agent` tool, captures the returned `agentId`, and writes a row to the **Session Agent Registry** (path and format in `claude-subagent-protocol` §3). Every subsequent ask — same design area, follow-up question, or related scope — reuses that agent by `SendMessage(to: <agentId>, ...)`. The agent retains all prior context (codebase, prior analyses, user preferences).
+
+**Decision rule (when to spawn vs reuse):**
+
+- First ask for architecture in this session → spawn. Record ID.
+- Follow-up question on a prior analysis, related scope, or design iteration → **reuse** the registered agent.
+- Disjoint scope (different subsystem, unrelated question) → spawn fresh; replace the registry row.
+
+Full protocol: see the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill.
+
+## Agent Registry
+
+The Oracle keeps a one-row registry at the canonical path:
 
 ```
-┌─────────┬───────────┐
-│         │           │
-│ Master  │ Architect │
-│ (left)  │ (Oracle)  │
-└─────────┴───────────┘
+_arcwright-output/sessions/<session-id>/agent-registry.md
 ```
 
-## Spawn Sequence
+```markdown
+# Session Agent Registry
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+Session: <session-id>
+Updated: <ISO timestamp>
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
-
-```bash
-# 1. Split Architect pane (right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent (The Oracle) managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/architect.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly, including writing prototype code to validate design assumptions. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 2. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
+| Role | Agent ID | Spawned | Last Task | Notes |
+|------|----------|---------|-----------|-------|
+| architect | agent_abc123 | 2026-06-10T10:00:00Z | review auth-jwt migration proposal | reused — knows prior design rationale |
 ```
 
-## Agent Activation
+On wind-down, rename the file to `agent-registry.closed.md` (or delete). Use `claude agents` to inspect the live agent set. See `claude-subagent-protocol` §3 for the full lifecycle.
 
-> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
+## Model and Permission Gate (sonnet-first)
 
-- **Architect**: activate `arcwright-architect`
-  - Has **full dev skill access** — can invoke any skill in `.agents/skills/` directly.
-  - Can write prototype code to validate design assumptions.
-  - Output is architecture notes and recommendations, not production code.
+| Role | Default model | Promote to opus? |
+|------|---------------|------------------|
+| architect | **sonnet** | Allowed ONLY with explicit user permission (see gate below). |
+
+**Permission-before-opus (mandatory).** Before spawning this team (or any single step) with `model: "opus"`, the orchestrator must ask the user:
+
+```
+This task may benefit from opus (deeper architectural reasoning). Default is sonnet.
+Switch this spawn to opus? (yes / no / always-yes-for-this-session)
+```
+
+If the user declines, spawn `sonnet`. If the user says "always-yes-for-this-session", record the preference and stop asking. **No silent escalation** — applies to every role in this team. See `claude-subagent-protocol` §6 for the full rule.
 
 ## Steps
 
-Single agent, no loop. Master queues tasks and dispatches one at a time.
+Single agent, no loop. Master queues tasks and dispatches one at a time. For follow-up work on the same scope, **reuse the registered architect** via `SendMessage` (no fresh spawn).
 
 ### 1. Architecture Task
 
@@ -75,9 +86,7 @@ Single agent, no loop. Master queues tasks and dispatches one at a time.
 **Inputs:** Architecture question or scope from master
 **Output:** `$STEP_1_OUTPUT` — architecture analysis, design proposal, or other output type. Final output — no next step.
 
----
-
-#### Default: In-Process (Agent tool)
+**First ask → spawn and record:**
 
 ```json
 {
@@ -85,14 +94,27 @@ Single agent, no loop. Master queues tasks and dispatches one at a time.
   "input": {
     "subagent_type": "arcwright-architect",
     "prompt": "Analyze the following architecture question or scope and produce the requested output. Include trade-offs, risks, and recommendations. Write prototype code if needed to validate assumptions.\n\n## Inputs\nTask: {architecture_question_or_scope}\nRequested output type: {output_type}\n\n## Output\n{output_type} with: analysis, trade-offs, risks, and clear recommendations.",
-    "model": "opus"
+    "model": "sonnet"
   }
 }
 ```
 
-Capture result into `$STEP_1_OUTPUT`. Final output — no next step. Present to user or route to another team.
+Capture the returned `agentId`, write the registry row, then capture the result into `$STEP_1_OUTPUT`. Present to user or route to another team.
+
+**Follow-up ask on the same scope → reuse the registered agent:**
+
+```json
+{
+  "name": "SendMessage",
+  "input": {
+    "to": "agent_abc123",
+    "prompt": "Follow-up on the prior analysis.\n\n## Inputs\nPrior ask: {original_architecture_question_or_scope}\nPrior output: _arcwright-output/sessions/<session-id>/oracle-1.md (or inline reference)\nNew ask: {followup_question}\n\n## Output\nUpdated recommendation addressing the follow-up, referencing but not re-deriving the prior analysis."
+  }
+}
+```
 
 Output types the Architect can produce:
+
 - Architecture analysis report
 - Design proposal with trade-offs
 - API contract specification
@@ -104,40 +126,30 @@ Output types the Architect can produce:
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in visibility only)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+For opt-in pane visibility, see the [`tmux`](../tmux/SKILL.md) skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process Agent tool + SendMessage flow inside it is still governed by the `claude-subagent-protocol` skill. Note: pane snippets may still reference `AGENT_SIGNAL::TASK_DONE` for tmux-internal signaling — this is opt-in only and does **not** apply in the default in-process flow.
 
 ```bash
-tmux send-keys -t {architect_pane_id} "TASK-{id}: {architecture_question_or_scope}. Produce: {desired_output_type}. Signal TASK_DONE when complete." Enter
+# 1. Split Architect pane (right)
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent (The Oracle) managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/architect.md. You have full dev skill access and can invoke any skill in .agents/skills/ directly, including writing prototype code to validate design assumptions. Your task queue comes from the master pane. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+sleep 8
+
+# 2. Equalize pane sizes
+tmux select-layout tiled
+sleep 6
 ```
 
-Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::{task_id}::done::{output_summary}`
+## Team Wind-down
 
----
+The Oracle has no pane to close in the default in-process flow. To wind down:
 
-## Communication Protocol
+1. **Stop dispatching** tasks to the `architect` row in the registry. The agent goes idle and is no longer messaged.
+2. **Inspect live agents** with `claude agents` (or `claude agents --json`) to see what is still running.
+3. **Close the registry** by renaming the file to `agent-registry.closed.md` (or deleting) at session end. Live agents end with the session.
+4. **User picks up later?** No action needed — the user can `SendMessage` to the same `agentId` in the same session and the architect resumes with full prior context.
 
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
-
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: solo-arch
-  name: "The Oracle"
-  spawned_at: {ISO8601}
-  panes:
-    architect: {pane_id}
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane ID from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill the pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+There is no `kill-pane` / `tmux send-keys "/exit"` analogue in-process. See `claude-subagent-protocol` §12 for the full wind-down model.
 
 ## Kiro Pipeline
 

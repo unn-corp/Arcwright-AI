@@ -95,29 +95,35 @@ for dir in $TMP_DIRS; do
     fi
 done
 
-# ── 6. Drop reclaimable page cache ───────────────────────────────────────────
-# Frees buff/cache that Linux holds speculatively — safe, kernel re-populates on demand
+# ── 6. Reclaim RAM back to Windows (vmmem) ───────────────────────────────────
+# The Hyper-V balloon driver can only return CONTIGUOUS free pages to the host.
+# Steps: sync dirty pages → drop pagecache+dentries+inodes → compact free pages.
+# Note: `wsl.exe --manage --set-sparse` shrinks the VHDX disk file, NOT RAM —
+# do not call it here.
 echo ""
 echo "► Page cache / memory reclaim"
 if [[ "$DRY" == "--dry-run" ]]; then
-    log "DRY  drop pagecache (echo 1 > /proc/sys/vm/drop_caches)"
+    log "DRY  sync"
+    log "DRY  drop_caches=3  (pagecache + dentries + inodes)"
+    log "DRY  compact_memory=1  (consolidate free pages so balloon can reclaim)"
     log "DRY  swappiness → 10 (currently $(cat /proc/sys/vm/swappiness))"
 else
-    if sudo sysctl -w vm.drop_caches=1; then
-        log "Dropped pagecache"
+    sync && log "synced dirty pages"
+    if sudo sysctl -w vm.drop_caches=3 >/dev/null; then
+        log "Dropped pagecache + dentries + inodes"
     else
         log "SKIP drop_caches (sudo failed)"
     fi
-    if sudo sysctl -w vm.swappiness=10; then
+    if sudo sysctl -w vm.compact_memory=1 >/dev/null; then
+        log "Compacted free pages — balloon driver can now return them to Windows"
+    else
+        log "SKIP compact_memory (sudo failed)"
+    fi
+    if sudo sysctl -w vm.swappiness=10 >/dev/null; then
         log "swappiness → 10"
     else
         log "SKIP swappiness (sudo failed)"
     fi
-    # Compact WSL2 memory balloon — returns freed pages to Windows
-    # WSL_DISTRO_NAME is set by WSL itself — no need to query wsl -l
-    distro="${WSL_DISTRO_NAME:-Ubuntu}"
-    powershell.exe -NoProfile -Command "wsl.exe --manage '$distro' --set-sparse true" 2>/dev/null \
-        && log "WSL2 balloon compacted ($distro)"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────
@@ -132,5 +138,6 @@ else
     free -h | grep Mem
 fi
 echo ""
-echo "Tip: run 'wsl --shutdown' from Windows to fully reclaim balloon RAM."
+echo "Tip: for max reclaim, run 'wsl.exe --shutdown' from Windows (closes all WSL sessions)."
+echo "     Add to %USERPROFILE%\\.wslconfig:  [wsl2] memory=12GB  /  [experimental] autoMemoryReclaim=dropCache"
 echo ""

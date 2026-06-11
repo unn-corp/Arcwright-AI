@@ -2,7 +2,7 @@
 
 > AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
 
-Arcwright installs a structured system of specialist AI agents, workflow tracks, and a 53-skill library into any project. Pick a track sized to your task, and the orchestrator routes it through spec, research, UX, implementation, review, and QA — using sequential in-process Agent tool calls (default) or coordinated tmux panes when you want to watch.
+Arcwright installs a structured system of specialist AI agents, in-process subagent orchestration, and a 47-skill library into any project. The orchestrator routes work through spec, research, UX, implementation, review, and QA — using **in-process `Agent` tool calls with `SendMessage` reuse** by default. tmux pane visibility is opt-in for users who want to watch.
 
 ---
 
@@ -11,7 +11,6 @@ Arcwright installs a structured system of specialist AI agents, workflow tracks,
 - [Quick Start](#quick-start)
 - [Packages](#packages)
 - [Slash Commands](#slash-commands)
-  - [Workflow Tracks](#workflow-tracks)
   - [Agent Teams (`/team`)](#agent-teams-team)
   - [Utility Commands](#utility-commands)
 - [Specialist Agents](#specialist-agents)
@@ -33,7 +32,7 @@ npx @arcwright-ai/agent-orchestration
 Then use a slash command to kick off a workflow:
 
 ```
-/arcwright-track-medium
+/triage "your task description"
 ```
 
 ---
@@ -51,34 +50,25 @@ The tmux setup is also bundled inside the main package — you can install it wi
 
 ## Slash Commands
 
-Arcwright ships 11 slash commands for Claude Code (and the equivalents for Kiro / Cursor / etc. where supported). All commands live in `.claude/commands/` after install.
+Arcwright ships slash commands for Claude Code (and the equivalents for Kiro / Cursor / etc. where supported). All commands live in `.claude/commands/` after install.
 
-### Workflow Tracks
+For new work, the recommended entry point is **`/triage <task description>`** — the workflow router (`.agents/skills/triage/SKILL.md`) reads the task and recommends an execution approach:
 
-Each track is a pre-sized pipeline for a category of task. Pick the one that matches your task's scope — the orchestrator handles the rest.
+- **Plain in-process agent(s)** — direct `Agent` tool spawn for focused, well-shaped work
+- **`ultracode` dynamic workflow** — Claude Code's multi-agent workflow runtime for comprehensive, multi-stage, or unknown-size work (`docs/dev/claude-code-patterns/ultracode.md`)
+- **`/goal` loop** — autonomous "keep working until this condition is true" loop for verification-check end states (`docs/dev/claude-code-patterns/orchestration.md`)
 
-| Command | Scope | Pipeline |
-|---------|-------|----------|
-| `/arcwright-track-nano` | 1–2 files, ≤20 lines | Direct to Dev, no spec overhead |
-| `/arcwright-track-small` | 2–4 files | Spec → Dev → Review → QA |
-| `/arcwright-track-compact` | 4–8 files | Optional Research → Dev → Review → QA |
-| `/arcwright-track-medium` | 6–12 files | Spec → Research → UX → Review Gate → Dev → Final Gate → QA |
-| `/arcwright-track-extended` | 10–16 files | PRD + arch notes, 2 review gates |
-| `/arcwright-track-large` | 12+ files | Full planning, epic loop, parallel research, final gates |
-| `/arcwright-track-rv` | Any | Audit → synthesize findings → route to fix path |
+`/triage` does not execute the work — it recommends an approach and the trigger to run it.
 
 ### Agent Teams (`/team`)
 
 The `/team` command is an interactive team selector. It presents all 17 teams organized by category and asks you to pick one (or pass a code directly: `/team arch-dev`).
 
-**Teams run in one of two modes, automatically chosen by context:**
+**Teams run in-process by default** — each teammate is spawned via the `Agent` tool and the orchestrator captures returned `agentId` values into a **Session Agent Registry** (role → agentId table). Subsequent tasks for the same role re-engage the existing agent via `SendMessage(to: agentId, ...)`, so context carries across turns instead of being rebuilt from scratch. See `.agents/skills/claude-subagent-protocol/SKILL.md` for the full protocol (canonical spawn pattern, sonnet-first default, permission-before-opus).
 
-| Mode | When | How It Works |
-|------|------|--------------|
-| **Split-pane (tmux)** | `$TMUX` is set — you're inside tmux | Each teammate gets its own tmux pane running `claude --dangerously-skip-permissions`. Agents stay alive across tasks, communicate via `tmux send-keys`, and coordinate through a session file at `.agents/orchestration/session-*.md`. You observe all panes live and can interject. |
-| **In-process (Agent tool)** | `$TMUX` is not set, or task is fully autonomous | Each teammate runs as an `Agent` tool invocation from the master orchestrator. Agents run sequentially; the master passes completed output as structured handoff context to the next agent. No user observation, no parallelism — best for scripted or batch work. |
+**tmux pane visibility is opt-in.** When the user has explicitly asked to watch agents in split panes **and** `$TMUX` is set, load the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface — the in-process orchestration inside it is still governed by `claude-subagent-protocol`.
 
-**Both modes use the same team composition and protocol** — only the spawning mechanism differs. Each team's SKILL.md contains both spawn sequences.
+Not sure which team to use? Run `/triage <task>` first — the **workflow router** recommends plain in-process agent(s), an `ultracode` dynamic workflow, or a `/goal` loop based on the task's shape (see `.agents/skills/triage/SKILL.md`).
 
 See the full team catalog below.
 
@@ -86,7 +76,8 @@ See the full team catalog below.
 
 | Command | Purpose |
 |---------|---------|
-| `/tmux` | Runs the tmux setup installer (`npx @arcwright-ai/tmux-setup`). Installs Catppuccin theme, Actions popup, pane title sync, clipboard integration, and agent orchestration scripts. |
+| `/triage` | Workflow router — given a task, recommends an execution approach: plain in-process agent(s), an `ultracode` dynamic workflow, or a `/goal` loop. Optional tmux opt-in visibility for users who want to watch. |
+| `/tmux` | Runs the tmux setup installer (`npx @arcwright-ai/tmux-setup`). Installs Catppuccin theme, Actions popup, pane title sync, clipboard integration, and pane-visibility scripts. tmux panes are a *viewing surface* for in-process orchestration, not the spawn mechanism. |
 | `/gsudo` | Loads the gsudo skill and runs a command with Windows elevated privileges. Works from WSL2, Git Bash, or native Windows. Takes `$ARGUMENTS` for the command to run. |
 | `/arcwright-migrate` | Migrates an existing bmad installation to arcwright naming. Runs a dry-run first, then applies the rename. See [Migrating from bmad](#migrating-from-bmad). |
 
@@ -112,6 +103,10 @@ Plus meta-agents for building new agents, workflows, and modules (Arcwright Buil
 ## Agent Teams Catalog
 
 17 pre-built team compositions. Use `/team <code>` or just `/team` for the picker.
+
+Each team runs **in-process by default** — the orchestrator spawns each role via the `Agent` tool, captures the returned `agentId` into a Session Agent Registry, and re-engages roles across tasks via `SendMessage`. tmux split-pane visibility is opt-in; see the `tmux` skill's "Watching agents in panes" section.
+
+Not sure which team matches your task? Run `/triage <task>` first — the workflow router recommends an approach (plain in-process, ultracode, `/goal`, or one of the 17 teams) based on the task's shape.
 
 ### Development Teams
 
@@ -188,6 +183,8 @@ WSL2 dual-home aware — terminal tools (Claude Code, Gemini) use the Linux home
 | `--docker-check` | not installed | Opt in to `/docker-check` and the `docker-type-check` skill |
 | `--gitignore <mode>` | prompted | One of: `full`, `skills`, `output-only`, `none` (see gitignore section below) |
 
+The installer also writes `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` into `.claude/settings.json` — this flag is **load-bearing for `SendMessage` reuse** and the in-process kept-alive model described in `claude-subagent-protocol`. Don't remove it.
+
 ### Gitignore Options
 
 When you install into a project (not `--global`), the installer asks how you want Arcwright files handled in git:
@@ -235,7 +232,7 @@ These are independent — installing globally does not replace a project-level i
 
 ## tmux Setup
 
-Standalone tmux configuration optimized for AI agent workflows:
+Standalone tmux configuration. **tmux is a visibility tool, not a spawn mechanism** — the default Arcwright orchestration runs in-process via the `Agent` tool + `SendMessage` reuse (see `claude-subagent-protocol` skill). You only need tmux panes if you want to watch agents run.
 
 ```bash
 npx @arcwright-ai/tmux-setup
@@ -260,6 +257,8 @@ npx @arcwright-ai/agent-orchestration tmux
 - **Agent orchestration scripts** — `dispatch.sh`, `float_term.sh`, `paste_image_wrapper.sh`, `watch-sync.sh`
 - **Status widgets** — CPU, RAM, Claude usage, session + window IDs, CWD, time
 - **Shell aliases** — `tmux-ai` (open tmux at your project) and `tmux-claude` (same, but launch Claude in the first pane)
+
+**Pane-based agent visibility is opt-in.** To watch a running agent in a split pane, see the "Watching agents in panes (opt-in)" section of the `.agents/skills/tmux/SKILL.md` skill. The pane mirrors the in-process session; the in-process flow inside it is still governed by `claude-subagent-protocol`.
 
 **Requires:** tmux 3.4+, a Nerd Font (JetBrainsMono NFM recommended), WSL2 or native Linux/macOS.
 
@@ -290,7 +289,6 @@ npx @arcwright-ai/agent-orchestration migrate             # apply
 | `bmb/` (module) | `awb/` |
 | `bmb-creations/` | `awb-creations/` |
 | `bmad-quick-flow/` (workflow) | `arcwright-quick-flow/` |
-| `bmad-track-*.md` | `arcwright-track-*.md` |
 | `bmad-master` | `arcwright-master` |
 | `BMAD Method` / `BMAD Builder` | `Arcwright Method` / `Arcwright Builder` |
 | `BMM Module` / `BMB Module` | `AWM Module` / `AWB Module` |

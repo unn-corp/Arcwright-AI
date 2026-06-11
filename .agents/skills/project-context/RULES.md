@@ -5,7 +5,6 @@
 ## Trigger
 
 Run this skill when:
-- Any track workflow (nano/small/compact/medium/extended/large/rv) is started
 - The triage skill is invoked
 - The master orchestrator begins executing a workflow item
 - The user asks to "check the project" or "what context do we have"

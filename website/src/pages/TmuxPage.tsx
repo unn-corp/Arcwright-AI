@@ -15,8 +15,10 @@ export default function TmuxPage() {
             tmux Setup
           </h1>
           <p className="font-sans text-muted text-lg max-w-2xl leading-relaxed">
-            Standalone tmux configuration optimised for AI agent workflows.
-            Split panes, live agent output, coordinated signals.
+            Standalone tmux configuration: a visibility tool, not a spawn mechanism.
+            Pane mechanics, live pane titles, and an optional viewing surface for
+            in-process agents. The Agent tool + SendMessage flow is the canonical
+            orchestration substrate; tmux panes are an opt-in add-on.
           </p>
         </div>
       </section>

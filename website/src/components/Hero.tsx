@@ -59,8 +59,9 @@ export default function Hero() {
 
         {/* Subheading */}
         <p className="font-sans text-lg sm:text-xl text-muted max-w-2xl mx-auto mb-4 leading-relaxed">
-          Structured specialist agents, workflow tracks, and an extensive skill library.
-          Pick a track, the orchestrator does the rest.
+          From <code className="font-mono text-sm text-cta/80">/triage</code> to runtime — plain
+          in-process agents, ultracode dynamic workflows, or <code className="font-mono text-sm text-cta/80">/goal</code> loops.
+          Specialists stay alive across tasks via SendMessage reuse; tmux is opt-in visibility.
         </p>
 
         {/* Install command */}

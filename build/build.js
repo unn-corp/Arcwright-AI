@@ -10,7 +10,7 @@
  *   Generic package → packages/agent-orchestration/src/
  *     All _arcwright/{awb,awm,core,_memory} modules.
  *     All .agents/skills/ (SKILL.md already generic — no scrubbing needed).
- *     .claude/commands/arcwright-track-*.md (no transforms).
+ *     .claude/commands/*.md (no transforms).
  *     docs/dev/tmux/ scripts.
  *
  *   Kiro assets → packages/agent-orchestration/src/.kiro/
@@ -65,7 +65,6 @@ const LEAK_PATTERNS = [
 
 /** Slash command files to ship. Shared by bundleKiroAgents() and bundleTrackCommands(). */
 const SHIPPED_COMMANDS = [
-  /^arcwright-track-.*\.md$/,
   /^arcwright-migrate\.md$/,
   /^tmux\.md$/,
   /^gsudo\.md$/,
@@ -377,7 +376,7 @@ function generateAgentsSteering(steeringDir) {
   lines.push('');
   lines.push('Load an agent by reading its `.md` file and following the activation instructions inside the `<agent>` XML block. Agents in `_arcwright/awm/agents/` are specialist workflow agents; those in `_arcwright/core/agents/` are system-level (orchestrator, builder, etc.).');
   lines.push('');
-  lines.push('Slash commands in `.claude/commands/arcwright-track-*.md` activate the master orchestrator with a pre-selected workflow track.');
+  lines.push('Slash commands in `.claude/commands/*.md` activate the corresponding agent or skill directly.');
   lines.push('');
 
   // ── Skill library catalog ─────────────────────────────────────────────────
@@ -433,99 +432,86 @@ function generateAgentsSteering(steeringDir) {
 }
 
 /**
- * Walk awm/workflows/ and core/workflows/ subdirectories and generate a
- * reference steering doc. Each subdirectory is a workflow; we read its
- * README.md, workflow.yaml, or first .md file to extract a title.
+ * Generate a workflows steering doc. The track-based content previously
+ * emitted here has been removed in stage 1; stage 4 fills the placeholder
+ * with workflow-router / ultracode / /goal guidance for Kiro.
  */
 function generateWorkflowsSteering(steeringDir) {
-  const workflowDirs = [
-    { label: 'awm/workflows',  dir: path.join(ARCWRIGHT_SRC, 'awm',  'workflows') },
-    { label: 'core/workflows', dir: path.join(ARCWRIGHT_SRC, 'core', 'workflows') },
-  ];
-
   const lines = [
     '---',
     'inclusion: auto',
     'name: arcwright-workflows',
-    'description: Arcwright workflow tracks, task sizing, and orchestration guidance. Loaded when users ask about workflows, tracks, or task complexity.',
+    'description: Arcwright workflow guidance — triage router, ultracode dynamic workflows, and /goal loops.',
     '---',
     '',
-    '# Arcwright — Available Workflows',
+    '# Arcwright — Workflows',
     '',
-    'Arcwright provides structured workflow tracks for different task scales.',
+    'Arcwright has moved off bespoke tracks and tmux-based subagent spawning.',
+    'Pick the right runtime for the task; the in-process `Agent` tool +',
+    '`SendMessage` reuse is the substrate underneath every option below.',
+    '',
+    '## 1. Triage router (entry point)',
+    '',
+    '`/triage` is the workflow router. Given a task it recommends one of the',
+    'three runtimes below (or, on top of any of them, tmux opt-in visibility).',
+    'See `.agents/skills/triage/SKILL.md` for the full decision tree. Use it',
+    'when the user has not named a runtime explicitly.',
+    '',
+    'Output format: a runtime, the exact trigger to run, a one-sentence',
+    'rationale, the default model (`sonnet`), and a "next step" line. The',
+    'router does not start the work — the user runs the trigger.',
+    '',
+    '## 2. The three runtimes',
+    '',
+    '| Runtime | When | Trigger |',
+    '|---------|------|---------|',
+    '| Plain in-process agent(s) | 1–10 files, single role or small parallel fan-out, clear deliverable | Direct `Agent` tool spawn (one or a few, in one assistant message) |',
+    '| `ultracode` dynamic workflow | 12+ files, multi-stage, unknown-size discovery, or work larger than one context | `ultracode <describe the work>` (or `/effort ultracode` for session default) |',
+    '| `/goal` loop | Completion is a verification check ("tests pass", "no type errors", "lint clean") | `/goal <condition>` |',
+    '',
+    'In-process is the default for every runtime. tmux is **opt-in visibility**',
+    'only — the pane mirrors the in-process session; the in-process flow inside',
+    'it is still governed by `.agents/skills/claude-subagent-protocol/`.',
+    '',
+    '## 3. tmux opt-in visibility (additive)',
+    '',
+    'Add tmux pane visibility only when **all** of these are true:',
+    '',
+    '- The user has explicitly asked to watch the agents as they work.',
+    '- `$TMUX` is set in the current shell.',
+    '- The recommended runtime would benefit from pane-by-pane view (typical',
+    '  for `ultracode` and `/goal` over a long duration).',
+    '',
+    'See `.agents/skills/tmux/SKILL.md`, "Watching agents in panes" section.',
+    'The pane is a viewing surface, never the spawn mechanism.',
+    '',
+    '## 4. Defaults and the permission gate',
+    '',
+    '- **Model:** `sonnet` for every role. `opus` is opt-in; the orchestrator',
+    '  (or skill) must ask the user before escalating. No version-pinned model',
+    '  names — use aliases only.',
+    '- **Reuse over re-spawn:** the Session Agent Registry in',
+    '  `_arcwright-output/sessions/<session-id>/agent-registry.md` records each',
+    "  role's `agentId`. Subsequent tasks for the same role use `SendMessage`",
+    '  to the existing agent; full prior context is retained.',
+    '- **No legacy signals:** `AGENT_SIGNAL`, `STEP COMPLETE`, `PEER_SIGNAL`,',
+    '  `STATUS_CHECK`, `$SPAWNER_PANE`, the old `tmux-protocol` skill, and',
+    '  `session-state.md` pane tables are all retired. The `Agent` tool return',
+    '  value is the sole completion signal.',
+    '',
+    '## 5. Cross-references',
+    '',
+    '- `.agents/skills/triage/SKILL.md` — the router (decision tree, output format).',
+    '- `.agents/skills/claude-subagent-protocol/SKILL.md` — the in-process protocol underneath every runtime.',
+    '- `.agents/skills/tmux/SKILL.md` — pane mechanics and opt-in visibility.',
+    '- `docs/dev/claude-code-patterns/ultracode.md` — full ultracode API (hooks, patterns, limits, resume).',
+    '- `docs/dev/claude-code-patterns/orchestration.md` — full `/goal` and `/loop` reference.',
     '',
   ];
 
-  let total = 0;
-
-  /** Try to extract a human title from a workflow directory. */
-  function getWorkflowTitle(workflowDir, dirName) {
-    // Try README.md first
-    const candidates = ['README.md', 'workflow.yaml', 'workflow.yml'];
-    for (const candidate of candidates) {
-      const candidatePath = path.join(workflowDir, candidate);
-      if (fs.existsSync(candidatePath)) {
-        const content = fs.readFileSync(candidatePath, 'utf8');
-        const heading  = content.match(/^#\s+(.+)/m);
-        if (heading) return heading[1].trim();
-        const yamlName = content.match(/^name:\s*["']?([^"'\n]+)/m);
-        if (yamlName) return yamlName[1].trim();
-        const yamlTitle = content.match(/^title:\s*["']?([^"'\n]+)/m);
-        if (yamlTitle) return yamlTitle[1].trim();
-        const yamlDesc = content.match(/^description:\s*["']?([^"'\n]+)/m);
-        if (yamlDesc) return yamlDesc[1].trim();
-      }
-    }
-    // Fallback: try the first .md file in the directory
-    const mdFiles = fs.readdirSync(workflowDir).filter(f => f.endsWith('.md')).sort();
-    if (mdFiles.length > 0) {
-      const content = fs.readFileSync(path.join(workflowDir, mdFiles[0]), 'utf8');
-      const heading = content.match(/^#\s+(.+)/m);
-      if (heading) return heading[1].trim();
-    }
-    // Last resort: title-case the directory name
-    return dirName.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  for (const { label, dir } of workflowDirs) {
-    if (!fs.existsSync(dir)) {
-      lines.push(`## ${label}`, '', '_Directory not found._', '');
-      continue;
-    }
-
-    // List subdirectories — each is a workflow
-    const subdirs = fs.readdirSync(dir, { withFileTypes: true })
-      .filter(e => e.isDirectory())
-      .map(e => e.name)
-      .sort();
-
-    lines.push(`## ${label}`);
-    lines.push('');
-
-    if (!subdirs.length) {
-      lines.push('_No workflow directories found._');
-      lines.push('');
-      continue;
-    }
-
-    for (const dirName of subdirs) {
-      const workflowDir = path.join(dir, dirName);
-      const title = getWorkflowTitle(workflowDir, dirName);
-      lines.push(`- **\`${dirName}/\`** — ${title}`);
-      total++;
-    }
-
-    lines.push('');
-  }
-
-  lines.push('## How to Use');
-  lines.push('');
-  lines.push('Start workflows via the master orchestrator (`/arcwright-master` or `/arcwright-track-*` slash commands). The orchestrator triages your task and routes it to the appropriate workflow track automatically. See `.kiro/steering/arcwright-core.md` for agent details.');
-  lines.push('');
-
   const dest = path.join(steeringDir, 'arcwright-workflows.md');
   writeFile(dest, lines.join('\n'));
-  console.log(`  ✓  .kiro/steering/arcwright-workflows.md  (${total} workflows catalogued)`);
+  console.log(`  ✓  .kiro/steering/arcwright-workflows.md  (workflow-router / ultracode / /goal guidance)`);
 }
 
 // ─── Step 2b: bundleKiroAgents ───────────────────────────────────────────────
@@ -569,7 +555,6 @@ function bundleKiroAgents() {
    * Kiro CLI tool names. These are the actual tool identifiers Kiro recognises.
    */
   const KIRO_TOOLS_BY_PATTERN = {
-    'arcwright-track':    ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch', 'subagent', 'knowledge'],
     'team':               ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'subagent', 'knowledge'],
     'arcwright-migrate':  ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
     'dry':                ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
@@ -610,8 +595,7 @@ function bundleKiroAgents() {
     return ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'];
   }
 
-  const isTrackOrTeam = (name) =>
-    name.startsWith('arcwright-track') || name === 'team';
+  const isTeam = (name) => name === 'team';
 
   /** Specialist agent names for toolsSettings.crew */
   const SPECIALIST_AGENTS = [
@@ -620,30 +604,64 @@ function bundleKiroAgents() {
     'arcwright-sm', 'arcwright-tech-writer', 'arcwright-ux-designer',
   ];
 
-  /** Kiro-specific tmux addendum appended to track/team agent prompts */
+  /** Kiro CLI addendum appended to team/team-style agent prompts. */
+  // Default is the in-process `subagent` tool (DAG pipeline with `stages` and
+  // `depends_on`). tmux is opt-in visibility only — see the `tmux` skill.
   const KIRO_TMUX_ADDENDUM = `
 
-## Kiro CLI — Split-Pane Mode (tmux)
+## Kiro CLI — In-Process Orchestration (default) and Pane Visibility (opt-in)
 
-When \`$TMUX\` is set, Kiro CLI can orchestrate split-pane agent workflows via \`execute_bash\`.
+**Default — in-process via the \`subagent\` tool:**
 
-**Spawning a Kiro agent in a new tmux pane:**
+Kiro CLI's \`subagent\` tool runs agents in-process as a DAG pipeline. This is
+the default and is equivalent to Claude Code's \`Agent\` tool + \`SendMessage\`
+reuse. For each role in the pipeline, reference a Kiro agent config by name in
+the \`role\` field (e.g. \`arcwright-dev\`, \`arcwright-qa\`); available agents
+are listed in this agent's \`toolsSettings.crew.availableAgents\`.
+
+\`\`\`json
+{
+  "name": "subagent",
+  "input": {
+    "task": "<task description>",
+    "stages": [
+      { "name": "research", "role": "arcwright-analyst", "prompt_template": "…", "model": "sonnet" },
+      { "name": "design",   "role": "arcwright-architect", "prompt_template": "…", "model": "sonnet", "depends_on": ["research"] },
+      { "name": "build",    "role": "arcwright-dev",        "prompt_template": "…", "model": "sonnet", "depends_on": ["design"] }
+    ]
+  }
+}
+\`\`\`
+
+Stages with no \`depends_on\` run in parallel; dependent stages wait. Default
+\`model\` is \`sonnet\` for every stage. Promote to \`opus\` only with explicit
+user permission (ask the user before escalating).
+
+**Opt-in — visible panes via \`execute_bash\` + tmux:**
+
+If the user has explicitly asked for split-pane visibility ("spawn", "watch",
+"open agent") AND \`$TMUX\` is set, you may spawn a Kiro agent into a new
+tmux pane as a *viewing surface*. The spawned agent still uses the in-process
+orchestration above — the pane is just a window onto it.
+
 \`\`\`bash
-SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
 tmux split-window -h -c "#{pane_current_path}" \\
-  "kiro-cli chat --trust-all-tools --agent arcwright-dev 'Your task: <task description>. Master pane: $SPAWNER_PANE. Report back with: tmux send-keys -t $SPAWNER_PANE \\"AGENT_SIGNAL::TASK_DONE::<role>::<task_id>::<status>::<summary>\\" Enter'"
+  "kiro-cli chat --trust-all-tools --agent arcwright-dev '<task description>'"
 sleep 8
 NEW_PANE=$(tmux list-panes -F "#{pane_id}" | tail -1)
 tmux select-layout tiled
 \`\`\`
 
-**Key differences from Claude Code split-pane mode:**
+**Key differences from Claude Code pane mode (opt-in only):**
 - Use \`kiro-cli chat --trust-all-tools --agent <agent-name>\` instead of \`claude --dangerously-skip-permissions\`
 - Agent names reference \`.kiro/agents/*.json\` configs (e.g. \`arcwright-dev\`, \`arcwright-qa\`)
 - Skills are at \`.kiro/skills/\` not \`.agents/skills/\`
-- The AGENT_SIGNAL protocol, message delivery verification, and pane close sequence from the \`tmux-protocol\` skill all apply identically
+- The old AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling protocol from the
+  retired \`tmux-protocol\` skill does **NOT** apply. The in-process
+  \`subagent\` tool return value is the completion signal.
+- Default to \`sonnet\`. Ask the user before any \`opus\` or effort upgrade.
 
-**When \`$TMUX\` is NOT set:** Use the \`subagent\` tool for in-process multi-agent pipelines instead. See the Non-tmux Variant section in each track skill.
+See the \`tmux\` skill for full pane-visibility mechanics (opt-in section).
 `;
 
   let generated = 0;
@@ -662,15 +680,15 @@ tmux select-layout tiled
     const tools = resolveTools(name);
     let prompt = adaptPromptForKiro(body.trim());
 
-    // Append tmux addendum to track and team agents
-    if (isTrackOrTeam(name)) {
+    // Append tmux addendum to team agents
+    if (isTeam(name)) {
       prompt += KIRO_TMUX_ADDENDUM;
     }
 
     const agent = { name, description: desc, prompt, tools };
 
-    // Track and team agents get read-only tools auto-approved, skill resources, and crew config
-    if (isTrackOrTeam(name)) {
+    // Team agents get read-only tools auto-approved, skill resources, and crew config
+    if (isTeam(name)) {
       agent.allowedTools = ['fs_read', 'grep', 'glob', 'code', 'knowledge', 'web_search', 'web_fetch'];
       agent.resources = [
         'skill://.kiro/skills/**/SKILL.md',
@@ -802,7 +820,8 @@ function bundleTrackCommands() {
     return;
   }
 
-  // Bundle all slash commands: arcwright-track-*, arcwright-migrate, tmux, gsudo, and utility commands
+  // Bundle all slash commands: arcwright-migrate, tmux, gsudo, and utility commands
+  // (track commands removed in stage 1; the function name is kept for continuity)
   const cmdFiles = fs.readdirSync(commandsSrc)
     .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
     .sort();

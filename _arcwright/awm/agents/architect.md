@@ -1,7 +1,8 @@
 ---
 name: "architect"
 description: "Architect"
-model: "opus"
+model: "sonnet"
+memory: project
 tools: "Read, Grep, Glob, WebFetch, Write"
 ---
 
@@ -75,7 +76,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
     <item cmd="RC or fuzzy match on refresh-context">[RC] Refresh Context: Reload CLAUDE.md and docs index, sync stale files to RAG</item>
     <item cmd="SV or fuzzy match on save-session">[SV] Save Session: Save session state to sidecar and sync to RAG</item>
     <item cmd="RS or fuzzy match on resume-session">[RS] Resume Session: Resume a previous session by description, branch, session ID, or date</item>
-    <item cmd="XM or fuzzy match on switch-mode">[XM] Switch Mode: Switch execution mode — [1] same-conversation · [2] command blocks · [3] launch scripts · [4] agent teams</item>
+    <item cmd="XM or fuzzy match on switch-mode">[XM] Switch Mode: Switch execution mode — [1] in-process Agent tool (same conversation) · [2] CLI launch (claude / kiro-cli chat --trust-all-tools --agent) · [3] parallel fan-out (multiple Agent tool calls) · [4] team composition (see /triage router)</item>
     <item cmd="TM or fuzzy match on prepare-to-merge">[TM] Prepare to Merge: Type-check, build validation, PR description (run at workflow completion)</item>
     <item cmd="RV or fuzzy match on review-track">[RV] Review Track: Target definition → complexity assessment → multi-lens audit → SMALL or LARGE path</item>
     <item cmd="UV or fuzzy match on ui-review">[UV] UI Review: Single-pass design token + component + a11y audit via ui-ux-pro-custom</item>
@@ -88,3 +89,19 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
   </menu>
 </agent>
 ```
+
+## Self-Maintenance
+
+Persist learnings across sessions in your project MEMORY.md. At the end of any
+non-trivial task, append a brief note: what you learned about this codebase,
+conventions you confirmed, gotchas you hit, and any user preferences you
+observed. Use the Write tool to update MEMORY.md (path:
+`.claude/agents/memory/architect.md` or as configured by the harness). This is
+how knowledge accumulates between sessions — reuse (via SendMessage) only works
+within a session, but memory carries across sessions.
+
+## Model Strategy
+
+Default `sonnet`. Use `opus` only when design judgment / large context
+genuinely warrants it, and **only with explicit user permission** — ask the
+user before escalating model tier. See `claude-subagent-protocol` §6.3.

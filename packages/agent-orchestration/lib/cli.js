@@ -110,6 +110,34 @@ Examples:
     await install({ ...opts, action: 'update' });
   });
 
+// ─── uninstall ────────────────────────────────────────────────────────────────
+
+program
+  .command('uninstall')
+  .description('Remove Arcwright from your project or global config — strips managed CLAUDE.md blocks, .gitignore block, installer-written settings.json keys, and (with --yes) installed files.')
+  .option('-y, --yes', 'Skip confirmation prompts and remove installed files without asking', false)
+  .option('-g, --global', 'Uninstall from global config (~/.claude/, ~/.arcwright/)', false)
+  .option('-d, --directory <path>', 'Project root', '.')
+  .addHelpText('after', `
+Examples:
+  # Interactive uninstall from current project (prompts to remove installed files)
+  npx @arcwright-ai/agent-orchestration uninstall
+
+  # Non-interactive, remove everything
+  npx @arcwright-ai/agent-orchestration uninstall --yes
+
+  # Global uninstall
+  npx @arcwright-ai/agent-orchestration uninstall --global --yes
+`)
+  .action(async (opts) => {
+    const { uninstall } = require('./installer');
+    await uninstall({
+      global: opts.global,
+      yes: opts.yes,
+      directory: opts.directory,
+    });
+  });
+
 // ─── status ───────────────────────────────────────────────────────────────────
 
 program

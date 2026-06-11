@@ -1,11 +1,11 @@
 ---
 name: "team-research"
-description: "Recon Pod — Analyst researches, PM synthesizes into briefs, Tech Writer documents outputs"
+description: "Recon Pod — Analyst researches, PM synthesizes into briefs, Tech Writer documents outputs; in-process with agent registry reuse"
 ---
 
 # Agent Team: Research — Recon Pod
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). Spawn-once + reuse via Session Agent Registry. tmux is opt-in visibility only.
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -29,51 +29,42 @@ description: "Recon Pod — Analyst researches, PM synthesizes into briefs, Tech
 
 The Recon Pod assembles for deep research tasks before strategy or build decisions. The Analyst conducts the primary research — domain analysis, competitive landscape, technical feasibility, user patterns. The PM synthesizes raw findings into actionable product briefs. The Tech Writer then structures and documents the final output for consumption by other teams or stakeholders. Master can spawn a second Analyst in parallel if the research scope demands it. Sequential flow: research → synthesis → documentation.
 
-## Layout (tmux)
+## Agent Registry
+
+This team uses a Session Agent Registry (see `claude-subagent-protocol` §3) to record live agent IDs and reuse them across steps. Path:
 
 ```
-┌─────────┬───────────┐
-│         │  Analyst  │
-│ Master  ├───────────┤
-│ (left)  │    PM     │
-│         ├───────────┤
-│         │  Writer   │
-└─────────┴───────────┘
+_arcwright-output/sessions/<session-id>/agent-registry.md
 ```
 
-*Optional: Master can issue a second parallel Analyst Agent call for parallel research tracks.*
+Roles in this team (one row per role):
 
-## Spawn Sequence
+| Role | Agent | Notes |
+|------|-------|-------|
+| analyst | `arcwright-analyst` | Optionally two parallel research tracks (analyst + analyst-2) for large scope |
+| pm | `arcwright-pm` | Reused for synthesis |
+| tech-writer | `arcwright-tech-writer` | Reused for final documentation |
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+Spawn-once rule: the first time each role is needed, spawn via `Agent` tool and capture `agentId`. On any subsequent task for the same role, look up the row in the registry and dispatch via `SendMessage`. The PM agent keeps full prior context (the research findings) across the synthesis → documentation handoff. The Tech Writer keeps full prior context (the brief and the raw research) for the final document.
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+## Model Strategy (sonnet-first + permission gate)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
+| Role | Default | Opus |
+|------|---------|------|
+| `arcwright-analyst` | sonnet | only with explicit user permission |
+| `arcwright-pm` | sonnet | only with explicit user permission |
+| `arcwright-tech-writer` | sonnet | only with explicit user permission |
 
-```bash
-# 1. Split Analyst pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Analyst agent in the Recon Pod team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/analyst.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::analyst::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+**Default is sonnet for every spawn.** Before spawning any agent with `model: "opus"` or raising effort, the orchestrator (or this skill) **must ask the user** first (per `claude-subagent-protocol` §6.3). No silent escalation.
 
-# 2. Split PM pane (mid-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the PM agent in the Recon Pod team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/pm.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::pm::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+## Spawn-once + Reuse
 
-# 3. Split Tech Writer pane (bottom-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Tech Writer agent in the Recon Pod team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/tech-writer.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
+For each step, before issuing the Agent call, check the registry:
 
-# 4. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
+- **Registry miss** (first use of the role in this session) → spawn via `Agent` tool. Capture the returned `agentId` and write a registry row.
+- **Registry hit** (same role, same context) → dispatch via `SendMessage(to: <agentId>, ...)`. The agent already holds the prior context — do not re-feed it.
 
-# Optional: Spawn second Analyst pane for parallel research tracks
-# tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are Analyst-2 in the Recon Pod team...'"
-# sleep 8
-# tmux select-layout tiled
-# sleep 6
-```
+For the full spawn / reuse pattern see `claude-subagent-protocol` §4.
 
 ## Agent Activation
 
@@ -110,21 +101,15 @@ Single research track:
 }
 ```
 
-For parallel research tracks, issue two Agent calls in a single message — assign separate research domains to avoid overlap. Capture results into `$STEP_1_OUTPUT_A` and `$STEP_1_OUTPUT_B`, then merge before passing to step 2.
+For parallel research tracks, issue two Agent calls in a single message — assign separate research domains to avoid overlap. Each parallel analyst is a separate first-use spawn (no row in the registry yet, since `analyst` has not been spawned). Capture the returned `agentId` for each and write rows to the registry. Capture results into `$STEP_1_OUTPUT_A` and `$STEP_1_OUTPUT_B`, then merge before passing to step 2.
 
 Capture result into `$STEP_1_OUTPUT`. Pass to step 2.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {analyst_pane_id} "TASK-{id}-research: Research: {topic}. Focus areas: {areas}. Signal TASK_DONE with structured findings." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::analyst::{task_id}::done::{findings_summary}`
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. In-process flow inside the pane is still governed by `claude-subagent-protocol`.
 
 ---
 
@@ -137,6 +122,8 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::analyst::{task_id}::done::{findings
 ---
 
 #### Default: In-Process (Agent tool)
+
+`pm` is the first-time role. Spawn via `Agent` tool, capture `agentId`, write the registry row.
 
 ```json
 {
@@ -153,15 +140,9 @@ Capture result into `$STEP_2_OUTPUT`. Pass to step 3.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {pm_pane_id} "TASK-{id}-synthesis: Synthesize research findings into a product brief. Findings: {$STEP_1_OUTPUT}. Signal TASK_DONE with brief." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::pm::{task_id}::done::{brief_summary}`
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section.
 
 ---
 
@@ -174,6 +155,8 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::pm::{task_id}::done::{brief_summary
 ---
 
 #### Default: In-Process (Agent tool)
+
+`tech-writer` is the first-time role. Spawn via `Agent` tool, capture `agentId`, write the registry row.
 
 ```json
 {
@@ -190,43 +173,20 @@ Capture result into `$STEP_3_OUTPUT`. Final output — no next step. Present res
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {tech_writer_pane_id} "TASK-{id}-docs: Document research brief as a structured reference doc. Brief: {$STEP_2_OUTPUT}. Raw research: {$STEP_1_OUTPUT}. Signal TASK_DONE when documented." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::tech-writer::{task_id}::done::{document_path}`
+For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section.
 
 ---
 
-## Communication Protocol
+## Team Wind-down
 
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
+In-process wind-down — no pane close:
 
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: research
-  name: "Recon Pod"
-  spawned_at: {ISO8601}
-  panes:
-    analyst: {pane_id}
-    pm: {pane_id}
-    tech-writer: {pane_id}
-    # analyst-2: {pane_id}  # if spawned
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane IDs from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+- Mark a role "done" by stopping further dispatch to that role. The agent becomes idle but is not killed (the user can pick it back up with `SendMessage` later in the session).
+- The Session Agent Registry may be deleted or renamed to `agent-registry.closed.md` when the session ends.
+- Inspect live agents at any time via `claude agents` (or `claude agents --json` for parseable output).
+- There is no `kill-pane` analogue. The wind-down is: stop dispatching, let the session end.
 
 ## Kiro Pipeline
 

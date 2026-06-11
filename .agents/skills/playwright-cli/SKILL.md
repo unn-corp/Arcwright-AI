@@ -200,6 +200,18 @@ npx --no-install playwright-cli --version
 
 ## QA Agent Completion Signal
 
-```bash
-tmux send-keys -t $SPAWNER_PANE "STEP COMPLETE: QA | result: <N> tests passing | session: $CLAUDE_SESSION_ID" Enter
+The in-process Agent tool's return value is the completion signal. The QA
+agent's final action is to return its result directly to the spawner — no
+`tmux send-keys`, no `AGENT_SIGNAL`, no `STEP COMPLETE`, no pane write.
+
+```text
+# In-process (default): return the result via the Agent tool return value
+return "QA: <N> tests passing, suite stable"
+
+# Opt-in visible pane (user asked for split-pane visibility): a plain
+# final message to the user is sufficient — do NOT post legacy signals.
+print to pane: "QA done — <N> tests passing"
 ```
+
+See the `claude-subagent-protocol` skill (§11 No Legacy Signals) and the
+`tmux` skill (opt-in section) for the full rule set.

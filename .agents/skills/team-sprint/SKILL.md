@@ -1,6 +1,7 @@
 ---
 name: "team-sprint"
-description: "The Strike Team — SM manages sprint queue, Dev implements stories in sequence, QA validates each before SM marks done"
+description: "The Strike Team — in-process SM + Dev + QA loop. SM manages sprint queue (reused across stories), Dev implements each story, QA validates, SM marks done. tmux is opt-in visibility only."
+allowed-tools: Read, Grep, Glob, Write, Edit, Agent, SendMessage, Bash
 ---
 
 # Agent Team: Sprint — The Strike Team
@@ -19,53 +20,66 @@ description: "The Strike Team — SM manages sprint queue, Dev implements storie
 
 ## Team Composition
 
-| Role | Agent | Skills |
-|------|-------|--------|
-| SM | `arcwright-sm` | Sprint task queue, story management, progress tracking |
-| Dev | `arcwright-dev` | Story implementation |
-| QA | `arcwright-qa` | playwright-cli, story acceptance criteria validation |
+| Role | Agent | Default Model |
+|------|-------|---------------|
+| SM | `arcwright-sm` | sonnet |
+| Dev | `arcwright-dev` | sonnet |
+| QA | `arcwright-qa` | sonnet |
+
+## Model Strategy (sonnet-first + permission gate)
+
+Default model for every spawn in this team is `sonnet`. Use `opus` only when the user
+explicitly approves an upgrade; otherwise stay on `sonnet`. The skill asks the user
+before any opus spawn or effort upgrade. See
+[`claude-subagent-protocol` §6.3](.agents/skills/claude-subagent-protocol/SKILL.md#63-permission-before-opus--permission-before-effort-upgrade-mandatory)
+for the full rule and the question format.
+
+## Agent Registry
+
+When this team is spawned, master creates the Session Agent Registry at:
+
+```
+_arcwright-output/sessions/<session-id>/agent-registry.md
+```
+
+| Role | Agent ID | Spawned | Last Task | Notes |
+|------|----------|---------|-----------|-------|
+| sm | `<assigned on first spawn>` | `<ISO>` | sprint init | reused on every step 4 (next-story) |
+| dev | `<assigned on first spawn>` | `<ISO>` | first story implementation | reused on step 2 ↔ 3b fix loop |
+| qa | `<assigned on first spawn>` | `<ISO>` | first story validation | reused on step 3 ↔ 3b fix loop |
+
+Registry path, format, and lifecycle follow
+[`claude-subagent-protocol` §3](.agents/skills/claude-subagent-protocol/SKILL.md#3-session-agent-registry-the-structural-change).
+Roles `sm`, `dev`, and `qa` are the only ones this team uses. `claude agents --json`
+is the observability tool; the registry file is the source of truth for SendMessage
+dispatch.
 
 ## Purpose
 
 The Strike Team runs a full sprint execution cycle with an SM coordinating the queue. The SM manages stories from the sprint plan, ensuring they are dispatched to Dev in the correct order and marked complete only after QA validation. Dev implements each story. QA validates against acceptance criteria before the SM marks the story done and moves to the next. Use this team when you have a sprint plan ready and want structured, sequential story execution with tracking.
 
-## Layout (tmux)
+## Spawn-once + Reuse
 
-```
-┌─────────┬───────────┐
-│         │    SM     │
-│ Master  ├───────────┤
-│ (left)  │    Dev    │
-│         ├───────────┤
-│         │    QA     │
-└─────────┴───────────┘
-```
+This is the canonical pattern for this team. Each role is **spawned on first use** and
+its `agentId` recorded in the Session Agent Registry. Subsequent steps for the same
+role use `SendMessage` to that existing agent — never re-spawn. See
+[`claude-subagent-protocol` §4.2](.agents/skills/claude-subagent-protocol/SKILL.md#42-reuse-sendmessage--replaces-re-spawn-for-known-roles)
+for the full Reuse (SendMessage) pattern.
 
-## Spawn Sequence
+**First use → Agent tool + write registry row. Later use → SendMessage to the row's `agentId`.**
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+### Reuse pattern for the sprint loop
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+The SM agent is the most-reused role in this team — it is dispatched at the start
+(step 1) and at the end of every story (step 4) to mark done and surface the next
+story. **Reuse the existing SM agent via SendMessage** for every step 4; the SM
+already holds the sprint plan, the queue state, and the done/remaining counts.
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
-
-```bash
-# 1. Split SM pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the SM (Scrum Master) agent in The Strike Team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/sm.md. You manage the sprint story queue and track completion. Stories are marked done only after QA validation. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::sm::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 2. Split Dev pane (mid-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in The Strike Team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 3. Split QA pane (bottom-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in The Strike Team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. Validate each story against its acceptance criteria using playwright-cli. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 4. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
-```
+Dev and QA reuse follows the standard pattern: first spawn per role records the
+`agentId`; the fix-pass loop in step 3 ↔ 3b uses `SendMessage` to the existing IDs.
+QA reuse on the fix pass re-validates the same story with the same acceptance
+criteria — re-engage the existing QA agent with the new test target via
+`SendMessage`.
 
 ## Agent Activation
 
@@ -85,9 +99,9 @@ Master initializes the sprint by handing the sprint plan to SM, then the SM driv
 **Inputs:** Sprint plan from master
 **Output:** `$STEP_1_OUTPUT` — first story details and queue order
 
----
-
-#### Default: In-Process (Agent tool)
+**First SM use:** spawn via Agent tool. Capture the returned `agentId` into the
+registry `sm` row. The same SM is reused at step 4 (next-story) for the rest of
+the sprint.
 
 ```json
 {
@@ -102,17 +116,7 @@ Master initializes the sprint by handing the sprint plan to SM, then the SM driv
 
 Capture result into `$STEP_1_OUTPUT`. Pass first story details to step 2.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {sm_pane_id} "TASK-init: Here is the sprint plan. Manage the story queue. Stories: {sprint_plan}. Signal TASK_DONE::next-story with the first story to implement." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::sm::queue::next-story::{story_id}::{story_summary}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -122,9 +126,9 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::sm::queue::next-story::{story_id}::
 **Inputs:** `$STEP_1_OUTPUT` or previous SM `$STEP_N_SM_OUTPUT` (story details + acceptance criteria)
 **Output:** `$STEP_2_OUTPUT` — implementation complete, files changed
 
----
-
-#### Default: In-Process (Agent tool)
+**First Dev use:** spawn via Agent tool. Capture the returned `agentId` into the
+registry `dev` row. Subsequent stories and the fix-pass loop reuse this row via
+`SendMessage`.
 
 ```json
 {
@@ -139,17 +143,7 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::sm::queue::next-story::{story_id}::
 
 Capture result into `$STEP_2_OUTPUT`. Pass to step 3.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {dev_pane_id} "TASK-{story_id}: Implement story: {story_details}. Acceptance criteria: {criteria}. Signal TASK_DONE when complete." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{story_id}::done::{summary}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -159,9 +153,9 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{story_id}::done::{summary}`
 **Inputs:** `$STEP_2_OUTPUT` (implementation summary) + acceptance criteria
 **Output:** `$STEP_3_OUTPUT` — pass or fail with findings
 
----
-
-#### Default: In-Process (Agent tool)
+**First QA use:** spawn via Agent tool. Capture the returned `agentId` into the
+registry `qa` row. Subsequent stories and the fix-pass loop reuse this row via
+`SendMessage` — re-engage the existing QA agent with the new test target.
 
 ```json
 {
@@ -176,17 +170,7 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{story_id}::done::{summary}`
 
 Capture result into `$STEP_3_OUTPUT`. If pass: proceed to step 4. If fail: pass to step 3b.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {qa_pane_id} "TASK-{story_id}-qa: Validate story implementation. Acceptance criteria: {criteria}. Use playwright-cli to verify. Signal TASK_DONE with pass or fail." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{story_id}::{pass|fail}::{summary}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -196,34 +180,22 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{story_id}::{pass|fail}::{summa
 **Inputs:** `$STEP_3_OUTPUT` (QA findings)
 **Output:** `$STEP_3B_OUTPUT` — fix complete. Return to step 3.
 
----
-
-#### Default: In-Process (Agent tool)
+The Dev agent already exists in the registry. **SendMessage** to its existing
+`agentId` — do not re-spawn Dev.
 
 ```json
 {
-  "name": "Agent",
+  "name": "SendMessage",
   "input": {
-    "subagent_type": "arcwright-dev",
-    "prompt": "Fix the QA failures for this story.\n\n## Inputs\nQA findings: {$STEP_3_OUTPUT}\n\n## Output\nFix complete. List all files changed.",
-    "model": "sonnet"
+    "to": "<dev.agentId from registry>",
+    "prompt": "Fix the QA failures for this story.\n\n## Inputs\nQA findings: {$STEP_3_OUTPUT}\n\n## Output\nFix complete. List all files changed."
   }
 }
 ```
 
-Capture result into `$STEP_3B_OUTPUT`. Return to step 3 (QA re-validates). When QA passes: proceed to step 4.
+Capture result into `$STEP_3B_OUTPUT`. Return to step 3 (re-engage the existing QA agent via `SendMessage` to re-validate). When QA passes: proceed to step 4.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {dev_pane_id} "TASK-{story_id}-fix: QA findings. Fix: {$STEP_3_OUTPUT}. Signal TASK_DONE." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{story_id}::fixed::{files_changed}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -233,61 +205,37 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{story_id}::fixed::{files_chan
 **Inputs:** QA pass signal from step 3 + story ID
 **Output:** `$STEP_4_OUTPUT` — next story details OR sprint complete signal
 
----
-
-#### Default: In-Process (Agent tool)
+The SM agent already exists in the registry from step 1. **Reuse it via
+SendMessage** — the SM still holds the sprint plan, the queue state, and the
+done/remaining counts.
 
 ```json
 {
-  "name": "Agent",
+  "name": "SendMessage",
   "input": {
-    "subagent_type": "arcwright-sm",
-    "prompt": "Story {story_id} passed QA. Mark it done and provide the next story from the queue, or signal sprint complete if all stories are done.\n\n## Inputs\nCompleted story: {story_id}\nRemaining queue: {queue_state}\n\n## Output\nNext story details: story ID, description, acceptance criteria. OR: 'Sprint complete: all N stories done.'",
-    "model": "sonnet"
+    "to": "<sm.agentId from registry>",
+    "prompt": "Story {story_id} passed QA. Mark it done and provide the next story from the queue, or signal sprint complete if all stories are done.\n\n## Inputs\nCompleted story: {story_id}\nRemaining queue: {queue_state}\n\n## Output\nNext story details: story ID, description, acceptance criteria. OR: 'Sprint complete: all N stories done.'"
   }
 }
 ```
 
-Capture result into `$STEP_4_OUTPUT`. If next story: return to step 2 with new story. If sprint complete: present summary to user. Final output — no next step.
+Capture result into `$STEP_4_OUTPUT`. If next story: return to step 2 with new story (Dev/QA may also be reused). If sprint complete: present summary to user. Final output — no next step.
+
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+## Team Wind-down
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+This team has no pane to close. Agents end when no longer messaged; the orchestrator's
+`claude agents` inspection tells the user what's still alive.
 
-```bash
-tmux send-keys -t {sm_pane_id} "Story {story_id} passed QA. Mark done and signal next story." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::sm::queue::next-story::{story_id}::{summary}` or `AGENT_SIGNAL::TASK_DONE::sm::sprint::complete::All {N} stories done`
-
----
-
-## Communication Protocol
-
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
-
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: sprint
-  name: "The Strike Team"
-  spawned_at: {ISO8601}
-  panes:
-    sm: {pane_id}
-    dev: {pane_id}
-    qa: {pane_id}
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane IDs from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+| Action | What happens |
+|--------|--------------|
+| Mark role "done" in the orchestrator's loop | Orchestrator stops sending tasks to that role. |
+| No more tasks for a role | The agent becomes idle. It is **not** killed — the user can pick it back up with `SendMessage` later in the session. |
+| Session ending | The orchestrator may delete the registry file or rename to `agent-registry.closed.md`. Live agents are torn down with the session. |
+| User wants to inspect live agents | `claude agents` (or `claude agents --json` for parseable output). |
 
 ## Kiro Pipeline
 

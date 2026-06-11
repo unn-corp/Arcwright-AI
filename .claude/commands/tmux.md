@@ -59,23 +59,14 @@ description: tmux pane and session reference — splits, navigation, layouts, re
 | Get pane title | `tmux display-message -p -t %<id> "#{pane_title}"` |
 | List panes with IDs | `tmux list-panes -F "%#{pane_id} #{pane_index} #{pane_title}"` |
 
-## Agent Workflow Pattern
+## Agent Orchestration
 
-Spawn a split-pane agent and communicate back to the spawner:
+For in-process agent orchestration, see the `claude-subagent-protocol` skill
+(`Agent` tool + `SendMessage` reuse via the Session Agent Registry — the
+default). Pane-visibility usage is opt-in; see the `tmux` skill's "Watching
+agents in panes" section.
 
-```bash
-# 1. Capture spawner pane ID first
-SPAWNER_PANE=$(tmux display-message -p "#{pane_id}")
-
-# 2. Spawn agent in new pane
-tmux split-window -h -c "#{pane_current_path}" \
-  "claude --dangerously-skip-permissions '<task>'"
-
-# 3. Agent signals completion back to spawner
-tmux send-keys -t $SPAWNER_PANE "AGENT_SIGNAL::TASK_DONE::agent-name::done" Enter
-```
-
-## Pane Close Sequence (agents)
+## Pane Close Sequence (agents, opt-in)
 
 ```bash
 # Always send /exit first — lets the agent finish and save state

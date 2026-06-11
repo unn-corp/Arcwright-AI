@@ -1,6 +1,7 @@
 ---
 name: "team-full-dev"
-description: "The Engine Room — Dev implements, QA validates, Architect available for inline consultation on complex decisions"
+description: "The Engine Room — in-process Dev + QA + Architect loop. Dev implements, QA validates (reuses the existing QA agent via SendMessage on re-validation), Architect available for inline consultation on complex decisions. tmux is opt-in visibility only."
+allowed-tools: Read, Grep, Glob, Write, Edit, Agent, SendMessage, Bash
 ---
 
 # Agent Team: Full Dev — The Engine Room
@@ -19,53 +20,83 @@ description: "The Engine Room — Dev implements, QA validates, Architect availa
 
 ## Team Composition
 
-| Role | Agent | Skills |
-|------|-------|--------|
-| Dev | `arcwright-dev` | Full implementation |
-| QA | `arcwright-qa` | playwright-cli, spec tests, validation |
-| Architect | `arcwright-architect` | Inline consultation, complex decision review, full dev skill access |
+| Role | Agent | Default Model |
+|------|-------|---------------|
+| Dev | `arcwright-dev` | sonnet |
+| QA | `arcwright-qa` | sonnet |
+| Architect | `arcwright-architect` | sonnet (opus only with user permission) |
+
+## Model Strategy (sonnet-first + permission gate)
+
+Default model for every spawn in this team is `sonnet`. The Architect may benefit
+from `opus` on hard design judgment calls, but the skill **asks the user first**
+before any opus spawn or effort upgrade. If the user declines, stay on `sonnet`.
+See
+[`claude-subagent-protocol` §6.3](.agents/skills/claude-subagent-protocol/SKILL.md#63-permission-before-opus--permission-before-effort-upgrade-mandatory)
+for the full rule and the question format.
+
+## Agent Registry
+
+When this team is spawned, master creates the Session Agent Registry at:
+
+```
+_arcwright-output/sessions/<session-id>/agent-registry.md
+```
+
+| Role | Agent ID | Spawned | Last Task | Notes |
+|------|----------|---------|-----------|-------|
+| dev | `<assigned on first spawn>` | `<ISO>` | first implementation | spawned on step 1 |
+| qa | `<assigned on first spawn>` | `<ISO>` | first validation | spawned on step 2; reused on fix loop |
+| architect | `<assigned on first spawn>` | `<ISO>` | first consultation (if any) | spawned on step 1b if Dev escalates |
+
+Registry path, format, and lifecycle follow
+[`claude-subagent-protocol` §3](.agents/skills/claude-subagent-protocol/SKILL.md#3-session-agent-registry-the-structural-change).
+Roles `dev`, `qa`, and `architect` are the only ones this team uses. `claude agents
+--json` is the observability tool; the registry file is the source of truth for
+SendMessage dispatch.
 
 ## Purpose
 
 The Engine Room is a full-stack implementation team with an Architect available for consultation rather than as a formal review gatekeeper. Dev implements and QA validates in the standard loop. When Dev encounters a complex architectural decision — a tricky data model choice, an API contract question, a caching strategy — master can route a consultation request to the Architect. The Architect responds with a recommendation and Dev proceeds. This keeps the review lightweight while ensuring expert guidance is available on-demand. Use this team for medium-to-large feature work where architectural questions are expected but don't need to block every task.
 
-## Layout (tmux)
+## Spawn-once + Reuse
 
+This is the canonical pattern for this team. Each role is **spawned on first use** and
+its `agentId` recorded in the Session Agent Registry. Subsequent steps for the same
+role use `SendMessage` to that existing agent — never re-spawn. See
+[`claude-subagent-protocol` §4.2](.agents/skills/claude-subagent-protocol/SKILL.md#42-reuse-sendmessage--replaces-re-spawn-for-known-roles)
+for the full Reuse (SendMessage) pattern.
+
+**First use → Agent tool + write registry row. Later use → SendMessage to the row's `agentId`.**
+
+### Reuse examples
+
+**Dev (step 1 → step 3 fix pass):** after the first Dev spawn records `dev.agentId`,
+the fix-pass step 3 sends a follow-up to that same ID — Dev retains full context on
+the spec, the architectural decision, and the prior implementation.
+
+**Architect (step 1b consultation chain):** if Dev escalates more than once, the
+Architect agent already exists in the registry. Re-engage the same Architect via
+`SendMessage` — the receiving agent already knows the task context, the prior
+recommendation, and any deviations Dev took.
+
+**QA (fix-pass re-validation) — re-engage the existing QA agent with the new test
+target via SendMessage:**
+
+```json
+{
+  "name": "SendMessage",
+  "input": {
+    "to": "<qa.agentId from registry>",
+    "prompt": "Re-engage the existing QA agent with the new test target.\n\n## Inputs\nNew code under test: the fix from step 3 (see $STEP_3_OUTPUT). Re-run the same acceptance criteria you validated in step 2. Prior run was a fail; we need a re-validate against the same surface, not a re-spawn.\n\n## Output\nPass or fail verdict with: test results summary, specific failures (if any), and affected areas."
+  }
+}
 ```
-┌─────────┬───────────┐
-│         │    Dev    │
-│ Master  ├───────────┤
-│ (left)  │    QA     │
-│         ├───────────┤
-│         │ Architect │
-└─────────┴───────────┘
-```
 
-## Spawn Sequence
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
-
-```bash
-# 1. Split Dev pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in The Engine Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. An Architect is available for consultation on complex decisions — the master will route consultation requests. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 2. Split QA pane (mid-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in The Engine Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 3. Split Architect pane (bottom-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Architect agent in The Engine Room team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/architect.md. You have full dev skill access. In this team you are available for ON-DEMAND CONSULTATION — the master will send consultation requests when Dev encounters complex architectural decisions. Respond with a clear recommendation and rationale. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::architect::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 4. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
-```
+The receiving QA agent retains all prior context — it already knows the codebase, the
+acceptance criteria, the prior run's findings, and the user's preferences surfaced in
+earlier turns. Do not re-feed prior context into the prompt; reference it via
+`## Inputs` only.
 
 ## Agent Activation
 
@@ -85,9 +116,8 @@ sleep 6
 **Inputs:** Task description and acceptance criteria from master
 **Output:** `$STEP_1_OUTPUT` — implementation complete, files changed
 
----
-
-#### Default: In-Process (Agent tool)
+**First Dev use:** spawn via Agent tool. Capture the returned `agentId` into the
+registry `dev` row.
 
 ```json
 {
@@ -102,17 +132,7 @@ sleep 6
 
 Capture result into `$STEP_1_OUTPUT`. If result contains `ARCH_QUESTION`: route to step 1b. Otherwise pass to step 2.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {dev_pane_id} "TASK-{id}: {task_description}. Acceptance criteria: {criteria}. Signal TASK_DONE when complete." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::done::{summary}` or `AGENT_SIGNAL::TASK_BLOCKED::dev::{task_id}::arch-question::{question}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -122,9 +142,9 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::done::{summary}` or
 **Inputs:** Architectural question from `$STEP_1_OUTPUT`
 **Output:** `$STEP_1B_OUTPUT` — architectural recommendation with rationale
 
----
-
-#### Default: In-Process (Agent tool)
+**First Architect use (or re-engagement of an existing Architect for a follow-up
+question):** spawn or `SendMessage` based on the registry. Default model `sonnet`.
+The skill must ask the user before any `opus` spawn.
 
 ```json
 {
@@ -132,24 +152,14 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::done::{summary}` or
   "input": {
     "subagent_type": "arcwright-architect",
     "prompt": "Dev needs architectural guidance. Provide a clear, actionable recommendation with rationale.\n\n## Inputs\nArchitectural question: {arch_question_from_step_1}\nTask context: {task_description}\n\n## Output\nClear recommendation with rationale. Be specific enough that Dev can proceed without further questions.",
-    "model": "opus"
+    "model": "sonnet"
   }
 }
 ```
 
-Capture result into `$STEP_1B_OUTPUT`. Pass recommendation back to step 1 (re-run Dev with recommendation injected).
+Capture result into `$STEP_1B_OUTPUT`. Pass recommendation back to step 1 (re-engage the existing Dev agent with the recommendation injected).
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {architect_pane_id} "CONSULT-{id}: Dev needs architectural guidance. Question: {arch_question}. Context: {task_context}. Provide a clear recommendation." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::consult-{id}::recommendation::{recommendation_summary}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -159,9 +169,9 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::consult-{id}::recommenda
 **Inputs:** `$STEP_1_OUTPUT` (implementation summary) + acceptance criteria
 **Output:** `$STEP_2_OUTPUT` — pass or fail with findings
 
----
-
-#### Default: In-Process (Agent tool)
+**First QA use:** spawn via Agent tool. Capture the returned `agentId` into the
+registry `qa` row. Subsequent fix-pass re-validations reuse this row via
+`SendMessage` (see "Reuse examples" above).
 
 ```json
 {
@@ -176,17 +186,7 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::architect::consult-{id}::recommenda
 
 Capture result into `$STEP_2_OUTPUT`. If pass: task complete. If fail: pass to step 3.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {qa_pane_id} "TASK-{id}-qa: Validate implementation. Criteria: {criteria}. Run playwright-cli tests. Signal TASK_DONE with pass or fail." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -196,61 +196,38 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summar
 **Inputs:** `$STEP_2_OUTPUT` (QA findings)
 **Output:** `$STEP_3_OUTPUT` — fix complete. Return to step 2.
 
----
-
-#### Default: In-Process (Agent tool)
+The Dev agent already exists in the registry. **SendMessage** to its existing
+`agentId` — do not re-spawn Dev.
 
 ```json
 {
-  "name": "Agent",
+  "name": "SendMessage",
   "input": {
-    "subagent_type": "arcwright-dev",
-    "prompt": "Fix all QA failures. Address each failure specifically.\n\n## Inputs\nQA findings: {$STEP_2_OUTPUT}\n\n## Output\nFix complete. List all files changed.",
-    "model": "sonnet"
+    "to": "<dev.agentId from registry>",
+    "prompt": "Fix all QA failures. Address each failure specifically.\n\n## Inputs\nQA findings: {$STEP_2_OUTPUT}\n\n## Output\nFix complete. List all files changed."
   }
 }
 ```
 
-Capture result into `$STEP_3_OUTPUT`. Return to step 2. When QA passes: task complete. Final output — no next step.
+Capture result into `$STEP_3_OUTPUT`. **Re-engage the existing QA agent with the
+new test target via SendMessage** for re-validation — return to step 2 using the
+QA reuse example. When QA passes: task complete. Final output — no next step.
+
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+## Team Wind-down
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+This team has no pane to close. Agents end when no longer messaged; the orchestrator's
+`claude agents` inspection tells the user what's still alive.
 
-```bash
-tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: QA findings. Fix: {$STEP_2_OUTPUT}. Signal TASK_DONE." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_changed}`
-
----
-
-## Communication Protocol
-
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
-
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: full-dev
-  name: "The Engine Room"
-  spawned_at: {ISO8601}
-  panes:
-    dev: {pane_id}
-    qa: {pane_id}
-    architect: {pane_id}
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane IDs from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+| Action | What happens |
+|--------|--------------|
+| Mark role "done" in the orchestrator's loop | Orchestrator stops sending tasks to that role. |
+| No more tasks for a role | The agent becomes idle. It is **not** killed — the user can pick it back up with `SendMessage` later in the session. |
+| Session ending | The orchestrator may delete the registry file or rename to `agent-registry.closed.md`. Live agents are torn down with the session. |
+| User wants to inspect live agents | `claude agents` (or `claude agents --json` for parseable output). |
 
 ## Kiro Pipeline
 

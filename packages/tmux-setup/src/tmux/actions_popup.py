@@ -35,7 +35,7 @@ COLS = [
      ("o","  Open URL / file"),("g","  Search in browser"),
      ("R","  Recenter layout")],
     [("E","  Neovim (M-e)"),("N","  NvimTree"),("Y","  Yazi file manager"),("G","  Lazygit"),
-     ("D","  Lazydocker"),("C","  WSL cleanup"),("P","  Drop page cache"),("M","  Compact memory"),("",""),("","")],
+     ("D","  Lazydocker"),("C","  WSL cleanup"),("P","  Drop page cache"),("M","  Compact memory"),("S","  WSL shutdown (nuclear)"),("","")],
 ]
 
 NR = max(len(c) for c in COLS)
@@ -178,13 +178,14 @@ def execute(key):
         'g': lambda: tmux('run-shell', '-b', 'bash ~/.config/tmux/bin/open_clip.sh search'),
         'R': lambda: tmux('run-shell', '-b', 'bash ~/.config/tmux/bin/recenter.sh'),
         'E': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' nvim"),
-        'N': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' 'nvim +NvimTree'"),
+        'N': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' 'nvim +NvimTreeToggle'"),
         'Y': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' yazi"),
         'G': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' lazygit"),
         'D': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -h -c '{cwd}' lazydocker"),
         'C': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'bash ~/.config/tmux/bin/wsl_cleanup.sh; read -p \"Press Enter to close\"'"),
-        'P': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'echo 3 | sudo tee /proc/sys/vm/drop_caches && echo \"Page cache dropped.\" && free -h | grep Mem; read -p \"Press Enter to close\"'"),
-        'M': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'echo 1 | sudo tee /proc/sys/vm/compact_memory && echo \"Memory compacted.\" && free -h | grep Mem; read -p \"Press Enter to close\"'"),
+        'P': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'sync && echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null && echo 1 | sudo tee /proc/sys/vm/compact_memory >/dev/null && echo \"Cache dropped + memory compacted (vmmem should shrink shortly).\" && free -h | grep Mem; read -p \"Press Enter to close\"'"),
+        'M': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'sync && echo 1 | sudo tee /proc/sys/vm/compact_memory >/dev/null && echo \"Memory compacted — balloon driver can now return free pages to Windows.\" && free -h | grep Mem; read -p \"Press Enter to close\"'"),
+        'S': lambda: tmux('run-shell', '-b', f"sleep 0.2 && tmux split-window -v -c '{cwd}' 'echo \"This will terminate ALL WSL sessions and fully reclaim vmmem RAM.\"; read -p \"Type YES to confirm: \" ans; [ \"$ans\" = YES ] && powershell.exe -NoProfile -Command \"wsl.exe --shutdown\" || echo Cancelled.; read -p \"Press Enter to close\"'"),
     }
     if key in dispatch:
         dispatch[key]()

@@ -21,7 +21,7 @@ Run `tsc --noEmit` inside the project's running Docker dev container to catch Ty
 4. Parse the output:
    - If zero errors: report "Type-check passed — no TypeScript errors."
    - If errors found: group by file, report each error with file path, line, and message. Count total errors.
-5. Do not auto-fix TypeScript errors — report only. Use `/arcwright-track-nano` or `/dry` to address findings.
+5. Do not auto-fix TypeScript errors — report only. Use `/dry` (DRY review) or `/triage` to address findings.
 
 ## Arguments
 

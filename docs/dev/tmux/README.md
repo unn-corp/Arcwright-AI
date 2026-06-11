@@ -156,11 +156,14 @@ ln -sf /usr/bin/wslview ~/.local/bin/xdg-open
 
 ### 3. Nerd Fonts
 
-Required for Powerline separator characters in the status bar.
+Required for Powerline separator characters and icons in the status bar. **Two fonts are needed** — the primary monospace font plus a symbol fallback that fills in icon glyphs the main font omits.
 
-**Step 1 — Install JetBrainsMono NFM**
+**Step 1 — Install both fonts**
 
-Download from [nerdfonts.com](https://www.nerdfonts.com/). Install `JetBrainsMonoNerdFontMono-Regular.ttf` (and Bold) to Windows by double-clicking → "Install for all users". Use the **NFM (Mono)** variant — single-width glyphs required for correct terminal cell alignment.
+Download from [nerdfonts.com](https://www.nerdfonts.com/). Install both to Windows by double-clicking → "Install for all users":
+
+- `JetBrainsMonoNerdFontMono-Regular.ttf` (and Bold) — primary monospace font. Use the **NFM (Mono)** variant — single-width glyphs required for correct terminal cell alignment.
+- `SymbolsNerdFontMono-Regular.ttf` — symbol fallback font. This fills in any icon glyphs that JetBrainsMono does not cover and is required for full icon rendering.
 
 **Step 2 — Set font in your terminal emulator**
 
@@ -169,14 +172,14 @@ Download from [nerdfonts.com](https://www.nerdfonts.com/). Install `JetBrainsMon
 
 **Cursor / VS Code** (`Ctrl+Shift+P` → Open User Settings JSON):
 ```json
-"terminal.integrated.fontFamily": "JetBrainsMono NFM",
+"terminal.integrated.fontFamily": "JetBrainsMono NFM, Symbols Nerd Font Mono",
 "terminal.integrated.fontSize": 13
 ```
 
 **Windows Terminal** (each profile in `settings.json`):
 ```json
 "font": {
-    "face": "JetBrainsMono NFM",
+    "face": "JetBrainsMono NFM, Symbols Nerd Font Mono",
     "size": 11,
     "builtinGlyphs": false
 }
@@ -768,7 +771,7 @@ The status bar contains emoji (💻 🪟 📁 🧮 💾 ⏰ etc.) and Powerline 
 |---------|-----|
 | `fatal: Unable to create '.git/index.lock': File exists` | VS Code git extension left a stale lock. Run `./scripts/git-unlock.sh` to remove it. Only run when VS Code is idle — if an operation is actively in progress, wait a few seconds first. |
 | Branch info in status bar not updating | `status-interval` controls how often `#()` reruns — set to `1` for near-instant updates |
-| Icons show as boxes or blank | Install JetBrainsMono NFM; set font in **your terminal emulator** (Cursor/VS Code: `terminal.integrated.fontFamily`; Windows Terminal: `font.face`). WT settings have no effect when running inside Cursor. |
+| Icons show as boxes or blank | Install both `JetBrainsMonoNerdFontMono-Regular.ttf` and `SymbolsNerdFontMono-Regular.ttf`; set `"terminal.integrated.fontFamily": "JetBrainsMono NFM, Symbols Nerd Font Mono"` in Cursor/VS Code. Windows Terminal: `font.face`. WT settings have no effect when running inside Cursor. |
 | Colors all look the same | Ensure `set -ga terminal-overrides ",*256col*:Tc"` is in config; restart terminal |
 | Actions menu goes blank | Confirm `display-popup -E` (capital E flag) in `MouseDown1Status` binding |
 | Actions menu shows garbled 2-column layout | Terminal pane is too narrow — the popup was width-capped. Widen your terminal or pane to ≥ 120 cols. Fixed in latest: popup now uses `95%` width and the Python script adapts `W` to terminal size. Reload config: `Reload` button or `Ctrl+B r`. |

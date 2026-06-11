@@ -2,7 +2,7 @@ export const fallbackReadme = `# Arcwright
 
 > AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
 
-Arcwright installs a structured system of specialist AI agents, workflow tracks, and a 53-skill library into any project. Pick a track sized to your task, and the orchestrator routes it through spec, research, UX, implementation, review, and QA — using sequential in-process Agent tool calls (default) or coordinated tmux panes when you want to watch.
+Arcwright installs a structured system of specialist AI agents, in-process subagent orchestration, and a 47-skill library into any project. The orchestrator routes your task through plain in-process Agent tool calls (with SendMessage reuse across a Session Agent Registry) by default — with tmux panes available as an opt-in viewing surface when you want to watch.
 
 ---
 
@@ -12,11 +12,13 @@ Arcwright installs a structured system of specialist AI agents, workflow tracks,
 npx @arcwright-ai/agent-orchestration
 \`\`\`
 
-Then use a slash command to kick off a workflow:
+Then point the workflow router at your task and run the recommended approach:
 
 \`\`\`
-/arcwright-track-medium
+/triage "your task description"
 \`\`\`
+
+The router does not execute the work — it returns a recommended runtime (plain in-process agent(s), an ultracode dynamic workflow, a /goal loop, or a pre-built team via /team) and the trigger to run it.
 
 ---
 
@@ -25,21 +27,22 @@ Then use a slash command to kick off a workflow:
 | Package | Description | Install |
 |---------|-------------|---------|
 | \`@arcwright-ai/agent-orchestration\` | Agents, skills, workflows, IDE configs, slash commands | \`npx @arcwright-ai/agent-orchestration\` |
-| \`@arcwright-ai/tmux-setup\` | tmux config + scripts for AI agent workflows | \`npx @arcwright-ai/tmux-setup\` |
+| \`@arcwright-ai/tmux-setup\` | tmux config + scripts (Catppuccin, pane title sync, clipboard) — used as an opt-in visibility surface for in-process agents | \`npx @arcwright-ai/tmux-setup\` |
 
 ---
 
-## Workflow Tracks
+## Slash Commands
 
-| Command | Scope | Pipeline |
-|---------|-------|----------|
-| \`/arcwright-track-nano\` | 1–2 files, ≤20 lines | Direct to Dev, no spec overhead |
-| \`/arcwright-track-small\` | 2–4 files | Spec → Dev → Review → QA |
-| \`/arcwright-track-compact\` | 4–8 files | Optional Research → Dev → Review → QA |
-| \`/arcwright-track-medium\` | 6–12 files | Spec → Research → UX → Review Gate → Dev → Final Gate → QA |
-| \`/arcwright-track-extended\` | 10–16 files | PRD + arch notes, 2 review gates |
-| \`/arcwright-track-large\` | 12+ files | Full planning, epic loop, parallel research, final gates |
-| \`/arcwright-track-rv\` | Any | Audit → synthesize findings → route to fix path |
+| Command | Purpose |
+|---------|---------|
+| \`/triage <task>\` | Workflow router — given a task, recommends an execution approach: plain in-process agent(s), an \`ultracode\` dynamic workflow, or a \`/goal\` loop. Optional tmux opt-in visibility for users who want to watch. |
+| \`/team <code>\` | Spawns one of 17 pre-built agent team compositions. Agents run in-process and can be reused across follow-up work via SendMessage. tmux split-pane visibility is opt-in. |
+| \`/tmux\` | Runs the tmux setup installer (\`npx @arcwright-ai/tmux-setup\`). Installs Catppuccin theme, Actions popup, pane title sync, clipboard integration, and pane-visibility scripts. tmux panes are a *viewing surface* for in-process orchestration, not the spawn mechanism. |
+| \`/goal <condition>\` | Keeps working until a verification condition is true. Use when the completion condition is a check (tests pass, no type errors, lint clean), not a single deliverable. |
+| \`/gsudo\` | Loads the gsudo skill and runs a command with Windows elevated privileges. Works from WSL2, Git Bash, or native Windows. |
+| \`/arcwright-migrate\` | Migrates an existing bmad installation to arcwright naming. Runs a dry-run first, then applies the rename. |
+
+The track system (nano / small / compact / medium / extended / large / rv) has been retired; \`/triage\` now routes tasks to one of the runtimes above or a team from \`/team\`.
 
 ---
 

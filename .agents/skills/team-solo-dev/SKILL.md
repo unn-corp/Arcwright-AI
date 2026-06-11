@@ -1,11 +1,11 @@
 ---
 name: "team-solo-dev"
-description: "Ghost — single quick-flow-solo-dev agent, master queues tasks, dev signals completion each time"
+description: "Ghost — single quick-flow-solo-dev agent in-process via the Session Agent Registry. Master queues tasks; the dev agent is spawned once and reused via SendMessage for each queued task. Sonnet-first, no legacy signals."
 ---
 
 # Agent Team: Solo Dev — Ghost
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Solo Dev` role is spawned once and recorded in the Session Agent Registry; every queued task reuses that agent via `SendMessage`. tmux split-pane variant is opt-in only (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -25,55 +25,67 @@ description: "Ghost — single quick-flow-solo-dev agent, master queues tasks, d
 
 ## Purpose
 
-Ghost is a single-agent team for autonomous task execution without review overhead. The quick-flow-solo-dev agent handles spec, implementation, and basic self-validation in one pass. Master queues tasks and Ghost works through them sequentially, signaling completion after each. Use Ghost when tasks are well-defined, scope is bounded, and you want maximum throughput without the coordination cost of a multi-agent team.
+Ghost is a single-agent team for autonomous task execution without review overhead. The quick-flow-solo-dev agent handles spec, implementation, and basic self-validation in one pass. Master queues tasks and Ghost works through them sequentially. **The same dev agent is reused across the whole queue** — Ghost remembers prior tasks, the codebase, and the user's preferences. Use Ghost when tasks are well-defined, scope is bounded, and you want maximum throughput without the coordination cost of a multi-agent team.
 
-## Layout (tmux)
+## Spawn-once + Reuse
+
+Ghost is a single-role team. The first task in the queue spawns the agent via the `Agent` tool, captures the returned `agentId`, and writes a row to the **Session Agent Registry** (path and format in `claude-subagent-protocol` §3). Every subsequent queued task — same project, same area, follow-up on the previous work — reuses that agent by `SendMessage(to: <agentId>, ...)`. The agent retains all prior context (codebase, prior commits, the user's coding conventions).
+
+**Decision rule (when to spawn vs reuse):**
+
+- First task in this Ghost run → spawn. Record ID.
+- Each subsequent task in the same queue → **reuse** the registered agent via `SendMessage`. Pass only the new task + the new acceptance criteria.
+- Switching projects or genuinely disjoint scope → spawn fresh; replace the registry row.
+
+Full protocol: see the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill.
+
+## Agent Registry
+
+Ghost keeps a one-row registry at the canonical path:
 
 ```
-┌─────────┬───────────┐
-│         │           │
-│ Master  │ Solo Dev  │
-│ (left)  │  (Ghost)  │
-└─────────┴───────────┘
+_arcwright-output/sessions/<session-id>/agent-registry.md
 ```
 
-## Spawn Sequence
+```markdown
+# Session Agent Registry
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+Session: <session-id>
+Updated: <ISO timestamp>
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
-
-```bash
-# 1. Split Solo Dev pane (right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Solo Dev (Ghost) agent managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/quick-flow-solo-dev.md. Your task queue comes from the master pane. Execute tasks autonomously and completely. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::solo-dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 2. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
+| Role | Agent ID | Spawned | Last Task | Notes |
+|------|----------|---------|-----------|-------|
+| solo-dev | agent_abc123 | 2026-06-10T10:00:00Z | implement forgot-password endpoint | reused — already on feature/auth |
 ```
 
-## Agent Activation
+On wind-down, rename the file to `agent-registry.closed.md` (or delete). Use `claude agents` to inspect the live agent set. See `claude-subagent-protocol` §3 for the full lifecycle.
 
-> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
+## Model and Permission Gate (sonnet-first)
 
-- **Solo Dev**: activate `arcwright-quick-flow-solo-dev`
+| Role | Default model | Promote to opus? |
+|------|---------------|------------------|
+| solo-dev | **sonnet** | Not recommended for Ghost — solo-dev is built for fast, autonomous execution. Opus only with explicit user permission if the task warrants deeper reasoning. |
+
+**Permission-before-opus (mandatory).** Before spawning this team with `model: "opus"`, the orchestrator must ask the user:
+
+```
+This task may benefit from opus (deeper reasoning on a complex algorithm). Default is sonnet.
+Switch this spawn to opus? (yes / no / always-yes-for-this-session)
+```
+
+If the user declines, spawn `sonnet`. If the user says "always-yes-for-this-session", record the preference and stop asking. **No silent escalation.** See `claude-subagent-protocol` §6 for the full rule.
 
 ## Steps
 
-Master maintains a task queue. Tasks are dispatched one at a time. Repeat step 1 for each queued task.
+Master maintains a task queue. Tasks are dispatched one at a time. The first task spawns; every subsequent task reuses the registered agent via `SendMessage`.
 
 ### 1. Task Execution
 
 **What this step does:** Solo Dev executes the task autonomously — spec, implement, and self-validate in one pass.
 **Inputs:** Task description and acceptance criteria from master
-**Output:** `$STEP_1_OUTPUT` — task complete with summary. Final output — no next step (repeat for next queued task).
+**Output:** `$STEP_N_OUTPUT` — task complete with summary. Mark task complete. Dispatch next queued task if any.
 
----
-
-#### Default: In-Process (Agent tool)
+**First task → spawn and record:**
 
 ```json
 {
@@ -81,49 +93,60 @@ Master maintains a task queue. Tasks are dispatched one at a time. Repeat step 1
   "input": {
     "subagent_type": "arcwright-quick-flow-solo-dev",
     "prompt": "Execute this task autonomously and completely. Write a quick spec, implement, and self-validate before finishing.\n\n## Inputs\nTask: {task_description}\nAcceptance criteria: {criteria}\n\n## Output\nTask complete. List all files changed and summarize what was done.",
-    "model": "sonnet"
+    "model": "sonnet",
+    "permissionMode": "acceptEdits"
   }
 }
 ```
 
-Capture result into `$STEP_1_OUTPUT`. Mark task complete. Dispatch next queued task if any. Final output — no next step.
+Capture the returned `agentId`, write the registry row, then capture the result into `$STEP_1_OUTPUT`. Verify file changes (`git diff --stat`) before marking complete.
+
+**Each subsequent queued task → reuse the registered agent:**
+
+```json
+{
+  "name": "SendMessage",
+  "input": {
+    "to": "agent_abc123",
+    "prompt": "Next queued task for the same Ghost run.\n\n## Inputs\nPrior tasks completed: {$STEP_1_OUTPUT, $STEP_2_OUTPUT, ...} (or file paths)\nNew task: {next_task_description}\nAcceptance criteria: {criteria}\n\n## Output\nTask complete. List all files changed and summarize what was done. Reference prior tasks for context, do not re-derive."
+  }
+}
+```
+
+Capture result into `$STEP_N_OUTPUT`. Verify file changes. Mark task complete. Dispatch next queued task.
+
+**Notes for the reuse pattern:**
+
+- The receiving agent already knows the codebase and the user's coding conventions. Do not re-feed them — reference the new task only.
+- Update the registry's `Last Task` column after each `SendMessage`.
+- If the agent returns an error summary, retry once with the same prompt; on second failure escalate to the user. See `claude-subagent-protocol` §10.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in visibility only)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+For opt-in pane visibility, see the [`tmux`](../tmux/SKILL.md) skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process Agent tool + SendMessage flow inside it is still governed by the `claude-subagent-protocol` skill. Note: pane snippets may still reference `AGENT_SIGNAL::TASK_DONE` for tmux-internal signaling — this is opt-in only and does **not** apply in the default in-process flow.
 
 ```bash
-tmux send-keys -t {solo_dev_pane_id} "TASK-{id}: {task_description}. Acceptance criteria: {criteria}. Signal TASK_DONE when complete." Enter
+# 1. Split Solo Dev pane (right)
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Solo Dev (Ghost) agent managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/quick-flow-solo-dev.md. Your task queue comes from the master pane. Execute tasks autonomously and completely. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+sleep 8
+
+# 2. Equalize pane sizes
+tmux select-layout tiled
+sleep 6
 ```
 
-Completion signal: `AGENT_SIGNAL::TASK_DONE::solo-dev::{task_id}::{status}::{summary}`
+## Team Wind-down
 
----
+Ghost has no pane to close in the default in-process flow. To wind down:
 
-## Communication Protocol
+1. **Stop dispatching** tasks to the `solo-dev` row in the registry. The agent goes idle and is no longer messaged.
+2. **Inspect live agents** with `claude agents` (or `claude agents --json`) to see what is still running.
+3. **Close the registry** by renaming the file to `agent-registry.closed.md` (or deleting) at session end. Live agents end with the session.
+4. **User picks up later?** No action needed — the user can `SendMessage` to the same `agentId` in the same session and Ghost resumes with full prior context.
 
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
-
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: solo-dev
-  name: "Ghost"
-  spawned_at: {ISO8601}
-  panes:
-    solo-dev: {pane_id}
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane ID from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill the pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+There is no `kill-pane` / `tmux send-keys "/exit"` analogue in-process. See `claude-subagent-protocol` §12 for the full wind-down model.
 
 ## Kiro Pipeline
 

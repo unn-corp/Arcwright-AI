@@ -1,6 +1,7 @@
 ---
 name: "team-tdd"
-description: "The Forge — TDD pod where QA writes failing tests first, Dev implements to green, QA verifies"
+description: "The Forge — in-process TDD pod. QA writes failing tests first, Dev implements to green, QA verifies (reuses the existing QA agent via SendMessage for re-verification). tmux is opt-in visibility only."
+allowed-tools: Read, Grep, Glob, Write, Edit, Agent, SendMessage, Bash
 ---
 
 # Agent Team: TDD Pod — The Forge
@@ -19,46 +20,72 @@ description: "The Forge — TDD pod where QA writes failing tests first, Dev imp
 
 ## Team Composition
 
-| Role | Agent | Skills |
-|------|-------|--------|
-| QA | `arcwright-qa` | Test authoring (failing tests first), playwright-cli, verification |
-| Dev | `arcwright-dev` | Implementation to make tests pass |
+| Role | Agent | Default Model |
+|------|-------|---------------|
+| QA | `arcwright-qa` | sonnet |
+| Dev | `arcwright-dev` | sonnet |
+
+## Model Strategy (sonnet-first + permission gate)
+
+Default model for every spawn in this team is `sonnet`. Use `opus` only when the user
+explicitly approves an upgrade; otherwise stay on `sonnet`. The skill asks the user
+before any opus spawn or effort upgrade. See
+[`claude-subagent-protocol` §6.3](.agents/skills/claude-subagent-protocol/SKILL.md#63-permission-before-opus--permission-before-effort-upgrade-mandatory)
+for the full rule and the question format.
+
+## Agent Registry
+
+When this team is spawned, master creates the Session Agent Registry at:
+
+```
+_arcwright-output/sessions/<session-id>/agent-registry.md
+```
+
+| Role | Agent ID | Spawned | Last Task | Notes |
+|------|----------|---------|-----------|-------|
+| qa | `<assigned on first spawn>` | `<ISO>` | write failing tests | reused on step 3 verification and step 4 fix loop |
+| dev | `<assigned on first spawn>` | `<ISO>` | implement to green | reused on step 2 ↔ step 4 fix loop |
+
+Registry path, format, and lifecycle follow
+[`claude-subagent-protocol` §3](.agents/skills/claude-subagent-protocol/SKILL.md#3-session-agent-registry-the-structural-change).
+Roles `qa` and `dev` are the only ones this team uses. `claude agents --json` is the
+observability tool; the registry file is the source of truth for SendMessage dispatch.
 
 ## Purpose
 
 The Forge enforces true test-driven development. QA writes failing tests from acceptance criteria before a single line of implementation exists. Dev implements only to make those tests pass. QA then verifies all tests are green. The discipline of writing tests first drives better acceptance criteria, clearer interfaces, and fewer edge case regressions. Use this team when correctness is critical and you want the test suite to act as a living spec.
 
-## Layout (tmux)
+## Spawn-once + Reuse
 
+This is the canonical pattern for this team. Each role is **spawned on first use** and
+its `agentId` recorded in the Session Agent Registry. Subsequent steps for the same
+role use `SendMessage` to that existing agent — never re-spawn. See
+[`claude-subagent-protocol` §4.2](.agents/skills/claude-subagent-protocol/SKILL.md#42-reuse-sendmessage--replaces-re-spawn-for-known-roles)
+for the full Reuse (SendMessage) pattern.
+
+**First use → Agent tool + write registry row. Later use → SendMessage to the row's `agentId`.**
+
+### Reuse example (QA re-engagement)
+
+The QA agent in this team is the most-reused role — it authors the tests (step 1),
+verifies the implementation (step 3), and re-verifies after a fix (step 3'). For
+**step 3' (re-verification), re-engage the existing QA agent with the new test
+target via SendMessage** — the QA already wrote the tests, knows the spec, and
+knows which assertions the dev cycle is trying to satisfy:
+
+```json
+{
+  "name": "SendMessage",
+  "input": {
+    "to": "<qa.agentId from registry>",
+    "prompt": "Re-engage the existing QA agent with the new test target.\n\n## Inputs\nNew code under test: the fix from step 4 (see $STEP_4_OUTPUT). Re-run the same test files you authored in step 1. Prior run was a fail (see $STEP_3_OUTPUT). We need a re-verify against the same surface, not a re-spawn.\n\n## Output\nPass or fail. If pass: 'All N tests green.' If fail: list each failing test with the failure message."
+  }
+}
 ```
-┌─────────┬───────────┐
-│         │    QA     │
-│ Master  ├───────────┤
-│ (left)  │    Dev    │
-└─────────┴───────────┘
-```
 
-## Spawn Sequence
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
-
-```bash
-# 1. Split QA pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent in the TDD Pod (The Forge) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. In this team you write FAILING tests first from acceptance criteria — do NOT implement. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 2. Split Dev pane (bottom-right, below QA)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in the TDD Pod (The Forge) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. In this team you implement ONLY to make QA-authored tests pass — do not add extra functionality. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::dev::{task_id}::{status}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 3. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
-```
+The receiving QA agent retains all prior context — it already wrote the tests, knows
+the spec, and knows which acceptance criteria drove each assertion. Do not re-feed
+prior context into the prompt; reference it via `## Inputs` only.
 
 ## Agent Activation
 
@@ -77,9 +104,8 @@ sleep 6
 **Inputs:** Spec and acceptance criteria from master
 **Output:** `$STEP_1_OUTPUT` — test file paths (tests are failing at this point)
 
----
-
-#### Default: In-Process (Agent tool)
+**First QA use:** spawn via Agent tool. Capture the returned `agentId` into the
+registry `qa` row. The same QA is reused on step 3 verification and step 3' re-verify.
 
 ```json
 {
@@ -94,17 +120,7 @@ sleep 6
 
 Capture result into `$STEP_1_OUTPUT`. Pass test file paths to step 2.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {qa_pane_id} "TASK-{id}: Write FAILING tests for: {spec}. Acceptance criteria: {criteria}. Signal TASK_DONE::tests-written with test file paths." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::tests-written::{test_file_paths}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -114,9 +130,8 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::tests-written::{test
 **Inputs:** `$STEP_1_OUTPUT` (test file paths) + spec
 **Output:** `$STEP_2_OUTPUT` — implementation complete, tests should now pass
 
----
-
-#### Default: In-Process (Agent tool)
+**First Dev use:** spawn via Agent tool. Capture the returned `agentId` into the
+registry `dev` row. The fix-pass loop in step 4 reuses this row via `SendMessage`.
 
 ```json
 {
@@ -131,17 +146,7 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::tests-written::{test
 
 Capture result into `$STEP_2_OUTPUT`. Pass to step 3.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {dev_pane_id} "TASK-{id}: Implement to make these tests pass. Test files: {$STEP_1_OUTPUT}. Spec: {spec}. Signal TASK_DONE when all tests green." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::implemented::{summary}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -151,34 +156,22 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::implemented::{summa
 **Inputs:** `$STEP_2_OUTPUT` (implementation summary) + `$STEP_1_OUTPUT` (test files)
 **Output:** `$STEP_3_OUTPUT` — pass (all tests green) or fail (list of still-failing tests)
 
----
-
-#### Default: In-Process (Agent tool)
+The QA agent already exists in the registry from step 1. **SendMessage** to its
+existing `agentId` — do not re-spawn QA.
 
 ```json
 {
-  "name": "Agent",
+  "name": "SendMessage",
   "input": {
-    "subagent_type": "arcwright-qa",
-    "prompt": "Verify all tests are now green by running the full test suite. Run the test files that were written in step 1.\n\n## Inputs\nTest files: {$STEP_1_OUTPUT}\nImplementation context: {$STEP_2_OUTPUT}\n\n## Output\nPass or fail. If pass: 'All N tests green.' If fail: list each failing test with the failure message.",
-    "model": "sonnet"
+    "to": "<qa.agentId from registry>",
+    "prompt": "Verify all tests are now green by running the full test suite. Run the test files that were written in step 1.\n\n## Inputs\nTest files: {$STEP_1_OUTPUT}\nImplementation context: {$STEP_2_OUTPUT}\n\n## Output\nPass or fail. If pass: 'All N tests green.' If fail: list each failing test with the failure message."
   }
 }
 ```
 
 Capture result into `$STEP_3_OUTPUT`. If all pass: task complete. If any fail: pass to step 4.
 
----
-
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
-
-```bash
-tmux send-keys -t {qa_pane_id} "TASK-{id}-verify: Verify all tests are now green. Run the test suite. Signal TASK_DONE::pass or TASK_DONE::fail." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::pass::All {N} tests green` or `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::fail::{failing_test_summary}`
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -188,60 +181,38 @@ Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::pass::All {N} tests 
 **Inputs:** `$STEP_3_OUTPUT` (failing test summary)
 **Output:** `$STEP_4_OUTPUT` — fix complete. Return to step 3.
 
----
-
-#### Default: In-Process (Agent tool)
+The Dev agent already exists in the registry from step 2. **SendMessage** to its
+existing `agentId` — do not re-spawn Dev.
 
 ```json
 {
-  "name": "Agent",
+  "name": "SendMessage",
   "input": {
-    "subagent_type": "arcwright-dev",
-    "prompt": "Fix the implementation to make the failing tests pass. Address each failing test specifically.\n\n## Inputs\nFailing tests: {$STEP_3_OUTPUT}\n\n## Output\nFix complete. List all files changed.",
-    "model": "sonnet"
+    "to": "<dev.agentId from registry>",
+    "prompt": "Fix the implementation to make the failing tests pass. Address each failing test specifically.\n\n## Inputs\nFailing tests: {$STEP_3_OUTPUT}\n\n## Output\nFix complete. List all files changed."
   }
 }
 ```
 
-Capture result into `$STEP_4_OUTPUT`. Return to step 3 (QA re-verifies). When all tests pass: task complete. Final output — no next step.
+Capture result into `$STEP_4_OUTPUT`. **Re-engage the existing QA agent with the
+new test target via SendMessage** — return to step 3 using the QA reuse example.
+When all tests pass: task complete. Final output — no next step.
+
+> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+## Team Wind-down
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+This team has no pane to close. Agents end when no longer messaged; the orchestrator's
+`claude agents` inspection tells the user what's still alive.
 
-```bash
-tmux send-keys -t {dev_pane_id} "TASK-{id}-fix: Tests still failing. Findings: {$STEP_3_OUTPUT}. Fix and signal TASK_DONE." Enter
-```
-
-Completion signal: `AGENT_SIGNAL::TASK_DONE::dev::{task_id}::fixed::{files_changed}`
-
----
-
-## Communication Protocol
-
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
-
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: tdd
-  name: "The Forge"
-  spawned_at: {ISO8601}
-  panes:
-    qa: {pane_id}
-    dev: {pane_id}
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane IDs from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill each pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+| Action | What happens |
+|--------|--------------|
+| Mark role "done" in the orchestrator's loop | Orchestrator stops sending tasks to that role. |
+| No more tasks for a role | The agent becomes idle. It is **not** killed — the user can pick it back up with `SendMessage` later in the session. |
+| Session ending | The orchestrator may delete the registry file or rename to `agent-registry.closed.md`. Live agents are torn down with the session. |
+| User wants to inspect live agents | `claude agents` (or `claude agents --json` for parseable output). |
 
 ## Kiro Pipeline
 

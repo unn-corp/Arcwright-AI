@@ -1,11 +1,11 @@
 ---
 name: "team-solo-qa"
-description: "The Inquisitor — single QA agent for regression runs, playwright-cli sessions, and pass/fail reports"
+description: "The Inquisitor — single QA agent in-process via the Session Agent Registry. Regression runs, playwright-cli sessions, and pass/fail reports with sonnet-first, no legacy signals. tmux opt-in visibility only."
 ---
 
 # Agent Team: Solo QA — The Inquisitor
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `QA` role is spawned once and recorded in the Session Agent Registry; subsequent runs (new test target, follow-up scope) reuse that agent via `SendMessage`. tmux split-pane variant is opt-in only (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -25,55 +25,67 @@ description: "The Inquisitor — single QA agent for regression runs, playwright
 
 ## Purpose
 
-The Inquisitor is a single QA agent for standalone test execution. No Dev, no Architect — just QA running tests and reporting results. Use this team when you want to run regression tests against existing code, validate a deployed environment, or run a targeted playwright-cli session without any implementation work attached. The Inquisitor signals master with structured pass/fail reports that can be fed into a subsequent decision or another team.
+The Inquisitor is a single QA agent for standalone test execution. No Dev, no Architect — just QA running tests and reporting results. Use this team when you want to run regression tests against existing code, validate a deployed environment, or run a targeted playwright-cli session without any implementation work attached. **The same QA agent is reused across the run queue** — the Inquisitor remembers the test target, prior run results, and the user's reporting preferences.
 
-## Layout (tmux)
+## Spawn-once + Reuse
+
+The Inquisitor is a single-role team. The first test run spawns the agent via the `Agent` tool, captures the returned `agentId`, and writes a row to the **Session Agent Registry** (path and format in `claude-subagent-protocol` §3). Every subsequent run — same test target, follow-up on a failure, additional scope in the same area — reuses that agent by `SendMessage(to: <agentId>, ...)`. The agent retains all prior context (last run results, prior failures, the user's reporting format).
+
+**Decision rule (when to spawn vs reuse):**
+
+- First run in this Inquisitor session → spawn. Record ID.
+- Follow-up run on the same target, retest after a fix, or expanded scope in the same area → **reuse** the registered agent.
+- Disjoint target (different project area, different environment) → spawn fresh; replace the registry row.
+
+Full protocol: see the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill.
+
+## Agent Registry
+
+The Inquisitor keeps a one-row registry at the canonical path:
 
 ```
-┌─────────┬───────────┐
-│         │           │
-│ Master  │    QA     │
-│ (left)  │ (Inq.)    │
-└─────────┴───────────┘
+_arcwright-output/sessions/<session-id>/agent-registry.md
 ```
 
-## Spawn Sequence
+```markdown
+# Session Agent Registry
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before running tmux commands. Default path is in-process — no pane operations needed.
+Session: <session-id>
+Updated: <ISO timestamp>
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
-
-Load `.agents/skills/tmux-protocol/SKILL.md` before running these commands.
-
-```bash
-# 1. Split QA pane (right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent (The Inquisitor) managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. Use playwright-cli for UI/API testing. Your task queue comes from the master pane. Before stopping any task output: AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 2. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
+| Role | Agent ID | Spawned | Last Task | Notes |
+|------|----------|---------|-----------|-------|
+| qa | agent_abc123 | 2026-06-10T10:00:00Z | run regression suite for feature/auth | reused — knows last test run |
 ```
 
-## Agent Activation
+On wind-down, rename the file to `agent-registry.closed.md` (or delete). Use `claude agents` to inspect the live agent set. See `claude-subagent-protocol` §3 for the full lifecycle.
 
-> **Project context**: Master passes the `## Project Context` block (from its activation scan) to each agent in their first task message. Agents receive context from master — they do not re-scan independently.
+## Model and Permission Gate (sonnet-first)
 
-- **QA**: activate `arcwright-qa`
+| Role | Default model | Promote to opus? |
+|------|---------------|------------------|
+| qa | **sonnet** | Not recommended — QA is verification only. Opus only with explicit user permission if the failure triage warrants deeper reasoning. |
+
+**Permission-before-opus (mandatory).** Before spawning this team with `model: "opus"`, the orchestrator must ask the user:
+
+```
+This task may benefit from opus (deeper failure triage). Default is sonnet.
+Switch this spawn to opus? (yes / no / always-yes-for-this-session)
+```
+
+If the user declines, spawn `sonnet`. If the user says "always-yes-for-this-session", record the preference and stop asking. **No silent escalation.** See `claude-subagent-protocol` §6 for the full rule.
 
 ## Steps
 
-Single agent, no loop. Master queues test tasks and dispatches one at a time. Repeat step 1 for each queued task.
+Single agent, no loop. Master queues test runs and dispatches one at a time. The first run spawns; every subsequent run reuses the registered agent via `SendMessage`.
 
 ### 1. Test Run
 
 **What this step does:** QA runs tests for the specified scope and produces a structured pass/fail report.
 **Inputs:** Test scope and approach from master
-**Output:** `$STEP_1_OUTPUT` — structured pass/fail report. Final output — no next step.
+**Output:** `$STEP_N_OUTPUT` — structured pass/fail report. Final output — no next step (or dispatched as next run).
 
----
-
-#### Default: In-Process (Agent tool)
+**First run → spawn and record:**
 
 ```json
 {
@@ -86,44 +98,48 @@ Single agent, no loop. Master queues test tasks and dispatches one at a time. Re
 }
 ```
 
-Capture result into `$STEP_1_OUTPUT`. Present report to user or route failures to a fix team. Final output — no next step.
+Capture the returned `agentId`, write the registry row, then capture the result into `$STEP_1_OUTPUT`. Present report to user or route failures to a fix team.
+
+**Each subsequent run → reuse the registered agent:**
+
+```json
+{
+  "name": "SendMessage",
+  "input": {
+    "to": "agent_abc123",
+    "prompt": "Next test run for the same Inquisitor session.\n\n## Inputs\nPrior run: see last task in registry or path to prior QA report\nNew scope: {test_scope}\nTest approach: {playwright-cli|spec-files|both}\n\n## Output\nStructured QA report. If rerun after a fix, reference prior failures and mark which are now resolved."
+  }
+}
+```
+
+Capture result into `$STEP_N_OUTPUT`. Update the registry's `Last Task` column.
 
 ---
 
-#### tmux Variant (when $TMUX is set and user wants visibility)
+#### tmux Variant (opt-in visibility only)
 
-Load `.agents/skills/tmux-protocol/SKILL.md` before spawning.
+For opt-in pane visibility, see the [`tmux`](../tmux/SKILL.md) skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process Agent tool + SendMessage flow inside it is still governed by the `claude-subagent-protocol` skill. Note: pane snippets may still reference `AGENT_SIGNAL::TASK_DONE` for tmux-internal signaling — this is opt-in only and does **not** apply in the default in-process flow.
 
 ```bash
-tmux send-keys -t {qa_pane_id} "TASK-{id}: {test_scope}. Test approach: {playwright-cli|spec-files|both}. Signal TASK_DONE with pass or fail and a structured report." Enter
+# 1. Split QA pane (right)
+tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent (The Inquisitor) managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. Use playwright-cli for UI/API testing. Your task queue comes from the master pane. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
+sleep 8
+
+# 2. Equalize pane sizes
+tmux select-layout tiled
+sleep 6
 ```
 
-Completion signal: `AGENT_SIGNAL::TASK_DONE::qa::{task_id}::{pass|fail}::{summary}`
+## Team Wind-down
 
----
+The Inquisitor has no pane to close in the default in-process flow. To wind down:
 
-## Communication Protocol
+1. **Stop dispatching** runs to the `qa` row in the registry. The agent goes idle and is no longer messaged.
+2. **Inspect live agents** with `claude agents` (or `claude agents --json`) to see what is still running.
+3. **Close the registry** by renaming the file to `agent-registry.closed.md` (or deleting) at session end. Live agents end with the session.
+4. **User picks up later?** No action needed — the user can `SendMessage` to the same `agentId` in the same session and the QA agent resumes with full prior context (last run results, test target).
 
-See [`tmux-protocol`](.agents/skills/tmux-protocol/SKILL.md) for the tmux signal protocol; this skill's default is in-process — Agent tool return value is the sole completion signal.
-
-## Team Registration
-
-When spawning this team, master writes to `_arcwright/_memory/master-orchestrator-sidecar/session-state.md` under `active_team`:
-```yaml
-active_team:
-  code: solo-qa
-  name: "The Inquisitor"
-  spawned_at: {ISO8601}
-  panes:
-    qa: {pane_id}
-```
-
-## Team Close Protocol
-
-When master needs to close this team:
-1. Read pane ID from `active_team` in `_arcwright/_memory/master-orchestrator-sidecar/session-state.md`
-2. Kill the pane directly: `tmux kill-pane -t {pane_id}` (DO NOT send `/exit`)
-3. Clear `active_team` from session-state.md
+There is no `kill-pane` / `tmux send-keys "/exit"` analogue in-process. See `claude-subagent-protocol` §12 for the full wind-down model.
 
 ## Kiro Pipeline
 
