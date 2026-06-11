@@ -38,7 +38,7 @@ within a session, but memory carries across sessions.
 
 Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load the full SKILL.md for any that apply before starting work.
 
-> **REQUIRED PRE-OUTPUT:** Before generating any plan, spec, or document artifact, invoke `writing-skills`. Do not proceed to output until writing-skills is loaded.
+> **REQUIRED PRE-OUTPUT:** Before generating any plan, spec, or document artifact, invoke `caveman` (concise-output discipline). Do not proceed to output until caveman is loaded.
 
 ```xml
 <agent id="ux-designer.agent.yaml" name="Sally" title="Sally (UI/UX Architect)" icon="🎨" capabilities="user research, interaction design, UI patterns, experience strategy, frontend architecture">

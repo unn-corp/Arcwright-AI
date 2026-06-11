@@ -35,7 +35,7 @@ const PKG_SRC      = path.join(PKG_DIR, 'src');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GENERIC_MODULES = ['awb', 'awm', 'core', '_memory'];
+const GENERIC_MODULES = ['awb', 'awm', 'core', '_memory', 'aws-infra', 'unnamed-pm'];
 
 /** File path segments that trigger an unconditional skip. */
 const EXCLUDE_ALWAYS = [
@@ -81,6 +81,8 @@ const SHIPPED_COMMANDS = [
   /^diagram\.md$/,
   /^triage\.md$/,
   /^docker-check\.md$/,
+  /^aws-infra\.md$/,
+  /^unnamed-pm\.md$/,
   /^react\.md$/,
   /^typescript\.md$/,
   /^nextjs\.md$/,
@@ -97,6 +99,9 @@ const SHIPPED_COMMANDS = [
   /^secure\.md$/,
   /^debug\.md$/,
   /^clean-code\.md$/,
+  /^caveman\.md$/,
+  /^constitution\.md$/,
+  /^correct-course\.md$/,
 ];
 
 
@@ -568,6 +573,8 @@ function bundleKiroAgents() {
     'diagram':            ['fs_read', 'fs_write', 'grep', 'glob'],
     'triage':             ['fs_read', 'grep', 'glob', 'code'],
     'docker-check':       ['fs_read', 'execute_bash', 'grep'],
+    'aws-infra':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_fetch'],
+    'unnamed-pm':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'tmux':               ['fs_read', 'fs_write', 'execute_bash'],
     'gsudo':              ['execute_bash'],
     // Coding / best-practice skill commands
@@ -586,6 +593,9 @@ function bundleKiroAgents() {
     'secure':             ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'debug':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'clean-code':         ['fs_read', 'fs_write', 'grep', 'glob', 'code'],
+    'caveman':            ['fs_read', 'fs_write', 'grep', 'glob'],
+    'constitution':       ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
+    'correct-course':     ['fs_read', 'fs_write', 'grep', 'glob', 'code'],
   };
 
   function resolveTools(name) {
@@ -602,6 +612,7 @@ function bundleKiroAgents() {
     'arcwright-analyst', 'arcwright-architect', 'arcwright-dev', 'arcwright-pm',
     'arcwright-qa', 'arcwright-quick-flow-solo-dev', 'arcwright-review-orchestrator',
     'arcwright-sm', 'arcwright-tech-writer', 'arcwright-ux-designer',
+    'arcwright-aws-infra', 'arcwright-unnamed-pm', 'arcwright-verifier',
   ];
 
   /** Kiro CLI addendum appended to team/team-style agent prompts. */
@@ -705,17 +716,26 @@ See the \`tmux\` skill for full pane-visibility mechanics (opt-in section).
     generated++;
   }
 
-  // ── Generate specialist agent stubs from _arcwright/awm/agents/ ───────────
-  const awmAgentsDir = path.join(ARCWRIGHT_SRC, 'awm', 'agents');
+  // ── Generate specialist agent stubs from module agent dirs ────────────────
+  // awm/agents/ always; aws-infra/agents/ and unnamed-pm/agents/ are optional
+  // modules (gated at install time) but their stubs are always built into the
+  // package — the installer decides whether to copy them.
+  const specialistAgentDirs = [
+    path.join(ARCWRIGHT_SRC, 'awm', 'agents'),
+    path.join(ARCWRIGHT_SRC, 'aws-infra', 'agents'),
+    path.join(ARCWRIGHT_SRC, 'unnamed-pm', 'agents'),
+  ].filter(d => fs.existsSync(d));
   let specialists = 0;
-  if (fs.existsSync(awmAgentsDir)) {
+  if (specialistAgentDirs.length) {
     const agentFiles = [];
-    (function collectMd(dir) {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (entry.isDirectory()) collectMd(path.join(dir, entry.name));
-        else if (entry.name.endsWith('.md')) agentFiles.push(path.join(dir, entry.name));
-      }
-    })(awmAgentsDir);
+    for (const d of specialistAgentDirs) {
+      (function collectMd(dir) {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          if (entry.isDirectory()) collectMd(path.join(dir, entry.name));
+          else if (entry.name.endsWith('.md')) agentFiles.push(path.join(dir, entry.name));
+        }
+      })(d);
+    }
 
     /**
      * Map an array of Claude Code tool names to Kiro CLI tool identifiers.

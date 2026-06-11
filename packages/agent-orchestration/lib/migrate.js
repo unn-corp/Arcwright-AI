@@ -55,7 +55,9 @@ const DIR_RENAMES = [
 function shouldDeleteCommand(filename) {
   // Non-bmad files that are still obsolete
   if (/^orchestration-master\./.test(filename)) return true;
-  // All bmad-* except track commands (those get renamed)
+  // Deprecated tracks: medium/extended/large were retired — delete, do not rename
+  if (/^bmad-track-(medium|extended|large)\.md$/.test(filename)) return true;
+  // All bmad-* except surviving track commands (those get renamed)
   if (!/^bmad-/.test(filename)) return false;
   if (/^bmad-track-/.test(filename)) return false; // renamed, not deleted
   return true;
@@ -80,12 +82,10 @@ const COMMANDS_TO_DELETE = [
 /** .claude/commands/ files to RENAME (track commands) */
 const COMMANDS_TO_RENAME = [
   { from: 'bmad-track-compact.md',  to: 'arcwright-track-compact.md' },
-  { from: 'bmad-track-extended.md', to: 'arcwright-track-extended.md' },
-  { from: 'bmad-track-large.md',    to: 'arcwright-track-large.md' },
-  { from: 'bmad-track-medium.md',   to: 'arcwright-track-medium.md' },
   { from: 'bmad-track-nano.md',     to: 'arcwright-track-nano.md' },
   { from: 'bmad-track-rv.md',       to: 'arcwright-track-rv.md' },
   { from: 'bmad-track-small.md',    to: 'arcwright-track-small.md' },
+  // medium/extended/large deliberately omitted — deprecated, deleted by shouldDeleteCommand()
 ];
 
 /** Content replacements applied to text files inside _arcwright/ and _arcwright-output/ */

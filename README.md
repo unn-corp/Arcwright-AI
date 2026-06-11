@@ -182,6 +182,9 @@ WSL2 dual-home aware — terminal tools (Claude Code, Gemini) use the Linux home
 | `--no-teams` | teams included | Skip the 17 team-* skills and `/team` command |
 | `--docker-check` | not installed | Opt in to `/docker-check` and the `docker-type-check` skill |
 | `--gitignore <mode>` | prompted | One of: `full`, `skills`, `output-only`, `none` (see gitignore section below) |
+| `--channel <stable\|next>` | `stable` | Release channel to track. Recorded in the manifest; `next` opts into pre-release builds when available. |
+
+**TOML customization (3-layer overrides):** on install, `_arcwright/custom/` is scaffolded with a commented `example.toml`. Drop `<name>.toml` (team) and `<name>.user.toml` (personal) there to override shipped defaults. Resolution order **base < team < user**: scalars override; arrays with a `<key>__append = true` sibling accumulate; keyed arrays (`id`/`name`) match-and-patch. No files present = unchanged behavior. Gitignore your `*.user.toml`.
 
 The installer also writes `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` into `.claude/settings.json` — this flag is **load-bearing for `SendMessage` reuse** and the in-process kept-alive model described in `claude-subagent-protocol`. Don't remove it.
 

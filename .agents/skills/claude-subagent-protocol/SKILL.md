@@ -601,6 +601,34 @@ content. Apply the wrapping pattern proactively at that point.
   you must run multiple orchestrators on one session, namespace the registry
   (`agent-registry-<pid>.md`).
 
+### Wave Planning (conflict-free parallel grouping)
+
+Group parallel tasks into conflict-free waves before spawning. A wave is a set of Agent calls where no two agents own overlapping output paths or read a file another writes.
+
+1. List all parallel tasks with their file ownership (read paths + write paths).
+2. Two tasks conflict if they share a write path, or one reads what the other writes.
+3. Conflicting tasks go in separate sequential waves; independent tasks share a wave.
+4. Document ownership in the planning step, e.g.:
+   ```
+   Wave 1 (parallel): R1→research/r1.md | R2→research/r2.md | R3→research/r3.md
+   Wave 2 (seq on W1): Architect reads research/* → planning/architecture.md
+   Wave 3 (seq on W2): Dev reads planning/architecture.md → src/...
+   ```
+
+---
+
+## 8a. Context-Health Check
+
+Before spawning each **sequential** subagent (§5.1), the orchestrator estimates its own context utilization (rough token count of the current conversation).
+
+| Utilization | Action |
+|-------------|--------|
+| < 60% | Proceed normally. |
+| ~60% | Warn in output: "Context ~60% — consider summarizing before next wave." |
+| ~70% | Force a fresh in-process agent with a structured handoff (§7) instead of continuing. Write the handoff to `_arcwright-output/features/{slug}/planning/handoff-context.md` and start a fresh orchestrator pointing at it. |
+
+Thresholds assume a ~200K window (~120K / ~140K used); scale proportionally. Does NOT apply to parallel fan-out (§5.2) — those agents always start fresh.
+
 ---
 
 ## 9. Trust-but-Verify
