@@ -929,7 +929,38 @@ function bundleTmuxSetup() {
   console.log('');
 }
 
-// ─── Step 5: verifyNoLeaks ────────────────────────────────────────────────────
+// ─── Step 5: bundleLauncherTemplates ─────────────────────────────────────────
+
+function bundleLauncherTemplates() {
+  console.log('🔀  Bundling model-launcher templates → src/launchers/');
+
+  const templatesSrc = path.join(PKG_DIR, 'lib', 'templates', 'launchers');
+  const destDir = path.join(PKG_SRC, 'launchers');
+
+  if (!fs.existsSync(templatesSrc)) {
+    console.log('  ⚠  lib/templates/launchers/ not found — skipping');
+    return;
+  }
+
+  const files = walk(templatesSrc, templatesSrc);
+  let copied = 0;
+  for (const { full, rel } of files) {
+    if (isExcluded(rel)) continue;
+    const dest = path.join(destDir, rel);
+    const content = readText(full);
+    if (content !== null) {
+      writeFile(dest, content);
+    } else {
+      copyFile(full, dest);
+    }
+    copied++;
+  }
+
+  console.log(`  ✓  lib/templates/launchers/  (${copied} files)  → src/launchers/`);
+  console.log('');
+}
+
+// ─── Step 6: verifyNoLeaks ────────────────────────────────────────────────────
 
 function verifyNoLeaks() {
   console.log('🔍  Verifying no Squidhub content leaks in src/...');
@@ -982,6 +1013,7 @@ bundleKiroAgents();
 bundleTrackCommands();
 bundleSpecialistCommands();
 bundleTmuxSetup();
+bundleLauncherTemplates();
 verifyNoLeaks();
 
 console.log('✅  Build complete!');

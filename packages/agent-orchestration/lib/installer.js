@@ -18,6 +18,232 @@ const SRC_DIR = path.join(__dirname, '..', 'src');
 const { setupTmux } = require('./tmuxInstaller');
 const { detectPlatform } = require('./platform');
 
+// ─── WSL audio setup (Claude Code /voice) ────────────────────────────────────
+
+/**
+ * On WSL2 + WSLg, Claude Code's /voice mode needs PULSE_SERVER to point at the
+ * WSLg PulseAudio socket. Append an idempotent managed block to ~/.bashrc.
+ * Safe to call repeatedly: re-running replaces the managed block in place.
+ *
+ * Returns 'added' | 'updated' | 'noop' | 'skipped' (reason in second value).
+ */
+async function setupWslAudio(platform, chalk) {
+  if (platform !== 'windows-wsl') return ['skipped', 'not WSL'];
+  const socket = '/mnt/wslg/PulseServer';
+  if (!await fs.pathExists(socket)) return ['skipped', 'no WSLg socket (older WSL or audio disabled)'];
+
+  const bashrc = path.join(os.homedir(), '.bashrc');
+  const START = '# ─── Arcwright WSL audio (Claude Code /voice) ───';
+  const END   = '# ─── End Arcwright WSL audio ───';
+  const block = [
+    START,
+    '# Auto-added by @arcwright-ai/agent-orchestration. Routes PulseAudio to the',
+    '# WSLg socket so Claude Code /voice can access the Windows microphone.',
+    'export PULSE_SERVER=unix:/mnt/wslg/PulseServer',
+    END,
+    '',
+  ].join('\n');
+
+  let existing = '';
+  if (await fs.pathExists(bashrc)) existing = await fs.readFile(bashrc, 'utf8');
+
+  const startIdx = existing.indexOf(START);
+  const endIdx   = existing.indexOf(END);
+
+  let next;
+  let result;
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    const before = existing.slice(0, startIdx);
+    const after  = existing.slice(endIdx + END.length).replace(/^\n/, '');
+    const replaced = before + block + after;
+    if (replaced === existing) return ['noop', 'already configured'];
+    next = replaced;
+    result = 'updated';
+  } else {
+    next = existing + (existing.endsWith('\n') || existing === '' ? '' : '\n') + '\n' + block;
+    result = 'added';
+  }
+
+  await fs.writeFile(bashrc, next);
+  if (chalk) {
+    const verb = result === 'added' ? 'Added' : 'Updated';
+    console.log(chalk.green(`  ✓ ${verb} WSL audio config in ~/.bashrc (PULSE_SERVER → ${socket})`));
+    console.log(chalk.dim('    Open a new shell or `source ~/.bashrc` to apply.'));
+  }
+  return [result, null];
+}
+
+// ─── OpenRouter launchers setup ──────────────────────────────────────────────
+
+const TEMPLATES_DIR = path.join(__dirname, 'templates', 'launchers');
+
+// Per-provider key files installed under ~/.config/<provider>/key.
+// GLM and MiniMax use their OWN native Anthropic endpoints (OpenRouter's
+// Anthropic shim breaks reasoning models in Claude Code's agentic loop).
+// OpenRouter is kept only for non-reasoning models (e.g. qwen3-coder).
+const LAUNCHER_PROVIDERS = [
+  { dir: 'zai',        placeholder: 'REPLACE-WITH-YOUR-ZAI-KEY',        label: 'Z.ai GLM Coding Plan (https://z.ai)' },
+  { dir: 'minimax',    placeholder: 'REPLACE-WITH-YOUR-MINIMAX-KEY',    label: 'MiniMax (https://platform.minimax.io)' },
+  { dir: 'openrouter', placeholder: 'sk-or-REPLACE-WITH-YOUR-OPENROUTER-KEY', label: 'OpenRouter (https://openrouter.ai/keys)' },
+];
+
+/**
+ * Install provider-aware Claude Code model launchers.
+ *
+ * Linux/macOS:
+ *   - Creates ~/.config/{zai,minimax,openrouter}/ + placeholder key files
+ *     (chmod 600, only if absent)
+ *   - Copies the multi-provider launcher to ~/.config/openrouter/claude-or.sh
+ *     (the script self-references this path)
+ *   - Idempotently sources it from ~/.bashrc (and ~/.zshrc if present)
+ *
+ * WSL2 additions:
+ *   - Writes claude-glm.cmd / claude-minimax.cmd / claude-qwen.cmd /
+ *     claude-sub.cmd to the Windows user's home (or bin/ subdir if it exists)
+ *   - Idempotently appends PowerShell profile functions to PS7 + PS5 profiles
+ *   - Writes Windows Terminal fragment JSON (4 profiles) to
+ *     %LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\arcwright-openrouter\
+ *
+ * All writes are idempotent (guarded by sentinel markers or existence checks).
+ */
+async function setupOpenRouterLaunchers(platform, homes, chalk) {
+  const linuxHome = homes.linux;
+  const scriptDest = path.join(linuxHome, '.config', 'openrouter', 'claude-or.sh');
+  const scriptSrc  = path.join(TEMPLATES_DIR, 'claude-or.sh');
+
+  if (!await fs.pathExists(scriptSrc)) {
+    if (chalk) console.log(chalk.yellow('  ⚠ Launcher template not found in package — skipping'));
+    return;
+  }
+
+  // ── Per-provider key files (chmod 600, only if absent) ───────────────────
+  for (const { dir, placeholder, label } of LAUNCHER_PROVIDERS) {
+    const providerDir = path.join(linuxHome, '.config', dir);
+    const keyFile = path.join(providerDir, 'key');
+    await fs.ensureDir(providerDir);
+    if (!await fs.pathExists(keyFile)) {
+      await fs.writeFile(keyFile, placeholder + '\n', 'utf8');
+      try { fs.chmodSync(keyFile, 0o600); } catch { /* non-POSIX (Windows FS) — ignore */ }
+      if (chalk) console.log(chalk.green(`  ✓ Created ~/.config/${dir}/key`) + chalk.dim(` (placeholder — ${label})`));
+    } else {
+      if (chalk) console.log(chalk.dim(`  · ~/.config/${dir}/key already exists — not overwritten`));
+    }
+  }
+
+  // ── Copy launcher script ──────────────────────────────────────────────────
+  await fs.copy(scriptSrc, scriptDest, { overwrite: true });
+  if (chalk) console.log(chalk.green(`  ✓ Installed ~/.config/openrouter/claude-or.sh (multi-provider)`));
+
+  // ── Source block for shell rc files ──────────────────────────────────────
+  const SOURCE_START = '# ─── Arcwright model launchers ───';
+  const SOURCE_END   = '# ─── End Arcwright model launchers ───';
+  // Legacy marker from the OpenRouter-only release — treated as "already present".
+  const LEGACY_START = '# ─── Arcwright OpenRouter launchers ───';
+  const sourceBlock  = [
+    SOURCE_START,
+    '[ -f "$HOME/.config/openrouter/claude-or.sh" ] && source "$HOME/.config/openrouter/claude-or.sh"',
+    SOURCE_END,
+    '',
+  ].join('\n');
+
+  for (const rcName of ['.bashrc', '.zshrc']) {
+    const rcPath = path.join(linuxHome, rcName);
+    if (rcName === '.zshrc' && !await fs.pathExists(rcPath)) continue; // zshrc only if present
+    let rc = '';
+    if (await fs.pathExists(rcPath)) rc = await fs.readFile(rcPath, 'utf8');
+    if (rc.includes(SOURCE_START) || rc.includes(LEGACY_START)) {
+      if (chalk) console.log(chalk.dim(`  · ~/${rcName} already sources the launchers — not modified`));
+      continue;
+    }
+    const separator = rc.endsWith('\n') || rc === '' ? '' : '\n';
+    await fs.writeFile(rcPath, rc + separator + '\n' + sourceBlock, 'utf8');
+    if (chalk) console.log(chalk.green(`  ✓ Added launcher source block to ~/${rcName}`));
+  }
+
+  // ── WSL2 Windows-side additions ───────────────────────────────────────────
+  if (platform !== 'windows-wsl' || !homes.windows) return;
+
+  const winHome = homes.windows;
+
+  // Detect the current WSL distro name (set inside WSL); fall back to "Ubuntu".
+  // Used in the generated .cmd files, PowerShell functions, and WT fragment so
+  // they invoke the user's actual distro instead of a hardcoded guess.
+  const distro = (process.env.WSL_DISTRO_NAME || '').trim() || 'Ubuntu';
+  const editNote = `:: Edit the distro name below if you switch WSL distros.`;
+
+  // .cmd launchers → Windows home (or a bin/ subdir if it exists)
+  const cmdTargetDir = await fs.pathExists(path.join(winHome, 'bin'))
+    ? path.join(winHome, 'bin')
+    : winHome;
+
+  const mkCmd = (tmuxFn) =>
+    `@echo off\n${editNote}\nwsl.exe -d ${distro} -- bash -ic "${tmuxFn}"\n`;
+  const cmds = [
+    { name: 'claude-glm.cmd',     body: mkCmd('tmux-claude-glm') },
+    { name: 'claude-minimax.cmd', body: mkCmd('tmux-claude-minimax') },
+    { name: 'claude-qwen.cmd',    body: mkCmd('tmux-claude-qwen') },
+    { name: 'claude-sub.cmd',     body: mkCmd('tmux-claude') },
+  ];
+  for (const { name, body } of cmds) {
+    const dest = path.join(cmdTargetDir, name);
+    if (!await fs.pathExists(dest)) {
+      await fs.writeFile(dest, body, 'utf8');
+      if (chalk) console.log(chalk.green(`  ✓ Created ${dest.replace(winHome, '~win')} (distro: ${distro})`));
+    } else {
+      if (chalk) console.log(chalk.dim(`  · ${name} already exists — not overwritten`));
+    }
+  }
+
+  // PowerShell profile functions
+  const PS_START = '# ─── Arcwright model launchers ───';
+  const PS_LEGACY = '# ─── Arcwright OpenRouter launchers ───';
+  const PS_END   = '# ─── End Arcwright model launchers ───';
+  const psBlock  = [
+    PS_START,
+    `# Edit "-d ${distro}" below if you switch WSL distros.`,
+    `function claude-glm     { wsl.exe -d ${distro} -- bash -ic "tmux-claude-glm" }`,
+    `function claude-minimax { wsl.exe -d ${distro} -- bash -ic "tmux-claude-minimax" }`,
+    `function claude-qwen    { wsl.exe -d ${distro} -- bash -ic "tmux-claude-qwen" }`,
+    `function claude-sub     { wsl.exe -d ${distro} -- bash -ic "tmux-claude" }`,
+    PS_END,
+    '',
+  ].join('\n');
+
+  // Detect Windows Documents folder; fall back to ~/Documents
+  let winDocs = path.join(winHome, 'Documents');
+  const psProfiles = [
+    path.join(winDocs, 'PowerShell', 'profile.ps1'),
+    path.join(winDocs, 'WindowsPowerShell', 'profile.ps1'),
+  ];
+  for (const profilePath of psProfiles) {
+    await fs.ensureDir(path.dirname(profilePath));
+    let existing = '';
+    if (await fs.pathExists(profilePath)) existing = await fs.readFile(profilePath, 'utf8');
+    if (existing.includes(PS_START) || existing.includes(PS_LEGACY)) {
+      if (chalk) console.log(chalk.dim(`  · ${path.basename(path.dirname(profilePath))}/profile.ps1 already has launcher functions — not modified`));
+      continue;
+    }
+    const sep = existing.endsWith('\n') || existing === '' ? '' : '\n';
+    await fs.writeFile(profilePath, existing + sep + '\n' + psBlock, 'utf8');
+    if (chalk) console.log(chalk.green(`  ✓ Added claude-glm/minimax/qwen/sub to ${path.basename(path.dirname(profilePath))}/profile.ps1 (distro: ${distro})`));
+  }
+
+  // Windows Terminal fragment — substitute the detected distro for the template's "Ubuntu"
+  const wtFragDir  = path.join(winHome, 'AppData', 'Local', 'Microsoft', 'Windows Terminal', 'Fragments', 'arcwright-openrouter');
+  const wtFragDest = path.join(wtFragDir, 'launchers.json');
+  const wtFragSrc  = path.join(TEMPLATES_DIR, 'windows-terminal-fragment.json');
+  if (!await fs.pathExists(wtFragDest) && await fs.pathExists(wtFragSrc)) {
+    await fs.ensureDir(wtFragDir);
+    let frag = await fs.readFile(wtFragSrc, 'utf8');
+    if (distro !== 'Ubuntu') frag = frag.replace(/-d Ubuntu/g, `-d ${distro}`);
+    await fs.writeFile(wtFragDest, frag, 'utf8');
+    if (chalk) console.log(chalk.green(`  ✓ Added Windows Terminal profiles fragment (4 profiles, distro: ${distro})`));
+    if (chalk) console.log(chalk.dim(`    (edit launchers.json if you switch WSL distros)`));
+  } else if (await fs.pathExists(wtFragDest)) {
+    if (chalk) console.log(chalk.dim(`  · Windows Terminal fragment already exists — not overwritten`));
+  }
+}
+
 // ─── bmad detection ───────────────────────────────────────────────────────────
 
 /**
@@ -325,10 +551,16 @@ async function install(opts) {
     gitignore = null,  // null | 'full' | 'skills' | 'output-only' | 'none'
     tmux = null,   // null = interactive prompt, true/false = explicit
     migrateBmad = null,  // null = prompt if bmad detected; true/false = explicit
+    openrouterLaunchers = null, // legacy alias for modelLaunchers
+    modelLaunchers = null, // null = interactive prompt, true/false = explicit
   } = opts;
   let resolvedGitignore = gitignore;
   let resolvedTmux = typeof tmux === 'boolean' ? tmux : null;
   let resolvedMigrateBmad = typeof migrateBmad === 'boolean' ? migrateBmad : null;
+  // --model-launchers is the primary flag; --openrouter-launchers is a kept alias.
+  const launchersFlag = typeof modelLaunchers === 'boolean' ? modelLaunchers
+    : (typeof openrouterLaunchers === 'boolean' ? openrouterLaunchers : null);
+  let resolvedOpenrouterLaunchers = launchersFlag;
 
   let isGlobal = opts.global || false;
 
@@ -513,6 +745,16 @@ async function install(opts) {
       resolvedTmux = tmuxChoice;
     }
 
+    // OpenRouter launchers opt-in — off by default
+    if (resolvedTools.includes('claude-code') && resolvedOpenrouterLaunchers === null) {
+      const orChoice = await confirm({
+        message: 'Install alternate-model launchers? (claude-glm, claude-minimax, claude-qwen, claude-sub — route Claude Code through Z.ai / MiniMax / OpenRouter)',
+        initialValue: false,
+      });
+      if (isCancel(orChoice)) { process.exit(0); }
+      resolvedOpenrouterLaunchers = orChoice;
+    }
+
     // Gitignore mode — only for project installs (global installs don't touch .gitignore)
     if (!isGlobal && resolvedGitignore === null) {
       const gitignoreChoice = await select({
@@ -535,6 +777,11 @@ async function install(opts) {
   // Finalize resolvedTmux — default to true when claude-code is selected (both project + global)
   if (resolvedTmux === null) {
     resolvedTmux = resolvedTools.includes('claude-code');
+  }
+
+  // Finalize resolvedOpenrouterLaunchers — default to false (opt-in only)
+  if (resolvedOpenrouterLaunchers === null) {
+    resolvedOpenrouterLaunchers = false;
   }
 
   const selectedModules = modules.split(',').map(m => m.trim()).filter(Boolean);
@@ -708,6 +955,17 @@ async function install(opts) {
     await setupTmux(projectRoot, chalk, platform);
   }
 
+  // ── WSL audio (Claude Code /voice — WSL2 + WSLg only, idempotent) ─────────
+  if (resolvedTools.includes('claude-code')) {
+    await setupWslAudio(platform, chalk);
+  }
+
+  // ── Model launchers (opt-in; claude-code only) ────────────────────────────
+  if (resolvedOpenrouterLaunchers && resolvedTools.includes('claude-code')) {
+    console.log(chalk.bold('\nAlternate-model launchers:'));
+    await setupOpenRouterLaunchers(platform, homes, chalk);
+  }
+
   // ── Gitignore update (project installs only, not global) ─────────────────
   // For --yes with no --gitignore flag, default to 'output-only'
   if (!isGlobal) {
@@ -731,6 +989,8 @@ async function install(opts) {
     teams: resolvedTeams,
     dockerCheck: resolvedDockerCheck,
     tmux: resolvedTmux,
+    modelLaunchers: resolvedOpenrouterLaunchers,
+    openrouterLaunchers: resolvedOpenrouterLaunchers, // legacy alias, kept for older readers
     gitignore: isGlobal ? null : resolvedGitignore,
     global: isGlobal,
     // Preserve existing migratedAt if present; add new one if migration ran this session

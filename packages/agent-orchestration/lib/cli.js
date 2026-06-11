@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const { Command } = require('commander');
+const { Command, Option } = require('commander');
 const path = require('path');
 const pkg = require('../package.json');
 
@@ -40,6 +40,8 @@ program
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before installing (default when bmad is detected)')
   .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
+  .option('--model-launchers', 'Install alternate-model launchers (claude-glm, claude-minimax, claude-qwen, claude-sub — provider-aware) — off by default')
+  .addOption(new Option('--openrouter-launchers', 'Alias for --model-launchers (kept for compatibility)').hideHelp())
   .addHelpText('after', `
 Examples:
   # Interactive install — prompts for your name, detects existing installation
@@ -87,6 +89,8 @@ program
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before updating (default when bmad is detected)')
   .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
+  .option('--model-launchers', 'Install alternate-model launchers (claude-glm, claude-minimax, claude-qwen, claude-sub — provider-aware) — off by default')
+  .addOption(new Option('--openrouter-launchers', 'Alias for --model-launchers (kept for compatibility)').hideHelp())
   .addHelpText('after', `
 Examples:
   # Interactive update — shows installed version, preserves your name
