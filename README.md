@@ -29,11 +29,43 @@ Arcwright installs a structured system of specialist AI agents, in-process subag
 npx @arcwright-ai/agent-orchestration
 ```
 
+During install you'll be asked **how autonomous Arcwright agents should run**. The default is
+**Autonomous (recommended)** — agents apply edits without stopping to ask, while safety hooks
+block the dangerous stuff. Pick **Conservative** if you'd rather approve each action. See
+[Autonomy & Safety](#autonomy--safety) below.
+
 Then use a slash command to kick off a workflow:
 
 ```
 /triage "your task description"
 ```
+
+---
+
+## Autonomy & Safety
+
+Arcwright is **autonomous by default, with guardrails**. On install (and with `--yes`) it sets
+up the `safe` posture in `.claude/settings.json`:
+
+- **Auto-accept edits** — `permissions.defaultMode: "acceptEdits"`, so agents apply file edits
+  without a prompt on every write. Plain bash still prompts (`acceptEdits` only covers edits).
+- **Destructive-command guard** (PreToolUse Bash) — blocks force-push to `main`, `rm -rf /`,
+  fork bombs, raw-disk writes, etc. *before* they run.
+- **Secret/key-file guard** (PreToolUse Write/Edit) — blocks writing AWS/GitHub/Slack tokens or
+  private keys, and edits to `.env`/`.pem`.
+- **SessionStart context** — primes each session to run project-context and honor `CONSTITUTION.md`.
+
+The guards are what make auto-accept safe to leave on. Three postures:
+
+| `--hooks` | Posture | What you get |
+|-----------|---------|--------------|
+| `safe` *(default)* | Autonomous | acceptEdits + the guards + SessionStart context |
+| `full` | Autonomous + typecheck | `safe` + `tsc`/`pyright` on every edit (slower, tighter) |
+| `none` | Conservative | No hooks; Claude Code's ask-first default — approve each action |
+
+Guard scripts are dependency-free Node and land in `.claude/arcwright-hooks/`. The merge into
+`settings.json` is idempotent and never overwrites a permission mode you've set yourself. Full
+catalog and recipes: [`docs/hooks-guide.md`](docs/hooks-guide.md).
 
 ---
 
@@ -81,6 +113,24 @@ See the full team catalog below.
 | `/gsudo` | Loads the gsudo skill and runs a command with Windows elevated privileges. Works from WSL2, Git Bash, or native Windows. Takes `$ARGUMENTS` for the command to run. |
 | `/arcwright-migrate` | Migrates an existing bmad installation to arcwright naming. Runs a dry-run first, then applies the rename. See [Migrating from bmad](#migrating-from-bmad). |
 
+**Workflow & quality commands** (added from the current Claude Code ecosystem):
+
+| Command | Purpose |
+|---------|---------|
+| `/hookify` | Describe a behavior in plain language → a correct, safely-merged hook in `settings.json`. |
+| `/handoff` | Compress the session into a continuation artifact for a fresh agent or worktree. |
+| `/grill` | Adversarial pre-implementation design interrogation — locks the design before any code. |
+| `/tasks` | Decompose an epic/SPEC into task files with a dependency graph + conflict-free wave execution; optional GitHub Issues sync. |
+| `/pr-review` | Parallel 6-lens PR review with 0–100 confidence scoring and a ranked merge verdict. |
+| `/code-graph` | Local symbol-dependency graph — query change blast radius without loading whole files. |
+| `/lsp` | Validate edits against `tsc`/`pyright` in a fix loop. |
+| `/commit`, `/commit-push-pr`, `/clean-gone` | Lightweight daily git trio (shows the message before committing). |
+| `/claude-md` | Audit CLAUDE.md, capture session learnings, prune stale lines. |
+| `/constitution` | Create/update/validate the project's versioned non-negotiables. |
+| `/correct-course` | Structured mid-task course-correction when a constraint or blocker invalidates the plan. |
+| `/caveman` | Concise-output mode — cut output tokens while keeping technical accuracy. |
+| `/explain-mode` | Verbose teaching dial — explain the "why" or leave learning checkpoints. |
+
 ---
 
 ## Specialist Agents
@@ -95,6 +145,7 @@ See the full team catalog below.
 | Scrum Master | Sprint management, team coordination |
 | Tech Writer | Documentation |
 | UX Designer | Interface design, accessibility |
+| Verifier | Goal-backward verification (exists → substantive → wired → real data flows) before sign-off |
 
 Plus meta-agents for building new agents, workflows, and modules (Arcwright Builder).
 
