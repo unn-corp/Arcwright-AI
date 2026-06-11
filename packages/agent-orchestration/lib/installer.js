@@ -566,12 +566,12 @@ async function install(opts) {
     openrouterLaunchers = null, // legacy alias for modelLaunchers
     modelLaunchers = null, // null = interactive prompt, true/false = explicit
     channel = 'stable', // release channel: 'stable' | 'next'
-    hooks = 'none', // Claude Code hooks to seed: 'none' | 'safe' | 'full'
+    hooks = null, // Claude Code hooks to seed: null = prompt | 'none' | 'safe' | 'full'
   } = opts;
   // Validate channel — silently clamp unknown values to 'stable'
   const resolvedChannel = (channel === 'next') ? 'next' : 'stable';
-  // Validate hooks mode — clamp unknown values to 'none'
-  let resolvedHooks = ['none', 'safe', 'full'].includes(hooks) ? hooks : 'none';
+  // Hooks mode: null = decide interactively (or 'none' with --yes); explicit flag wins.
+  let resolvedHooks = ['none', 'safe', 'full'].includes(hooks) ? hooks : null;
   let resolvedGitignore = gitignore;
   let resolvedTmux = typeof tmux === 'boolean' ? tmux : null;
   let resolvedMigrateBmad = typeof migrateBmad === 'boolean' ? migrateBmad : null;
@@ -650,7 +650,7 @@ async function install(opts) {
     resolvedChannelFinal = existingManifest.channel;
   }
   // Restore hooks mode from manifest on --yes updates (so re-runs preserve choice).
-  if (manifestFallback && resolvedHooks === 'none' && existingManifest.hooks) {
+  if (manifestFallback && resolvedHooks === null && existingManifest.hooks) {
     resolvedHooks = existingManifest.hooks;
   }
 
@@ -825,6 +825,21 @@ async function install(opts) {
       });
       if (isCancel(gitignoreChoice)) { process.exit(0); }
       resolvedGitignore = gitignoreChoice;
+    }
+
+    // Claude Code hooks — only for claude-code installs, only if not set via flag
+    if (resolvedTools.includes('claude-code') && resolvedHooks === null) {
+      const hooksChoice = await select({
+        message: 'Seed Claude Code hooks into settings.json?',
+        options: [
+          { value: 'none', label: 'None — no hooks (default)' },
+          { value: 'safe', label: 'Safe — block destructive commands + secret writes, load context on session start' },
+          { value: 'full', label: 'Full — safe + run tsc/pyright typecheck after edits' },
+        ],
+        initialValue: existingManifest?.hooks || 'none',
+      });
+      if (isCancel(hooksChoice)) { process.exit(0); }
+      resolvedHooks = hooksChoice;
     }
 
     outro(`${isUpdate ? 'Updating' : 'Installing'} Arcwright...`);
@@ -1052,6 +1067,7 @@ async function install(opts) {
   // For --yes with no --gitignore flag, default to 'output-only'
   if (!isGlobal) {
     if (resolvedGitignore === null) resolvedGitignore = 'output-only';
+    if (resolvedHooks === null) resolvedHooks = 'none';
     if (resolvedGitignore !== 'none') {
       await updateGitignore(projectRoot, resolvedGitignore, chalk);
     }
