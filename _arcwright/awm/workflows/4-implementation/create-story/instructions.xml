@@ -9,8 +9,8 @@
   <critical>❓ SAVE QUESTIONS: If you think of questions or clarifications during analysis, save them for the end after the complete story is written</critical>
   <critical>🎯 ZERO USER INTERVENTION: Process is fully automated except for initial epic/story selection or genuine missing documents</critical>
 
-  <step n="0" goal="Load writing-skills">
-    <action>Invoke writing-skills before generating any story file output. Do not proceed to Step 1 until writing-skills is loaded.</action>
+  <step n="0" goal="Load caveman (concise-output)">
+    <action>Invoke caveman before generating any story file output. Write terse, keep all technical substance. Do not proceed to Step 1 until caveman is loaded.</action>
   </step>
 
   <step n="1" goal="Determine target story">

@@ -213,6 +213,48 @@ export const skills: Skill[] = [
     description: 'Create new structured documents: specs, PRDs, architecture notes, user stories.',
     category: 'workflow',
   },
+  {
+    name: 'Caveman',
+    slug: 'caveman',
+    description: 'Concise-output discipline — write artifacts terse, cut ~65% of tokens, keep all technical substance. Required pre-output for every doc-writing agent.',
+    category: 'workflow',
+  },
+  {
+    name: 'Spec Kernel',
+    slug: 'spec-kernel',
+    description: 'Tight SPEC.md contract: Why, Capabilities (CAP-NNN), Constraints, Non-goals, Success signal — with a pre-planning quality checklist.',
+    category: 'workflow',
+  },
+  {
+    name: 'Clarification Gate',
+    slug: 'clarification-gate',
+    description: '12-category ambiguity scan; asks ≤5 questions one at a time and locks decisions (D-NN) before planning.',
+    category: 'workflow',
+  },
+  {
+    name: 'Goal-Backward Verify',
+    slug: 'goal-backward-verify',
+    description: '4-level verification (exists → substantive → wired → real data flows) proving an implementation meets its stated goals.',
+    category: 'quality',
+  },
+  {
+    name: 'Correct Course',
+    slug: 'correct-course',
+    description: 'Structured mid-task course-correction when a constraint, blocker, or verification FAIL invalidates the current plan.',
+    category: 'workflow',
+  },
+  {
+    name: 'Project Memory',
+    slug: 'project-memory',
+    description: 'Durable planning layer (STATE / ROADMAP / DECISIONS / LEARNINGS) for resumable work and decision capture across sessions.',
+    category: 'workflow',
+  },
+  {
+    name: 'Constitution',
+    slug: 'constitution',
+    description: 'Versioned project non-negotiables (test discipline, security posture, conventions) with semantic-version bump rules.',
+    category: 'workflow',
+  },
   // Teams (17)
   {
     name: 'Team: arch-dev',

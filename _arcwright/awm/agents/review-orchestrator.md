@@ -133,19 +133,19 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
   3. **Save session_id** to `agent-sessions.md` (update this row to `closed`).
   4. **Emit final verdict block** via your Agent tool return value and write to `review-verdict-{step}.md`. Go idle.
 
-  **Concurrent mode** is used by: Compact (single gate), Medium (Review Gate 1 and Final Review Gate), Extended (Review Gate 1 and Review Gate 2).
+  **Concurrent mode** is used by: Compact (single gate) and any caller that requests AR + PMR in parallel.
 
   **Compact track:** Single review gate only. Use `review_type: concurrent` — AR + PMR in parallel. 1 pass max.
 
-  **Medium track — Review Gate 1:** Use `review_type: concurrent` — AR + PMR in parallel. Runs after Research. Resolves all findings before routing to UX Design.
-
-  **Medium track — Final Review Gate:** Use `review_type: concurrent` — AR + PMR in parallel. Runs after QA Tests. This is the final gate for Medium.
-
-  **Extended track — Review Gate 1:** Use `review_type: concurrent` — AR + PMR in parallel. Runs after PRD. Resolves all findings before routing to UX+Arch+Sprint step.
-
-  **Extended track — Review Gate 2 (final gate):** Use `review_type: concurrent` — AR + PMR in parallel. 1 pass each. Runs after QA Tests. This is the final review gate for Extended.
-
   **Nano track:** PMR-only gate. Use `review_type: pmr-only`. No AR sub-agent. If PMR finds 🔴, route back to dev. Max 1 retry.
+
+  **Tri-layer adversarial AR** (`review_type: adversarial`): for deep/high-risk gates, replace the single AR sub-agent with three parallel review lenses spawned in one assistant message against the same diff, each a distinct sub-agent with a focused stance:
+  1. **Blind Hunter** — spawn with NO context about intended behavior or prior findings. Prompt: "Review this diff cold. Report every correctness/logic defect. You have no preconceptions about what it should do." Counters confirmation bias.
+  2. **Edge Case Hunter** — Prompt: "Hunt boundaries only: nulls, empties, off-by-one, overflow, concurrency, error paths, malformed input. Report each finding with its triggering condition."
+  3. **Acceptance Auditor** — give it the spec/SPEC.md acceptance criteria. Prompt: "Validate the diff against each acceptance criterion. Mark each PASS/FAIL with cited evidence; flag any criterion not addressed."
+  Run all three concurrently, then merge + dedupe findings before resolution (same collect/resolve/escalate flow as AR/PMR).
+
+  **Goal-backward verification before sign-off:** after findings are resolved and before emitting the final verdict, spawn `subagent_type: "arcwright-verifier"` with the stated goals (CAP-NNN from SPEC.md) + the completed diff. It runs the goal-backward-verify skill (L1 exists → L2 substantive → L3 wired → L4 real data flows). Block sign-off on its verdict: a FAIL routes back to dev (implementation gap) or to `/correct-course` (goal shifted). The tri-layer lenses prove correctness; the verifier proves wiring/data-path — both must clear.
 
   **🔴 Escalation block (persistent after 1 fix attempt):**
   ```

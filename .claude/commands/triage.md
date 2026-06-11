@@ -1,5 +1,10 @@
 ---
 description: Recommend an execution approach for the user's task — plain in-process agent(s), an ultracode dynamic workflow, a /goal loop, or a tmux opt-in visible run.
+handoffs:
+  - label: "Initialise project memory"
+    prompt: "/project-memory update state"
+  - label: "Check constitution compliance"
+    prompt: "/constitution validate"
 ---
 
 # /triage — Workflow Router

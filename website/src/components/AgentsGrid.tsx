@@ -1,13 +1,13 @@
 import { agents } from '../data/agents';
 import {
   Search, Network, Code2, ClipboardList,
-  TestTube2, GitPullRequest, BookOpen, Layers, Bot,
+  TestTube2, GitPullRequest, BookOpen, Layers, Bot, ShieldCheck,
 } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
   Search, Network, Code2, ClipboardList,
-  TestTube2, GitPullRequest, BookOpen, Layers,
+  TestTube2, GitPullRequest, BookOpen, Layers, ShieldCheck,
 };
 
 function AgentIcon({ name, ...props }: { name: string } & LucideProps) {
@@ -25,7 +25,7 @@ export default function AgentsGrid({ hideHeader }: { hideHeader?: boolean } = {}
               Specialist Agents
             </h2>
             <p className="font-sans text-muted max-w-xl mx-auto">
-              8 named specialists coordinate across tracks and teams.
+              9 named specialists coordinate across workflows and teams.
             </p>
           </div>
         )}

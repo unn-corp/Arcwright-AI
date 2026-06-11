@@ -13,7 +13,7 @@ export const agents: Agent[] = [
     role: 'Requirements & Research',
     icon: 'Search',
     description:
-      'Conducts deep codebase exploration, competitive research, and technical domain analysis. Produces structured research reports that feed into specs, PRDs, and architecture decisions. Runs in-process, often in parallel with other analysts on Medium/Extended/Large tracks.',
+      'Conducts deep codebase exploration, competitive research, and technical domain analysis. Produces structured research reports that feed into specs, PRDs, and architecture decisions. Runs in-process, often in parallel with other analysts during research and planning.',
     primarySkills: ['systematic-debugging', 'project-context', 'typescript-best-practices'],
     collaboratesWith: ['PM', 'Architect', 'Developer'],
   },
@@ -58,7 +58,7 @@ export const agents: Agent[] = [
     role: 'Sprint Management',
     icon: 'GitPullRequest',
     description:
-      'Decomposes PRDs into epics and user stories. Creates sprint plans, manages the per-story dev loop on Large tracks, and marks stories done after QA validates each.',
+      'Decomposes PRDs into epics and user stories. Creates sprint plans, manages the per-story dev loop, and marks stories done after QA validates each.',
     primarySkills: ['project-context', 'triage'],
     collaboratesWith: ['PM', 'Developer', 'Architect'],
   },
@@ -79,5 +79,14 @@ export const agents: Agent[] = [
       'Creates UX design documents, component specs, and visual hierarchy notes. Also acts as a reviewer (UV = UX Validation) in Review Gates. On the ux-qa team, implements UI code and validates with playwright-cli.',
     primarySkills: ['frontend-responsive-design-standards', 'react-expert', 'design', 'ux-audit'],
     collaboratesWith: ['Developer', 'Architect', 'QA'],
+  },
+  {
+    name: 'Verifier',
+    role: 'Goal-Backward Verification',
+    icon: 'ShieldCheck',
+    description:
+      'Proves a completed implementation meets its stated goals via 4-level verification: artifact exists → substantive code → wired into the system → real data flows through it. Distinct from QA — runs as a pre-sign-off gate in review cycles and routes failures back to Developer or to course-correction.',
+    primarySkills: ['goal-backward-verify', 'systematic-debugging', 'project-context'],
+    collaboratesWith: ['Developer', 'QA', 'Architect'],
   },
 ];

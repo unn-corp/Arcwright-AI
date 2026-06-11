@@ -11,9 +11,9 @@ outputFile: "{planning_artifacts}/prd.md"
 prdTemplate: "../templates/prd-template.md"
 ---
 
-## Step 0: Load writing-skills
+## Step 0: Load caveman (concise-output)
 
-Invoke `writing-skills` now. Do not proceed to Step 1 until writing-skills is loaded.
+Invoke `caveman` now. Do not proceed to Step 1 until caveman is loaded.
 
 ---
 

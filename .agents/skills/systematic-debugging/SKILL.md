@@ -21,6 +21,29 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 
 If you haven't completed Phase 1, you cannot propose fixes.
 
+## Evidence Grading (tag every finding)
+
+Debugging fails when assumptions masquerade as facts. Every finding you state —
+in any phase, in any report — MUST carry one of three evidence tiers. This forces
+you to separate what you *know* from what you *suspect*, and makes a reviewer able
+to challenge the weak links.
+
+| Tier | Meaning | What you MUST show |
+|------|---------|--------------------|
+| **Confirmed** | Directly observed in the code/output/logs. | Cite the exact `path:line`, command output, log line, or stack frame. No citation → not Confirmed. |
+| **Deduced** | Logically inferred from Confirmed facts. | Show the reasoning chain: "Confirmed A (`x.ts:12`) + Confirmed B (`y.ts:30`) ⇒ therefore C." Each premise must itself be Confirmed or Deduced. |
+| **Hypothesized** | A plausible cause not yet proven. | State explicitly **what observation would confirm it** and **what would refute it**. A hypothesis with no test is a guess — name the test. |
+
+**Rules:**
+- Tag findings inline, e.g. `[Confirmed] null returned at parse.ts:44` / `[Deduced] caller passes undefined because … ` / `[Hypothesized] race on init — confirm by logging order, refute if order is deterministic`.
+- A root cause may only be declared from **Confirmed** evidence (or a chain of Deductions resting entirely on Confirmed facts). A **Hypothesized** root cause is not a root cause — it is the input to Phase 3 testing.
+- Never silently upgrade a tier. If a Hypothesis is tested and observed, restate it as Confirmed with its new citation.
+- In Phase 3, the hypothesis you test is, by definition, **Hypothesized** until the minimal test moves it to **Confirmed** (or kills it).
+
+This grading composes with the four phases — it does not replace them. Phase 1
+gathers Confirmed evidence; Phase 2/3 build Deductions and test Hypotheses;
+Phase 4 only fixes a Confirmed root cause.
+
 ## When to Use
 
 Use for ANY technical issue:

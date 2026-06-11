@@ -16,6 +16,13 @@
 - "Simple bugs" still have root causes — never skip the process because it seems easy
 - Systematic debugging is faster than thrashing, even under time pressure
 
+## Evidence Grading (tag every finding)
+- **Confirmed** — directly observed; cite `path:line` / output / log line. No citation → not Confirmed.
+- **Deduced** — inferred from Confirmed facts; show the reasoning chain (premise A + premise B ⇒ C), each premise Confirmed or Deduced.
+- **Hypothesized** — plausible, unproven; state what would confirm it AND what would refute it. A hypothesis with no test is a guess.
+- A root cause may only be declared from Confirmed evidence (or a Deduction chain resting on Confirmed facts). A Hypothesized root cause is the input to Phase 3, not a root cause.
+- Tag findings inline, e.g. `[Confirmed] …`, `[Deduced] …`, `[Hypothesized] … (confirm by X / refute if Y)`. Never silently upgrade a tier — restate with the new citation.
+
 ## Red Flags (stop and apply skill)
 - About to change code without knowing why it broke
 - Thinking "just try X and see if it works"

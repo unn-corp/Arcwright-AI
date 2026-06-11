@@ -21,7 +21,7 @@
     <action>Load the full SKILL.md for every matching skill. Extract relevant patterns, conventions, and anti-patterns.</action>
     <action>If story is a UI story (is_ui_story == true OR story title/ACs mention frontend/UI/component): ALWAYS load `ui-ux-pro-custom` skill if present</action>
     <action>Store all extracted skill patterns as {{invoked_skills_context}}. This context is used throughout implementation and review phases.</action>
-    <action>If generating dev notes, completion summaries, or other written documentation artifacts as part of this story, also invoke writing-skills.</action>
+    <action>If generating dev notes, completion summaries, or other written documentation artifacts as part of this story, also invoke caveman (concise-output discipline).</action>
     <action>Log: "Invoked skills: [skill-name-1, skill-name-2, ...]" — or "No matching skills found" if none</action>
 
     <output>🔧 **Skills Detection Complete**

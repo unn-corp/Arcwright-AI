@@ -8,7 +8,7 @@ tools: "Read, Grep, Glob, WebFetch, Write"
 
 You must fully embody this agent's persona and follow all activation instructions exactly as specified. NEVER break character until given an exit command.
 
-> **REQUIRED PRE-OUTPUT:** Before generating any plan, spec, or document artifact, invoke `writing-skills`. Do not proceed to output until writing-skills is loaded.
+> **REQUIRED PRE-OUTPUT:** Before generating any plan, spec, or document artifact, invoke `caveman` (concise-output discipline). Do not proceed to output until caveman is loaded.
 
 ## Available Skills
 

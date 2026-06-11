@@ -396,7 +396,7 @@ async function writeFilesManifest(arcwrightDir, entries) {
 
 // ─── Kiro config writer ───────────────────────────────────────────────────────
 
-async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false) {
+async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
   const kiroAgentsSrc = path.join(SRC_DIR, '.kiro', 'agents');
 
@@ -417,6 +417,8 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const filter = (src) => {
       if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
+      if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
+      if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
       return true;
     };
     await fs.copy(kiroSkillsSrc, skillsDest, { overwrite: true, filter });
@@ -424,12 +426,16 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const skillFiles = allSkillFiles.filter(f => {
       if (!resolvedTeams && /^team-/.test(f)) return false;
       if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
+      if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
+      if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
       return true;
     });
     const skippedCount = allSkillFiles.length - skillFiles.length;
     const skipNotes = [];
     if (!resolvedTeams) skipNotes.push('team-*');
     if (!resolvedDockerCheck) skipNotes.push('docker-type-check');
+    if (!resolvedAwsInfra) skipNotes.push('aws-serverless-cdk');
+    if (!resolvedUnnamedPm) skipNotes.push('unnamed-pm-sync');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
     console.log(chalk.green(`  ✓ .kiro/skills/ (${skillFiles.length} files)`) + teamNote);
   }
@@ -449,6 +455,8 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const agentFiles = allAgentFiles.filter(f => {
       if (!resolvedTeams && f === 'team.json') return false;
       if (!resolvedDockerCheck && f === 'docker-check.json') return false;
+      if (!resolvedAwsInfra && (f === 'aws-infra.json' || f === 'arcwright-aws-infra.json')) return false;
+      if (!resolvedUnnamedPm && (f === 'unnamed-pm.json' || f === 'arcwright-unnamed-pm.json')) return false;
       return true;
     });
     for (const f of agentFiles) {
@@ -457,6 +465,8 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const skipNotes = [];
     if (!resolvedTeams) skipNotes.push('/team');
     if (!resolvedDockerCheck) skipNotes.push('/docker-check');
+    if (!resolvedAwsInfra) skipNotes.push('/aws-infra');
+    if (!resolvedUnnamedPm) skipNotes.push('/unnamed-pm');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
     console.log(chalk.green(`  ✓ .kiro/agents/ (${agentFiles.length} agents)`) + teamNote);
   }
@@ -548,12 +558,17 @@ async function install(opts) {
     yes = false,
     teams = true,  // include team-* skills and /team command
     dockerCheck = false,  // include docker-type-check skill and /docker-check command
+    awsInfra = false,  // include aws-infra module + aws-serverless-cdk skill + /aws-infra command
+    unnamedPm = false,  // include unnamed-pm module + unnamed-pm-sync skill + /unnamed-pm command
     gitignore = null,  // null | 'full' | 'skills' | 'output-only' | 'none'
     tmux = null,   // null = interactive prompt, true/false = explicit
     migrateBmad = null,  // null = prompt if bmad detected; true/false = explicit
     openrouterLaunchers = null, // legacy alias for modelLaunchers
     modelLaunchers = null, // null = interactive prompt, true/false = explicit
+    channel = 'stable', // release channel: 'stable' | 'next'
   } = opts;
+  // Validate channel — silently clamp unknown values to 'stable'
+  const resolvedChannel = (channel === 'next') ? 'next' : 'stable';
   let resolvedGitignore = gitignore;
   let resolvedTmux = typeof tmux === 'boolean' ? tmux : null;
   let resolvedMigrateBmad = typeof migrateBmad === 'boolean' ? migrateBmad : null;
@@ -626,6 +641,12 @@ async function install(opts) {
   // indistinguishable from explicit flags, so we use manifest when value == default).
   const manifestFallback = yes && isUpdate && existingManifest;
 
+  // Restore channel from manifest on --yes updates (so re-runs preserve the chosen channel).
+  let resolvedChannelFinal = resolvedChannel;
+  if (manifestFallback && resolvedChannel === 'stable' && existingManifest.channel) {
+    resolvedChannelFinal = existingManifest.channel;
+  }
+
   // Restore userName from manifest on --yes updates (so config.yaml gets the right name
   // if it needs to be created, e.g. old global install that pre-dates config.yaml writing).
   if (manifestFallback && !resolvedUserName && existingManifest.userName) {
@@ -652,6 +673,18 @@ async function install(opts) {
       return existingManifest.dockerCheck === true;
     }
     return dockerCheck === true;
+  })();
+  let resolvedAwsInfra = (() => {
+    if (manifestFallback && awsInfra !== true && existingManifest.awsInfra !== undefined) {
+      return existingManifest.awsInfra === true;
+    }
+    return awsInfra === true;
+  })();
+  let resolvedUnnamedPm = (() => {
+    if (manifestFallback && unnamedPm !== true && existingManifest.unnamedPm !== undefined) {
+      return existingManifest.unnamedPm === true;
+    }
+    return unnamedPm === true;
   })();
 
   if (!yes) {
@@ -735,6 +768,22 @@ async function install(opts) {
     if (isCancel(dockerCheckChoice)) { process.exit(0); }
     resolvedDockerCheck = dockerCheckChoice;
 
+    // AWS serverless infrastructure opt-in — aws-infra module + aws-serverless-cdk skill + /aws-infra
+    const awsInfraChoice = await confirm({
+      message: 'Install the AWS-Infra module? (AWS serverless architect agent + aws-serverless-cdk skill + /aws-infra — CDK, Lambda, DynamoDB, EventBridge knowledge)',
+      initialValue: existingManifest?.awsInfra === true,
+    });
+    if (isCancel(awsInfraChoice)) { process.exit(0); }
+    resolvedAwsInfra = awsInfraChoice;
+
+    // Unnamed Development PM opt-in — unnamed-pm module + unnamed-pm-sync skill + /unnamed-pm
+    const unnamedPmChoice = await confirm({
+      message: 'Install the Unnamed-PM module? (PM-sync agent + unnamed-pm-sync skill + /unnamed-pm — keeps projects/milestones/issues in sync via the unnamed-development MCP)',
+      initialValue: existingManifest?.unnamedPm === true,
+    });
+    if (isCancel(unnamedPmChoice)) { process.exit(0); }
+    resolvedUnnamedPm = unnamedPmChoice;
+
     // tmux setup opt-in — runs for both project and global installs (tmux config is always global)
     if (resolvedTools.includes('claude-code') && resolvedTmux === null) {
       const tmuxChoice = await confirm({
@@ -796,6 +845,10 @@ async function install(opts) {
   if (selectedModules.includes('awm') || selectedModules.includes('awb')) {
     modulesToInstall.add('_memory');
   }
+  // Optional opt-in modules — gated by their own flags, never part of the
+  // default --modules set. Each ships its own config.yaml (preserved on update).
+  if (resolvedAwsInfra) modulesToInstall.add('aws-infra');
+  if (resolvedUnnamedPm) modulesToInstall.add('unnamed-pm');
 
   const newFileEntries = [];
   let installedCount = 0;
@@ -845,10 +898,12 @@ async function install(opts) {
       : path.join(projectRoot, '.agents', 'skills');
     await fs.ensureDir(destSkills);
 
-    // Filter team-* skills if teams were declined; filter docker-type-check if not opted in
+    // Filter team-* skills if teams were declined; filter optional add-on skills if not opted in
     const filter = (src) => {
       if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
+      if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
+      if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
       return true;
     };
 
@@ -857,6 +912,8 @@ async function install(opts) {
     const skillFiles = allSkillFiles.filter(f => {
       if (!resolvedTeams && /^team-/.test(f)) return false;
       if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
+      if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
+      if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
       return true;
     });
     for (const rel of skillFiles) {
@@ -868,8 +925,26 @@ async function install(opts) {
     const skipNotes = [];
     if (!resolvedTeams) skipNotes.push('team-*');
     if (!resolvedDockerCheck) skipNotes.push('docker-type-check');
+    if (!resolvedAwsInfra) skipNotes.push('aws-serverless-cdk');
+    if (!resolvedUnnamedPm) skipNotes.push('unnamed-pm-sync');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
     console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`) + teamNote);
+  }
+
+  // ── Customization dir scaffold ──────────────────────────────────────────────
+  // Create _arcwright/custom/ (or ~/.arcwright/custom/) and seed an example override
+  // file on first install. Preserved on update — user owns everything in custom/.
+  {
+    const customDir = path.join(effectiveArwDir, 'custom');
+    await fs.ensureDir(customDir);
+    const exampleDest = path.join(customDir, 'example.toml');
+    if (!await fs.pathExists(exampleDest)) {
+      const exampleSrc = path.join(__dirname, 'templates', 'custom', 'example.toml');
+      if (await fs.pathExists(exampleSrc)) {
+        await fs.copy(exampleSrc, exampleDest);
+        console.log(chalk.green('  ✓ _arcwright/custom/example.toml (customization scaffold)'));
+      }
+    }
   }
 
   // ── config.yaml generation ────────────────────────────────────────────────
@@ -891,7 +966,7 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro') continue; // handled separately below
-    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck);
+    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
     }
@@ -899,7 +974,7 @@ async function install(opts) {
 
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
-    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck);
+    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm);
   }
 
   // ── Orphan removal (update only) ──────────────────────────────────────────
@@ -988,9 +1063,12 @@ async function install(opts) {
     tools: resolvedTools,
     teams: resolvedTeams,
     dockerCheck: resolvedDockerCheck,
+    awsInfra: resolvedAwsInfra,
+    unnamedPm: resolvedUnnamedPm,
     tmux: resolvedTmux,
     modelLaunchers: resolvedOpenrouterLaunchers,
     openrouterLaunchers: resolvedOpenrouterLaunchers, // legacy alias, kept for older readers
+    channel: resolvedChannelFinal || resolvedChannel,  // release channel: 'stable' | 'next'
     gitignore: isGlobal ? null : resolvedGitignore,
     global: isGlobal,
     // Preserve existing migratedAt if present; add new one if migration ran this session
@@ -1095,7 +1173,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
-async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false) {
+async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false) {
   const stubEntries = [];
   const platformCfg = PLATFORMS[tool];
   if (!platformCfg) {
@@ -1195,6 +1273,8 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
       const files = allFiles.filter(f => {
         if (!resolvedTeams && f === 'team.md') return false;
         if (!resolvedDockerCheck && f === 'docker-check.md') return false;
+        if (!resolvedAwsInfra && f === 'aws-infra.md') return false;
+        if (!resolvedUnnamedPm && f === 'unnamed-pm.md') return false;
         return true;
       });
       let installed = 0;
@@ -1210,6 +1290,8 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         const skipNotes = [];
         if (!resolvedTeams) skipNotes.push('/team');
         if (!resolvedDockerCheck) skipNotes.push('/docker-check');
+        if (!resolvedAwsInfra) skipNotes.push('/aws-infra');
+        if (!resolvedUnnamedPm) skipNotes.push('/unnamed-pm');
         const skipNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
         console.log(chalk.green(`  ✓ ${installed} slash commands → .claude/commands/`) + skipNote);
       }
@@ -1229,7 +1311,10 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     const agentDir = isGlobal
       ? resolveToolPath('claude-code', GLOBAL_PATHS['claude-code'].agents, true, homes, platform)
       : path.join(projectRoot, platformCfg.agentDir);
-    const entries = await writeClaudeAgentStubs(SRC_DIR, agentDir, chalk, modules);
+    const stubModules = [...modules];
+    if (resolvedAwsInfra) stubModules.push('aws-infra');
+    if (resolvedUnnamedPm) stubModules.push('unnamed-pm');
+    const entries = await writeClaudeAgentStubs(SRC_DIR, agentDir, chalk, stubModules);
     stubEntries.push(...entries);
   }
 
@@ -1545,7 +1630,7 @@ async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
  * can merge them into newFileEntries for orphan-removal tracking.
  */
 async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules) {
-  const STUB_MODULES = ['awm', 'awb'];
+  const STUB_MODULES = ['awm', 'awb', 'aws-infra', 'unnamed-pm'];
   const selectedStubModules = (modules || STUB_MODULES).filter(m => STUB_MODULES.includes(m));
 
   const manifestEntries = [];

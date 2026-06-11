@@ -74,6 +74,14 @@ Also check for active orchestration sessions:
 
 If artifacts exist: note them. At Step 0 in a track workflow, offer the user the choice to **resume** (pass artifacts as context to the next step) or **start fresh**.
 
+#### 3a. Planning Memory Layer
+
+If `_arcwright-output/planning/STATE.md` exists, read it and extract `current_phase`, `next_action`, and any `blocked` flag — this is the machine-resumable project state (see the `project-memory` skill).
+
+If `_arcwright-output/planning/CONSTITUTION.md` exists, read ONLY its `version:` frontmatter field (do not load the full file into context yet — the `constitution` skill loads it on demand).
+
+Surface both in the Output Format below under a `**Memory:**` line and pass it in the handoff context.
+
 ### 4. Tech Stack Detection
 
 Check root-level for:
