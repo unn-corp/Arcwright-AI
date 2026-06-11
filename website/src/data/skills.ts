@@ -255,6 +255,72 @@ export const skills: Skill[] = [
     description: 'Versioned project non-negotiables (test discipline, security posture, conventions) with semantic-version bump rules.',
     category: 'workflow',
   },
+  {
+    name: 'Hookify',
+    slug: 'hookify',
+    description: 'Describe a behavior in plain language and get a correct, safely-merged Claude Code hook in settings.json.',
+    category: 'workflow',
+  },
+  {
+    name: 'Session Handoff',
+    slug: 'session-handoff',
+    description: 'Compress a finished session into a terse continuation artifact for a fresh agent or worktree.',
+    category: 'workflow',
+  },
+  {
+    name: 'CLAUDE.md Management',
+    slug: 'claude-md-management',
+    description: 'Audit CLAUDE.md quality, capture session learnings, and prune stale or contradictory guidance.',
+    category: 'workflow',
+  },
+  {
+    name: 'Commit Commands',
+    slug: 'commit-commands',
+    description: 'Lightweight daily git trio: /commit, /commit-push-pr, /clean-gone — shows the message before committing.',
+    category: 'workflow',
+  },
+  {
+    name: 'Grill Me',
+    slug: 'grill-me',
+    description: 'Adversarial pre-implementation design interrogation — refuses to start coding until the design is locked.',
+    category: 'workflow',
+  },
+  {
+    name: 'Karpathy Discipline',
+    slug: 'karpathy-discipline',
+    description: 'Minimalism layer: think first, smallest viable change, delete before adding, no over-engineering.',
+    category: 'quality',
+  },
+  {
+    name: 'Task Manager',
+    slug: 'task-manager',
+    description: 'Decompose an epic/SPEC into task files with a dependency graph + conflict-free wave plan; run parallel waves and optionally sync to GitHub Issues.',
+    category: 'workflow',
+  },
+  {
+    name: 'PR Review Panel',
+    slug: 'pr-review-panel',
+    description: 'Parallel 6-lens PR review with 0-100 confidence scoring, dedup, and a ranked merge verdict.',
+    category: 'quality',
+  },
+  {
+    name: 'Code Graph',
+    slug: 'code-graph',
+    description: 'Local symbol-dependency graph to assess change blast radius without loading whole files.',
+    category: 'quality',
+  },
+  {
+    name: 'LSP Diagnostics',
+    slug: 'lsp-diagnostics',
+    description: 'Validate edits against real compiler/type-checker output (tsc, pyright) in a fix loop.',
+    category: 'quality',
+  },
+  {
+    name: 'Document Tools',
+    slug: 'doc-pdf',
+    description: 'Read/write PDF, Word, Excel, and PowerPoint files from within Claude Code (pypdf, python-docx, openpyxl, python-pptx).',
+    category: 'workflow',
+  },
   // Teams (17)
   {
     name: 'Team: arch-dev',
