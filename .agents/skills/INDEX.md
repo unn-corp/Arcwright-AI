@@ -2,7 +2,7 @@
 
 _Last updated: 2026-04-03_
 
-Total skills: 54 (52 in `.agents/skills/` + 2 in `_arcwright/_memory/skills/`)
+Total skills: 48 (46 in `.agents/skills/` + 2 in `_arcwright/_memory/skills/`)
 
 ---
 
@@ -10,12 +10,19 @@ Total skills: 54 (52 in `.agents/skills/` + 2 in `_arcwright/_memory/skills/`)
 
 Skills that load automatically based on environment or context.
 
-### tmux-protocol
-- **Location:** `.agents/skills/tmux-protocol/`
-- **Trigger:** Auto-load when `$TMUX` is set, before any multi-pane work
-- **Slash command:** `/tmux-protocol`
-- **Used by:** squid-master, all 17 team-* skills, all 7 track-* skills
-- **Description:** Full tmux orchestration protocol — spawn sequence, message delivery verification, sleep timings, AGENT_SIGNAL format, master polling, backup signal system, pane close protocol, and follow-up task routing with active teams.
+### claude-subagent-protocol
+- **Location:** `.agents/skills/claude-subagent-protocol/`
+- **Trigger:** Load before any in-process Agent tool call sequence — the default orchestration substrate for every Arcwright workflow
+- **Slash command:** no
+- **Used by:** every workflow that spawns subagents (teams, ultracode, /goal, plain workflows)
+- **Description:** Default in-process Agent tool orchestration — spawn-once + SendMessage reuse via a Session Agent Registry, sonnet-first with permission-before-opus, no legacy signals (AGENT_SIGNAL/STEP COMPLETE/PEER_SIGNAL/STATUS_CHECK all retired), tmux opt-in visibility only. Replaces the old tmux-based spawn mechanism.
+
+### tmux
+- **Location:** `.agents/skills/tmux/`
+- **Trigger:** Load when you need tmux pane/window/session mechanics (splits, layouts, navigation, clipboard). For agent orchestration, default to `claude-subagent-protocol` — tmux is opt-in visibility only via the "Watching agents in panes" section.
+- **Slash command:** `/tmux`
+- **Used by:** any agent that needs tmux mechanics; pane-visibility flows when the user explicitly opts in
+- **Description:** tmux pane and session reference — splits, navigation, layouts, resizing, clipboard. Includes one clearly-marked opt-in section on watching in-process agents in panes. The pane is a viewing surface, never the spawn mechanism.
 
 ### systematic-debugging
 - **Location:** `.agents/skills/systematic-debugging/`
@@ -35,7 +42,7 @@ Skills that load automatically based on environment or context.
 
 ## Team Skills
 
-Persistent multi-pane agent teams spawned by squid-master. All team skills auto-load `tmux-protocol` when `$TMUX` is set. Spawned via `[ST-{code}]` commands or `/spawn-team-{name}` slash commands.
+Persistent in-process agent teams spawned by squid-master (or invoked via `[ST-{code}]` commands / `/spawn-team-{name}` slash commands). Default orchestration is in-process via `claude-subagent-protocol` (Agent tool + SendMessage reuse via the Session Agent Registry). tmux pane visibility is opt-in via the `tmux` skill.
 
 ### team-arch-dev
 - **Location:** `.agents/skills/team-arch-dev/`
@@ -158,58 +165,9 @@ Persistent multi-pane agent teams spawned by squid-master. All team skills auto-
 
 ---
 
-## Track Skills
+## Workflow Routing (triage → router)
 
-Workflow track definitions that define the pipeline of agents, gates, and steps for a given task size. Squid-master routes to a track automatically based on complexity scoring.
-
-### track-nano
-- **Location:** `.agents/skills/track-nano/`
-- **Trigger:** Via squid-master track routing (1-2 files, <=20 lines changed) or `/arcwright-track-nano`
-- **Slash command:** `/arcwright-track-nano`
-- **Used by:** squid-master
-- **Description:** Nano track — 1-2 files, <=20 lines, no new imports, one-commit revert complexity. Straight to Dev with no spec overhead.
-
-### track-small
-- **Location:** `.agents/skills/track-small/`
-- **Trigger:** Via squid-master track routing (2-4 files) or `/arcwright-track-small`
-- **Slash command:** `/arcwright-track-small`
-- **Used by:** squid-master
-- **Description:** Small track — 2-4 files, single concern with clear acceptance criteria. Pipeline: spec + dev + review + QA.
-
-### track-compact
-- **Location:** `.agents/skills/track-compact/`
-- **Trigger:** Via squid-master track routing (4-8 files) or `/arcwright-track-compact`
-- **Slash command:** `/arcwright-track-compact`
-- **Used by:** squid-master
-- **Description:** Compact track — 4-8 files, may touch unfamiliar areas or external APIs. Includes optional research phase and one review cycle.
-
-### track-medium
-- **Location:** `.agents/skills/track-medium/`
-- **Trigger:** Via squid-master track routing (6-12 files) or `/arcwright-track-medium`
-- **Slash command:** `/arcwright-track-medium`
-- **Used by:** squid-master
-- **Description:** Medium track — 6-12 files, new UI flow or notable backend change. Full spec, UX design, 2 review gates, QA.
-
-### track-extended
-- **Location:** `.agents/skills/track-extended/`
-- **Trigger:** Via squid-master track routing (10-16 files) or `/arcwright-track-extended`
-- **Slash command:** `/arcwright-track-extended`
-- **Used by:** squid-master
-- **Description:** Extended track — 10-16 files, significant feature with cross-cutting concerns. PRD, arch notes, 2 review gates, no epic loop.
-
-### track-large
-- **Location:** `.agents/skills/track-large/`
-- **Trigger:** Via squid-master track routing (12+ files) or `/arcwright-track-large`
-- **Slash command:** `/arcwright-track-large`
-- **Used by:** squid-master
-- **Description:** Large track — 12+ files, multi-epic feature or new subsystem. Full planning pipeline with epic loop, parallel research, and final gates.
-
-### track-rv
-- **Location:** `.agents/skills/track-rv/`
-- **Trigger:** Via squid-master track routing or `/arcwright-track-rv`
-- **Slash command:** `/arcwright-track-rv`
-- **Used by:** squid-master
-- **Description:** Review track — audit an existing codebase area first, synthesize findings, then route to SMALL or LARGE fix path based on finding volume.
+The `/triage` skill is the workflow router. It reads a task and recommends one of: plain in-process agent(s), an `ultracode` dynamic workflow, or a `/goal` loop (with optional tmux opt-in visibility when the user wants to watch). See `.agents/skills/triage/` for the routing heuristic.
 
 ---
 
@@ -321,6 +279,13 @@ Skills for specific external tools and integrations.
 - **Used by:** squid-master, team-dev-qa, team-sprint, team-full-dev, team-tdd, team-ux-qa, team-sec-qa, team-solo-qa
 - **Description:** Automate browser interactions, test web pages, and work with Playwright tests via the playwright-cli tool.
 
+### browser-use
+- **Location:** `.agents/skills/browser-use/`
+- **Trigger:** When the *goal* is known but the steps are not, or the UI is unknown/changing — exploratory testing, bug-repro discovery, documenting an unfamiliar UI, or scaffolding a first Playwright test. The agentic counterpart to `playwright-cli`.
+- **Slash command:** no
+- **Used by:** qa-agent (exploration phase), analyst/tech-writer (UI documentation), ultracode dynamic workflows and `/goal` loops (discovery step)
+- **Description:** Agentic browser automation — give a natural-language goal and an LLM-driven agent self-navigates the page (no selectors), returning `final_result()`. More expensive than `playwright-cli` (runs its own LLM loop); use for discovery, then encode confirmed steps as `playwright-cli` / `.spec.ts` for the durable test. Sonnet-first; scope with `allowed_domains`.
+
 ### gsudo
 - **Location:** `.agents/skills/gsudo/`
 - **Trigger:** When running on Windows host (`$OS == Windows_NT`) for admin operations, git, or playwright that require elevation
@@ -385,10 +350,10 @@ Process, methodology, and review skills that enforce standards or guide workflow
 
 ### triage
 - **Location:** `.agents/skills/triage/`
-- **Trigger:** When user invokes `/triage` with a task description
+- **Trigger:** When user invokes `/triage` with a task description, or any agent needs to decide which execution approach to dispatch to
 - **Slash command:** `/triage`
 - **Used by:** any agent, master orchestrator
-- **Description:** Score a task description across 6 complexity dimensions and recommend the appropriate Arcwright track (nano/small/compact/medium/extended/large/rv) with a rationale and the exact slash command to run.
+- **Description:** Workflow router. Given a task, recommends: plain in-process agent(s), ultracode dynamic workflow, or /goal loop. (Formerly a track-scorer; repurposed.)
 
 ### security-review
 - **Location:** `.agents/skills/security-review/`
@@ -430,6 +395,6 @@ Process, methodology, and review skills that enforce standards or guide workflow
 ## Notes
 
 - **Duplicate skills:** `writing-skills` and `excalidraw` exist in both `.agents/skills/` and `_arcwright/_memory/skills/`. The memory-skills versions are the authoritative source for the Arcwright memory system; the agents-skills versions are the project-local copies.
-- **Slash commands:** All team and track skills have corresponding `/spawn-team-*` and `/arcwright-track-*` slash commands in `.claude/commands/`. Domain and tool skills are loaded by agents programmatically; only a subset have user-facing slash commands.
-- **tmux-protocol precedence:** All 17 team-* skills explicitly load tmux-protocol when `$TMUX` is set. This is also squid-master's global rule for all multi-pane work.
+- **Slash commands:** All team skills have corresponding `/spawn-team-*` slash commands in `.claude/commands/`. Domain and tool skills are loaded by agents programmatically; only a subset have user-facing slash commands.
+- **tmux in teams:** Team skills are in-process by default (per `claude-subagent-protocol`). The `tmux` skill's opt-in section is consulted only when the user explicitly asks for split-pane visibility. The old `tmux-protocol` skill is retired.
 - **Skill injection:** squid-master scans `.agents/skills/` before routing to any sub-agent and injects applicable skill names into the context block. Sub-agents load the full SKILL.md at activation step 4.

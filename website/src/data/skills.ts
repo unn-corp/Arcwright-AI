@@ -6,8 +6,7 @@ export type SkillCategory =
   | 'quality'
   | 'security'
   | 'design'
-  | 'teams'
-  | 'tracks';
+  | 'teams';
 
 export interface Skill {
   name: string;
@@ -123,21 +122,27 @@ export const skills: Skill[] = [
     category: 'devops',
   },
   {
-    name: 'tmux Protocol',
-    slug: 'tmux-protocol',
-    description: 'Agent orchestration via tmux: spawn, signal, verify, and coordinate panes.',
+    name: 'Playwright CLI',
+    slug: 'playwright-cli',
+    description: 'Deterministic browser automation, screenshot comparison, and E2E test execution via Playwright.',
     category: 'devops',
   },
   {
-    name: 'Playwright CLI',
-    slug: 'playwright-cli',
-    description: 'Browser automation, screenshot comparison, and E2E test execution via Playwright.',
+    name: 'browser-use',
+    slug: 'browser-use',
+    description: 'Agentic browser exploration — give a natural-language goal, an LLM agent self-navigates (no selectors). For exploratory testing, documenting unknown UIs, and scaffolding Playwright tests. The agentic counterpart to playwright-cli.',
     category: 'devops',
   },
   {
     name: 'gsudo',
     slug: 'gsudo',
     description: 'Windows privilege escalation for WSL2 — run commands with elevated permissions.',
+    category: 'devops',
+  },
+  {
+    name: 'tmux',
+    slug: 'tmux',
+    description: 'Pane/window/session mechanics + opt-in visibility for watching in-process agents. See the "Watching agents in panes (opt-in)" section.',
     category: 'devops',
   },
   // Quality / Debug
@@ -194,6 +199,12 @@ export const skills: Skill[] = [
     name: 'Triage',
     slug: 'triage',
     description: 'Analyse a task description and route it to the appropriate track or team.',
+    category: 'workflow',
+  },
+  {
+    name: 'Claude Subagent Protocol',
+    slug: 'claude-subagent-protocol',
+    description: 'In-process agent orchestration: Agent tool + SendMessage reuse + Session Agent Registry. The default orchestration method; tmux is opt-in visibility only. Replaces the retired tmux-protocol skill.',
     category: 'workflow',
   },
   {
@@ -305,49 +316,6 @@ export const skills: Skill[] = [
     description: 'UX Designer implements UI code, QA validates live with playwright-cli.',
     category: 'teams',
   },
-  // Tracks (7)
-  {
-    name: 'Track: Nano',
-    slug: 'track-nano',
-    description: 'Nano track workflow — direct to dev, no spec, scope guard at 20 lines.',
-    category: 'tracks',
-  },
-  {
-    name: 'Track: Small',
-    slug: 'track-small',
-    description: 'Small track workflow — Spec → Dev → 3-sub Review Gate → QA.',
-    category: 'tracks',
-  },
-  {
-    name: 'Track: Compact',
-    slug: 'track-compact',
-    description: 'Compact track workflow — optional research before Dev, same 3-sub gate.',
-    category: 'tracks',
-  },
-  {
-    name: 'Track: Medium',
-    slug: 'track-medium',
-    description: 'Medium track workflow — full spec, research, UX, two review gates.',
-    category: 'tracks',
-  },
-  {
-    name: 'Track: Extended',
-    slug: 'track-extended',
-    description: 'Extended track workflow — PRD-driven, UX + arch notes, sprint plan, two gates.',
-    category: 'tracks',
-  },
-  {
-    name: 'Track: Large',
-    slug: 'track-large',
-    description: 'Large track workflow — full planning, epics/stories loop, parallel research.',
-    category: 'tracks',
-  },
-  {
-    name: 'Track: Review',
-    slug: 'track-rv',
-    description: 'Review track — audit-first, synthesizes findings, routes to appropriate fix path.',
-    category: 'tracks',
-  },
 ];
 
 export const SKILL_CATEGORIES: SkillCategory[] = [
@@ -359,7 +327,6 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
   'security',
   'design',
   'teams',
-  'tracks',
 ];
 
 export const CATEGORY_LABELS: Record<SkillCategory, string> = {
@@ -371,7 +338,6 @@ export const CATEGORY_LABELS: Record<SkillCategory, string> = {
   security: 'Security',
   design: 'Design',
   teams: 'Teams',
-  tracks: 'Tracks',
 };
 
 export const CATEGORY_COLORS: Record<SkillCategory, string> = {
@@ -383,5 +349,4 @@ export const CATEGORY_COLORS: Record<SkillCategory, string> = {
   security: '#fca5a5',
   design: '#CA9EE6',
   teams: '#fdba74',
-  tracks: '#6ee7b7',
 };

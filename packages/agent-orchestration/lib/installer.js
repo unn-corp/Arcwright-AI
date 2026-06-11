@@ -1014,9 +1014,13 @@ async function install(opts) {
   // ── Skill prerequisites ────────────────────────────────────────────────────
   console.log(chalk.bold('Optional skill prerequisites:'));
   console.log('');
-  console.log('  ' + chalk.white('playwright-cli') + chalk.dim(' — browser automation for QA agent (.agents/skills/playwright-cli/)'));
+  console.log('  ' + chalk.white('playwright-cli') + chalk.dim(' — deterministic browser automation for QA agent (.agents/skills/playwright-cli/)'));
   console.log('    ' + chalk.cyan('npm install -g @playwright/cli@latest'));
   console.log('    ' + chalk.dim('Then: npx playwright install  # downloads browser binaries'));
+  console.log('');
+  console.log('  ' + chalk.white('browser-use') + chalk.dim(' — agentic browser exploration / test scaffolding (.agents/skills/browser-use/)'));
+  console.log('    ' + chalk.cyan('uv add "browser-use[core]"') + chalk.dim('   # or: pip install "browser-use[core]" (Python >=3.11)'));
+  console.log('    ' + chalk.dim('Needs ANTHROPIC_API_KEY in env. Optional — use for unknown/changing UIs; playwright-cli stays the default for known flows.'));
   console.log('');
   console.log('  ' + chalk.white('gsudo') + chalk.dim(' — Windows privilege escalation for git/PowerShell/playwright (.agents/skills/gsudo/)'));
   console.log('    ' + chalk.cyan('winget install gerardog.gsudo') + chalk.dim('  # Windows'));
@@ -1121,7 +1125,11 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         changed = true;
       }
       // Only add tmux entry for Claude Code (the only tool with tmux-native pane support)
-      if (tool === 'claude-code' && !existing.includes('## Agent Spawning (tmux-aware)')) {
+      // Detect the OLD tmux-aware header (from pre-stage-2 installs) OR the absence
+      // of the new header — covers both fresh installs and updates where the
+      // section content has changed but the marker hasn't moved yet.
+      if (tool === 'claude-code'
+          && !existing.includes('## Agent Spawning (in-process, tmux opt-in)')) {
         updated += tmuxEntry;
         changed = true;
       }
@@ -1148,9 +1156,9 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
       ? resolveToolPath('claude-code', '.claude/CLAUDE.md', true, homes, platform)
       : path.join(projectRoot, 'CLAUDE.md');
     await migrateOldClaudeMd(rootClaudePath);
-    const arcwrightResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-agent-start -->',    '<!-- arcwright-agent-end -->',    arcwrightEntry);
-    const tmuxResult       = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-tmux-start -->',     '<!-- arcwright-tmux-end -->',     tmuxEntry);
-    const proactiveResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-proactive-start -->', '<!-- arcwright-proactive-end -->', proactiveEntry);
+    const arcwrightResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-agent-start -->',         '<!-- arcwright-agent-end -->',         arcwrightEntry);
+    const tmuxResult       = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-orchestration-start -->', '<!-- arcwright-orchestration-end -->', tmuxEntry);
+    const proactiveResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-proactive-start -->',     '<!-- arcwright-proactive-end -->',     proactiveEntry);
     const anyChanged  = arcwrightResult !== 'noop' || tmuxResult !== 'noop' || proactiveResult !== 'noop';
     if (anyChanged) {
       console.log(chalk.green(`  ✓ ${isGlobal ? '~/.claude/CLAUDE.md' : 'CLAUDE.md'} updated (stale sections replaced)`));
@@ -1236,11 +1244,13 @@ function getFileHeader(tool) {
 
 /**
  * Write / merge .claude/settings.json with Arcwright-required env vars and
- * skill-listing budget. Enables CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS so mode
- * [4] parallel agents work out of the box. Bumps skillListingBudgetFraction
- * to 0.03 (3%) so the 50+ Arcwright skills + user skills don't get truncated
- * at session start (default 0.01 / 1% drops descriptions for users with many
- * skills installed).
+ * skill-listing budget. Enables CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS so the
+ * SendMessage agent-reuse primitive works out of the box. Bumps
+ * skillListingBudgetFraction to 0.03 (3%) so the 50+ Arcwright skills + user
+ * skills don't get truncated at session start (default 0.01 / 1% drops
+ * descriptions for users with many skills installed). Sets
+ * fallbackModel: ["sonnet"] so overload/flag-fallbacks land on a fast
+ * mid-tier model without pinning a version.
  * Merges with any existing settings — never overwrites user values.
  */
 async function writeClaudeSettings(claudeDir, chalk) {
@@ -1261,7 +1271,10 @@ async function writeClaudeSettings(claudeDir, chalk) {
   // Ensure env object exists
   settings.env = settings.env || {};
 
-  // Set Agent Teams env var if not already configured
+  // Set Agent Teams env var if not already configured.
+  // Load-bearing: this env var powers the SendMessage agent-reuse primitive
+  // used by the in-process orchestration (claude-subagent-protocol skill).
+  // Without it, kept-alive agents can't be re-engaged across turns.
   if (!settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS) {
     settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = '1';
   }
@@ -1276,10 +1289,17 @@ async function writeClaudeSettings(claudeDir, chalk) {
     settings.skillListingBudgetFraction = 0.03;
   }
 
+  // Set fallbackModel: ["sonnet"] so overload/flag-fallbacks land on a fast
+  // mid-tier model without pinning a specific version (per models.md guidance).
+  // Only set if user hasn't customized it already.
+  if (settings.fallbackModel === undefined) {
+    settings.fallbackModel = ['sonnet'];
+  }
+
   const after = JSON.stringify(settings);
   if (before !== after) {
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
-    console.log(chalk.green('  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=0.03)'));
+    console.log(chalk.green('  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=0.03, fallbackModel=["sonnet"])'));
   } else {
     console.log(chalk.gray('  ○ .claude/settings.json already up to date'));
   }
@@ -1309,9 +1329,24 @@ function buildArcwrightRulesEntry(modules) {
 function buildTmuxEntry() {
   return [
     '',
-    '## Agent Spawning (tmux-aware)',
+    '## Agent Spawning (in-process, tmux opt-in)',
     '',
-    'If `$TMUX` is set, load `.agents/skills/tmux-protocol/SKILL.md` before any multi-pane work.',
+    'Default orchestration is **in-process** via the `Agent` tool + `SendMessage`',
+    'reuse. See `.agents/skills/claude-subagent-protocol/SKILL.md` for the full',
+    'protocol (Session Agent Registry, sonnet-first, permission-before-opus).',
+    '',
+    '`tmux` is **opt-in visibility only** — load `.agents/skills/tmux/SKILL.md`',
+    '("Watching agents in panes" section) only when the user has explicitly asked',
+    'for split-pane visibility AND `$TMUX` is set. The pane is just a viewing',
+    'surface; the in-process orchestration inside it is still governed by the',
+    '`claude-subagent-protocol` skill.',
+    '',
+    'The old `tmux-protocol` skill (AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling)',
+    'is retired. Do not reintroduce those signals.',
+    '',
+    'Required setting (load-bearing for `SendMessage` reuse):',
+    '`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json`.',
+    'The installer writes this automatically.',
     '',
   ].join('\n');
 }
@@ -1330,7 +1365,7 @@ function buildProactiveEntry() {
     '',
     '| Situation | Skill |',
     '|-----------|-------|',
-    '| Starting any Arcwright workflow (track, triage, team) | `project-context` |',
+    '| Starting any Arcwright workflow (triage, team) | `project-context` |',
     '| Bug, test failure, or unexpected behavior | `systematic-debugging` |',
     '| Writing or reviewing TypeScript | `typescript-best-practices` |',
     '| Writing or reviewing React | `react-expert` |',
@@ -1358,9 +1393,9 @@ async function writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, proactiveEntry, ch
   // Migrate: strip old markerless sections left by pre-1.0.21 installers
   await migrateOldClaudeMd(globalClaudePath);
 
-  const arcwrightResult  = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-agent-start -->',    '<!-- arcwright-agent-end -->',    arcwrightEntry);
-  const tmuxResult       = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-tmux-start -->',     '<!-- arcwright-tmux-end -->',     tmuxEntry);
-  const proactiveResult  = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-proactive-start -->', '<!-- arcwright-proactive-end -->', proactiveEntry);
+  const arcwrightResult  = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-agent-start -->',         '<!-- arcwright-agent-end -->',         arcwrightEntry);
+  const tmuxResult       = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-orchestration-start -->', '<!-- arcwright-orchestration-end -->', tmuxEntry);
+  const proactiveResult  = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-proactive-start -->',     '<!-- arcwright-proactive-end -->',     proactiveEntry);
   const anyChanged = arcwrightResult !== 'noop' || tmuxResult !== 'noop' || proactiveResult !== 'noop';
 
   if (arcwrightResult === 'created' || tmuxResult === 'created' || proactiveResult === 'created') {
@@ -1372,33 +1407,100 @@ async function writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, proactiveEntry, ch
   }
 }
 
+// ─── Managed-block registries (Stage 5b) ──────────────────────────────────────
+// Single source of truth for blocks the installer writes vs. blocks it used to
+// write. Consumed by `upsertManagedBlock` (write), `cleanupManagedBlocks`
+// (strip), and `uninstall` (full strip). Keeping the lists in one place means
+// a rename or new managed block only touches one constant.
+
 /**
- * One-time migration: remove old markerless Arcwright/tmux sections injected by
- * pre-1.0.21 installers. Detects the old heading anchors and strips from that
- * heading to the next top-level heading (or end of file). No-ops if file has
- * new managed-block markers already, or if old headings are not present.
+ * Blocks the installer CURRENTLY writes. install/update use these to upsert;
+ * uninstall uses them to strip everything Arcwright wrote.
+ */
+const MANAGED_MARKERS = [
+  { name: 'arcwright-agent',         start: '<!-- arcwright-agent-start -->',         end: '<!-- arcwright-agent-end -->' },
+  { name: 'arcwright-orchestration', start: '<!-- arcwright-orchestration-start -->', end: '<!-- arcwright-orchestration-end -->' },
+  { name: 'arcwright-proactive',     start: '<!-- arcwright-proactive-start -->',     end: '<!-- arcwright-proactive-end -->' },
+];
+
+/**
+ * Blocks the installer NO LONGER writes but might still exist in user
+ * CLAUDE.md files. install/update strip these so a rename or dropped block
+ * can't orphan stale content in user files. uninstall also strips them.
+ * Includes markerless pre-1.0.21 headings that the old migrateOldClaudeMd
+ * helper used to remove by hand.
+ */
+const DEPRECATED_MARKERS = [
+  { name: 'arcwright-tmux',         start: '<!-- arcwright-tmux-start -->',          end: '<!-- arcwright-tmux-end -->' },
+  // Markerless pre-1.0.21 headings — `start` is the heading line, `end` is the
+  // next heading marker we strip up to. cleanupManagedBlocks uses the same
+  // `next ## ` heuristic the old migrateOldClaudeMd did for these pairs.
+  { name: 'arcwright-legacy-block', start: '## Arcwright',                          end: '## Agent Spawning' },
+  { name: 'arcwright-legacy-tmux',  start: '## Agent Spawning (tmux-aware)',        end: '## Proactive Skill' },
+];
+
+/**
+ * Strip each marker-pair block (and its surrounding blank lines) from a
+ * CLAUDE.md file. Generalizes the slice logic shared by upsertManagedBlock
+ * and the old migrateOldClaudeMd. Used by install/update to strip
+ * deprecated/renamed blocks, and by uninstall to strip all managed blocks.
+ *
+ * Each pair is handled as:
+ *   - HTML-comment-marker pair: remove slice from `start` to `end` (inclusive)
+ *     and surrounding blank lines. If only `start` is present (truncated file
+ *     or partial migration), strip from `start` to the next `<!-- ` comment
+ *     as a defensive fallback.
+ *   - Markerless legacy pair (start = heading, end = next heading): strip
+ *     from `start` to the next `## ` heading (or end of file).
+ *
+ * @param {string} filePath - absolute path to CLAUDE.md
+ * @param {Array<{name: string, start: string, end: string}>} markerPairs
+ * @returns {Promise<boolean>} - true if any block was removed
+ */
+async function cleanupManagedBlocks(filePath, markerPairs) {
+  if (!await fs.pathExists(filePath)) return false;
+  if (!markerPairs || markerPairs.length === 0) return false;
+
+  const original = await fs.readFile(filePath, 'utf8');
+  let cleaned = original;
+
+  for (const { start, end } of markerPairs) {
+    let startIdx = cleaned.indexOf(start);
+    if (startIdx === -1) continue;
+
+    let endIdx = cleaned.indexOf(end, startIdx + start.length);
+
+    if (endIdx === -1) {
+      // Defensive: start marker present but end marker missing.
+      // Strip from start to the next HTML comment open (or end of file).
+      const rest = cleaned.slice(startIdx + start.length);
+      const nextComment = rest.indexOf('<!-- ');
+      endIdx = nextComment === -1 ? cleaned.length : startIdx + start.length + nextComment;
+    } else {
+      endIdx = endIdx + end.length; // include the end marker in the slice
+    }
+
+    cleaned = cleaned.slice(0, startIdx) + cleaned.slice(endIdx);
+    // Collapse any blank lines that the removed block left behind.
+    cleaned = cleaned.replace(/(\n[ \t]*){3,}/g, '\n\n');
+  }
+
+  // Strip leading blank lines the removed block exposed.
+  cleaned = cleaned.replace(/^\s+/, '');
+
+  if (cleaned === original) return false;
+  await fs.writeFile(filePath, cleaned, 'utf8');
+  return true;
+}
+
+/**
+ * One-time migration helper — KEPT for backward compatibility (still called
+ * by the install flows during the transition), but the actual logic is now
+ * driven by `cleanupManagedBlocks` + `DEPRECATED_MARKERS`. New code should
+ * call `cleanupManagedBlocks(filePath, DEPRECATED_MARKERS)` directly.
  */
 async function migrateOldClaudeMd(filePath) {
-  if (!await fs.pathExists(filePath)) return;
-  const content = await fs.readFile(filePath, 'utf8');
-  // Already migrated — new markers present
-  if (content.includes('<!-- arcwright-agent-start -->') || content.includes('<!-- arcwright-tmux-start -->')) return;
-
-  const OLD_MARKERS = ['## Arcwright', '## Agent Spawning (tmux-aware)'];
-  let cleaned = content;
-  for (const marker of OLD_MARKERS) {
-    const idx = cleaned.indexOf(marker);
-    if (idx === -1) continue;
-    // Find the next top-level heading after this one, or end of string
-    const rest = cleaned.slice(idx + marker.length);
-    const nextHeading = rest.search(/\n## /);
-    const end = nextHeading === -1 ? cleaned.length : idx + marker.length + nextHeading;
-    cleaned = cleaned.slice(0, idx) + cleaned.slice(end);
-  }
-
-  if (cleaned !== content) {
-    await fs.writeFile(filePath, cleaned.trimStart(), 'utf8');
-  }
+  await cleanupManagedBlocks(filePath, DEPRECATED_MARKERS);
 }
 
 /**
@@ -1512,4 +1614,182 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules) {
   return manifestEntries;
 }
 
-module.exports = { install, status, setupTmux };
+// ─── Uninstall ────────────────────────────────────────────────────────────────
+
+/**
+ * Locations the installer can target for CLAUDE.md cleanup. Mirrors the
+ * three write sites in writeIdeConfig + writeGlobalClaudeMd.
+ */
+function getClaudeMdLocations(projectRoot, isGlobal, platform, homes) {
+  if (isGlobal) {
+    return [
+      // Global install: rules + root CLAUDE.md are both under ~/.claude/
+      resolveToolPath('claude-code', '.claude/CLAUDE.md', true, homes, platform),
+    ];
+  }
+  return [
+    // Project install: rules file lives in .claude/CLAUDE.md, root CLAUDE.md
+    // may also exist.
+    path.join(projectRoot, '.claude', 'CLAUDE.md'),
+    path.join(projectRoot, 'CLAUDE.md'),
+  ];
+}
+
+/**
+ * Strip the installer-managed `# ─── Arcwright installation ───` block from
+ * .gitignore. Idempotent — no-op if absent.
+ */
+async function stripGitignoreBlock(projectRoot) {
+  const gitignorePath = path.join(projectRoot, '.gitignore');
+  if (!await fs.pathExists(gitignorePath)) return false;
+  const original = await fs.readFile(gitignorePath, 'utf8');
+
+  const START = '# ─── Arcwright installation ──────────────────────────────────────────';
+  const END   = '# ─── end arcwright ───────────────────────────────────────────────────';
+  const blockRe = new RegExp(`${escapeRe(START)}[\\s\\S]*?${escapeRe(END)}\\n?`, 'm');
+  const cleaned = original.replace(blockRe, '').replace(/\n{3,}/g, '\n\n').trimStart() + '\n';
+  if (cleaned === original) return false;
+  await fs.writeFile(gitignorePath, cleaned, 'utf8');
+  return true;
+}
+
+/**
+ * Remove keys the installer wrote to .claude/settings.json IF they still match
+ * the installer-written values. Never clobber user-customized values.
+ *
+ * Installer-written defaults:
+ *   env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS === '1'
+ *   env.CLAUDE_CODE_NO_FLICKER === '1'
+ *   skillListingBudgetFraction === 0.03
+ *   fallbackModel === ['sonnet']
+ */
+async function stripInstallerSettingsKeys(claudeDir) {
+  const settingsPath = path.join(claudeDir, 'settings.json');
+  if (!await fs.pathExists(settingsPath)) return false;
+  let settings;
+  try { settings = JSON.parse(await fs.readFile(settingsPath, 'utf8')); }
+  catch { return false; }
+
+  let touched = false;
+  if (settings.env) {
+    if (settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS === '1') {
+      delete settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
+      touched = true;
+    }
+    if (settings.env.CLAUDE_CODE_NO_FLICKER === '1') {
+      delete settings.env.CLAUDE_CODE_NO_FLICKER;
+      touched = true;
+    }
+    if (settings.env && Object.keys(settings.env).length === 0) {
+      delete settings.env;
+    }
+  }
+  if (settings.skillListingBudgetFraction === 0.03) {
+    delete settings.skillListingBudgetFraction;
+    touched = true;
+  }
+  if (Array.isArray(settings.fallbackModel) && settings.fallbackModel.length === 1 && settings.fallbackModel[0] === 'sonnet') {
+    delete settings.fallbackModel;
+    touched = true;
+  }
+
+  if (!touched) return false;
+  await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
+  return true;
+}
+
+/**
+ * Uninstall Arcwright from the user's project or global config.
+ *
+ * Steps:
+ *  1. Strip MANAGED_MARKERS + DEPRECATED_MARKERS blocks from every CLAUDE.md
+ *     location the installer might have written to.
+ *  2. Strip the managed Arcwright block from .gitignore (project installs only).
+ *  3. Strip installer-written keys from .claude/settings.json (only if they
+ *     still match the installer defaults — never clobber user edits).
+ *  4. Optionally remove installed dirs per the manifest. Prompts unless --yes.
+ *
+ * Idempotent — running twice is safe (everything's already gone on run 2).
+ *
+ * @param {Object} [opts]
+ * @param {boolean} [opts.global]   - uninstall from global (~/.claude/, ~/.arcwright/)
+ * @param {boolean} [opts.yes]      - skip confirmation prompts
+ * @param {string}  [opts.directory] - project root (default cwd)
+ */
+async function uninstall(opts = {}) {
+  const isGlobal = !!opts.global;
+  const yes = !!opts.yes;
+  const projectRoot = path.resolve(opts.directory || process.cwd());
+  const chalk = (await import('chalk')).default;
+  const platform = detectPlatform();
+  const homes = getHomes(platform);
+
+  console.log(chalk.bold(`\nUninstalling Arcwright (${isGlobal ? 'global' : 'project'}: ${projectRoot})\n`));
+
+  // 1. Strip managed + deprecated blocks from every CLAUDE.md location.
+  const claudeMdLocations = getClaudeMdLocations(projectRoot, isGlobal, platform, homes);
+  let mdStripped = 0;
+  for (const md of claudeMdLocations) {
+    const removed = await cleanupManagedBlocks(md, [...MANAGED_MARKERS, ...DEPRECATED_MARKERS]);
+    if (removed) {
+      mdStripped++;
+      console.log(chalk.green(`  ✓ ${path.relative(projectRoot, md) || md} (Arcwright blocks stripped)`));
+    }
+  }
+  if (mdStripped === 0) console.log(chalk.gray('  ○ No CLAUDE.md blocks to strip'));
+
+  // 2. Strip the managed gitignore block (project installs only).
+  if (!isGlobal) {
+    const removed = await stripGitignoreBlock(projectRoot);
+    if (removed) console.log(chalk.green('  ✓ .gitignore (Arcwright block stripped)'));
+    else console.log(chalk.gray('  ○ .gitignore (no Arcwright block)'));
+  }
+
+  // 3. Strip installer-written settings.json keys.
+  const settingsBase = isGlobal
+    ? resolveToolPath('claude-code', '.claude', true, homes, platform)
+    : path.join(projectRoot, '.claude');
+  const settingsChanged = await stripInstallerSettingsKeys(settingsBase);
+  if (settingsChanged) console.log(chalk.green('  ✓ .claude/settings.json (installer keys removed)'));
+  else console.log(chalk.gray('  ○ .claude/settings.json (no installer keys to remove)'));
+
+  // 4. Optionally remove installed dirs per the manifest.
+  // Library contract: `--yes` opts in automatically. The CLI layer
+  // (`cli.js`) is responsible for the interactive prompt and is expected
+  // to call this function with `yes: true` only after the user confirms.
+  // Idempotent: if there's no manifest, there's nothing to remove.
+  const manifestDir = isGlobal
+    ? path.join(homes.linux, '.arcwright')
+    : path.join(projectRoot, '_arcwright');
+  const manifest = await readManifest(manifestDir);
+  if (!manifest) {
+    console.log(chalk.gray('  ○ No manifest found — nothing to remove'));
+  } else if (yes) {
+    if (isGlobal) {
+      if (await fs.pathExists(manifestDir)) {
+        await fs.remove(manifestDir);
+        console.log(chalk.green(`  ✓ ${manifestDir} (removed)`));
+      }
+    } else {
+      // Project installs: only remove Arcwright-owned module dirs + the
+      // output folder. _arcwright/_config/ contains the manifest + any user
+      // `.customize.yaml` overlays — leave in place so the next install can
+      // detect prior state and preserve user-owned files. Callers wanting a
+      // full wipe can `rm -rf _arcwright/` themselves.
+      for (const sub of ['awm', 'awb', 'core', '_memory']) {
+        const d = path.join(manifestDir, sub);
+        if (await fs.pathExists(d)) await fs.remove(d);
+      }
+      const outputDir = path.join(projectRoot, manifest.outputFolder || '_arcwright-output');
+      if (await fs.pathExists(outputDir)) await fs.remove(outputDir);
+      console.log(chalk.green(`  ✓ Arcwright module dirs + ${manifest.outputFolder || '_arcwright-output'} removed`));
+      console.log(chalk.dim(`    (${path.relative(projectRoot, manifestDir)} retained — contains manifest + user overlays)`));
+    }
+  } else {
+    console.log(chalk.yellow('  ⚠ Installed dirs NOT removed (pass --yes to remove them).'));
+  }
+
+  console.log(chalk.bold.green(`\n✓ Uninstalled.\n`));
+}
+
+module.exports = { install, status, setupTmux, uninstall };
