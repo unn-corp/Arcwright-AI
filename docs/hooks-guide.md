@@ -108,18 +108,29 @@ and merges without clobbering existing hooks.
 
 ## Seeding hooks with the installer
 
-The installer **prompts** for a hooks mode during interactive setup (alongside the gitignore
-choice). You can also set it non-interactively with the `--hooks <none|safe|full>` flag, which
-skips the prompt (`--yes` defaults to `none`):
+The installer **prompts** for an autonomy posture during interactive setup (alongside the
+gitignore choice). The default is **safe (autonomous)** — `--yes` and non-interactive installs
+get it automatically. Set it explicitly to skip the prompt:
 
 ```bash
-npx @arcwright-ai/agent-orchestration --hooks safe   # guards + SessionStart context
+npx @arcwright-ai/agent-orchestration --hooks safe   # autonomous + guards (default)
 npx @arcwright-ai/agent-orchestration --hooks full   # + tsc/pyright typecheck on edits
+npx @arcwright-ai/agent-orchestration --hooks none   # conservative: ask-first, no hooks
 ```
 
-- **safe** — PreToolUse(Bash) destructive-command guard, PreToolUse(Write|Edit) secret/key-file
-  guard, and a SessionStart context reminder.
-- **full** — `safe` plus a PostToolUse(Write|Edit) typecheck (`tsc --noEmit` / `pyright`).
+- **safe (default, autonomous)** — sets `permissions.defaultMode: "acceptEdits"` so agents
+  apply edits without stopping to ask, with PreToolUse(Bash) destructive-command guard,
+  PreToolUse(Write|Edit) secret/key-file guard, and a SessionStart context reminder. The
+  guards are what make auto-accept safe: edits flow, but `rm -rf /`, force-push to main, and
+  secret writes are blocked, and ordinary bash still prompts (`acceptEdits` only auto-accepts
+  file edits).
+- **full (autonomous + typecheck)** — `safe` plus a PostToolUse(Write|Edit) typecheck
+  (`tsc --noEmit` / `pyright`).
+- **none (conservative)** — no Arcwright hooks; Claude Code's default ask-first permission
+  mode. For users who want to approve each action.
+
+The permission mode is only set if you haven't chosen your own — a user-set `defaultMode` is
+never overwritten.
 
 Guard scripts are copied to `.claude/arcwright-hooks/` (`guard-bash.js`, `guard-write.js`,
 `typecheck.js`). The merge into `.claude/settings.json` is **idempotent** — Arcwright entries
