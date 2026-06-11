@@ -201,6 +201,8 @@ Available stacks: `html-tailwind`, `react`, `nextjs`, `vue`, `svelte`, `swiftui`
 
 **Note for Web Mobile UI Layout (React/Next.js):** When creating mobile-first web pages or progressive web apps, explicitly read the `data/mobile-ui-layout.md` guide. It contains essential layout patterns, touch target requirements, safe area handling, and production-ready component code (like Bottom Sheets, Pull-to-Refresh) for mobile web layouts.
 
+**Note for Local Business / Lead-Gen / Service-Area Marketing Sites:** When building a marketing site, service page, city page, or any lead-gen landing page for a local service business (plumber, HVAC, electrician, contractor, home services), explicitly read the `data/conversion-landing-local-business.md` guide. It contains above-the-fold mobile checklists, city and service page templates, sticky tap-to-call patterns, copy-pasteable LocalBusiness + AggregateRating JSON-LD schema, performance targets, and a full anti-pattern list.
+
 ---
 
 ## Example Workflow

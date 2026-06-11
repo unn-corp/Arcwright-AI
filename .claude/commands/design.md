@@ -4,7 +4,11 @@ description: Query the design-intelligence database for style, palette, and font
 
 # /design — Design Intelligence Query, Implementation & Clone
 
-Three modes in one command — driven by `$ARGUMENTS`:
+Three modes in one command — driven by `$ARGUMENTS`.
+
+> **Optional MCP components:** `.agents/skills/visual-feedback-loop/recommended-frontend-mcps.md` lists shadcn MCP, Magic MCP, and Chrome DevTools MCP for users who want higher-quality primitives or browser-native debugging.
+
+
 
 | Mode | How to invoke |
 |---|---|
@@ -68,6 +72,7 @@ Apply a chosen design (from a Recommend result or a user description) as real co
    playwright-cli screenshot --filename=design-impl-check.png
    ```
    Read `design-impl-check.png` with the Read tool. Confirm the design looks as expected. Fix any obvious visual regressions before reporting done.
+   > This single-pass check is the lightweight variant of the shared `visual-feedback-loop` skill — for a full scored multi-iteration loop, load `.agents/skills/visual-feedback-loop/SKILL.md`.
 7. Report: what was changed, what files were touched, and a one-line visual assessment.
 
 ---
@@ -129,6 +134,9 @@ Cross-reference findings with the design database from `ui-ux-pro-custom` to nam
    ```
 
 #### Step 4 — Visual comparison loop (max 5 iterations)
+
+> This is the shared `visual-feedback-loop` skill. For standalone use outside of clone mode, load `.agents/skills/visual-feedback-loop/SKILL.md`.
+
 
 Repeat until the implementation matches the source or the iteration cap is reached:
 

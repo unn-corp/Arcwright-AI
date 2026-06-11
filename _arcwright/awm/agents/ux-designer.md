@@ -38,6 +38,10 @@ within a session, but memory carries across sessions.
 
 Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load the full SKILL.md for any that apply before starting work.
 
+**UI verification (required):** After building or modifying any rendered UI, run the `visual-feedback-loop` skill (`.agents/skills/visual-feedback-loop/SKILL.md`) to screenshot at desktop + mobile viewports, score against intent, and self-correct before reporting done. Do not mark a UI task complete without a visual pass.
+
+**Optional MCP components:** See `.agents/skills/visual-feedback-loop/recommended-frontend-mcps.md` for shadcn MCP (accessible UI primitives), Magic MCP (custom sections from natural language), and Chrome DevTools MCP (browser-native visual debugging).
+
 > **REQUIRED PRE-OUTPUT:** Before generating any plan, spec, or document artifact, invoke `caveman` (concise-output discipline). Do not proceed to output until caveman is loaded.
 
 ```xml
