@@ -183,7 +183,7 @@ WSL2 dual-home aware — terminal tools (Claude Code, Gemini) use the Linux home
 | `--docker-check` | not installed | Opt in to `/docker-check` and the `docker-type-check` skill |
 | `--gitignore <mode>` | prompted | One of: `full`, `skills`, `output-only`, `none` (see gitignore section below) |
 | `--channel <stable\|next>` | `stable` | Release channel to track. Recorded in the manifest; `next` opts into pre-release builds when available. |
-| `--hooks <none\|safe\|full>` | prompted | Seed Claude Code hooks into `.claude/settings.json` (asked interactively; `none` with `--yes`). `safe` = destructive-command + secret/key-file guards + SessionStart context. `full` adds tsc/pyright typecheck on edits. Idempotent merge; scripts land in `.claude/arcwright-hooks/`. See [`docs/hooks-guide.md`](docs/hooks-guide.md). |
+| `--hooks <safe\|full\|none>` | prompted (`safe`) | Autonomy posture in `.claude/settings.json` (asked interactively; **`safe` with `--yes`**). `safe` = autonomous: auto-accept edits + destructive-command/secret guards + SessionStart context. `full` adds tsc/pyright typecheck on edits. `none` = conservative (ask-first, no hooks). Idempotent merge; scripts land in `.claude/arcwright-hooks/`. See [`docs/hooks-guide.md`](docs/hooks-guide.md). |
 
 **TOML customization (3-layer overrides):** on install, `_arcwright/custom/` is scaffolded with a commented `example.toml`. Drop `<name>.toml` (team) and `<name>.user.toml` (personal) there to override shipped defaults. Resolution order **base < team < user**: scalars override; arrays with a `<key>__append = true` sibling accumulate; keyed arrays (`id`/`name`) match-and-patch. No files present = unchanged behavior. Gitignore your `*.user.toml`.
 

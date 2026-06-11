@@ -45,7 +45,7 @@ program
   .option('--model-launchers', 'Install alternate-model launchers (claude-glm, claude-minimax, claude-qwen, claude-sub — provider-aware) — off by default')
   .addOption(new Option('--openrouter-launchers', 'Alias for --model-launchers (kept for compatibility)').hideHelp())
   .option('--channel <channel>', 'Release channel to track: stable | next (default: stable)', 'stable')
-  .option('--hooks <mode>', 'Seed Claude Code hooks into settings.json: none | safe | full (default: prompted interactively, none with --yes). safe = secret-scan + destructive-command guard + SessionStart context; full = + typecheck on edits')
+  .option('--hooks <mode>', 'Autonomy posture: safe | full | none (default: prompted, safe with --yes). safe = auto-accept edits + destructive-command/secret guards + SessionStart context; full = + tsc/pyright on edits; none = conservative, ask first')
   .addHelpText('after', `
 Examples:
   # Interactive install — prompts for your name, detects existing installation
@@ -98,7 +98,7 @@ program
   .option('--model-launchers', 'Install alternate-model launchers (claude-glm, claude-minimax, claude-qwen, claude-sub — provider-aware) — off by default')
   .addOption(new Option('--openrouter-launchers', 'Alias for --model-launchers (kept for compatibility)').hideHelp())
   .option('--channel <channel>', 'Release channel to track: stable | next (default: stable)', 'stable')
-  .option('--hooks <mode>', 'Seed Claude Code hooks into settings.json: none | safe | full (default: prompted interactively, none with --yes). safe = secret-scan + destructive-command guard + SessionStart context; full = + typecheck on edits')
+  .option('--hooks <mode>', 'Autonomy posture: safe | full | none (default: prompted, safe with --yes). safe = auto-accept edits + destructive-command/secret guards + SessionStart context; full = + tsc/pyright on edits; none = conservative, ask first')
   .addHelpText('after', `
 Examples:
   # Interactive update — shows installed version, preserves your name

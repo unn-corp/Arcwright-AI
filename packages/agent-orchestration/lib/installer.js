@@ -827,16 +827,17 @@ async function install(opts) {
       resolvedGitignore = gitignoreChoice;
     }
 
-    // Claude Code hooks — only for claude-code installs, only if not set via flag
+    // Autonomy posture (Claude Code hooks + permission mode) — claude-code only,
+    // only if not set via flag. Default leans autonomous-with-guardrails.
     if (resolvedTools.includes('claude-code') && resolvedHooks === null) {
       const hooksChoice = await select({
-        message: 'Seed Claude Code hooks into settings.json?',
+        message: 'How autonomous should Arcwright agents run?',
         options: [
-          { value: 'none', label: 'None — no hooks (default)' },
-          { value: 'safe', label: 'Safe — block destructive commands + secret writes, load context on session start' },
-          { value: 'full', label: 'Full — safe + run tsc/pyright typecheck after edits' },
+          { value: 'safe', label: 'Autonomous (recommended) — auto-accept edits; guardrails block destructive commands + secret writes; load context on session start' },
+          { value: 'full', label: 'Autonomous + typecheck — safe, plus tsc/pyright on every edit (slower, tighter)' },
+          { value: 'none', label: 'Conservative — no hooks, ask before edits/commands (Claude Code default)' },
         ],
-        initialValue: existingManifest?.hooks || 'none',
+        initialValue: existingManifest?.hooks || 'safe',
       });
       if (isCancel(hooksChoice)) { process.exit(0); }
       resolvedHooks = hooksChoice;
@@ -844,6 +845,11 @@ async function install(opts) {
 
     outro(`${isUpdate ? 'Updating' : 'Installing'} Arcwright...`);
   }
+
+  // Finalize resolvedHooks BEFORE writeIdeConfig (which writes settings.json).
+  // Default autonomy posture is 'safe' (autonomous-with-guardrails); --hooks none
+  // opts into the conservative ask-first path.
+  if (resolvedHooks === null) resolvedHooks = 'safe';
 
   // Finalize resolvedTmux — default to true when claude-code is selected (both project + global)
   if (resolvedTmux === null) {
@@ -1067,7 +1073,6 @@ async function install(opts) {
   // For --yes with no --gitignore flag, default to 'output-only'
   if (!isGlobal) {
     if (resolvedGitignore === null) resolvedGitignore = 'output-only';
-    if (resolvedHooks === null) resolvedHooks = 'none';
     if (resolvedGitignore !== 'none') {
       await updateGitignore(projectRoot, resolvedGitignore, chalk);
     }
@@ -1405,10 +1410,19 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
     settings.fallbackModel = ['sonnet'];
   }
 
-  // Seed Arcwright hooks (opt-in via --hooks safe|full). Copies guard scripts
-  // and idempotently merges hook entries without clobbering user hooks.
+  // Seed Arcwright hooks (safe|full). Copies guard scripts and idempotently
+  // merges hook entries without clobbering user hooks. The guards are what make
+  // the autonomous permission posture below safe to run.
   if (hooksMode === 'safe' || hooksMode === 'full') {
     await seedArcwrightHooks(settings, claudeDir, hooksMode, isGlobal);
+    // Autonomous posture: auto-accept edits so agents don't stop on every write.
+    // Destructive bash + secret writes are still fenced by the guard hooks, and
+    // bash itself still prompts (acceptEdits only auto-accepts file edits).
+    // Only set if the user hasn't chosen their own permission mode.
+    settings.permissions = settings.permissions || {};
+    if (!settings.permissions.defaultMode) {
+      settings.permissions.defaultMode = 'acceptEdits';
+    }
   }
 
   const after = JSON.stringify(settings);
