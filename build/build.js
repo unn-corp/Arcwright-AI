@@ -102,6 +102,18 @@ const SHIPPED_COMMANDS = [
   /^caveman\.md$/,
   /^constitution\.md$/,
   /^correct-course\.md$/,
+  /^hookify\.md$/,
+  /^handoff\.md$/,
+  /^claude-md\.md$/,
+  /^commit\.md$/,
+  /^commit-push-pr\.md$/,
+  /^clean-gone\.md$/,
+  /^grill\.md$/,
+  /^explain-mode\.md$/,
+  /^pr-review\.md$/,
+  /^code-graph\.md$/,
+  /^tasks\.md$/,
+  /^lsp\.md$/,
 ];
 
 
@@ -596,6 +608,18 @@ function bundleKiroAgents() {
     'caveman':            ['fs_read', 'fs_write', 'grep', 'glob'],
     'constitution':       ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
     'correct-course':     ['fs_read', 'fs_write', 'grep', 'glob', 'code'],
+    'hookify':            ['fs_read', 'fs_write', 'execute_bash'],
+    'handoff':            ['fs_read', 'fs_write', 'execute_bash', 'glob'],
+    'claude-md':          ['fs_read', 'fs_write', 'execute_bash'],
+    'commit-push-pr':     ['execute_bash'],
+    'commit':             ['execute_bash'],
+    'clean-gone':         ['execute_bash'],
+    'grill':              ['fs_read', 'execute_bash', 'grep', 'glob'],
+    'explain-mode':       ['fs_read'],
+    'pr-review':          ['fs_read', 'execute_bash', 'grep', 'glob', 'subagent', 'web_fetch'],
+    'code-graph':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
+    'tasks':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'subagent'],
+    'lsp':                ['fs_read', 'fs_write', 'execute_bash'],
   };
 
   function resolveTools(name) {
