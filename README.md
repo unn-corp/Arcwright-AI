@@ -283,6 +283,15 @@ Global installs skip the project-level gitignore prompt. On `update --yes --glob
 
 These are independent — installing globally does not replace a project-level install. Claude Code and Kiro merge global and project configs at runtime. If both exist, the project-level entries take precedence.
 
+**Multiple Claude accounts on one machine:**
+
+If you run several Claude Code accounts (e.g. Personal / Work / Alt, each with its own
+`CLAUDE_CONFIG_DIR`), you can install Arcwright **once** and share it — plus your
+conversation transcripts — across all of them via symlinks. Works the same on native
+Linux/macOS and on WSL2 (the only Windows-specific part is the launcher, which becomes a
+small shell function on Linux). Full walkthrough, launchers for both platforms, and
+revert steps: [`docs/multi-account-setup.md`](docs/multi-account-setup.md).
+
 ---
 
 ## tmux Setup
