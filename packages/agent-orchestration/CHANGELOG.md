@@ -25,3 +25,11 @@
   `--openrouter-launchers` is retained as a hidden alias for `--model-launchers`.
 
   Docs: `docs/dev/model-launchers.md`.
+- **`motion` skill** — Motion (formerly Framer Motion) is now the prioritized React
+  animation library for Arcwright frontends. Lean distillation (SKILL.md + RULES.md sidecar)
+  of the MIT-licensed motion skill from `secondsky/claude-skills`: when-to-use decision guide
+  (Motion vs CSS vs `auto-animate` vs `framer-motion` on Cloudflare Workers), core API,
+  framework integration gotchas (Next.js `"use client"`, Tailwind `transition-*` conflicts),
+  `LazyMotion` bundle optimization, and `prefers-reduced-motion` accessibility. Wired into the
+  `ux-designer` agent (Animation Library Rule) and the proactive skill-invocation tables so any
+  JS-driven animation defaults to Motion over hand-rolled CSS/`requestAnimationFrame`.
