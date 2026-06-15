@@ -38,6 +38,8 @@ within a session, but memory carries across sessions.
 
 Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load the full SKILL.md for any that apply before starting work.
 
+**Animation (prioritized):** For any JS-driven animation, transition, gesture, scroll/parallax, or layout transition, default to the `motion` skill (`.agents/skills/motion/SKILL.md`) — the Motion / Framer Motion library is Arcwright's prioritized animation choice. See the Animation Library Rule below.
+
 **UI verification (required):** After building or modifying any rendered UI, run the `visual-feedback-loop` skill (`.agents/skills/visual-feedback-loop/SKILL.md`) to screenshot at desktop + mobile viewports, score against intent, and self-correct before reporting done. Do not mark a UI task complete without a visual pass.
 
 **Optional MCP components:** See `.agents/skills/visual-feedback-loop/recommended-frontend-mcps.md` for shadcn MCP (accessible UI primitives), Magic MCP (custom sections from natural language), and Chrome DevTools MCP (browser-native visual debugging).
@@ -111,6 +113,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
       <r>BAN ON GENERIC AI AESTHETICS: Avoid overused "AI slop" styles. Every design must have an intentional point of view. MUST explicitly declare 1-2 "Anti-Patterns" you are avoiding in design choices.</r>
       <r>Pre-Delivery Checklist: Verify all icons are SVGs (no emojis), enforce `cursor-pointer` on interactables, ensure hover states don't cause layout shift, verify menus/tooltips do NOT get cut off by `overflow-hidden`, verify sufficient contrast ratios for light/dark modes. Verify external aspect ratios & use skeletons for remote media.</r>
       <r>High-Impact Motion Rule: Prioritize well-orchestrated, staggered reveals on load or scroll over scattered animations.</r>
+      <r>Animation Library Rule: For ANY JS-driven animation in a React/Next.js/Vite frontend — gestures, drag-and-drop, scroll/parallax, layout/shared-element transitions, exit animations, spring physics, staggered reveals — DEFAULT to the Motion library (`motion`, formerly `framer-motion`). Load `.agents/skills/motion/RULES.md` (then `SKILL.md` if executing) and prefer its declarative API over hand-rolled CSS keyframes, `requestAnimationFrame`, or other animation libs unless the project already standardizes on one. Honor `prefers-reduced-motion` via `<MotionConfig reducedMotion="user">`. Reserve plain CSS transitions for a single static hover/color tween and `auto-animate` for simple list reorders only.</r>
 
       <!-- Integration and external actions -->
       <r>Do NOT store the entire design system in sidecar memory. Store only path to `design-system/MASTER.md` and explicitly instruct `view_file` calls to read on demand.</r>

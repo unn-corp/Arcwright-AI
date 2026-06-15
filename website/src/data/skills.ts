@@ -36,6 +36,12 @@ export const skills: Skill[] = [
     category: 'frontend',
   },
   {
+    name: 'Motion',
+    slug: 'motion',
+    description: 'Prioritized React animation library (Motion / Framer Motion) — gestures, drag, scroll, layout transitions, springs, and reduced-motion accessibility.',
+    category: 'frontend',
+  },
+  {
     name: 'Design',
     slug: 'design',
     description: 'Design intelligence for UI/UX decisions, component specs, and visual hierarchy.',
