@@ -72,9 +72,15 @@ grep -rniE "role|permission|is_?admin|can_?access|authorize|abac|rbac" --include
 - Session invalidation on logout / password change; sessions are server-validated, not trusted from the client.
 - **MFA available for sensitive accounts** (TOTP/WebAuthn-passkeys) — at minimum admin/owner
   accounts; phishing-resistant WebAuthn preferred over SMS OTP.
+- **Email/identity verification enforced before sensitive actions** — unverified accounts are
+  blocked from writes/purchases/privileged actions, not just nagged. The gate is **server-side**
+  (check `email_confirmed_at` / the provider's verified flag in the session, e.g. Cognito
+  `email_verified`, Supabase, Clerk), never a client boolean. New-signup self-grant of trusted
+  state is rejected.
 
 **Red flags:**
 - Authorization decided by a client-supplied field (`req.body.userId`, `?role=admin`).
+- Unverified users can perform writes/sensitive actions (no server-side `email_verified` gate) (**Medium**).
 - Object fetched by ID with no ownership/tenant check → **IDOR** (Critical/High).
 - Auth check in the UI only (route renders, but the API is open).
 - Mixed enforcement: some routes gated, siblings unguarded.
@@ -133,11 +139,18 @@ grep -rniE "md5|sha1|sha256).{0,40}(password|passwd|pwd" --include=*.{js,ts,py,g
 - A maintained library does the hashing+salting (per-password salt automatic).
 - Verification uses the library's constant-time `compare`/`verify`, never `==`.
 - No plaintext, no reversible encryption, no fast hashes (MD5/SHA-*) for passwords.
+- **Password policy (separate from hashing):** enforce a sane **minimum length (≥ 12)** and
+  **screen against breached passwords** (HaveIBeenPwned range API, or the provider's
+  leaked-password protection — Supabase Auth, Cognito advanced security, Clerk). Composition
+  rules (special-char mandates) are *not* a substitute for length + breach screening. Policy is
+  enforced **server-side**, not just in client validation (topic 23).
 
-**Red flags (Critical):**
-- `md5(password)`, `sha256(password)`, plaintext storage, hardcoded/global salt.
-- Home-rolled hashing; `password === stored` string comparison (timing leak).
-- Reversible encryption of passwords (recoverable = breach-amplifying).
+**Red flags:**
+- `md5(password)`, `sha256(password)`, plaintext storage, hardcoded/global salt (**Critical**).
+- Home-rolled hashing; `password === stored` string comparison (timing leak) (**Critical**).
+- Reversible encryption of passwords (recoverable = breach-amplifying) (**Critical**).
+- No minimum-length / no breached-password screening on signup or password change (**Medium**).
+- Password policy enforced only client-side (bypassable via direct API call) (**Medium**, ties to topic 23).
 
 ---
 
@@ -187,10 +200,16 @@ grep -rniE "csrf|csurf|SameSite|samesite|X-CSRF|csrf_token|@csrf_exempt" --inclu
 
 **What good looks like:**
 - **SQLi:** parameterized queries / ORM bind params only; no string interpolation of input into SQL. `.raw()`/`.extra()` only with bound params.
+- **ORM identifier injection (bind params do NOT cover this):** user input that selects a
+  **column name, table, `ORDER BY` field, sort direction, or operator** must be validated against
+  a server-side **allowlist** — parameterization only protects *values*, not identifiers. Watch
+  dynamic `orderBy`/`sortBy`/`column`/`filter`/`op` query params, Prisma `orderBy`/`where` keys
+  built from input, Sequelize `Op`/`order` from input, and raw fragments (`Prisma.sql`, `knex.raw`,
+  `QueryBuilder.where("..." )`) interpolating input.
 - **XSS:** rely on framework auto-escaping; `dangerouslySetInnerHTML`/`v-html`/`|safe` only with sanitized (DOMPurify/bleach) content.
 - **CSRF:** state-changing routes protected by tokens **or** cookies set `SameSite=Lax/Strict`; pure-Bearer-token APIs (no cookies) are CSRF-exempt by design — note that, don't flag.
 
-**Red flags:** f-string/template-literal SQL with input (**Critical**); `v-html`/`dangerouslySetInnerHTML` on user data (**High**); cookie-session app with `@csrf_exempt` on POST and no SameSite (**Medium/High**).
+**Red flags:** f-string/template-literal SQL with input (**Critical**); user-controlled `ORDER BY`/column/sort/operator with no allowlist → **identifier injection** (**High**); `v-html`/`dangerouslySetInnerHTML` on user data (**High**); cookie-session app with `@csrf_exempt` on POST and no SameSite (**Medium/High**).
 
 ---
 
