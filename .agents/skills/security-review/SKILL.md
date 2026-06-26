@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: OWASP-aligned security code review — injection, XSS, auth, authorization, cryptography. Use for "security review", "find vulnerabilities", "audit security", or any vulnerability check.
+description: OWASP-aligned security code review — injection, XSS, auth, authorization, cryptography. Use for "security review", "find vulnerabilities", "audit security", or any vulnerability check. For a whole-repo posture scan across 12 domains, see `posture/posture-scan.md` (the `/security-scan` command).
 allowed-tools: Read, Grep, Glob, Bash, Task
 license: LICENSE
 ---
@@ -13,6 +13,40 @@ https://cheatsheetseries.owasp.org/
 # Security Review Skill
 
 Identify exploitable security vulnerabilities in code. Report only **HIGH CONFIDENCE** findings—clear vulnerable patterns with attacker-controlled input.
+
+## Two Modes
+
+| Mode | Question | Entry point |
+|------|----------|-------------|
+| **Diff review** (this file) | "Is this changed code exploitable?" | `/security-review`, `/sec-loop` |
+| **Posture scan** | "Does this repo implement each control correctly?" | `posture/posture-scan.md` → `/security-scan` |
+
+The **posture scan** walks 12 application-security domains (auth & authz, password hashing,
+input validation, SQLi/XSS/CSRF, JWT, rate limiting, secret/env management, API routes,
+HTTPS, dependency CVEs, file uploads, logging), an optional 13th — **AWS IaC posture**
+(`posture/aws-cdk.md`: CDK/CloudFormation/Terraform IAM, S3, encryption, security groups,
+WAF/API-throttling, secrets, CloudTrail) when infrastructure code is present, and a 14th —
+**API token & credential scoping** (`posture/token-scoping.md`: least privilege for tokens
+the app holds and issues), a 15th — **API inventory, versioning & shadow/zombie
+endpoints** (`posture/api-inventory.md`), and a 16th — **database server hardening**
+(`posture/database-hardening.md`: pg_hba/`trust`, PUBLIC grants, app-as-superuser,
+`SECURITY DEFINER` search_path, `sslmode`) when DB config/migrations are present, and a 17th —
+**browser & client-side security** (`posture/browser-security.md`: CSP, security headers,
+Subresource Integrity, clickjacking, Trusted Types) when the app serves HTML, and an 18th —
+**error & exception handling / fail-closed** (`posture/error-handling.md`, OWASP A10:2025),
+and topics 19–22 — **multi-tenancy isolation & business logic**
+(`posture/multitenancy-logic.md`), **SSRF & insecure deserialization**
+(`posture/ssrf-deserialization.md`), **container & image hardening**
+(`posture/container-hardening.md`), **AI/LLM & WebSocket security**
+(`posture/ai-websocket.md`), a 23rd — **user input & form field security**
+(`posture/input-fields.md`: client-vs-server validation, rich-text sanitization, Unicode
+normalization, ReDoS, sensitive-field hygiene), and a 24th — **data classification & field-level
+encryption** (`posture/data-encryption.md`: classify/minimize PII, column-level encryption of
+restricted fields, card tokenization, KMS key management). The whole set is mapped to both the **OWASP Top 10:2025** (web)
+and the **OWASP API Security Top 10**. It emits a report card and is
+hybrid: runs real tools (npm audit, gitleaks, trivy, pip-audit, govulncheck, semgrep,
+cdk-nag, checkov, cfn-lint) where installed and falls back to LLM analysis. It reuses the
+same confidence rules, severity table, and references below.
 
 ## Scope: Research vs. Reporting
 
