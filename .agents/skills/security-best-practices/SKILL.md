@@ -222,6 +222,47 @@ app.post('/api/auth/refresh', async (req, res) => {
 });
 ```
 
+### Step 6: Make money-touching writes idempotent
+
+Any state-changing request that moves money (a sale, charge, capture, refund,
+payout, transfer) MUST be safe to send twice. A double-click, a retried request
+after a dropped response, or a second tab will otherwise replay the operation:
+a duplicate charge, a double-credited payee, double-decremented stock. POST is
+not safe to replay by default, so when you do NOT want replication, an
+idempotency key is the mechanism that turns a replay into a no-op.
+
+Enforce it at two layers:
+
+```typescript
+// Layer 1 — pass an idempotency key on every payment-provider WRITE call.
+// The provider stores it and returns the ORIGINAL result on a replay instead
+// of creating a second object. Derive it from the logical operation so a retry
+// reuses the same key.
+await stripe.refunds.create(
+  { payment_intent: id },
+  { idempotencyKey: `refund:${id}` },
+);
+
+// Layer 2 — your OWN write endpoint must dedup too. The caller sends one token
+// per logical operation (an `Idempotency-Key` header or body field); persist it
+// in a column with a UNIQUE index so a replay is rejected at the DB, not just in
+// app code. On collision, RETURN the original row instead of erroring, so a
+// network retry resolves to one idempotent success.
+const token = normalizeUuid(req.headers.get('idempotency-key'));
+if (token) {
+  const prior = await db.queryOne('SELECT id FROM sales WHERE client_txn_id = $1', [token]);
+  if (prior) return prior.id;            // replay -> original result
+}
+// ... INSERT ... carrying the token in a UNIQUE-indexed column;
+// catch the unique-violation race and return the winning row's id.
+```
+
+Mint the token per logical attempt (a fresh UUID per checkout), never a hash of
+the request body: two genuinely-distinct identical purchases must each ring.
+A client-side disabled-button / busy flag is NOT sufficient on its own; it does
+not survive retries or multiple tabs. This maps to OWASP A08 (Software & Data
+Integrity Failures).
+
 ## Constraints
 
 ### Required rules (MUST)
@@ -231,6 +272,7 @@ app.post('/api/auth/refresh', async (req, res) => {
 3. **Input Validation**: validate all user input
 4. **Parameterized Queries**: prevent SQL Injection
 5. **Rate Limiting**: DDoS prevention
+6. **Idempotent money writes**: every money-touching POST carries an idempotency key, deduped by a UNIQUE DB index; a replay returns the original result, never a second transaction
 
 ### Prohibited items (MUST NOT)
 
@@ -248,7 +290,7 @@ app.post('/api/auth/refresh', async (req, res) => {
 - [ ] A05: Security Misconfiguration - Helmet, change default passwords
 - [ ] A06: Vulnerable Components - npm audit, regular updates
 - [ ] A07: Authentication Failures - strong auth, MFA
-- [ ] A08: Data Integrity Failures - signature validation, CSRF prevention
+- [ ] A08: Data Integrity Failures - signature validation, CSRF prevention, idempotent money writes
 - [ ] A09: Logging Failures - security event logging
 - [ ] A10: SSRF - validate outbound requests
 ```

@@ -15,6 +15,7 @@
 - Use short-lived JWTs (15 min access token) paired with long-lived refresh tokens (7 days); rotate refresh tokens on each use and delete the prior token
 - Never use `eval()`, direct `innerHTML` assignment with user data, or `dangerouslySetInnerHTML` with unvalidated input
 - Apply least-privilege and defense-in-depth: layer controls rather than relying on a single check
+- Make money-touching writes (sale, charge, refund, payout) idempotent: caller sends one idempotency key per attempt, deduped by a UNIQUE DB index, and a replay returns the original result instead of a second transaction (a disabled button is not enough)
 
 ## OWASP Top 10 — stop and apply skill when any of these are present
 - Missing authorization checks on routes (A01)
@@ -24,3 +25,4 @@
 - No rate limiting on public endpoints (A07)
 - Dependencies not audited (`npm audit`) (A06)
 - Missing CSRF protection on state-changing routes (A08)
+- Money-touching POST with no idempotency key / no dedup index (A08)
