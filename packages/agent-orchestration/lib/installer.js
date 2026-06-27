@@ -396,7 +396,7 @@ async function writeFilesManifest(arcwrightDir, entries) {
 
 // ─── Kiro config writer ───────────────────────────────────────────────────────
 
-async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false) {
+async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
   const kiroAgentsSrc = path.join(SRC_DIR, '.kiro', 'agents');
 
@@ -417,6 +417,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const filter = (src) => {
       if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
+      if (!resolvedDotnet && (/[/\\]dotnet-[^/\\]+[/\\]?$/.test(src) || /[/\\]dotnet-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
       if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
       return true;
@@ -426,6 +427,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const skillFiles = allSkillFiles.filter(f => {
       if (!resolvedTeams && /^team-/.test(f)) return false;
       if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
+      if (!resolvedDotnet && /^dotnet-/.test(f)) return false;
       if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
       if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
       return true;
@@ -434,6 +436,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const skipNotes = [];
     if (!resolvedTeams) skipNotes.push('team-*');
     if (!resolvedDockerCheck) skipNotes.push('docker-type-check');
+    if (!resolvedDotnet) skipNotes.push('dotnet-*');
     if (!resolvedAwsInfra) skipNotes.push('aws-serverless-cdk');
     if (!resolvedUnnamedPm) skipNotes.push('unnamed-pm-sync');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
@@ -455,6 +458,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const agentFiles = allAgentFiles.filter(f => {
       if (!resolvedTeams && f === 'team.json') return false;
       if (!resolvedDockerCheck && f === 'docker-check.json') return false;
+      if (!resolvedDotnet && f === 'dotnet.json') return false;
       if (!resolvedAwsInfra && (f === 'aws-infra.json' || f === 'arcwright-aws-infra.json')) return false;
       if (!resolvedUnnamedPm && (f === 'unnamed-pm.json' || f === 'arcwright-unnamed-pm.json')) return false;
       return true;
@@ -465,6 +469,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const skipNotes = [];
     if (!resolvedTeams) skipNotes.push('/team');
     if (!resolvedDockerCheck) skipNotes.push('/docker-check');
+    if (!resolvedDotnet) skipNotes.push('/dotnet');
     if (!resolvedAwsInfra) skipNotes.push('/aws-infra');
     if (!resolvedUnnamedPm) skipNotes.push('/unnamed-pm');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
@@ -509,6 +514,7 @@ async function updateGitignore(projectRoot, mode, chalk) {
       '.claude/commands/diagram.md',
       '.claude/commands/triage.md',
       '.claude/commands/docker-check.md',
+      '.claude/commands/dotnet.md',
       '.claude/agents/arcwright-*.md',
       '.kiro/agents/',
       '.kiro/skills/',
@@ -558,6 +564,7 @@ async function install(opts) {
     yes = false,
     teams = true,  // include team-* skills and /team command
     dockerCheck = false,  // include docker-type-check skill and /docker-check command
+    dotnet = false,  // include curated dotnet-* skills and /dotnet command
     awsInfra = false,  // include aws-infra module + aws-serverless-cdk skill + /aws-infra command
     unnamedPm = false,  // include unnamed-pm module + unnamed-pm-sync skill + /unnamed-pm command
     gitignore = null,  // null | 'full' | 'skills' | 'output-only' | 'none'
@@ -681,6 +688,13 @@ async function install(opts) {
     }
     return dockerCheck === true;
   })();
+  let resolvedDotnet = (() => {
+    // dotnet===true means --dotnet was explicitly passed; false is the default
+    if (manifestFallback && dotnet !== true && existingManifest.dotnet !== undefined) {
+      return existingManifest.dotnet === true;
+    }
+    return dotnet === true;
+  })();
   let resolvedAwsInfra = (() => {
     if (manifestFallback && awsInfra !== true && existingManifest.awsInfra !== undefined) {
       return existingManifest.awsInfra === true;
@@ -774,6 +788,14 @@ async function install(opts) {
     });
     if (isCancel(dockerCheckChoice)) { process.exit(0); }
     resolvedDockerCheck = dockerCheckChoice;
+
+    // .NET opt-in — curated dotnet-* skills + /dotnet command (vendored from dotnet/skills, MIT)
+    const dotnetChoice = await confirm({
+      message: 'Install .NET skills? (curated dotnet-* — P/Invoke/native interop, Native AOT, MSBuild, local SDK — only useful for .NET / C# projects)',
+      initialValue: existingManifest?.dotnet === true,
+    });
+    if (isCancel(dotnetChoice)) { process.exit(0); }
+    resolvedDotnet = dotnetChoice;
 
     // AWS serverless infrastructure opt-in — aws-infra module + aws-serverless-cdk skill + /aws-infra
     const awsInfraChoice = await confirm({
@@ -930,6 +952,7 @@ async function install(opts) {
     const filter = (src) => {
       if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
+      if (!resolvedDotnet && (/[/\\]dotnet-[^/\\]+[/\\]?$/.test(src) || /[/\\]dotnet-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
       if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
       return true;
@@ -940,6 +963,7 @@ async function install(opts) {
     const skillFiles = allSkillFiles.filter(f => {
       if (!resolvedTeams && /^team-/.test(f)) return false;
       if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
+      if (!resolvedDotnet && /^dotnet-/.test(f)) return false;
       if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
       if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
       return true;
@@ -953,6 +977,7 @@ async function install(opts) {
     const skipNotes = [];
     if (!resolvedTeams) skipNotes.push('team-*');
     if (!resolvedDockerCheck) skipNotes.push('docker-type-check');
+    if (!resolvedDotnet) skipNotes.push('dotnet-*');
     if (!resolvedAwsInfra) skipNotes.push('aws-serverless-cdk');
     if (!resolvedUnnamedPm) skipNotes.push('unnamed-pm-sync');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
@@ -994,7 +1019,7 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro') continue; // handled separately below
-    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks);
+    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
     }
@@ -1002,7 +1027,7 @@ async function install(opts) {
 
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
-    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm);
+    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet);
   }
 
   // ── Orphan removal (update only) ──────────────────────────────────────────
@@ -1091,6 +1116,7 @@ async function install(opts) {
     tools: resolvedTools,
     teams: resolvedTeams,
     dockerCheck: resolvedDockerCheck,
+    dotnet: resolvedDotnet,
     awsInfra: resolvedAwsInfra,
     unnamedPm: resolvedUnnamedPm,
     tmux: resolvedTmux,
@@ -1202,7 +1228,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
-async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none') {
+async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none', resolvedDotnet = false) {
   const stubEntries = [];
   const platformCfg = PLATFORMS[tool];
   if (!platformCfg) {
@@ -1302,6 +1328,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
       const files = allFiles.filter(f => {
         if (!resolvedTeams && f === 'team.md') return false;
         if (!resolvedDockerCheck && f === 'docker-check.md') return false;
+        if (!resolvedDotnet && f === 'dotnet.md') return false;
         if (!resolvedAwsInfra && f === 'aws-infra.md') return false;
         if (!resolvedUnnamedPm && f === 'unnamed-pm.md') return false;
         return true;
@@ -1319,6 +1346,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         const skipNotes = [];
         if (!resolvedTeams) skipNotes.push('/team');
         if (!resolvedDockerCheck) skipNotes.push('/docker-check');
+        if (!resolvedDotnet) skipNotes.push('/dotnet');
         if (!resolvedAwsInfra) skipNotes.push('/aws-infra');
         if (!resolvedUnnamedPm) skipNotes.push('/unnamed-pm');
         const skipNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
