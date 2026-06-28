@@ -43,6 +43,28 @@ The patch:
 The Arcwright installer wires the harvester into **every** detected account
 config dir. Worth upstreaming; until then, re-vendoring must re-apply these.
 
+### Per-pane account signal (most reliable)
+
+`status-right` is a single global `#()` whose output tmux shares across all
+clients, so the segment must be told *which pane* it is rendering for. It is
+wired as `#(segment.sh #{pane_pid} #{@claude_usage_account})` — tmux expands both
+formats per client (its active pane), so every session resolves its own account.
+
+Account precedence in `segment.sh`:
+1. `@claude_usage_account` pane option (set by `set-account.sh`) — explicit, instant;
+2. global `@claude_usage_account` (pin a whole session);
+3. `/proc` auto-detect of the pane's claude `CLAUDE_CONFIG_DIR` (Linux-only);
+4. legacy / newest cache.
+
+`set-account.sh` (arcwright addition) sets the pane option from a launcher. Add
+to a personal `claude-devo`-style wrapper, after choosing the account:
+
+```sh
+export CLAUDE_CONFIG_DIR="$HOME/.claude-work"   # whatever the user picked
+bash ~/.config/tmux/bin/claude-usage/set-account.sh   # pins this pane to it
+exec claude "$@"
+```
+
 ## Updating
 
 Re-vendor from upstream and bump the pinned commit above:

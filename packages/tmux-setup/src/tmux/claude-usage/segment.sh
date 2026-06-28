@@ -27,15 +27,29 @@ source "$DIR/helpers.sh"
 #   3. else the legacy single-account file;
 #   4. else the most-recently-updated per-account file.
 pane_pid="${1:-}"
-acct="$(get_tmux_option @claude_usage_account '')"
+# $2 = explicit per-pane account, injected via `#(segment.sh #{pane_pid}
+# #{@claude_usage_account})`. tmux expands the pane option per client, so a
+# launcher (claude-devo) that ran `set-account.sh` makes this rock-solid and
+# instant. Falls back to the global option, then /proc auto-detection.
+acct="${2:-}"
+[ -n "$acct" ] || acct="$(get_tmux_option @claude_usage_account '')"
 [ -n "$acct" ] || acct="$(account_for_pane "$pane_pid" 2>/dev/null || true)"
-CACHE_FILE="$(usage_cache_file "$acct")"
-if [ ! -f "$CACHE_FILE" ]; then
-	CACHE_FILE="$(usage_cache_file)" # legacy single-account file
-fi
-if [ ! -f "$CACHE_FILE" ]; then
-	# newest per-account cache as a last resort
-	CACHE_FILE="$(ls -t "$HOME"/.cache/claude-usage/usage-* 2>/dev/null | head -1)"
+
+# Sentinel "none" → this pane is not a usage-bearing Claude account (e.g. an
+# alt-provider pane: GLM/MiniMax/Qwen). Show nothing rather than another
+# account's numbers. A launcher pins this with: set-account.sh none
+[ "$acct" = none ] && exit 0
+
+if [ -n "$acct" ]; then
+	# A specific account was resolved → show ONLY that account's cache. If it has
+	# no data yet, show nothing — never another account's numbers (that was the
+	# bug where a pane showed the wrong account's usage).
+	CACHE_FILE="$(usage_cache_file "$acct")"
+else
+	# No account could be resolved (single-account setup, or a non-claude pane).
+	# Use the legacy shared file, then the newest per-account file.
+	CACHE_FILE="$(usage_cache_file)"
+	[ -f "$CACHE_FILE" ] || CACHE_FILE="$(ls -t "$HOME"/.cache/claude-usage/usage-* 2>/dev/null | head -1)"
 fi
 [ -n "$CACHE_FILE" ] && [ -f "$CACHE_FILE" ] || exit 0
 

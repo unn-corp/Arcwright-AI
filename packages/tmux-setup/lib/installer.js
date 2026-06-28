@@ -588,7 +588,7 @@ async function setupClaudeUsage({ tmuxSrc, tmuxBin, tmuxConf, chalk, ask, opts, 
   // 1. Copy scripts into ~/.config/tmux/bin/claude-usage/
   const destDir = path.join(tmuxBin, 'claude-usage');
   await fs.ensureDir(destDir);
-  for (const f of ['segment.sh', 'statusline.sh', 'helpers.sh', 'chain.sh', 'init.sh', 'LICENSE', 'SOURCES.md']) {
+  for (const f of ['segment.sh', 'statusline.sh', 'helpers.sh', 'chain.sh', 'init.sh', 'set-account.sh', 'LICENSE', 'SOURCES.md']) {
     const s = path.join(srcDir, f);
     if (await fs.pathExists(s)) {
       await fs.copy(s, path.join(destDir, f), { overwrite: true });
@@ -638,7 +638,7 @@ async function setupClaudeUsage({ tmuxSrc, tmuxBin, tmuxConf, chalk, ask, opts, 
   const END   = '# ─── end claude-usage ───';
   // Pass #{pane_pid} so tmux expands it per client (each session's active pane).
   // Without it the global status-right shows one shared account to every session.
-  const segLine = `set -ga status-right ' #(${destDir.replace('~', '$HOME')}/segment.sh #{pane_pid})'`;
+  const segLine = `set -ga status-right ' #(${destDir.replace('~', '$HOME')}/segment.sh #{pane_pid} #{@claude_usage_account})'`;
   const block = `${START}\n${segLine}\n${END}\n`;
   let conf = '';
   try { conf = await fs.readFile(tmuxConf, 'utf8'); } catch { /* no ~/.tmux.conf yet */ }
