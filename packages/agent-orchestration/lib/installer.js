@@ -2069,4 +2069,16 @@ async function uninstall(opts = {}) {
   console.log(chalk.bold.green(`\n✓ Uninstalled.\n`));
 }
 
-module.exports = { install, status, setupTmux, uninstall };
+module.exports = {
+  install, status, setupTmux, uninstall,
+  // Internal helpers exported for unit testing (not part of the public CLI API).
+  _internal: {
+    sha256, escapeRe, detectBmad, getHomes, resolveToolPath,
+    readManifest, writeManifest, readFilesManifest, writeFilesManifest,
+    buildModuleConfig, getFileHeader, getClaudeMdLocations,
+    updateGitignore, stripGitignoreBlock,
+    cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
+    writeClaudeSettings, stripInstallerSettingsKeys,
+    buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
+  },
+};
