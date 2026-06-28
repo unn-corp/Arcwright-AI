@@ -119,31 +119,19 @@ jobs:
             -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
           /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
 
-  # SAST (semgrep) — HARD gate, runs inside the semgrep container.
-  # A `container:` job sidesteps the DinD bind-mount trap that breaks manual
-  # `docker run -v`: the runner sets up the workspace mount itself and injects
-  # its own node for JS actions (actions/checkout), and the image already ships
-  # `semgrep-core` (which won't pip-install reliably on the bare runner).
+  # SAST (semgrep) — HARD gate. The semgrep image ships `semgrep-core` (which
+  # won't pip-install reliably on the bare runner). A `container:` job can't be
+  # used here: this self-hosted DinD runner doesn't provision the externals
+  # (node) or the `_temp` script mount that container jobs require. And a plain
+  # `docker run -v "$GITHUB_WORKSPACE:/src"` mounts an empty host path (the
+  # DinD-sibling bind-mount trap). So: checkout on the bare runner, then push the
+  # tree INTO the container with `docker cp` (daemon API, no path mismatch).
   sast:
     name: sast (semgrep)
     runs-on: [self-hosted, linux, x64, unn]
-    container:
-      image: semgrep/semgrep:1.168.0
     steps:
-      # Manual checkout via git (the image ships git). actions/checkout is a JS
-      # action and needs a node the runner injects from externals; this runner
-      # lacks the musl `node24_alpine` build the Alpine semgrep image requires,
-      # so the JS action can't start. A plain `run:` step executes in the
-      # container shell with no node, sidestepping that entirely.
-      - name: Checkout (git, no node)
-        run: |
-          git clone --no-checkout --depth 1 \
-            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" src
-          cd src
-          git fetch --depth 1 origin "${{ github.sha }}"
-          git checkout --detach FETCH_HEAD
+      - uses: actions/checkout@v4
       - name: SAST (semgrep)
-        working-directory: src
         # Gate on ERROR severity only (WARNING/INFO are noise on a skills+tooling
         # monorepo). Three rules are excluded as false-positives here:
         #   - detect-child-process: hook scripts/installers spawn processes by
@@ -153,11 +141,16 @@ jobs:
         # All rules still run, so new high-severity issues (eval, hardcoded
         # secrets, injection) fail the gate.
         run: |
-          semgrep scan --config auto --severity ERROR --error \
-            --exclude-rule javascript.lang.security.detect-child-process.detect-child-process \
-            --exclude-rule javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket \
-            --exclude-rule dockerfile.security.missing-user.missing-user \
-            .
+          set -euo pipefail
+          CID=$(docker create semgrep/semgrep:1.168.0 \
+            semgrep scan --config auto --severity ERROR --error \
+              --exclude-rule javascript.lang.security.detect-child-process.detect-child-process \
+              --exclude-rule javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket \
+              --exclude-rule dockerfile.security.missing-user.missing-user \
+              /src)
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          docker cp "$GITHUB_WORKSPACE/." "$CID:/src"
+          docker start -a "$CID"
 
   # Merge-gate hygiene: Conventional PR title (mirrors the local commit advisory).
   pr-title:
