@@ -24,6 +24,15 @@ authoritative merge gate. The two stay in sync (a hook can be bypassed with
 - `gate-precommit.js` — `PreToolUse(Bash)` on `git commit`, **tiered**. Blocks
   (exit 2) when a secret is staged (gitleaks, or a built-in high-confidence
   fallback); warns when the commit subject is not Conventional Commits.
+- `gate-ci-verify.js` — `PostToolUse(Bash)` on `git push`, **tiered**. After a
+  push succeeds it polls GitHub Actions for that commit, waits for the workflow
+  runs to finish, and reports the verdict to the model — exit 2 if any CI gate
+  concluded failure (so the model fixes and re-pushes), exit 0 when all passed,
+  still running, or unknowable (no `gh`/auth/remote → skips cleanly). Closes the
+  loop: the local hooks mirror CI but can be bypassed, so this confirms the
+  authoritative remote gate actually went green. Tunables: `ARCWRIGHT_CI_VERIFY=0`
+  to disable, `ARCWRIGHT_CI_TIMEOUT_SECONDS` (default 180), `ARCWRIGHT_CI_POLL_SECONDS`
+  (default 10).
 
 **CI** (the real merge gate):
 - `.github/workflows/ci.yml` — fast-fail jobs: static (format/lint/type-check),
@@ -74,6 +83,7 @@ DEST="$CLAUDE_DIR/arcwright-hooks"
 mkdir -p "$DEST"
 cp "$SKILL_DIR/templates/gate-lint.js" "$DEST/gate-lint.js"
 cp "$SKILL_DIR/templates/gate-precommit.js" "$DEST/gate-precommit.js"
+cp "$SKILL_DIR/templates/gate-ci-verify.js" "$DEST/gate-ci-verify.js"
 ```
 
 Then merge entries into `$CLAUDE_DIR/settings.json` (create if absent). Use the
@@ -90,7 +100,10 @@ Target shape (project install):
     "PostToolUse": [
       { "matcher": "Write|Edit",
         "hooks": [{ "type": "command",
-          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/gate-lint.js\"" }] }
+          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/gate-lint.js\"" }] },
+      { "matcher": "Bash",
+        "hooks": [{ "type": "command",
+          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/gate-ci-verify.js\"" }] }
     ],
     "PreToolUse": [
       { "matcher": "Bash",
@@ -102,7 +115,7 @@ Target shape (project install):
 ```
 
 Global install: replace the command with `node "/home/<user>/.claude/arcwright-hooks/gate-lint.js"`
-(absolute), same for `gate-precommit.js`.
+(absolute), same for `gate-precommit.js` and `gate-ci-verify.js`.
 
 **Coexistence note:** the installer's `full` posture already adds a
 `PostToolUse(Write|Edit)` typecheck entry, and `safe` adds a `PreToolUse(Bash)`

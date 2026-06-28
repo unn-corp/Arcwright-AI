@@ -20,6 +20,14 @@ concurrency:
 permissions:
   contents: read
 
+# All deps are public npm. The self-hosted runners carry a user-level ~/.npmrc
+# pointed at a private AWS CodeArtifact mirror with a frequently-expired token,
+# which 401s every npm install. Force the public registry and ignore that
+# userconfig on every npm step via these env vars.
+env:
+  npm_config_registry: https://registry.npmjs.org/
+  NPM_CONFIG_USERCONFIG: /dev/null
+
 jobs:
   # Build verification — runs the workshop packager (includes the no-leak check).
   build-package:
@@ -83,7 +91,7 @@ jobs:
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
       - name: Dependency + vuln scan (trivy)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: fs
           scanners: vuln,secret
