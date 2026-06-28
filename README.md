@@ -53,7 +53,7 @@ up the `safe` posture in `.claude/settings.json`:
   fork bombs, raw-disk writes, etc. *before* they run.
 - **Secret/key-file guard** (PreToolUse Write/Edit) — blocks writing AWS/GitHub/Slack tokens or
   private keys, and edits to `.env`/`.pem`.
-- **SessionStart context** — primes each session to run project-context and honor `CONSTITUTION.md`.
+- **SessionStart context** — primes each session to run project-context and load the project's CLAUDE.md / AGENTS.md.
 
 The guards are what make auto-accept safe to leave on. Three postures:
 
@@ -126,7 +126,6 @@ See the full team catalog below.
 | `/lsp` | Validate edits against `tsc`/`pyright` in a fix loop. |
 | `/commit`, `/commit-push-pr`, `/clean-gone` | Lightweight daily git trio (shows the message before committing). |
 | `/claude-md` | Audit CLAUDE.md, capture session learnings, prune stale lines. |
-| `/constitution` | Create/update/validate the project's versioned non-negotiables. |
 | `/correct-course` | Structured mid-task course-correction when a constraint or blocker invalidates the plan. |
 | `/caveman` | Concise-output mode — cut output tokens while keeping technical accuracy. |
 | `/explain-mode` | Verbose teaching dial — explain the "why" or leave learning checkpoints. |

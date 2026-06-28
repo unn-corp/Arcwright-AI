@@ -1566,7 +1566,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal) {
 
   // SessionStart context reminder — carries the marker so it's replaceable.
   setEvent('SessionStart', [
-    { hooks: [cmd(`echo "Arcwright: run the project-context scan (arcwright-hooks) and honor CONSTITUTION.md if present."`)] },
+    { hooks: [cmd(`echo "Arcwright: run the project-context scan (arcwright-hooks) and load the project's CLAUDE.md / AGENTS.md if present."`)] },
   ]);
 
   if (mode === 'full') {

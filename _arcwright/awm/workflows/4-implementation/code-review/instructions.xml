@@ -40,7 +40,7 @@
     </action>
 
     <invoke-protocol name="discover_inputs" />
-    <action>Load {project_context} for coding standards (if exists)</action>
+    <action>Load {project_context} (the project's AGENTS.md / CLAUDE.md native memory file) for coding standards (if present)</action>
   </step>
 
   <step n="2" goal="Build review attack plan">

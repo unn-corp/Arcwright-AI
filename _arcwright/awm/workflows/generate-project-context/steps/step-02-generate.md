@@ -212,41 +212,39 @@ Are there other 'gotchas' agents should know about?"
 
 ### 8. Generate Context Content
 
-For each category, prepare lean content for the project context file:
+For each category, prepare lean content mapped onto the **three GENERATED sections** of the unified
+memory-file template. The categories above are inputs; they collapse into these sections:
 
-#### Content Structure:
+- **`## Setup & commands`** ← Technology Stack & Versions + install/dev/build/test/lint commands
+- **`## Architecture`** ← Code organization, module/dir map, structural rules (hand-trimmed)
+- **`## Gotchas / project context`** ← Language/framework/testing/quality/workflow rules +
+  anti-patterns + don't-miss edge cases
+
+#### Content Structure (the generated layer that merges into `{memory_file}`):
 
 ```markdown
-## Technology Stack & Versions
+## Setup & commands
 
 {{concise_technology_list_with_exact_versions}}
+{{install_dev_build_test_lint_commands}}
 
-## Critical Implementation Rules
+## Architecture
 
-### Language-Specific Rules
+{{module_and_directory_map_with_structural_rules}}
+
+## Gotchas / project context
 
 {{bullet_points_of_critical_language_rules}}
-
-### Framework-Specific Rules
-
 {{bullet_points_of_framework_patterns}}
-
-### Testing Rules
-
 {{bullet_points_of_testing_requirements}}
-
-### Code Quality & Style Rules
-
 {{bullet_points_of_style_and_quality_rules}}
-
-### Development Workflow Rules
-
 {{bullet_points_of_workflow_patterns}}
-
-### Critical Don't-Miss Rules
-
 {{bullet_points_of_anti_patterns_and_edge_cases}}
 ```
+
+> The hand-authored sections (`Project overview`, `Conventions`, `Commit & PR rules`, `Security`)
+> are NEVER written by this workflow. If discovery surfaced material that belongs in one of those,
+> suggest it to the user — don't write it automatically.
 
 ### 9. Present Content and Menu
 
@@ -287,13 +285,18 @@ After each category, show the generated rules and present choices:
 
 #### If 'C' (Continue):
 
-- Save the current category content to project context file
-- Update frontmatter: `sections_completed: [...]`
+- Merge the current category content into the matching GENERATED section of `{memory_file}`
+  (see "MERGE INTO MEMORY FILE" below)
 - Proceed to next category or step-03 if complete
 
-## APPEND TO PROJECT CONTEXT:
+## MERGE INTO MEMORY FILE:
 
-When user selects 'C' for a category, append the content directly to `{output_folder}/project-context.md` using the structure from step 8.
+When user selects 'C' for a category, merge its content into the corresponding GENERATED section
+(`## Setup & commands`, `## Architecture`, or `## Gotchas / project context`) of `{memory_file}`,
+using the mapping and structure from step 8. **Edit in place** — replace the body of an existing
+GENERATED section, or insert the section in unified-template order if it is missing. **Never** touch
+the hand-authored sections (`Project overview`, `Conventions`, `Commit & PR rules`, `Security`).
+Keep the whole file under ~200 lines.
 
 ## SUCCESS METRICS:
 

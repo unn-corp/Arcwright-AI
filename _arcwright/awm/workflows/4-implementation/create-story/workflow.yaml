@@ -24,7 +24,7 @@ prd_file: "{planning_artifacts}/prd.md" # Fallback for requirements (if not in e
 architecture_file: "{planning_artifacts}/architecture.md" # Fallback for constraints (if not in epics file)
 ux_file: "{planning_artifacts}/*ux*.md" # Fallback for UX requirements (if not in epics file)
 story_title: "" # Will be elicited if not derivable
-project_context: "**/project-context.md"
+project_context: "{AGENTS.md,CLAUDE.md,.claude/CLAUDE.md,.github/copilot-instructions.md}"
 default_output_file: "{implementation_artifacts}/{{story_key}}.md"
 
 # Smart input file references - Simplified for enhanced approach

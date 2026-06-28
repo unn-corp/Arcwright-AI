@@ -35,7 +35,7 @@ Load config from `{project-root}/_arcwright/awm/config.yaml` and resolve:
 ### Paths
 
 - `installed_path` = `{project-root}/_arcwright/awm/workflows/arcwright-quick-flow/quick-dev`
-- `project_context` = `**/project-context.md` (load if exists)
+- `project_context` = `{AGENTS.md,CLAUDE.md,.claude/CLAUDE.md,.github/copilot-instructions.md}` (the project's AGENTS.md / CLAUDE.md native memory file, load if present)
 
 ### Related Workflows
 

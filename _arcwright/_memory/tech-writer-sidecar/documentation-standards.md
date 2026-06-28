@@ -1,6 +1,8 @@
 # Technical Documentation Standards for Arcwright
 
-CommonMark standards, technical writing best practices, and style guide compliance.
+CommonMark standards, technical writing best practices, and style guide compliance — plus
+audience analysis, the Diátaxis document-type framework, changelog/SemVer conventions, docs-as-code,
+and reader testing.
 
 ## User Specified CRITICAL Rules - Supersedes General CRITICAL RULES
 
@@ -96,6 +98,48 @@ flowchart TD
 ```
 ````
 
+## Audience & Purpose (Do This First)
+
+Before writing a single line, establish — ask the user if unknown (3-5 concise numbered questions):
+
+1. **Reader** — who reads this? (end user, integrating developer, contributor, operator, future-you)
+2. **Prior knowledge** — what can you assume they already know? what must you not assume?
+3. **Goal** — what is the reader trying to *accomplish* when they open this doc?
+4. **Context of use** — read once start-to-finish, or scanned/searched under time pressure?
+5. **Success** — what does "this doc worked" look like?
+
+Audience drives everything downstream: document type, depth, vocabulary, and how much to explain.
+Never start drafting until reader + goal are clear.
+
+## Diátaxis: Choose the Document Type
+
+Every documentation page serves **exactly one** of four purposes. Mixing them is the most common
+documentation failure. Identify the quadrant first, then write to it — keep a single quadrant per
+page (**single-quadrant purity**).
+
+| Type | Serves | Reader is… | Answers | Form |
+|------|--------|-----------|---------|------|
+| **Tutorial** | Learning | a beginner being taught | "teach me by doing" | A guided lesson; guaranteed-to-work steps; no choices/options |
+| **How-to guide** | A task | a user with a goal | "how do I accomplish X?" | Ordered steps for one real-world goal; assumes competence |
+| **Reference** | Information | a user who needs facts | "what are the exact details?" | Dry, complete, consistent; describes the machinery (API/CLI/config) |
+| **Explanation** | Understanding | a user who wants the *why* | "why does it work this way?" | Discursive; background, trade-offs, design rationale |
+
+**Decision compass:**
+
+- Practical + study (acquiring skill) → **Tutorial**
+- Practical + work (applying skill) → **How-to**
+- Theoretical + work (applying knowledge) → **Reference**
+- Theoretical + study (acquiring knowledge) → **Explanation**
+
+**Anti-patterns (single-quadrant violations):**
+
+- A tutorial that stops to explain internals or list every option → move that to Explanation/Reference.
+- A how-to that teaches concepts from scratch → link a tutorial instead.
+- Reference padded with tutorials/opinions → keep it factual; move narrative out.
+- Explanation crammed with step-by-step instructions → extract a how-to.
+
+A README is a *router*, not a quadrant: it orients and links out to the four types.
+
 ## Style Guide Principles (Distilled)
 
 Apply in this hierarchy:
@@ -154,6 +198,43 @@ Apply in this hierarchy:
 - Clear error messages
 - Security schemes documented
 
+## Changelogs & Versioning
+
+**Changelog** — follow [Keep a Changelog](https://keepachangelog.com): a human-readable
+`CHANGELOG.md`, newest version first.
+
+- Group entries under headings: **Added, Changed, Deprecated, Removed, Fixed, Security**.
+- Keep an `## [Unreleased]` section at the top; move it under a version + date (`## [1.4.0] - 2026-06-28`) on release.
+- Write for humans, not a `git log` dump — describe user-visible impact, not internal commits.
+
+**Versioning** — follow [SemVer](https://semver.org) `MAJOR.MINOR.PATCH`:
+
+- **MAJOR** — incompatible/breaking changes. **MINOR** — backward-compatible features. **PATCH** — backward-compatible fixes.
+- A breaking change requires a MAJOR bump **and** a migration note (what broke, how to update).
+
+**Changelog vs release notes:** the changelog is the complete, terse record; release notes are a
+curated, narrative highlight of a release for end users. Don't conflate them.
+
+## Docs as Code
+
+Treat docs as source: same repo, same review, same CI.
+
+- **Co-locate** docs with the code they describe; commit them in the **same PR** as the change. A
+  feature isn't done until its docs are updated.
+- **Review** doc diffs like code (correctness + clarity).
+- **Lint/test** in CI: `markdownlint` (format), **Vale** (prose/style-guide), a link-checker, and —
+  where possible — compile/run code samples so they can't rot.
+- **Build & publish** from CI via a static-site generator (Docusaurus, MkDocs, Sphinx, Astro Starlight).
+- **Version docs with the code** so the published docs match the released version.
+
+## Reader Testing
+
+Before declaring a doc done, validate it against a fresh reader:
+
+- Spawn a **fresh sub-agent** with no prior context, give it only the doc + the reader's goal, and
+  have it attempt the task or list every question it still has. Gaps it hits are your revisions.
+- Confirm the doc still serves its single Diátaxis quadrant after edits (no drift).
+
 ## Documentation Types: Quick Reference
 
 **README:**
@@ -198,6 +279,8 @@ Apply in this hierarchy:
 
 Before finalizing ANY documentation:
 
+- [ ] Audience + goal established before drafting
+- [ ] Document type chosen (Diátaxis) and single-quadrant purity held
 - [ ] CommonMark compliant (no violations)
 - [ ] NO time estimates anywhere (Critical Rule 2)
 - [ ] Headers in proper hierarchy
@@ -210,6 +293,8 @@ Before finalizing ANY documentation:
 - [ ] Accessibility standards met
 - [ ] Spelling/grammar checked
 - [ ] Reads clearly at target skill level
+- [ ] Changelog/SemVer updated if this ships a change (Added/Changed/Fixed; breaking → MAJOR + migration note)
+- [ ] Reader-tested (fresh sub-agent attempts the task / lists open questions)
 
 **Frontmatter:**
 Use YAML frontmatter when appropriate, for example:

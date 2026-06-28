@@ -255,7 +255,7 @@ task-manager is additive. It does not replace or modify:
 - **Team compositions (17 teams)** — teams are ad-hoc multi-role setups; task-manager is the persistent registry feeding them.
 - **Tracks (nano/small/compact)** — tracks are single-epic workflows; task-manager sits above them, breaking epics into track-sized chunks.
 - **SM agent sprint planning** — SM owns sprint ceremonies; task-manager owns the task file format and wave dispatch. The SM agent MAY call `/tasks decompose` as part of sprint setup.
-- **project-memory** — STATE.md / ROADMAP.md continue to track high-level phase state. INDEX.md tracks task-level granularity. Both coexist.
+- **External PM tool** — high-level project status lives in the external PM tool / tracker. INDEX.md tracks task-level granularity. Both coexist.
 
 **Recommended flow:**
 ```
@@ -288,5 +288,4 @@ All paths are project-relative. Never write to `src/`, `packages/*/src/`, or `.k
 
 - **[`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md)** — §5.2 (parallel fan-out), §6.3 (permission-before-opus), §8 (wave planning + concurrency cap), §9 (trust-but-verify). Load before `/tasks run`.
 - **[`spec-kernel`](.agents/skills/spec-kernel/SKILL.md)** — CAP-NNN IDs map 1:1 to tasks during decompose.
-- **[`project-memory`](.agents/skills/project-memory/SKILL.md)** — update STATE.md when wave completes; INDEX.md is the task-level complement.
 - **[`caveman`](.agents/skills/caveman/SKILL.md)** — `full` level required before all task file writes.

@@ -35,7 +35,7 @@ Discover:
 - UX Design (`*ux-design*.md`)
 - Research Documents (`*research*.md`)
 - Project Documentation (in `{product_knowledge}` or `docs/`)
-- Project Context (`**/project-context.md`)
+- Project Context (the project's AGENTS.md / CLAUDE.md native memory file)
 
 **Confirm what you found with the user and ask if they want to provide anything else. Wait for confirmation before loading.**
 

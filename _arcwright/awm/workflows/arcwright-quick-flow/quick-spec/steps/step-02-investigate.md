@@ -71,9 +71,9 @@ Capture and confirm with user:
 - **Files to Modify/Create**: Specific files that will need changes or new files to be created
 - **Test Patterns**: How tests are structured, test frameworks used
 
-d) **Look for project-context.md**
+d) **Look for the native memory file**
 
-If `**/project-context.md` exists and wasn't loaded in Step 1:
+If the project's AGENTS.md / CLAUDE.md native memory file exists and wasn't loaded in Step 1:
 
 - Load it now
 - Extract patterns and conventions

@@ -18,7 +18,7 @@ From previous steps:
 - `{baseline_commit}` - Git HEAD at workflow start
 - `{execution_mode}` - "tech-spec" or "direct"
 - `{tech_spec_path}` - Tech-spec file (if Mode A)
-- `{project_context}` - Project patterns (if exists)
+- `{project_context}` - Project patterns from the AGENTS.md / CLAUDE.md native memory file (if present)
 
 ---
 
@@ -53,7 +53,7 @@ For each AC:
 Verify code quality:
 
 - [ ] Follows existing code patterns in codebase
-- [ ] Follows project-context rules (if exists)
+- [ ] Follows the AGENTS.md / CLAUDE.md native memory file rules (if present)
 - [ ] Error handling consistent with codebase
 - [ ] No obvious code smells introduced
 

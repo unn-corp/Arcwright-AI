@@ -3,17 +3,21 @@
 ## Context:
 
 - All rule categories from step-2 are complete; technology stack and versions are documented.
-- This is the final step — optimize and finalize the context file for AI agent consumption.
+- This is the final step — optimize and finalize the GENERATED sections inside `{memory_file}` for
+  AI agent consumption.
 
 ## YOUR TASK:
 
-Complete the project context file, optimize it for LLM efficiency, and provide guidance for usage and maintenance.
+Finalize the GENERATED sections (`## Setup & commands`, `## Architecture`,
+`## Gotchas / project context`) inside the native memory file `{memory_file}`, optimize them for LLM
+efficiency, and provide guidance for usage and maintenance. Do not touch hand-authored sections.
 
 ## COMPLETION SEQUENCE:
 
-### 1. Review Complete Context File
+### 1. Review the Memory File
 
-Read the entire project context file and analyze:
+Read the entire native memory file `{memory_file}` and analyze (focus only on the GENERATED
+sections; leave hand-authored sections alone):
 
 **Content Analysis:**
 
@@ -49,74 +53,55 @@ Ensure the file is lean and efficient:
 
 ### 3. Final Content Structure
 
-Ensure the final structure follows this optimized format:
+Ensure the GENERATED sections sit correctly inside the unified memory-file template. The full file
+follows this section order (hand-authored sections left intact; only the three GENERATED sections are
+authored by this workflow):
 
 ```markdown
-# Project Context for AI Agents
+# <Project Name>
 
-_This file contains critical rules and patterns that AI agents must follow when implementing code in this project. Focus on unobvious details that agents might otherwise miss._
+## Project overview            <!-- hand-authored — DO NOT TOUCH -->
 
----
-
-## Technology Stack & Versions
+## Setup & commands            <!-- GENERATED -->
 
 {{concise_technology_list}}
+{{install_dev_build_test_lint_commands}}
 
-## Critical Implementation Rules
+## Architecture                <!-- GENERATED, hand-trimmed -->
 
-### Language-Specific Rules
+{{module_and_directory_map_with_structural_rules}}
+
+## Conventions                 <!-- hand-authored — DO NOT TOUCH -->
+## Testing                     <!-- mixed: commands generated, discipline hand-authored -->
+## Commit & PR rules           <!-- hand-authored — DO NOT TOUCH -->
+## Security                    <!-- hand-authored — DO NOT TOUCH -->
+
+## Gotchas / project context   <!-- GENERATED -->
 
 {{specific_language_rules}}
-
-### Framework-Specific Rules
-
 {{framework_patterns}}
-
-### Testing Rules
-
 {{testing_requirements}}
-
-### Code Quality & Style Rules
-
 {{style_and_quality_patterns}}
-
-### Development Workflow Rules
-
 {{workflow_patterns}}
-
-### Critical Don't-Miss Rules
-
 {{anti_patterns_and_edge_cases}}
-
----
-
-## Usage Guidelines
-
-**For AI Agents:**
-
-- Read this file before implementing any code
-- Follow ALL rules exactly as documented
-- When in doubt, prefer the more restrictive option
-- Update this file if new patterns emerge
-
-**For Humans:**
-
-- Keep this file lean and focused on agent needs
-- Update when technology stack changes
-- Review quarterly for outdated rules
-- Remove rules that become obvious over time
-
-Last Updated: {{date}}
 ```
+
+**Maintenance notes (state to the user, don't write into the file unless a `## Usage` convention
+already exists):**
+
+- The memory file loads in full every session — keep it under ~200 lines, lean and scannable.
+- Agents read it before implementing; humans hand-author overview/conventions/commit/security.
+- Re-run this workflow when the stack, commands, or architecture change; it re-merges only the
+  GENERATED sections.
 
 ### 4. Present Completion Summary
 
 Based on user skill level, present the completion:
 
 **Expert Mode:**
-"Project context complete. Optimized for LLM consumption with {{rule_count}} critical rules across {{section_count}} sections.
+"Project context complete. GENERATED sections merged into the native memory file, optimized for LLM consumption with {{rule_count}} critical rules.
 
-File saved to: `{output_folder}/project-context.md`
+Memory file updated: `{memory_file}`
 
 Ready for AI agent integration."
 
@@ -163,25 +148,16 @@ Your project context is saved and ready to help agents implement consistently!"
 
 ### 5. Final File Updates
 
-Update the project context file with completion information:
+Finalize the GENERATED sections inside `{memory_file}`:
 
-**Frontmatter Update:**
-
-```yaml
----
-project_name: '{{project_name}}'
-user_name: '{{user_name}}'
-date: '{{date}}'
-sections_completed:
-  ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'quality_rules', 'workflow_rules', 'anti_patterns']
-status: 'complete'
-rule_count: { { total_rules } }
-optimized_for_llm: true
----
-```
-
-**Add Usage Section:**
-Append the usage guidelines from step 3 to complete the document.
+- Confirm the three GENERATED sections (`## Setup & commands`, `## Architecture`,
+  `## Gotchas / project context`) are present, in unified-template order, and trimmed for LLM
+  efficiency.
+- Confirm hand-authored sections are untouched.
+- The native memory file does **not** carry generator frontmatter — do not add YAML frontmatter to
+  it. (Track completion state only in your working notes / the workflow's run summary.)
+- If the memory file was newly scaffolded, leave the hand-authored sections as clear stubs prompting
+  the user to fill them.
 
 ### 6. Completion Validation
 
@@ -208,8 +184,8 @@ Present final completion to user:
 
 "✅ **Project Context Generation Complete!**
 
-Your optimized project context file is ready at:
-`{output_folder}/project-context.md`
+The GENERATED sections are merged into your native memory file at:
+`{memory_file}`
 
 **📊 Context Summary:**
 

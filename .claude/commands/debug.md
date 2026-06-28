@@ -1,8 +1,6 @@
 ---
 description: Load systematic debugging skill — structured bug investigation methodology. Use before proposing fixes for any bug or test failure.
 handoffs:
-  - label: "Log decision from debugging"
-    prompt: "/constitution"
   - label: "Verify fix in app"
     prompt: "/verify"
 ---

@@ -82,7 +82,7 @@
     </check>
 
     <check if="research_context_file does NOT exist">
-      <action>Load {project_context} for coding standards (if exists)</action>
+      <action>Load {project_context} (the project's AGENTS.md / CLAUDE.md native memory file) for coding standards (if present)</action>
       <action>Extract developer guidance from Dev Notes: architecture requirements, previous learnings, technical specifications</action>
       <output>📂 No cached research context — using Dev Notes as primary context</output>
     </check>

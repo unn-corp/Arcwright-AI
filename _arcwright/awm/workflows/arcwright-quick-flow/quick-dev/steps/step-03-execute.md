@@ -20,7 +20,7 @@ From previous steps:
 - `{baseline_commit}` - Git HEAD at workflow start
 - `{execution_mode}` - "tech-spec" or "direct"
 - `{tech_spec_path}` - Tech-spec file (if Mode A)
-- `{project_context}` - Project patterns (if exists)
+- `{project_context}` - Project patterns from the AGENTS.md / CLAUDE.md native memory file (if present)
 
 From context:
 
@@ -36,7 +36,7 @@ For each task:
 ### 1. Load Context
 
 - Read files relevant to this task
-- Review patterns from project-context or observed code
+- Review patterns from the AGENTS.md / CLAUDE.md native memory file or observed code
 - Understand dependencies
 
 ### 2. Implement

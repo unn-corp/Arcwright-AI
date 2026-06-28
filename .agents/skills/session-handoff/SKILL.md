@@ -69,7 +69,7 @@ BLOCKED: … (reason)
 Run these reads before writing (adapt paths to the actual project):
 - `git diff --name-only HEAD` — files changed this session
 - `git log --oneline -10` — recent commits
-- Check `_arcwright-output/planning/DECISIONS.md` for decision IDs if it exists
+- Reference the external PM tool / tracker if used for decision context
 - Check any open spec or plan doc in `_arcwright-output/`
 
 Do not ask the user to summarize — derive from evidence. Ask only if a critical piece of context is genuinely ambiguous.

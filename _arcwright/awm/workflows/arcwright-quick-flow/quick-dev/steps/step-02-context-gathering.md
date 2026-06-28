@@ -19,7 +19,7 @@ From step-01:
 
 - `{baseline_commit}` - Git HEAD at workflow start
 - `{execution_mode}` - Should be "direct"
-- `{project_context}` - Loaded if exists
+- `{project_context}` - The project's AGENTS.md / CLAUDE.md native memory file, loaded if present
 
 ---
 

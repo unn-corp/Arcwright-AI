@@ -3,8 +3,6 @@ description: Compress current session into a structured continuation artifact fo
 handoffs:
   - label: "Open handoff in new session"
     prompt: "Read the latest handoff in _arcwright-output/handoffs/ and resume from Next Action."
-  - label: "Write a decision log entry first"
-    prompt: "/constitution"
 ---
 
 # /handoff — Session Handoff
