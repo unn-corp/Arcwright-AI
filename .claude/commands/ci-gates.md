@@ -27,7 +27,10 @@ and report what is missing — most usefully, code that has no tests.
      hooks are wired). 
    - **If gates are missing →** install the hooks (Step 3 of the skill), scaffold
      the CI workflow trimmed to the detected stack (Step 4), and add the coverage
-     thresholds (80/80/70 by default).
+     thresholds (80/80/70 by default). Default the workflow's `runs-on` to
+     **self-hosted** runners (`[self-hosted, linux, x64]`, pinned to the org's
+     fleet with a custom label like `unn` where available) — not GitHub-hosted.
+     See the skill's `references/self-hosted-runners.md`.
    - **If gates already exist →** run **audit mode** (see below) instead of
      re-scaffolding.
 
