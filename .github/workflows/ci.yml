@@ -1,0 +1,79 @@
+# Arcwright workshop — CI gates (scaffolded by the ci-gates skill, trimmed to this repo).
+# Monorepo: root build pipeline + website (Vite/React/TS) + npm packages.
+# No unit-test/coverage job yet — this repo has no test suite. Add a `test`
+# job (Vitest, 80/80/70) once tests exist; see .agents/skills/ci-gates/.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Build verification — runs the workshop packager (includes the no-leak check).
+  build-package:
+    name: build (package)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node build/build.js
+
+  # Website static gates: lint + type-check + production build.
+  website:
+    name: static (website)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build # tsc -b && vite build (type-check + bundle)
+
+  # Security: secret scan, dependency/vuln, SAST — language-agnostic.
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+      - name: Dependency + vuln scan (trivy)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+      - name: SAST (semgrep)
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: auto
+
+  # Merge-gate hygiene: Conventional PR title (mirrors the local commit advisory).
+  pr-title:
+    name: pr title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
