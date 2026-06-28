@@ -587,7 +587,7 @@ function bundleKiroAgents() {
     'audit-site':         ['fs_read', 'fs_write', 'execute_bash', 'web_search', 'web_fetch'],
     'diagram':            ['fs_read', 'fs_write', 'grep', 'glob'],
     'triage':             ['fs_read', 'grep', 'glob', 'code'],
-    'skill-scout':        ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'subagent', 'web_fetch'],
+    'skill-scout':        ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'subagent', 'web_search', 'web_fetch'],
     'docker-check':       ['fs_read', 'execute_bash', 'grep'],
     'dotnet':             ['fs_read', 'execute_bash', 'grep'],
     'electron':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
