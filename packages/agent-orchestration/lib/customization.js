@@ -308,35 +308,27 @@ function mergeKeyedArrays(base, higher) {
  * @param {string} customDir  — absolute path to the custom/ directory
  * @returns {object}          — merged configuration
  */
+/**
+ * Merge one optional TOML layer file onto `result`. Missing file → unchanged.
+ * A parse error is non-fatal: warn and keep the lower layer.
+ */
+function applyTomlLayer(result, file) {
+  if (!fs.existsSync(file)) return result;
+  try {
+    return mergeLayers(result, parseToml(fs.readFileSync(file, 'utf8')));
+  } catch (err) {
+    console.warn(`[arcwright/customization] Warning: failed to parse ${file}: ${err.message}`);
+    return result;
+  }
+}
+
 function loadCustomization(name, base, customDir) {
   if (!customDir || !fs.existsSync(customDir)) return base;
 
-  const teamFile = path.join(customDir, `${name}.toml`);
-  const userFile = path.join(customDir, `${name}.user.toml`);
-
+  // base < team (<name>.toml) < user (<name>.user.toml)
   let result = base;
-
-  // Layer 2: team overrides
-  if (fs.existsSync(teamFile)) {
-    try {
-      const team = parseToml(fs.readFileSync(teamFile, 'utf8'));
-      result = mergeLayers(result, team);
-    } catch (err) {
-      // Non-fatal: log and continue with base
-      console.warn(`[arcwright/customization] Warning: failed to parse ${teamFile}: ${err.message}`);
-    }
-  }
-
-  // Layer 3: user overrides
-  if (fs.existsSync(userFile)) {
-    try {
-      const user = parseToml(fs.readFileSync(userFile, 'utf8'));
-      result = mergeLayers(result, user);
-    } catch (err) {
-      console.warn(`[arcwright/customization] Warning: failed to parse ${userFile}: ${err.message}`);
-    }
-  }
-
+  result = applyTomlLayer(result, path.join(customDir, `${name}.toml`));
+  result = applyTomlLayer(result, path.join(customDir, `${name}.user.toml`));
   return result;
 }
 

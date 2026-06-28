@@ -56,6 +56,19 @@ async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
  * @param {Array<{start: string, end: string}>} markerPairs
  * @returns {Promise<boolean>} true if the file was changed
  */
+/**
+ * Index just past a managed block's end, given its start index. Includes the end
+ * marker. If the end marker is missing (truncated file / partial migration),
+ * strips to the next HTML comment or end of file as a defensive fallback.
+ */
+function blockEndIndex(text, startIdx, start, end) {
+  const found = text.indexOf(end, startIdx + start.length);
+  if (found !== -1) return found + end.length;
+  const rest = text.slice(startIdx + start.length);
+  const nextComment = rest.indexOf('<!-- ');
+  return nextComment === -1 ? text.length : startIdx + start.length + nextComment;
+}
+
 async function cleanupManagedBlocks(filePath, markerPairs) {
   if (!await fs.pathExists(filePath)) return false;
   if (!markerPairs || markerPairs.length === 0) return false;
@@ -64,28 +77,14 @@ async function cleanupManagedBlocks(filePath, markerPairs) {
   let cleaned = original;
 
   for (const { start, end } of markerPairs) {
-    let startIdx = cleaned.indexOf(start);
+    const startIdx = cleaned.indexOf(start);
     if (startIdx === -1) continue;
-
-    let endIdx = cleaned.indexOf(end, startIdx + start.length);
-
-    if (endIdx === -1) {
-      // Defensive: start marker present but end marker missing.
-      // Strip from start to the next HTML comment open (or end of file).
-      const rest = cleaned.slice(startIdx + start.length);
-      const nextComment = rest.indexOf('<!-- ');
-      endIdx = nextComment === -1 ? cleaned.length : startIdx + start.length + nextComment;
-    } else {
-      endIdx = endIdx + end.length; // include the end marker in the slice
-    }
-
-    cleaned = cleaned.slice(0, startIdx) + cleaned.slice(endIdx);
-    // Collapse any blank lines that the removed block left behind.
-    cleaned = cleaned.replace(/(\n[ \t]*){3,}/g, '\n\n');
+    const endIdx = blockEndIndex(cleaned, startIdx, start, end);
+    // Remove the block, then collapse the blank lines it left behind.
+    cleaned = (cleaned.slice(0, startIdx) + cleaned.slice(endIdx)).replace(/(\n[ \t]*){3,}/g, '\n\n');
   }
 
-  // Strip leading blank lines the removed block exposed.
-  cleaned = cleaned.replace(/^\s+/, '');
+  cleaned = cleaned.replace(/^\s+/, ''); // strip leading blank lines exposed
 
   if (cleaned === original) return false;
   await fs.writeFile(filePath, cleaned, 'utf8');

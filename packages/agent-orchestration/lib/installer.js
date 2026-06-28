@@ -596,7 +596,6 @@ async function install(opts) {
   let resolvedHooks = ['none', 'safe', 'full'].includes(hooks) ? hooks : null;
   let resolvedGitignore = gitignore;
   let resolvedTmux = typeof tmux === 'boolean' ? tmux : null;
-  let resolvedMigrateBmad = typeof migrateBmad === 'boolean' ? migrateBmad : null;
   // --model-launchers is the primary flag; --openrouter-launchers is a kept alias.
   const launchersFlag = typeof modelLaunchers === 'boolean' ? modelLaunchers
     : (typeof openrouterLaunchers === 'boolean' ? openrouterLaunchers : null);
@@ -627,36 +626,12 @@ async function install(opts) {
   const isUpdate = action === 'update' || (action === 'install' && existingManifest != null);
   const effectiveAction = isUpdate ? 'update' : 'install';
 
-  // ── bmad detection (project installs only; skip if already migrated) ──────
-  const bmadDetected = !isGlobal ? detectBmad(projectRoot) : { present: false, signals: [] };
-  // If manifest already records a migration, skip re-prompting unless --migrate-bmad is explicit
-  const alreadyMigrated = existingManifest?.migratedAt != null;
-
-  if (!yes && bmadDetected.present && !alreadyMigrated && resolvedMigrateBmad === null) {
-    const { confirm, isCancel } = require('@clack/prompts');
-    console.log(chalk.yellow('\n  Existing bmad installation detected:'));
-    for (const s of bmadDetected.signals) console.log(chalk.dim(`     - ${s}`));
-    const migrateChoice = await confirm({
-      message: 'Run automatic migration (rename bmad -> arcwright, preserve output dirs)?',
-      initialValue: true,
-    });
-    if (isCancel(migrateChoice)) { process.exit(0); }
-    resolvedMigrateBmad = migrateChoice;
-  }
-
-  // Default for --yes or non-interactive: migrate if detected and not already migrated
-  if (resolvedMigrateBmad === null) {
-    resolvedMigrateBmad = bmadDetected.present && !alreadyMigrated;
-  }
-
-  // ── Run migrate before installing arcwright files ─────────────────────────
-  const manifestExtras = {};
-  if (resolvedMigrateBmad && !isGlobal && bmadDetected.present) {
-    const { migrate } = require('./migrate');
-    const result = migrate(projectRoot, false);
-    console.log(chalk.green(`\n  Migration complete: ${result.actions.filter(a => a.type !== 'skip').length} changes applied`));
-    manifestExtras.migratedAt = new Date().toISOString();
-  }
+  // ── bmad detection + migration (project installs only) ────────────────────
+  // Detect a legacy bmad install, confirm, and migrate (before installing
+  // Arcwright files). Returns { migratedAt } only when a migration ran.
+  const manifestExtras = await runBmadMigrationIfNeeded({
+    migrateBmad, yes, isGlobal, projectRoot, existingManifest, chalk,
+  });
 
   // ── Interactive prompts ───────────────────────────────────────────────────
   let resolvedUserName = userName;
@@ -1198,6 +1173,54 @@ async function install(opts) {
   }
 
   // ── Skill prerequisites ────────────────────────────────────────────────────
+  printSkillPrerequisites(chalk);
+
+  // ── Open workflows overview in default browser (project installs only) ────
+  if (!isGlobal) {
+    await openWorkflowsOverview(effectiveArwDir, chalk);
+  }
+}
+
+/**
+ * Detect a legacy bmad install (project installs only), confirm migration
+ * (interactive unless --yes or an explicit --migrate-bmad), and run it before
+ * Arcwright files are installed.
+ * @returns {Promise<{migratedAt?: string}>} migratedAt set only when a migration ran
+ */
+async function runBmadMigrationIfNeeded({ migrateBmad, yes, isGlobal, projectRoot, existingManifest, chalk }) {
+  let resolvedMigrateBmad = typeof migrateBmad === 'boolean' ? migrateBmad : null;
+  const bmadDetected = !isGlobal ? detectBmad(projectRoot) : { present: false, signals: [] };
+  // If the manifest already records a migration, skip re-prompting.
+  const alreadyMigrated = existingManifest?.migratedAt != null;
+
+  if (!yes && bmadDetected.present && !alreadyMigrated && resolvedMigrateBmad === null) {
+    const { confirm, isCancel } = require('@clack/prompts');
+    console.log(chalk.yellow('\n  Existing bmad installation detected:'));
+    for (const s of bmadDetected.signals) console.log(chalk.dim(`     - ${s}`));
+    const migrateChoice = await confirm({
+      message: 'Run automatic migration (rename bmad -> arcwright, preserve output dirs)?',
+      initialValue: true,
+    });
+    if (isCancel(migrateChoice)) { process.exit(0); }
+    resolvedMigrateBmad = migrateChoice;
+  }
+
+  // Default for --yes / non-interactive: migrate if detected and not already migrated.
+  if (resolvedMigrateBmad === null) {
+    resolvedMigrateBmad = bmadDetected.present && !alreadyMigrated;
+  }
+
+  if (resolvedMigrateBmad && !isGlobal && bmadDetected.present) {
+    const { migrate } = require('./migrate');
+    const result = migrate(projectRoot, false);
+    console.log(chalk.green(`\n  Migration complete: ${result.actions.filter(a => a.type !== 'skip').length} changes applied`));
+    return { migratedAt: new Date().toISOString() };
+  }
+  return {};
+}
+
+/** Print the optional skill prerequisite hints (playwright-cli, browser-use, gsudo). */
+function printSkillPrerequisites(chalk) {
   console.log(chalk.bold('Optional skill prerequisites:'));
   console.log('');
   console.log('  ' + chalk.white('playwright-cli') + chalk.dim(' — deterministic browser automation for QA agent (.agents/skills/playwright-cli/)'));
@@ -1212,20 +1235,19 @@ async function install(opts) {
   console.log('    ' + chalk.cyan('winget install gerardog.gsudo') + chalk.dim('  # Windows'));
   console.log('    ' + chalk.cyan('scoop install gsudo') + chalk.dim('            # Windows (Scoop)'));
   console.log('');
+}
 
-  // ── Open workflows overview in default browser (project installs only) ────
-  if (!isGlobal) {
-    const overviewHtml = path.join(effectiveArwDir, '_memory', 'master-orchestrator-sidecar', 'workflows-overview.html');
-    if (await fs.pathExists(overviewHtml)) {
-      const { spawn } = require('child_process');
-      const opener = process.platform === 'win32' ? 'cmd'
-                   : process.platform === 'darwin' ? 'open'
-                   : 'xdg-open';
-      const args = process.platform === 'win32' ? ['/c', 'start', '', overviewHtml] : [overviewHtml];
-      spawn(opener, args, { detached: true, stdio: 'ignore' }).unref();
-      console.log(chalk.dim(`  Opening workflows overview in your browser…\n`));
-    }
-  }
+/** Open the generated workflows-overview.html in the OS default browser, if present. */
+async function openWorkflowsOverview(arwDir, chalk) {
+  const overviewHtml = path.join(arwDir, '_memory', 'master-orchestrator-sidecar', 'workflows-overview.html');
+  if (!await fs.pathExists(overviewHtml)) return;
+  const { spawn } = require('child_process');
+  const opener = process.platform === 'win32' ? 'cmd'
+               : process.platform === 'darwin' ? 'open'
+               : 'xdg-open';
+  const args = process.platform === 'win32' ? ['/c', 'start', '', overviewHtml] : [overviewHtml];
+  spawn(opener, args, { detached: true, stdio: 'ignore' }).unref();
+  console.log(chalk.dim(`  Opening workflows overview in your browser…\n`));
 }
 
 // ─── Status ───────────────────────────────────────────────────────────────────
