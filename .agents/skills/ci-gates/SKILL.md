@@ -64,7 +64,10 @@ language-agnostic — always include.
 ## Step 3 — Install the hooks
 
 ```bash
-SKILL_DIR="$(dirname "$0")"          # this skill's directory
+# SKILL_DIR = the absolute path to THIS skill's directory. There is no $0 when a
+# skill runs, so resolve it yourself: it's the ci-gates dir under whichever
+# skills root applies (project ./.agents/skills/ci-gates or a global skills dir).
+SKILL_DIR="<abs path to .agents/skills/ci-gates>"
 DEST="$CLAUDE_DIR/arcwright-hooks"
 mkdir -p "$DEST"
 cp "$SKILL_DIR/templates/gate-lint.js" "$DEST/gate-lint.js"
@@ -118,6 +121,20 @@ Trim jobs to the detected stack (drop `python` if no Python; pick the Vitest or
 Jest line in `test-node`). Add the coverage threshold to the project's test
 config per `references/tooling.md` (Vitest `coverage.thresholds`, Jest
 `coverageThreshold`, or pytest `--cov-fail-under=80` — all 80/80/70).
+
+**Monorepo:** the template's `npm ci` assumes a root `package-lock.json`. If the
+lockfile lives in a subdir (e.g. `website/`), set the job's `working-directory`
+and `cache-dependency-path` to that subdir, or `npm ci` fails with "can only
+install with an existing package-lock.json". See this repo's own
+`.github/workflows/ci.yml` for a worked monorepo example.
+
+**gitleaks license:** `gitleaks-action@v2` runs free on public repos but needs a
+`GITLEAKS_LICENSE` repo secret on **private** repos, or the `security` job errors
+at startup. To publish findings to the Security tab, give the job
+`permissions: security-events: write` (the workflow default `contents: read`
+silently skips the SARIF upload). `semgrep` `config: auto` uses OSS rules only
+unless a `SEMGREP_APP_TOKEN` is set; `trivy-action` is version-pinned — bump it
+periodically.
 
 ## Step 5 — Make the gates required (optional, asks first)
 

@@ -15,7 +15,11 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection \
 ```
 
 - `strict: true` = branch must be up to date with base before merge.
-- `contexts` must match the job `name:` values in `ci.yml` exactly.
+- `contexts` must match the job `name:` values in **your** `ci.yml` exactly. The
+  names above are the generic template's (`static (node)`, `test (node)`); after
+  trimming, a monorepo may have `build (package)`, `static (website)`, etc.
+  Requiring a name that no job emits silently blocks every merge (the check
+  never reports), so copy the exact `name:` strings from your workflow.
 
 ## Option B — repository ruleset (newer, org-scalable)
 

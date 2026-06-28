@@ -48,11 +48,12 @@ function effectiveCommand(cmd) {
 // High-confidence secret patterns for the fallback scan (gitleaks preferred).
 const SECRET_PATTERNS = [
   [/-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----/, 'private key block'],
-  [/AKIA[0-9A-Z]{16}/, 'AWS access key id'],
+  [/\bAKIA[0-9A-Z]{16}\b/, 'AWS access key id'],
   [/\bgh[pousr]_[A-Za-z0-9]{36,}\b/, 'GitHub token'],
+  [/\bgithub_pat_[A-Za-z0-9_]{22,}\b/, 'GitHub fine-grained PAT'],
   [/\bxox[baprs]-[A-Za-z0-9-]{10,}\b/, 'Slack token'],
+  [/\bsk-ant-[A-Za-z0-9-]{20,}\b/, 'Anthropic API key'],
   [/\bsk-[A-Za-z0-9]{32,}\b/, 'OpenAI-style secret key'],
-  [/-----BEGIN PRIVATE KEY-----/, 'PKCS#8 private key'],
 ];
 
 let raw = '';
@@ -70,11 +71,16 @@ process.stdin.on('end', () => {
   const scanned = effectiveCommand(cmd);
   if (!/\bgit\s+commit\b/.test(scanned)) process.exit(0);
 
-  // ---- BLOCKING: secret scan of the staged diff ----
-  const secret = scanStagedForSecrets();
+  // `git commit -a/--all` stages tracked modifications at commit time, AFTER
+  // this PreToolUse hook runs — so the cached diff would miss them. When -a is
+  // present, also scan unstaged tracked changes.
+  const includeAll = /\bgit\s+commit\b[^\n]*\s(?:--all\b|-[a-zA-Z]*a[a-zA-Z]*\b)/.test(scanned);
+
+  // ---- BLOCKING: secret scan of the (effective) diff ----
+  const secret = scanStagedForSecrets(includeAll);
   if (secret) {
     process.stderr.write(
-      `[Arcwright ci-gates] Commit blocked: ${secret} detected in the staged diff.\n` +
+      `[Arcwright ci-gates] Commit blocked: ${secret} detected in the diff to be committed.\n` +
         `Remove the secret (and rotate it if it was ever real), unstage the file, then commit again.\n` +
         `If this is a false positive, commit outside the gate or adjust the gitleaks allowlist.\n`
     );
@@ -94,28 +100,33 @@ process.stdin.on('end', () => {
   process.exit(0);
 });
 
-function scanStagedForSecrets() {
-  // Prefer gitleaks if present (protect mode scans staged changes).
+function scanStagedForSecrets(includeAll) {
+  // Prefer gitleaks if present (protect mode scans staged changes). Decide by
+  // exit status, not output text: gitleaks exits 1 for leaks, 0 for clean,
+  // 126/127 (or spawn error) for not-found/config error → fall through.
   try {
     execSync('gitleaks protect --staged --no-banner', { stdio: 'pipe', timeout: 60000 });
-    return null; // gitleaks ran clean
+    if (!includeAll) return null; // gitleaks ran clean over staged
   } catch (e) {
-    const out = ((e.stdout || '') + (e.stderr || '')).toString();
-    if (/leaks found|secret/i.test(out)) return 'a secret (gitleaks)';
-    // gitleaks absent or errored → fall back to the built-in scan below.
+    if (e && e.status === 1) return 'a secret (gitleaks)';
+    // not found / config error → fall back to the built-in scan below.
   }
-  try {
-    const diff = execSync('git diff --cached --no-color', { stdio: 'pipe', timeout: 30000 })
-      .toString();
-    const added = diff
-      .split('\n')
-      .filter((l) => l.startsWith('+') && !l.startsWith('+++'))
-      .join('\n');
-    for (const [re, label] of SECRET_PATTERNS) {
-      if (re.test(added)) return label;
+  // Built-in fallback (and the unstaged sweep for `-a`).
+  const ranges = ['git diff --cached --no-color'];
+  if (includeAll) ranges.push('git diff --no-color'); // unstaged tracked changes
+  for (const cmd of ranges) {
+    try {
+      const diff = execSync(cmd, { stdio: 'pipe', timeout: 30000 }).toString();
+      const added = diff
+        .split('\n')
+        .filter((l) => l.startsWith('+') && !l.startsWith('+++'))
+        .join('\n');
+      for (const [re, label] of SECRET_PATTERNS) {
+        if (re.test(added)) return label;
+      }
+    } catch {
+      /* no repo / nothing to diff → skip this range */
     }
-  } catch {
-    /* no repo / nothing staged → nothing to block */
   }
   return null;
 }

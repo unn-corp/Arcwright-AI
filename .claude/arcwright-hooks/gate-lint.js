@@ -16,7 +16,7 @@
  */
 'use strict';
 
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 let raw = '';
 process.stdin.on('data', (c) => (raw += c));
@@ -30,33 +30,32 @@ process.stdin.on('end', () => {
   }
   if (!filePath) process.exit(0);
 
-  const q = JSON.stringify(filePath);
   try {
     if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(filePath)) {
-      run(`npx --no-install eslint ${q}`, 'ESLint');
-      run(`npx --no-install prettier --check ${q}`, 'Prettier');
+      run('npx', ['--no-install', 'eslint', filePath], 'ESLint');
+      run('npx', ['--no-install', 'prettier', '--check', filePath], 'Prettier');
     } else if (/\.py$/.test(filePath)) {
-      run(`ruff check ${q}`, 'Ruff lint');
-      run(`ruff format --check ${q}`, 'Ruff format');
+      run('ruff', ['check', filePath], 'Ruff lint');
+      run('ruff', ['format', '--check', filePath], 'Ruff format');
     }
   } catch {
     /* advisory only — never fail the turn */
   }
   process.exit(0);
 
-  function run(command, label) {
-    try {
-      execSync(command, { stdio: 'pipe', timeout: 60000 });
-      // exit 0, no output = clean
-    } catch (e) {
-      // Missing tool / no config → degrade silently. Only surface real findings.
-      const out = ((e.stdout || '') + (e.stderr || '')).toString().trim();
-      const missing = /not found|cannot find module|couldn't find|no such file|command not found|ENOENT/i.test(out);
-      if (out && !missing) {
-        process.stdout.write(
-          `[Arcwright ci-gates ${label}]\n` + out.split('\n').slice(0, 25).join('\n') + '\n'
-        );
-      }
+  // Run via spawnSync with an argument array: the file path is passed as a
+  // literal argv entry, never through a shell, so a malicious file_path
+  // (e.g. `foo$(cmd).ts`) cannot inject commands. shell:false is the default.
+  function run(cmd, args, label) {
+    const r = spawnSync(cmd, args, { stdio: 'pipe', timeout: 60000, encoding: 'utf8' });
+    if (r.error) return; // tool missing (ENOENT) → degrade silently
+    if (r.status === 0) return; // clean
+    const out = ((r.stdout || '') + (r.stderr || '')).trim();
+    const missing = /not found|cannot find module|couldn't find|no such file|command not found/i.test(out);
+    if (out && !missing) {
+      process.stdout.write(
+        `[Arcwright ci-gates ${label}]\n` + out.split('\n').slice(0, 25).join('\n') + '\n'
+      );
     }
   }
 });

@@ -30,7 +30,8 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+          # Monorepo: point at the actual lockfile, e.g. cache-dependency-path: website/package-lock.json
+      - run: npm ci # needs a package-lock.json in working-directory (set working-directory for monorepos)
       - run: npx prettier --check .
       - run: npx eslint .
       - run: npx tsc --noEmit
