@@ -118,29 +118,29 @@ jobs:
           curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 \
             -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
           /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
-      - name: Set up Python (for semgrep)
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: SAST (semgrep) — advisory
-        # ADVISORY (continue-on-error): semgrep is a Python package whose OCaml
-        # `semgrep-core` binary doesn't reliably install via pip on these
-        # containerized runners, and its Docker image hits the DinD bind-mount
-        # trap (see job note). The hard secret/dep/vuln gates above (gitleaks,
-        # trivy, OSV) cover the security posture; semgrep runs for SAST signal but
-        # does not block. To promote it back to a hard gate, run it where
-        # semgrep-core installs cleanly (e.g. a dedicated container job).
-        #
+
+  # SAST (semgrep) — HARD gate, runs inside the semgrep container.
+  # A `container:` job sidesteps the DinD bind-mount trap that breaks manual
+  # `docker run -v`: the runner sets up the workspace mount itself and injects
+  # its own node for JS actions (actions/checkout), and the image already ships
+  # `semgrep-core` (which won't pip-install reliably on the bare runner).
+  sast:
+    name: sast (semgrep)
+    runs-on: [self-hosted, linux, x64, unn]
+    container:
+      image: semgrep/semgrep:1.168.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: SAST (semgrep)
         # Gate on ERROR severity only (WARNING/INFO are noise on a skills+tooling
         # monorepo). Three rules are excluded as false-positives here:
         #   - detect-child-process: hook scripts/installers spawn processes by
         #     design (CLI tooling, not request handlers).
         #   - detect-insecure-websocket: only a `ws://` example in security docs.
         #   - dockerfile missing-user: the nginx static image binds :80 as root.
-        continue-on-error: true
+        # All rules still run, so new high-severity issues (eval, hardcoded
+        # secrets, injection) fail the gate.
         run: |
-          python -m pip install --upgrade --quiet --disable-pip-version-check pip wheel
-          python -m pip install --quiet --disable-pip-version-check semgrep
           semgrep scan --config auto --severity ERROR --error \
             --exclude-rule javascript.lang.security.detect-child-process.detect-child-process \
             --exclude-rule javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket \
