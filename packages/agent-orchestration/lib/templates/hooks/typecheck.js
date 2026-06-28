@@ -7,7 +7,7 @@
  */
 'use strict';
 
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 let raw = '';
 process.stdin.on('data', (c) => (raw += c));
@@ -23,24 +23,25 @@ process.stdin.on('end', () => {
 
   try {
     if (/\.(ts|tsx)$/.test(filePath)) {
-      run('npx --no-install tsc --noEmit', 'TypeScript');
+      run('npx', ['--no-install', 'tsc', '--noEmit'], 'TypeScript');
     } else if (/\.py$/.test(filePath)) {
-      run('pyright --outputjson', 'Pyright');
+      run('pyright', ['--outputjson'], 'Pyright');
     }
   } catch {
     /* never fail the turn */
   }
   process.exit(0);
 
-  function run(command, label) {
-    try {
-      execSync(command, { stdio: 'pipe', timeout: 120000 });
-      // exit 0, no output = clean
-    } catch (e) {
-      const out = ((e.stdout || '') + (e.stderr || '')).toString().trim();
-      if (out) {
-        process.stdout.write(`[Arcwright ${label} check]\n` + out.split('\n').slice(0, 25).join('\n') + '\n');
-      }
+  // spawnSync with an argument array — no shell, so nothing here can be turned
+  // into command injection. These commands take no model-controlled input today
+  // (they run project-wide); the no-shell form keeps it that way defensively.
+  function run(cmd, args, label) {
+    const r = spawnSync(cmd, args, { stdio: 'pipe', timeout: 120000, encoding: 'utf8' });
+    if (r.error) return; // tool absent (ENOENT) → degrade silently
+    if (r.status === 0) return; // clean
+    const out = ((r.stdout || '') + (r.stderr || '')).trim();
+    if (out) {
+      process.stdout.write(`[Arcwright ${label} check]\n` + out.split('\n').slice(0, 25).join('\n') + '\n');
     }
   }
 });
