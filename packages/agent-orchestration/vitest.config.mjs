@@ -19,9 +19,9 @@ export default defineConfig({
       thresholds: {
         'lib/filter.js': { lines: 100, functions: 100, branches: 90, statements: 100 },
         'lib/customization.js': { lines: 95, functions: 100, branches: 90, statements: 95 },
-        // Floor dropped slightly after upsert/cleanup helpers moved to managed-md
-        // (their coverage moved with them — see managed-md.js at ~100%).
-        'lib/installer.js': { lines: 18, functions: 40, branches: 9, statements: 17 },
+        // Raised after install() integration tests (test/install.integration.test.js)
+        // exercise the full project/global/update/bmad/hooks flows end to end.
+        'lib/installer.js': { lines: 55, functions: 80, branches: 44, statements: 52 },
         'lib/managed-md.js': { lines: 90, functions: 100, branches: 85, statements: 90 },
       },
     },

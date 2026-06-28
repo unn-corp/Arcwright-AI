@@ -1237,17 +1237,26 @@ function printSkillPrerequisites(chalk) {
   console.log('');
 }
 
-/** Open the generated workflows-overview.html in the OS default browser, if present. */
+/**
+ * Open the generated workflows-overview.html in the OS default browser, if
+ * present. Best-effort: ARCWRIGHT_NO_OPEN suppresses it (automation/CI), and a
+ * missing opener binary is swallowed rather than crashing the install.
+ */
 async function openWorkflowsOverview(arwDir, chalk) {
+  if (process.env.ARCWRIGHT_NO_OPEN) return;
   const overviewHtml = path.join(arwDir, '_memory', 'master-orchestrator-sidecar', 'workflows-overview.html');
   if (!await fs.pathExists(overviewHtml)) return;
-  const { spawn } = require('child_process');
-  const opener = process.platform === 'win32' ? 'cmd'
-               : process.platform === 'darwin' ? 'open'
-               : 'xdg-open';
-  const args = process.platform === 'win32' ? ['/c', 'start', '', overviewHtml] : [overviewHtml];
-  spawn(opener, args, { detached: true, stdio: 'ignore' }).unref();
-  console.log(chalk.dim(`  Opening workflows overview in your browser…\n`));
+  try {
+    const { spawn } = require('child_process');
+    const opener = process.platform === 'win32' ? 'cmd'
+                 : process.platform === 'darwin' ? 'open'
+                 : 'xdg-open';
+    const args = process.platform === 'win32' ? ['/c', 'start', '', overviewHtml] : [overviewHtml];
+    const child = spawn(opener, args, { detached: true, stdio: 'ignore' });
+    child.on('error', () => {}); // no opener (headless/CI) → ignore
+    child.unref();
+    console.log(chalk.dim(`  Opening workflows overview in your browser…\n`));
+  } catch { /* opening a browser is best-effort */ }
 }
 
 // ─── Status ───────────────────────────────────────────────────────────────────
