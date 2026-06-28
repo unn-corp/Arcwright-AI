@@ -21,11 +21,14 @@ source "$DIR/helpers.sh"
 
 # [arcwright multi-account] Pick which account's usage to show:
 #   1. @claude_usage_account tmux option, if set (pin a session to an account);
-#   2. else the account of the active pane's claude process (auto-follow);
+#   2. else the account of THIS pane's claude process — the pane PID is passed in
+#      as $1 via `#(segment.sh #{pane_pid})`, so each session resolves its own
+#      pane (a global #() with no pane context shows one value to all sessions);
 #   3. else the legacy single-account file;
 #   4. else the most-recently-updated per-account file.
+pane_pid="${1:-}"
 acct="$(get_tmux_option @claude_usage_account '')"
-[ -n "$acct" ] || acct="$(active_pane_account 2>/dev/null || true)"
+[ -n "$acct" ] || acct="$(account_for_pane "$pane_pid" 2>/dev/null || true)"
 CACHE_FILE="$(usage_cache_file "$acct")"
 if [ ! -f "$CACHE_FILE" ]; then
 	CACHE_FILE="$(usage_cache_file)" # legacy single-account file

@@ -29,21 +29,29 @@ claude_account_key() {
 	printf '%s' "$base"
 }
 
-# [arcwright multi-account] Resolve the account of the tmux *active pane* by
-# finding the claude process running in it and reading its CLAUDE_CONFIG_DIR from
-# /proc. Linux-only (no /proc on macOS) and best-effort: prints the account key
-# on success, returns non-zero otherwise so the caller can fall back. This is
-# what makes the bar follow the account of the pane you're looking at.
+# [arcwright multi-account] Resolve the claude account for a given pane by
+# walking the pane's process tree, finding the claude process, and reading its
+# CLAUDE_CONFIG_DIR from /proc. Linux-only (no /proc on macOS), best-effort.
+#
+# CRITICAL: the pane PID must be passed IN (the segment is wired as
+# `#(segment.sh #{pane_pid})`). tmux expands #{pane_pid} per client to that
+# client's active pane and caches each distinct expansion separately, so every
+# session's status bar resolves ITS OWN pane — a single global status-right
+# otherwise shows one shared value to all sessions. Querying tmux for "the active
+# pane" here would be client-ambiguous and is only a last-resort fallback.
 _claude_usage_descendants() {
 	local parent="$1" k
 	printf '%s\n' "$parent"
 	for k in $(pgrep -P "$parent" 2>/dev/null); do _claude_usage_descendants "$k"; done
 }
-active_pane_account() {
-	command -v tmux >/dev/null 2>&1 || return 1
+account_for_pane() {
 	[ -d /proc ] || return 1
-	local pid p ccd
-	pid="$(tmux display-message -p '#{pane_pid}' 2>/dev/null)"
+	local pid="${1:-}" p ccd
+	if [ -z "$pid" ]; then
+		# Fallback only: no pid passed in → the current client's active pane.
+		command -v tmux >/dev/null 2>&1 || return 1
+		pid="$(tmux display-message -p '#{pane_pid}' 2>/dev/null)"
+	fi
 	[ -n "$pid" ] || return 1
 	for p in $(_claude_usage_descendants "$pid"); do
 		[ -r "/proc/$p/cmdline" ] || continue
@@ -54,6 +62,8 @@ active_pane_account() {
 	done
 	return 1
 }
+# Back-compat alias (resolves the current client's active pane).
+active_pane_account() { account_for_pane; }
 
 # Read a tmux user option, falling back to a default when unset/empty.
 get_tmux_option() {

@@ -636,7 +636,9 @@ async function setupClaudeUsage({ tmuxSrc, tmuxBin, tmuxConf, chalk, ask, opts, 
   // 3. Append the segment to status-right via a managed block (idempotent).
   const START = '# ─── arcwright claude-usage segment ───';
   const END   = '# ─── end claude-usage ───';
-  const segLine = `set -ga status-right ' #(${destDir.replace('~', '$HOME')}/segment.sh)'`;
+  // Pass #{pane_pid} so tmux expands it per client (each session's active pane).
+  // Without it the global status-right shows one shared account to every session.
+  const segLine = `set -ga status-right ' #(${destDir.replace('~', '$HOME')}/segment.sh #{pane_pid})'`;
   const block = `${START}\n${segLine}\n${END}\n`;
   let conf = '';
   try { conf = await fs.readFile(tmuxConf, 'utf8'); } catch { /* no ~/.tmux.conf yet */ }
