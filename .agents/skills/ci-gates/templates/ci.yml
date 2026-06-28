@@ -92,6 +92,13 @@ jobs:
           scanners: vuln,secret
           severity: HIGH,CRITICAL
           exit-code: "1"
+      - name: Dependency vulnerabilities (OSV-Scanner / OSV.dev)
+        # Scans every committed lockfile (the dependency surface of the built
+        # artifact) against the OSV.dev database. Non-zero exit on findings fails
+        # the gate. Runs via the official image (self-hosted runners carry dind).
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/src" \
+            ghcr.io/google/osv-scanner:latest scan source --recursive /src
       - name: SAST (semgrep)
         uses: semgrep/semgrep-action@v1
         with:

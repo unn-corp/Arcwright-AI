@@ -53,11 +53,32 @@ issues early.
 | Gate | Tool | Command |
 |------|------|---------|
 | Secret scan | gitleaks | `gitleaks protect --staged` (local) / `gitleaks detect` (CI) |
-| Dependency vuln | Trivy | `trivy fs --scanners vuln .` |
+| Dependency vuln (lockfiles) | OSV-Scanner (OSV.dev) | `osv-scanner scan source -r .` / `docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest scan source -r /src` |
+| Dependency vuln (filesystem/images) | Trivy | `trivy fs --scanners vuln .` |
 | Node dep audit | npm audit | `npm audit --audit-level=high` |
 | Python dep audit | pip-audit | `pip-audit` |
 | SAST (multi-lang, no build) | Semgrep | `semgrep --config auto` |
 | Container scan | Trivy image | `trivy image <ref>` |
+
+## OSV-Scanner (OSV.dev) — the artifact's dependency surface
+
+A built artifact's vulnerability surface is its **dependencies**, captured in the
+committed lockfiles. OSV-Scanner matches every lockfile (npm, pip, Go, Cargo,
+Maven, …) and SBOMs against the OSV.dev database — more precise per-package than
+a filesystem image scan.
+
+```sh
+osv-scanner scan source --recursive .        # all lockfiles under the tree
+osv-scanner scan source --lockfile=path/to/package-lock.json
+# no local install needed — run the official image (CI parity):
+docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest scan source -r /src
+```
+
+Non-zero exit on findings. **Fixing:** bump within the existing semver range
+(`npm update`, `pip install -U`, etc.) and re-scan; if the fix needs a major
+bump, treat it as a tracked dependency upgrade. OSV-Scanner prints the fixed
+version per advisory, so the remediation target is explicit. Run it in CI (the
+`security` job) and before a release.
 
 ## Conventional commits / PR titles
 

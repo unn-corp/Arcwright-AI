@@ -28,7 +28,9 @@ authoritative merge gate. The two stay in sync (a hook can be bypassed with
 **CI** (the real merge gate):
 - `.github/workflows/ci.yml` — fast-fail jobs: static (format/lint/type-check),
   test (unit + 80/80/70 coverage), python (optional), security (gitleaks +
-  trivy + semgrep), pr-title.
+  OSV-Scanner/OSV.dev + trivy + semgrep), pr-title. OSV-Scanner matches the
+  artifact's committed lockfiles against OSV.dev and fails on a known vuln; fix
+  by bumping the dependency to the version it reports. See `references/tooling.md`.
 - Config snippets for Vitest/Jest coverage thresholds and pytest `--cov-fail-under`.
 
 See `references/gate-catalog.md` (the gate set + 3-layer model),

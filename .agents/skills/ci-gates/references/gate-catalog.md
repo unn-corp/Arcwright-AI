@@ -12,7 +12,7 @@ merge gate or nightly.
 | 4 | Secret scan | < 30 s | local + PR-CI | committed credential |
 | 5 | Unit tests + coverage | 30 s–5 min | PR-CI | failing test / coverage < threshold |
 | 6 | Build verification | 1–5 min | PR-CI | build failure |
-| 7 | SAST + dependency audit | 2–10 min | PR-CI | HIGH/CRITICAL finding |
+| 7 | SAST + dependency audit (OSV.dev + SAST) | 2–10 min | PR-CI | HIGH/CRITICAL finding |
 | 8 | Integration tests | 5–20 min | PR-CI | failure |
 | 9 | E2E tests | 10–30 min | merge gate / nightly | failure |
 
