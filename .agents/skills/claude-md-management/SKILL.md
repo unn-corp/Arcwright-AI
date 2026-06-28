@@ -10,7 +10,7 @@ allowed-tools: Read, Edit, Write, Bash, Glob
 # CLAUDE.md Management — Audit + Session Learning Capture
 
 Keep CLAUDE.md accurate, concise, and load-bearing.
-Distinct from `constitution` (enforcement rules) and `project-memory` (planning state).
+Complements `project-context` (which writes durable project context into CLAUDE.md / AGENTS.md).
 
 **Scope:** CLAUDE.md files only — project (`.claude/CLAUDE.md` or `CLAUDE.md`) and global (`~/.claude/CLAUDE.md`).
 
@@ -25,9 +25,9 @@ Distinct from `constitution` (enforcement rules) and `project-memory` (planning 
 | Persistent house conventions Claude should follow | One-off instructions for a single task |
 | Proactive skill invocation triggers | Project roadmap / sprint items |
 | Repo structure notes that are non-obvious | Information already in README or code comments |
-| Tool permission patterns (allowedTools) | Decisions with rationale (→ DECISIONS.md) |
-| Agent spawning rules specific to this project | Enforcement rules (→ CONSTITUTION.md) |
-| Format/style rules not in lint config | Planning state (→ project-memory skill) |
+| Tool permission patterns (allowedTools) | Decisions with rationale (→ external PM tool) |
+| Agent spawning rules specific to this project | Planning / sprint state (→ external PM tool) |
+| Format/style rules not in lint config | Roadmap / project status (→ external PM tool) |
 
 **Load-bearing test:** If a line disappeared, would Claude behave differently in this project? If no — cut it.
 
@@ -97,7 +97,6 @@ APPLIED: {N} changes to {path}
 ## Constraints
 
 - Never edit `CLAUDE.md` without showing the diff and getting confirmation.
-- Never move enforcement rules here from CONSTITUTION.md — keep them separate.
 - Global CLAUDE.md changes affect all projects — warn before writing to `~/.claude/CLAUDE.md`.
 - Do not add task-specific notes (sprint items, one-off reminders) — those go in `_arcwright-output/`.
 - Additions must be shorter than what they replace or explain — never add verbose prose.

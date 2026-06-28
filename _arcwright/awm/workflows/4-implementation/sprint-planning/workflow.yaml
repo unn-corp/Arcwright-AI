@@ -17,7 +17,7 @@ template: "{installed_path}/sprint-status-template.yaml"
 validation: "{installed_path}/checklist.md"
 
 # Variables and inputs
-project_context: "**/project-context.md"
+project_context: "{AGENTS.md,CLAUDE.md,.claude/CLAUDE.md,.github/copilot-instructions.md}"
 project_name: "{config_source}:project_name"
 
 # Tracking system configuration

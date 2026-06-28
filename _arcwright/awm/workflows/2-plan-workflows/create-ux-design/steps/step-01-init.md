@@ -29,7 +29,7 @@ Try to discover:
 - Product Brief (`*brief*.md`)
 - Research Documents (`*prd*.md`)
 - Project Documentation (generally multiple documents in `{product_knowledge}` or `docs`)
-- Project Context (`**/project-context.md`)
+- Project Context (the project's AGENTS.md / CLAUDE.md native memory file)
 
 <critical>Confirm what you have found with the user, along with asking if the user wants to provide anything else. Only after this confirmation will you proceed to follow the loading rules.</critical>
 

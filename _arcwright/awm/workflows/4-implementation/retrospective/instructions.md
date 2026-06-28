@@ -31,7 +31,7 @@ PARTY MODE PROTOCOL:
 
 <step n="1" goal="Epic Discovery - Find Completed Epic with Priority Logic">
 
-<action>Load {project_context} for project-wide patterns and conventions (if exists)</action>
+<action>Load {project_context} (the project's AGENTS.md / CLAUDE.md native memory file) for project-wide patterns and conventions (if present)</action>
 <action>Explain to {user_name} the epic discovery process using natural dialogue</action>
 
 <output>

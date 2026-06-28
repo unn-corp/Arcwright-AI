@@ -30,13 +30,25 @@ Discover the project's technology stack, existing patterns, and critical impleme
 
 ## DISCOVERY SEQUENCE:
 
-### 1. Check for Existing Project Context
+### 1. Locate the Native Memory File & Existing Context
 
-First, check if project context already exists:
+The durable project context lives in the coding agent's **native memory file**, not a standalone
+`project-context.md`. Resolve `{memory_file}` using the priority order in `workflow.md` (Target
+memory file resolution):
 
-- Look for file at `{project_knowledge}/project-context.md or {project-root}/**/project-context.md`
-- If exists: Read complete file to understand existing rules
-- Present to user: "Found existing project context with {number_of_sections} sections. Would you like to update this or create a new one?"
+1. `AGENTS.md` (root) → 2. `CLAUDE.md` / `.claude/CLAUDE.md` (follow an `@AGENTS.md` import or
+   symlink back to `AGENTS.md`) → 3. `.github/copilot-instructions.md` or `.kiro/steering/` if that's
+   the repo's convention → 4. else none yet (will be created in step 5).
+
+- If a memory file is found: Read it in full. Identify which of the GENERATED sections
+  (`## Setup & commands`, `## Architecture`, `## Gotchas / project context`) already exist and note
+  the hand-authored sections (`Project overview`, `Conventions`, `Commit & PR rules`, `Security`)
+  that must NOT be touched.
+- Present to user: "Found existing memory file at `{memory_file}` with {number_of_sections} sections.
+  I'll merge the generated Setup/Architecture/Gotchas sections in place and leave your hand-authored
+  sections untouched. Continue?"
+- If none is found: note that a new `AGENTS.md` (+ a `CLAUDE.md` importing `@AGENTS.md`) will be
+  scaffolded from the unified template.
 
 ### 2. Discover Project Technology Stack
 
@@ -117,19 +129,27 @@ Look for rules that AI agents might miss:
 - PR review requirements
 - Deployment procedures
 
-### 5. Initialize Project Context Document
+### 5. Prepare the Native Memory File
 
-Based on discovery, create or update the context document:
+Based on discovery, prepare `{memory_file}` for an in-place merge of the GENERATED sections:
 
-#### A. Fresh Document Setup (if no existing context)
+#### A. Fresh Memory File (no memory file found)
 
-Copy template from `{installed_path}/project-context-template.md` to `{output_folder}/project-context.md`
-Initialize frontmatter fields.
+Create `AGENTS.md` at the project root scaffolded from the **unified template** (see the
+`project-context` skill — `# <Project Name>` then `## Project overview`, `## Setup & commands`,
+`## Architecture`, `## Conventions`, `## Testing`, `## Commit & PR rules`, `## Security`,
+`## Gotchas / project context`). Use the generated-section content from
+`{installed_path}/project-context-template.md` for the three GENERATED sections; leave the
+hand-authored sections as stubs for the user to fill. Also create a sibling `CLAUDE.md` containing
+`@AGENTS.md` (the import) so Claude Code picks it up. On Windows prefer the `@AGENTS.md` import over
+a symlink.
 
-#### B. Existing Document Update
+#### B. Existing Memory File Update
 
-Load existing context and prepare for updates
-Set frontmatter `sections_completed` to track what will be updated
+Load `{memory_file}` and prepare for an in-place merge. Track which GENERATED sections
+(`## Setup & commands`, `## Architecture`, `## Gotchas / project context`) will be inserted or
+replaced. Preserve hand-authored sections verbatim. If a GENERATED section is missing, it will be
+inserted in the unified template order.
 
 ### 6. Present Discovery Summary
 

@@ -1,8 +1,8 @@
 ---
-description: Audit CLAUDE.md quality + capture session learnings. Prunes stale/contradictory lines, proposes terse additions. Complements constitution (enforcement) and project-memory (planning state).
+description: Audit CLAUDE.md / AGENTS.md quality + capture session learnings. Prunes stale/contradictory lines, proposes terse additions. Complements project-context (which writes project context into the agent-native memory file).
 handoffs:
-  - label: "Update CONSTITUTION.md instead"
-    prompt: "/constitution"
+  - label: "Refresh project context"
+    prompt: "/triage"
   - label: "Write a session handoff"
     prompt: "/handoff"
 ---

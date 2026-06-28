@@ -12,8 +12,8 @@ natural-language behavior to the right event + matcher + command and safe-merges
 
 | Event | Fires | Can block? | Typical Arcwright use |
 |-------|-------|-----------|------------------------|
-| `SessionStart` | session begins / resumes | no | load `project-context`, planning STATE, constitution version |
-| `UserPromptSubmit` | user sends a prompt | yes (deny) | inject context, gate on constitution |
+| `SessionStart` | session begins / resumes | no | load `project-context` (CLAUDE.md / AGENTS.md) |
+| `UserPromptSubmit` | user sends a prompt | yes (deny) | inject context |
 | `PreToolUse` | before a tool runs | yes (deny) | guard secrets, block destructive git/fs, protect files |
 | `PostToolUse` | after a tool succeeds | no | typecheck/lint changed files, run LSP diagnostics |
 | `Stop` | main agent finishes a turn | no | session-handoff, session-report, LEARNINGS capture |
@@ -43,10 +43,6 @@ Matchers filter by tool name (`Write|Edit`, `Bash`, etc.) or are omitted to matc
 ### 3. Memory & continuity (Stop / SubagentStop / PreCompact)
 - **Auto-handoff on Stop** → when a long session ends, run `session-handoff` to write
   `_arcwright-output/handoffs/handoff-{date}.md` (via `caveman`). Survives context resets.
-- **Flush STATE on PreCompact** → write planning `STATE.md` (`project-memory`) before
-  compaction so `next_action` is never lost.
-- **Decision-log on SubagentStop** → when a review/verifier subagent returns, append its
-  verdict to `DECISIONS.md` (D-NN).
 
 ### 4. Orchestration (SubagentStop) — enforce our review model
 - **Verifier sign-off** → after a dev subagent finishes an implementation task, the
@@ -55,13 +51,8 @@ Matchers filter by tool name (`Write|Edit`, `Bash`, etc.) or are omitted to matc
 - **Registry update** → mark the Session Agent Registry row `closed` automatically.
 
 ### 5. Context loading (SessionStart) — start every session grounded
-- **Load project context** → run `project-context` scan; surface STATE + constitution
-  version. This is the single most useful hook for our workflows.
-- **Constitution check** → if `CONSTITUTION.md` exists, note its version so agents honor it.
-
-### 6. Constitution enforcement (UserPromptSubmit) — optional, strict teams
-- Gate implementation prompts against `CONSTITUTION.md` non-negotiables; deny + explain when
-  a request violates a standing principle (e.g. "skip tests"). Off by default — opt-in.
+- **Load project context** → run `project-context` scan (CLAUDE.md / AGENTS.md). This is the
+  single most useful hook for our workflows.
 
 ## Example: `.claude/settings.json`
 
@@ -100,11 +91,9 @@ and merges without clobbering existing hooks.
 |------|------------------------------------|
 | PostToolUse typecheck | `lsp-diagnostics`, `typescript-best-practices`, `python-backend` |
 | PreToolUse secret-scan | `security-review`, `security-best-practices` |
-| Stop handoff | `session-handoff`, `project-memory` |
-| PreCompact flush | `project-memory` (STATE.md) |
+| Stop handoff | `session-handoff` |
 | SubagentStop verify | `goal-backward-verify`, `review-orchestrator` |
-| SessionStart context | `project-context`, `constitution` |
-| UserPromptSubmit gate | `constitution` |
+| SessionStart context | `project-context` |
 
 ## Seeding hooks with the installer
 

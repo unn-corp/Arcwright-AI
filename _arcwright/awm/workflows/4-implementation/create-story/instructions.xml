@@ -250,9 +250,9 @@
       <prompt>
         You are a coding standards extractor. Story context: {{story_key}} (Epic {{epic_num}}, Story {{story_num}}: {{story_title}}).
 
-        Read project-context.md at: {project_context} (glob search for **/project-context.md).
+        Read the project's native memory file at: {project_context} (the AGENTS.md / CLAUDE.md / .github/copilot-instructions.md the project uses; glob the {project_context} pattern). Focus on its GENERATED sections (Setup & commands, Architecture, Gotchas / project context) plus any Conventions section.
 
-        If not found: return "project-context.md not found — skipping."
+        If not found: return "native memory file not found — skipping."
 
         Extract coding standards relevant to story {{story_key}}:
         - Language-specific conventions (Python patterns, TypeScript rules)

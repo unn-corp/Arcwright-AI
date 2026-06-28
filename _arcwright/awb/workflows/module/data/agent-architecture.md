@@ -105,7 +105,7 @@ That's it! The agent-builder workflow will handle the detailed implementation.
 
 **Characteristics:**
 - Each conversation starts fresh
-- Relies on shared context files (like project-context.md)
+- Relies on shared context files (like the agent-native memory file, AGENTS.md / CLAUDE.md)
 - Simpler, more predictable
 
 **Most module agents are stateless** — they reference shared project context rather than maintaining their own memory.

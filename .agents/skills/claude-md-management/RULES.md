@@ -2,9 +2,7 @@
 
 > Load full `SKILL.md` when auditing or writing to CLAUDE.md.
 
-Keeps CLAUDE.md accurate, concise, and load-bearing. Distinct from:
-- `constitution` — enforcement rules (CONSTITUTION.md)
-- `project-memory` — planning state
+Keeps CLAUDE.md accurate, concise, and load-bearing. Complements `project-context` (which writes durable project context into CLAUDE.md / AGENTS.md).
 
 ## Core Rules
 
@@ -26,6 +24,6 @@ Keeps CLAUDE.md accurate, concise, and load-bearing. Distinct from:
 
 - Writing to CLAUDE.md without showing the diff
 - Adding task-specific notes (sprint items, one-off reminders)
-- Moving enforcement rules here from CONSTITUTION.md
+- Adding decisions/planning state that belongs in the external PM tool
 - Writing verbose explanations instead of terse rules
 - Adding global CLAUDE.md changes without warning

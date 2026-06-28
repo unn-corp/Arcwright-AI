@@ -24,7 +24,7 @@
 </step>
 
 <step n="1" goal="Locate sprint status file">
-  <action>Load {project_context} for project-wide patterns and conventions (if exists)</action>
+  <action>Load {project_context} (the project's AGENTS.md / CLAUDE.md native memory file) for project-wide patterns and conventions (if present)</action>
   <action>Try {sprint_status_file}</action>
   <check if="file not found">
     <output>❌ sprint-status.yaml not found.
