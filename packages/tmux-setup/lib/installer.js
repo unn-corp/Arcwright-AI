@@ -11,7 +11,7 @@ const path = require('path');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
 
-async function setupTmux(projectRoot, chalk) {
+async function setupTmux(projectRoot, chalk, opts = {}) {
   const readline = require('readline');
   const os = require('os');
   const { execSync } = require('child_process');
@@ -267,6 +267,9 @@ async function setupTmux(projectRoot, chalk) {
 
   // Write / merge global ~/.claude/CLAUDE.md with tmux-aware agent spawning rules
   await writeGlobalClaudeMd(chalk);
+
+  // ── Step 4b: Claude usage status-bar segment (opt-in) ─────────────────────
+  await setupClaudeUsage({ tmuxSrc, tmuxBin, tmuxConf, chalk, ask, opts, execSync });
 
   // ── Step 5: WSL2 optimizations ────────────────────────────────────────────
   const isWsl = !!(process.env.WSL_DISTRO_NAME || await fs.pathExists('/proc/sys/fs/binfmt_misc/WSLInterop'));
@@ -544,4 +547,82 @@ async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
   return 'created';
 }
 
-module.exports = { setupTmux };
+/**
+ * Install the vendored tmux-claude-usage segment (opt-in).
+ * - Copies claude-usage/ scripts into ~/.config/tmux/bin/claude-usage/
+ * - Runs init.sh to wire the harvester into Claude Code's settings.json
+ *   (backs up + chains any existing statusLine — upstream logic, not reimplemented)
+ * - Appends the segment to status-right via a managed block in ~/.tmux.conf
+ *   (set -ga = append; non-destructive to the existing status-right)
+ *
+ * opts.claudeUsage: true → install without asking; false → skip; undefined → prompt.
+ */
+async function setupClaudeUsage({ tmuxSrc, tmuxBin, tmuxConf, chalk, ask, opts, execSync }) {
+  console.log('\n' + chalk.bold('Step 4b — Claude usage status-bar segment'));
+  console.log(chalk.dim('  Live Claude usage (5-hour + weekly limits, bar, reset time) in the tmux status bar.'));
+  console.log(chalk.dim('  Vendored from docker-run/tmux-claude-usage (MIT). Requires jq + a Claude Pro/Max session.\n'));
+
+  let enabled = opts && opts.claudeUsage;
+  if (enabled === undefined) {
+    const a = await ask(chalk.yellow('  Install the Claude usage segment? (Y/n): '));
+    enabled = !a.toLowerCase().startsWith('n');
+  }
+  if (!enabled) {
+    console.log(chalk.dim('  ○ Skipped Claude usage segment.'));
+    return;
+  }
+
+  const srcDir = path.join(tmuxSrc, 'claude-usage');
+  if (!await fs.pathExists(srcDir)) {
+    console.log(chalk.yellow('  ⚠  claude-usage source not found in package — skipping.'));
+    return;
+  }
+
+  // jq is required by the harvester. Warn but proceed (init.sh --check also reports it).
+  try {
+    execSync('command -v jq', { stdio: 'pipe' });
+  } catch {
+    console.log(chalk.yellow('  ⚠  jq not found — install it (apt install jq / brew install jq) or the bar stays blank.'));
+  }
+
+  // 1. Copy scripts into ~/.config/tmux/bin/claude-usage/
+  const destDir = path.join(tmuxBin, 'claude-usage');
+  await fs.ensureDir(destDir);
+  for (const f of ['segment.sh', 'statusline.sh', 'helpers.sh', 'chain.sh', 'init.sh', 'LICENSE', 'SOURCES.md']) {
+    const s = path.join(srcDir, f);
+    if (await fs.pathExists(s)) {
+      await fs.copy(s, path.join(destDir, f), { overwrite: true });
+      if (f.endsWith('.sh')) { try { await fs.chmod(path.join(destDir, f), 0o755); } catch {} }
+    }
+  }
+  console.log(chalk.green(`  ✓ ${destDir}`));
+
+  // 2. Wire the harvester into Claude Code's settings.json (upstream init.sh:
+  //    backs up first, chains an existing statusLine). Safe to re-run.
+  try {
+    execSync(`bash "${path.join(destDir, 'init.sh')}"`, { stdio: 'pipe' });
+    console.log(chalk.green('  ✓ Claude statusLine harvester wired into settings.json (backed up)'));
+  } catch (e) {
+    const msg = ((e.stdout || '') + (e.stderr || '')).toString().trim().split('\n').slice(-2).join(' ');
+    console.log(chalk.yellow(`  ⚠  init.sh wiring failed: ${msg || 'see init.sh --check'}`));
+    console.log(chalk.dim(`     Run manually: bash "${path.join(destDir, 'init.sh')}"`));
+  }
+
+  // 3. Append the segment to status-right via a managed block (idempotent).
+  const START = '# ─── arcwright claude-usage segment ───';
+  const END   = '# ─── end claude-usage ───';
+  const segLine = `set -ga status-right ' #(${destDir.replace('~', '$HOME')}/segment.sh)'`;
+  const block = `${START}\n${segLine}\n${END}\n`;
+  let conf = '';
+  try { conf = await fs.readFile(tmuxConf, 'utf8'); } catch { /* no ~/.tmux.conf yet */ }
+  const blockRe = new RegExp(`${block.split('\n')[0].replace(/[.*+?^${}()|[\]\\─]/g, '\\$&')}[\\s\\S]*?${END.replace(/[.*+?^${}()|[\]\\─]/g, '\\$&')}\\n?`, 'm');
+  const updated = blockRe.test(conf)
+    ? conf.replace(blockRe, block)
+    : conf.trimEnd() + '\n\n' + block;
+  await fs.writeFile(tmuxConf, updated, 'utf8');
+  console.log(chalk.green('  ✓ status-right segment added to ~/.tmux.conf (set -ga, non-destructive)'));
+  console.log(chalk.dim('     Reload tmux (prefix + r, or tmux source ~/.tmux.conf). The bar fills as Claude renders.'));
+  console.log(chalk.dim('     Customize via @claude_usage_* options; uninstall: bash ~/.config/tmux/bin/claude-usage/init.sh --uninstall'));
+}
+
+module.exports = { setupTmux, setupClaudeUsage };

@@ -17,9 +17,13 @@ program
   .command('install', { isDefault: true })
   .description('Interactive tmux setup — config, scripts, TPM, Nerd Fonts, aliases')
   .option('-d, --directory <path>', 'Project root (used for tmux-ai/tmux-claude aliases)', process.cwd())
+  .option('--claude-usage', 'Install the Claude usage status-bar segment (skip the prompt)')
+  .option('--no-claude-usage', 'Skip the Claude usage status-bar segment')
   .action(async (opts) => {
     const chalk = (await import('chalk')).default;
-    await setupTmux(opts.directory, chalk);
+    // opts.claudeUsage: true (--claude-usage), false (--no-claude-usage), or
+    // undefined (neither → installer prompts interactively).
+    await setupTmux(opts.directory, chalk, { claudeUsage: opts.claudeUsage });
   });
 
 program.addHelpText('after', `
