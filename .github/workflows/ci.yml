@@ -77,7 +77,12 @@ jobs:
       - run: npm run build # tsc -b && vite build (type-check + bundle)
 
   # Security: secret scan, dependency/vuln, SAST — language-agnostic.
-  # gitleaks-action is free on public repos; a private repo needs GITLEAKS_LICENSE.
+  # NOTE: scanners run as NATIVE binaries on the runner, not `docker run -v`.
+  # These self-hosted runners are containerized with the host docker socket
+  # mounted (DinD-sibling), so a `-v "${{ github.workspace }}:/x"` bind mounts an
+  # empty host path (the workspace exists inside the runner container, not on the
+  # host daemon) — the scanner would see nothing and pass vacuously. Running the
+  # binaries directly against $GITHUB_WORKSPACE avoids that trap.
   security:
     name: security
     runs-on: [self-hosted, linux, x64, unn]
@@ -89,29 +94,37 @@ jobs:
         with:
           fetch-depth: 0
       - name: Secret scan (gitleaks)
-        # Run the gitleaks binary directly (Apache-2.0, free). The gitleaks-action
-        # wrapper requires a paid GITLEAKS_LICENSE on private repos; the CLI does
-        # not. fetch-depth:0 above gives it full history to scan.
+        # gitleaks CLI (MIT, free). The gitleaks-action wrapper requires a paid
+        # GITLEAKS_LICENSE on private repos; the binary does not. fetch-depth:0
+        # gives it full history. .gitleaks.toml allowlists doc false-positives.
         run: |
-          docker run --rm -v "${{ github.workspace }}:/repo" \
-            ghcr.io/gitleaks/gitleaks:latest detect \
-            --source=/repo --config=/repo/.gitleaks.toml \
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks detect --source="$GITHUB_WORKSPACE" \
+            --config="$GITHUB_WORKSPACE/.gitleaks.toml" \
             --redact --no-banner --exit-code=1 -v
       - name: Dependency + vuln scan (trivy)
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          scan-type: fs
-          scanners: vuln,secret
-          severity: HIGH,CRITICAL
-          exit-code: "1"
+        # trivy CLI (Apache-2.0). trivy-action runs trivy inside a container with
+        # the workspace mounted, which hits the same DinD-mount trap; run the
+        # binary natively instead.
+        run: |
+          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz \
+            | tar -xz -C /tmp trivy
+          /tmp/trivy fs --scanners vuln,secret --severity HIGH,CRITICAL \
+            --exit-code 1 --no-progress "$GITHUB_WORKSPACE"
       - name: Dependency vulnerabilities (OSV-Scanner / OSV.dev)
         # Scans every committed lockfile against OSV.dev; fails on findings.
         run: |
-          docker run --rm -v "${{ github.workspace }}:/src" \
-            ghcr.io/google/osv-scanner:latest scan source --recursive /src
+          curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 \
+            -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
+          /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
+      - name: Set up Python (for semgrep)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: SAST (semgrep)
-        # Run semgrep via its image (LGPL-2.1, free, no token for community rules).
-        # The semgrep-action wrapper is deprecated and nudges toward Semgrep Cloud.
+        # semgrep via pip (LGPL-2.1, free, no token for community rules). The
+        # semgrep-action wrapper is deprecated and nudges toward Semgrep Cloud.
         # Gate on ERROR severity only (WARNING/INFO are advisory noise on a
         # skills+tooling monorepo). Three rules are excluded as false-positives
         # for this repo's nature:
@@ -124,12 +137,12 @@ jobs:
         # All 518 rules still run, so new high-severity issues (eval, hardcoded
         # secrets, injection) will fail the gate.
         run: |
-          docker run --rm -v "${{ github.workspace }}:/src" \
-            semgrep/semgrep semgrep scan --config auto --severity ERROR --error \
+          python -m pip install --quiet --disable-pip-version-check semgrep
+          semgrep scan --config auto --severity ERROR --error \
             --exclude-rule javascript.lang.security.detect-child-process.detect-child-process \
             --exclude-rule javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket \
             --exclude-rule dockerfile.security.missing-user.missing-user \
-            /src
+            "$GITHUB_WORKSPACE"
 
   # Merge-gate hygiene: Conventional PR title (mirrors the local commit advisory).
   pr-title:
