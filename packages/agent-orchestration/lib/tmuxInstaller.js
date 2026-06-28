@@ -11,18 +11,9 @@ const path = require('path');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
 
-/** Detect platform — respects ARCWRIGHT_PLATFORM env override for testing */
-function detectPlatform() {
-  if (process.env.ARCWRIGHT_PLATFORM) return process.env.ARCWRIGHT_PLATFORM;
-  if (process.platform === 'win32') return 'windows-wsl';
-  if (process.platform === 'darwin') return 'macos';
-  try {
-    const fsSync = require('fs');
-    const v = fsSync.readFileSync('/proc/version', 'utf8');
-    if (v.toLowerCase().includes('microsoft')) return 'windows-wsl';
-  } catch (_) {}
-  return 'linux-native';
-}
+// Shared with installer.js — single source of truth, no per-file copies.
+const { detectPlatform } = require('./platform');
+const { upsertManagedBlock } = require('./managed-md');
 
 async function setupTmux(projectRoot, chalk, platform) {
   const readline = require('readline');
@@ -370,29 +361,6 @@ async function migrateOldClaudeMd(filePath) {
   await fs.writeFile(filePath, cleaned, 'utf8');
 }
 
-/**
- * Upsert a managed block in a file using start/end markers.
- * - File missing: create with block
- * - Markers absent: append block
- * - Markers present: replace content between them (removes stale content)
- */
-async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
-  await fs.ensureDir(path.dirname(filePath));
-  const block = `${startMarker}\n${content}\n${endMarker}`;
-  if (await fs.pathExists(filePath)) {
-    const existing = await fs.readFile(filePath, 'utf8');
-    const startIdx = existing.indexOf(startMarker);
-    const endIdx   = existing.indexOf(endMarker);
-    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-      const updated = existing.slice(0, startIdx) + block + existing.slice(endIdx + endMarker.length);
-      await fs.writeFile(filePath, updated, 'utf8');
-      return 'updated';
-    }
-    await fs.writeFile(filePath, existing.trimEnd() + '\n\n' + block + '\n', 'utf8');
-    return 'appended';
-  }
-  await fs.writeFile(filePath, block + '\n', 'utf8');
-  return 'created';
-}
+// upsertManagedBlock is imported from ./managed-md (shared with installer.js).
 
 module.exports = { setupTmux };

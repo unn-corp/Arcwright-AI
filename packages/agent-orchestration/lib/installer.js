@@ -17,6 +17,7 @@ const { execSync } = require('child_process');
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const { setupTmux } = require('./tmuxInstaller');
 const { detectPlatform } = require('./platform');
+const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
 
 // ─── WSL audio setup (Claude Code /voice) ────────────────────────────────────
 
@@ -1716,59 +1717,7 @@ const DEPRECATED_MARKERS = [
   { name: 'arcwright-legacy-tmux',  start: '## Agent Spawning (tmux-aware)',        end: '## Proactive Skill' },
 ];
 
-/**
- * Strip each marker-pair block (and its surrounding blank lines) from a
- * CLAUDE.md file. Generalizes the slice logic shared by upsertManagedBlock
- * and the old migrateOldClaudeMd. Used by install/update to strip
- * deprecated/renamed blocks, and by uninstall to strip all managed blocks.
- *
- * Each pair is handled as:
- *   - HTML-comment-marker pair: remove slice from `start` to `end` (inclusive)
- *     and surrounding blank lines. If only `start` is present (truncated file
- *     or partial migration), strip from `start` to the next `<!-- ` comment
- *     as a defensive fallback.
- *   - Markerless legacy pair (start = heading, end = next heading): strip
- *     from `start` to the next `## ` heading (or end of file).
- *
- * @param {string} filePath - absolute path to CLAUDE.md
- * @param {Array<{name: string, start: string, end: string}>} markerPairs
- * @returns {Promise<boolean>} - true if any block was removed
- */
-async function cleanupManagedBlocks(filePath, markerPairs) {
-  if (!await fs.pathExists(filePath)) return false;
-  if (!markerPairs || markerPairs.length === 0) return false;
-
-  const original = await fs.readFile(filePath, 'utf8');
-  let cleaned = original;
-
-  for (const { start, end } of markerPairs) {
-    let startIdx = cleaned.indexOf(start);
-    if (startIdx === -1) continue;
-
-    let endIdx = cleaned.indexOf(end, startIdx + start.length);
-
-    if (endIdx === -1) {
-      // Defensive: start marker present but end marker missing.
-      // Strip from start to the next HTML comment open (or end of file).
-      const rest = cleaned.slice(startIdx + start.length);
-      const nextComment = rest.indexOf('<!-- ');
-      endIdx = nextComment === -1 ? cleaned.length : startIdx + start.length + nextComment;
-    } else {
-      endIdx = endIdx + end.length; // include the end marker in the slice
-    }
-
-    cleaned = cleaned.slice(0, startIdx) + cleaned.slice(endIdx);
-    // Collapse any blank lines that the removed block left behind.
-    cleaned = cleaned.replace(/(\n[ \t]*){3,}/g, '\n\n');
-  }
-
-  // Strip leading blank lines the removed block exposed.
-  cleaned = cleaned.replace(/^\s+/, '');
-
-  if (cleaned === original) return false;
-  await fs.writeFile(filePath, cleaned, 'utf8');
-  return true;
-}
+// cleanupManagedBlocks is imported from ./managed-md (shared with tmuxInstaller.js).
 
 /**
  * One-time migration helper — KEPT for backward compatibility (still called
@@ -1780,35 +1729,7 @@ async function migrateOldClaudeMd(filePath) {
   await cleanupManagedBlocks(filePath, DEPRECATED_MARKERS);
 }
 
-/**
- * Upsert a managed block in a file using start/end HTML comment markers.
- * - File missing or markers absent: append block
- * - Markers present: replace content between them (removes stale content)
- * Returns: 'created' | 'appended' | 'updated' | 'noop'
- */
-async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
-  await fs.ensureDir(path.dirname(filePath));
-  const block = `${startMarker}\n${content}\n${endMarker}`;
-
-  if (!await fs.pathExists(filePath)) {
-    await fs.writeFile(filePath, block + '\n', 'utf8');
-    return 'created';
-  }
-
-  const existing = await fs.readFile(filePath, 'utf8');
-  const startIdx = existing.indexOf(startMarker);
-  const endIdx   = existing.indexOf(endMarker);
-
-  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-    const replacement = existing.slice(0, startIdx) + block + existing.slice(endIdx + endMarker.length);
-    if (replacement === existing) return 'noop';
-    await fs.writeFile(filePath, replacement, 'utf8');
-    return 'updated';
-  }
-
-  await fs.writeFile(filePath, existing.trimEnd() + '\n\n' + block + '\n', 'utf8');
-  return 'appended';
-}
+// upsertManagedBlock is imported from ./managed-md (shared with tmuxInstaller.js).
 
 /**
  * Write lightweight agent stub files into .claude/agents/ so the IDE
