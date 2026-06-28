@@ -23,3 +23,6 @@ packages/*/package-lock.json
 *.jpeg
 .playwright-cli/
 website/.playwright-cli/
+
+# Vitest/coverage output (per-package)
+packages/*/coverage/

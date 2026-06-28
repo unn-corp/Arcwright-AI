@@ -28,6 +28,24 @@ jobs:
           node-version: 20
       - run: node build/build.js
 
+  # Unit tests + coverage gate (agent-orchestration package, Vitest 80/80/70).
+  test-package:
+    name: test (package)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/agent-orchestration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # No npm cache: this package's package-lock.json is gitignored by repo
+          # convention (.gitignore: packages/*/package-lock.json), so it isn't in
+          # the CI checkout. Use `npm install` (not `npm ci`) for the same reason.
+      - run: npm install --no-audit --no-fund
+      - run: npm run test:coverage
+
   # Website static gates: lint + type-check + production build.
   website:
     name: static (website)
