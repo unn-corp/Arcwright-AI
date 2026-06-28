@@ -19,8 +19,22 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=helpers.sh
 source "$DIR/helpers.sh"
 
-CACHE_FILE="$(usage_cache_file)"
-[ -f "$CACHE_FILE" ] || exit 0
+# [arcwright multi-account] Pick which account's usage to show:
+#   1. @claude_usage_account tmux option, if set (pin a session to an account);
+#   2. else the account of the active pane's claude process (auto-follow);
+#   3. else the legacy single-account file;
+#   4. else the most-recently-updated per-account file.
+acct="$(get_tmux_option @claude_usage_account '')"
+[ -n "$acct" ] || acct="$(active_pane_account 2>/dev/null || true)"
+CACHE_FILE="$(usage_cache_file "$acct")"
+if [ ! -f "$CACHE_FILE" ]; then
+	CACHE_FILE="$(usage_cache_file)" # legacy single-account file
+fi
+if [ ! -f "$CACHE_FILE" ]; then
+	# newest per-account cache as a last resort
+	CACHE_FILE="$(ls -t "$HOME"/.cache/claude-usage/usage-* 2>/dev/null | head -1)"
+fi
+[ -n "$CACHE_FILE" ] && [ -f "$CACHE_FILE" ] || exit 0
 
 # Load the harvested values without sourcing (no code execution from the file).
 five_pct="" five_reset="" seven_pct="" seven_reset="" updated_at=""

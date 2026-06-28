@@ -13,7 +13,16 @@ set -uo pipefail
 # always resolve the same path even when their environments differ. Must match
 # helpers.sh usage_cache_file().
 CACHE_DIR="$HOME/.cache/claude-usage"
-CACHE_FILE="$CACHE_DIR/usage"
+
+# [arcwright multi-account] Each Claude account uses its own config dir
+# (CLAUDE_CONFIG_DIR; ~/.claude when unset). Key the cache by account so three
+# logged-in accounts don't clobber one shared file — the segment then reads the
+# file for whichever account owns the active pane. Keep this mapping in sync with
+# helpers.sh claude_account_key().
+ACCT="$(basename "${CLAUDE_CONFIG_DIR:-$HOME/.claude}")"
+ACCT="${ACCT#.}" # strip leading dot (.claude-work → claude-work)
+case "$ACCT" in claude | '') ACCT=default ;; esac
+CACHE_FILE="$CACHE_DIR/usage-$ACCT"
 
 input="$(cat)"
 
@@ -71,6 +80,9 @@ if printf '%s' "$data" | grep -q 'PCT=[0-9]' && should_write; then
 		printf '%s\n' "$data"
 		printf 'UPDATED_AT=%s\n' "$(date +%s)"
 	} >"$CACHE_FILE.tmp.$$" 2>/dev/null && mv "$CACHE_FILE.tmp.$$" "$CACHE_FILE" 2>/dev/null
+	# [arcwright multi-account] Also refresh the legacy single-account file so the
+	# doctor (init.sh --check) and any single-account segment keep working.
+	cp "$CACHE_FILE" "$CACHE_DIR/usage" 2>/dev/null
 fi
 
 # Silent harvester: print nothing.

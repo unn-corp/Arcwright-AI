@@ -8,7 +8,51 @@
 # fixed $HOME path guarantees both sides resolve the same file. Must match the
 # path hardcoded in scripts/statusline.sh.
 usage_cache_file() {
-	printf '%s/.cache/claude-usage/usage' "$HOME"
+	# [arcwright multi-account] Optional account key → per-account cache file
+	# (usage-<acct>); empty/absent → the legacy single-account file (usage).
+	local acct="${1:-}"
+	if [ -n "$acct" ]; then
+		printf '%s/.cache/claude-usage/usage-%s' "$HOME" "$acct"
+	else
+		printf '%s/.cache/claude-usage/usage' "$HOME"
+	fi
+}
+
+# [arcwright multi-account] Map a Claude config dir to a short account key.
+# ~/.claude (or unset) → "default"; otherwise the dir's basename
+# (~/.claude-work → "claude-work"). Keep in sync with statusline.sh.
+claude_account_key() {
+	local dir="${1:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}" base
+	base="$(basename "$dir")"
+	base="${base#.}" # strip leading dot (.claude-work → claude-work)
+	case "$base" in claude | '') base=default ;; esac
+	printf '%s' "$base"
+}
+
+# [arcwright multi-account] Resolve the account of the tmux *active pane* by
+# finding the claude process running in it and reading its CLAUDE_CONFIG_DIR from
+# /proc. Linux-only (no /proc on macOS) and best-effort: prints the account key
+# on success, returns non-zero otherwise so the caller can fall back. This is
+# what makes the bar follow the account of the pane you're looking at.
+_claude_usage_descendants() {
+	local parent="$1" k
+	printf '%s\n' "$parent"
+	for k in $(pgrep -P "$parent" 2>/dev/null); do _claude_usage_descendants "$k"; done
+}
+active_pane_account() {
+	command -v tmux >/dev/null 2>&1 || return 1
+	[ -d /proc ] || return 1
+	local pid p ccd
+	pid="$(tmux display-message -p '#{pane_pid}' 2>/dev/null)"
+	[ -n "$pid" ] || return 1
+	for p in $(_claude_usage_descendants "$pid"); do
+		[ -r "/proc/$p/cmdline" ] || continue
+		tr '\0' ' ' <"/proc/$p/cmdline" 2>/dev/null | grep -q 'claude' || continue
+		ccd="$(tr '\0' '\n' <"/proc/$p/environ" 2>/dev/null | sed -n 's/^CLAUDE_CONFIG_DIR=//p' | head -1)"
+		claude_account_key "${ccd:-$HOME/.claude}"
+		return 0
+	done
+	return 1
 }
 
 # Read a tmux user option, falling back to a default when unset/empty.

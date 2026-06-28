@@ -24,6 +24,25 @@ unmodified from the upstream project.
 `tmux` 3.0+, `jq`, and a Claude Code session signed in with **Pro or Max** (the
 `rate_limits` payload is only sent to Pro/Max sessions).
 
+## Arcwright modifications (divergence from upstream)
+
+These files are **patched** for multi-account support (look for
+`# [arcwright multi-account]` markers). Upstream writes one shared cache
+(`~/.cache/claude-usage/usage`), so running several logged-in Claude accounts at
+once makes the last render win and the bar shows the wrong account.
+
+The patch:
+- `statusline.sh` keys the cache by account — `usage-<account>` derived from the
+  harvester's `CLAUDE_CONFIG_DIR` (`~/.claude` → `default`, `~/.claude-work` →
+  `claude-work`). Still refreshes the legacy `usage` file for the `--check` doctor.
+- `helpers.sh` adds `claude_account_key()` and `active_pane_account()` (resolves
+  the account of the tmux active pane via `/proc`, Linux-only, best-effort).
+- `segment.sh` shows the account of the active pane (or the `@claude_usage_account`
+  tmux option if set), falling back to the legacy/newest cache.
+
+The Arcwright installer wires the harvester into **every** detected account
+config dir. Worth upstreaming; until then, re-vendoring must re-apply these.
+
 ## Updating
 
 Re-vendor from upstream and bump the pinned commit above:

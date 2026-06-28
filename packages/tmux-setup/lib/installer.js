@@ -597,15 +597,40 @@ async function setupClaudeUsage({ tmuxSrc, tmuxBin, tmuxConf, chalk, ask, opts, 
   }
   console.log(chalk.green(`  ✓ ${destDir}`));
 
-  // 2. Wire the harvester into Claude Code's settings.json (upstream init.sh:
-  //    backs up first, chains an existing statusLine). Safe to re-run.
+  // 2. Wire the harvester into every Claude account's settings.json. Each
+  //    account uses its own config dir (~/.claude default, plus ~/.claude-*
+  //    siblings for additional logins), and the harvester keys its cache by
+  //    account so they don't clobber each other — the segment then follows the
+  //    active pane's account. init.sh backs up + chains an existing statusLine.
+  const os = require('os');
+  const homeDir = os.homedir();
+  const configDirs = [path.join(homeDir, '.claude')];
   try {
-    execSync(`bash "${path.join(destDir, 'init.sh')}"`, { stdio: 'pipe' });
-    console.log(chalk.green('  ✓ Claude statusLine harvester wired into settings.json (backed up)'));
-  } catch (e) {
-    const msg = ((e.stdout || '') + (e.stderr || '')).toString().trim().split('\n').slice(-2).join(' ');
-    console.log(chalk.yellow(`  ⚠  init.sh wiring failed: ${msg || 'see init.sh --check'}`));
-    console.log(chalk.dim(`     Run manually: bash "${path.join(destDir, 'init.sh')}"`));
+    for (const entry of await fs.readdir(homeDir)) {
+      if (/^\.claude-/.test(entry)) {
+        const d = path.join(homeDir, entry);
+        if ((await fs.stat(d)).isDirectory() &&
+            (await fs.pathExists(path.join(d, 'settings.json')) ||
+             await fs.pathExists(path.join(d, '.credentials.json')))) {
+          configDirs.push(d);
+        }
+      }
+    }
+  } catch { /* readdir failed → just wire the default */ }
+
+  const initSh = path.join(destDir, 'init.sh');
+  for (const cfgDir of configDirs) {
+    try {
+      execSync(`bash "${initSh}"`, { stdio: 'pipe', env: { ...process.env, CLAUDE_CONFIG_DIR: cfgDir } });
+      console.log(chalk.green(`  ✓ harvester wired into ${path.join(cfgDir, 'settings.json')} (backed up)`));
+    } catch (e) {
+      const msg = ((e.stdout || '') + (e.stderr || '')).toString().trim().split('\n').slice(-2).join(' ');
+      console.log(chalk.yellow(`  ⚠  wiring ${cfgDir} failed: ${msg || 'see init.sh --check'}`));
+    }
+  }
+  if (configDirs.length > 1) {
+    console.log(chalk.dim(`     ${configDirs.length} accounts detected — the bar follows whichever account owns the active pane.`));
+    console.log(chalk.dim('     Pin a session to one account with: tmux set -g @claude_usage_account <name>'));
   }
 
   // 3. Append the segment to status-right via a managed block (idempotent).
