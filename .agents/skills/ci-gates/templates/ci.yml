@@ -4,6 +4,13 @@
 # Delete the jobs you don't need; keep job NAMES stable so branch protection's
 # "required status checks" keep matching. See the skill's references/branch-
 # protection.md to turn these into hard merge gates.
+#
+# Runners: defaults to SELF-HOSTED Linux ([self-hosted, linux, x64]). Set the
+# label set to match your org's runners (e.g. add a custom org label like `unn`
+# to pin to your fleet, or swap to `ubuntu-latest` for GitHub-hosted). All jobs
+# share the same `runs-on` below — change it once. A job that queues forever
+# means no runner matches these labels / the runner group does not grant this
+# repo access. See references/self-hosted-runners.md.
 name: ci
 
 on:
@@ -23,7 +30,7 @@ jobs:
   # ── Gate 1+2+3: format, lint, type-check (Node/TS) ──────────────────────────
   static-node:
     name: static (node)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,7 +46,7 @@ jobs:
   # ── Gate 5: unit tests + coverage threshold (Vitest or Jest) ────────────────
   test-node:
     name: test (node)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     needs: static-node
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +62,7 @@ jobs:
   # ── Gates 1+2+3+5: Python (drop if not a Python repo) ───────────────────────
   python:
     name: static + test (python)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     if: ${{ hashFiles('pyproject.toml', 'requirements.txt') != '' }}
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +78,7 @@ jobs:
   # ── Gate 4+7: security — secret scan, dependency + SAST ─────────────────────
   security:
     name: security
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -94,7 +101,7 @@ jobs:
   pr-title:
     name: pr title
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
       - uses: amannn/action-semantic-pull-request@v5
         env:

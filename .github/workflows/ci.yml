@@ -1,7 +1,11 @@
 # Arcwright workshop — CI gates (scaffolded by the ci-gates skill, trimmed to this repo).
 # Monorepo: root build pipeline + website (Vite/React/TS) + npm packages.
-# No unit-test/coverage job yet — this repo has no test suite. Add a `test`
-# job (Vitest, 80/80/70) once tests exist; see .agents/skills/ci-gates/.
+#
+# Runners: self-hosted only (no GitHub-hosted fallback). All jobs target the
+# unn-corp org runners on the mothership VPS via labels [self-hosted, linux, x64,
+# unn] (myoung34/github-runner, ubuntu-jammy, RUNNER_SCOPE=org, RUNNER_GROUP=
+# default). If a job queues forever: confirm the org runner group `default`
+# grants this repo access and that ci-runner-runner-{1,2,3} are online on the VPS.
 name: ci
 
 on:
@@ -20,7 +24,7 @@ jobs:
   # Build verification — runs the workshop packager (includes the no-leak check).
   build-package:
     name: build (package)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,7 +35,7 @@ jobs:
   # Unit tests + coverage gate (agent-orchestration package, Vitest 80/80/70).
   test-package:
     name: test (package)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn]
     defaults:
       run:
         working-directory: packages/agent-orchestration
@@ -49,7 +53,7 @@ jobs:
   # Website static gates: lint + type-check + production build.
   website:
     name: static (website)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn]
     defaults:
       run:
         working-directory: website
@@ -68,7 +72,7 @@ jobs:
   # gitleaks-action is free on public repos; a private repo needs GITLEAKS_LICENSE.
   security:
     name: security
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn]
     permissions:
       contents: read
       security-events: write # allow SARIF upload to the Security tab
@@ -94,7 +98,7 @@ jobs:
   pr-title:
     name: pr title
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn]
     steps:
       - uses: amannn/action-semantic-pull-request@v5
         env:

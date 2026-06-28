@@ -122,6 +122,15 @@ Jest line in `test-node`). Add the coverage threshold to the project's test
 config per `references/tooling.md` (Vitest `coverage.thresholds`, Jest
 `coverageThreshold`, or pytest `--cov-fail-under=80` — all 80/80/70).
 
+**Runners (self-hosted-first):** the template targets **self-hosted** runners by
+default (`runs-on: [self-hosted, linux, x64]`), no GitHub-hosted fallback — a job
+queues until a matching runner is online. Pin to a fleet by adding a custom org
+label (e.g. `unn` for the unn-corp mothership runners → `[self-hosted, linux,
+x64, unn]`). All jobs share one `runs-on`; change it once. To use GitHub-hosted
+instead, set `runs-on: ubuntu-latest`. Full guidance + the unn-corp fleet (org
+runners `ci-runner-runner-{1,2,3}` on the mothership VPS) and a "queued forever"
+checklist: `references/self-hosted-runners.md`.
+
 **Monorepo:** the template's `npm ci` assumes a root `package-lock.json`. If the
 lockfile lives in a subdir (e.g. `website/`), set the job's `working-directory`
 and `cache-dependency-path` to that subdir, or `npm ci` fails with "can only
