@@ -1,0 +1,14 @@
+# gitleaks config for the Arcwright workshop.
+# Extends the built-in default ruleset and allowlists known documentation
+# false-positives so the CI secret-scan gate stays green on real secrets only.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "RFC 6455 'Sec-WebSocket-Key/Accept' values are example handshake headers in the websocket-engineer skill docs (and their historical copies), not real secrets."
+paths = [
+  '''websocket-engineer/references/protocol\.md''',
+]
+regexes = [
+  '''Sec-WebSocket-(Key|Accept):\s*\S+''',
+]

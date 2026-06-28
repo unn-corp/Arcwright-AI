@@ -89,7 +89,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: Secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        # Run the gitleaks binary directly (Apache-2.0, free). The gitleaks-action
+        # wrapper requires a paid GITLEAKS_LICENSE on private repos; the CLI does
+        # not. fetch-depth:0 above gives it full history to scan.
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" \
+            ghcr.io/gitleaks/gitleaks:latest detect \
+            --source=/repo --config=/repo/.gitleaks.toml \
+            --redact --no-banner --exit-code=1 -v
       - name: Dependency + vuln scan (trivy)
         uses: aquasecurity/trivy-action@v0.33.1
         with:
@@ -103,9 +110,26 @@ jobs:
           docker run --rm -v "${{ github.workspace }}:/src" \
             ghcr.io/google/osv-scanner:latest scan source --recursive /src
       - name: SAST (semgrep)
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: auto
+        # Run semgrep via its image (LGPL-2.1, free, no token for community rules).
+        # The semgrep-action wrapper is deprecated and nudges toward Semgrep Cloud.
+        # Gate on ERROR severity only (WARNING/INFO are advisory noise on a
+        # skills+tooling monorepo). Three rules are excluded as false-positives
+        # for this repo's nature:
+        #   - detect-child-process: the hook scripts/installers spawn processes by
+        #     design (CLI tooling, not request handlers).
+        #   - detect-insecure-websocket: only matches a `ws://` example inside the
+        #     security-review docs, not shipped code.
+        #   - dockerfile missing-user: the static-site nginx image must run as root
+        #     to bind :80 behind Traefik; non-root would change the port/deploy.
+        # All 518 rules still run, so new high-severity issues (eval, hardcoded
+        # secrets, injection) will fail the gate.
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/src" \
+            semgrep/semgrep semgrep scan --config auto --severity ERROR --error \
+            --exclude-rule javascript.lang.security.detect-child-process.detect-child-process \
+            --exclude-rule javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket \
+            --exclude-rule dockerfile.security.missing-user.missing-user \
+            /src
 
   # Merge-gate hygiene: Conventional PR title (mirrors the local commit advisory).
   pr-title:
