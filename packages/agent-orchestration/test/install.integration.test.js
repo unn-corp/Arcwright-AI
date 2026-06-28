@@ -20,7 +20,7 @@ beforeAll(() => {
   }
 }, 120000);
 
-let projectDir, homeDir, savedHome, savedNoOpen;
+let projectDir, homeDir, savedHome;
 
 beforeEach(() => {
   projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-proj-'));
@@ -29,8 +29,6 @@ beforeEach(() => {
   // into a throwaway HOME so the real environment is never touched.
   savedHome = process.env.HOME;
   process.env.HOME = homeDir;
-  savedNoOpen = process.env.ARCWRIGHT_NO_OPEN;
-  process.env.ARCWRIGHT_NO_OPEN = '1'; // never spawn a browser
   // install() is very chatty; silence stdout to keep test output readable.
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -39,7 +37,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   if (savedHome === undefined) delete process.env.HOME; else process.env.HOME = savedHome;
-  if (savedNoOpen === undefined) delete process.env.ARCWRIGHT_NO_OPEN; else process.env.ARCWRIGHT_NO_OPEN = savedNoOpen;
   fs.rmSync(projectDir, { recursive: true, force: true });
   fs.rmSync(homeDir, { recursive: true, force: true });
 });
