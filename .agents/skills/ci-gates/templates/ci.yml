@@ -1,0 +1,100 @@
+# Arcwright ci-gates — merge-gate workflow (scaffold).
+#
+# Fast-fail ordering: cheap gates first so a lint typo never waits on E2E.
+# Delete the jobs you don't need; keep job NAMES stable so branch protection's
+# "required status checks" keep matching. See the skill's references/branch-
+# protection.md to turn these into hard merge gates.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Gate 1+2+3: format, lint, type-check (Node/TS) ──────────────────────────
+  static-node:
+    name: static (node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --check .
+      - run: npx eslint .
+      - run: npx tsc --noEmit
+
+  # ── Gate 5: unit tests + coverage threshold (Vitest or Jest) ────────────────
+  test-node:
+    name: test (node)
+    runs-on: ubuntu-latest
+    needs: static-node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Vitest reads coverage.thresholds from vite/vitest config (80/80/70).
+      # Jest equivalent: `npx jest --coverage` with coverageThreshold in config.
+      - run: npx vitest run --coverage
+
+  # ── Gates 1+2+3+5: Python (drop if not a Python repo) ───────────────────────
+  python:
+    name: static + test (python)
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('pyproject.toml', 'requirements.txt') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt -e . 2>/dev/null || pip install -r requirements.txt
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: pyright
+      - run: pytest --cov --cov-fail-under=80
+
+  # ── Gate 4+7: security — secret scan, dependency + SAST ─────────────────────
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks needs full history for a deep scan
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+      - name: Dependency + vuln scan (trivy)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+      - name: SAST (semgrep)
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: auto
+
+  # ── Merge gate: PR-title convention (advisory locally, enforced here) ───────
+  pr-title:
+    name: pr title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
