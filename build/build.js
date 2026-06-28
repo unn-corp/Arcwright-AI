@@ -908,6 +908,27 @@ function bundleSpecialistCommands() {
   fs.mkdirSync(commandsDest, { recursive: true });
 
   const SPECIALIST_MODULES = ['awm', 'awb'];
+
+  // Specialist slash-command names: the `arcwright-` prefix is dropped and
+  // abbreviated roles are expanded to their full names. slug -> command name.
+  // Slugs not listed keep their slug verbatim (e.g. architect, ux-designer,
+  // verifier, agent-builder, module-builder, workflow-builder, review-orchestrator).
+  // NOTE: this renames the user-facing SLASH COMMANDS only. The subagent_type
+  // identifiers and Kiro agent names stay `arcwright-<slug>` (see SPECIALIST_AGENTS).
+  const COMMAND_NAME_MAP = {
+    'analyst': 'business-analyst',
+    'dev': 'developer',
+    'pm': 'product-manager',
+    'qa': 'quality-assurance',
+    'sm': 'scrum-master',
+    'tech-writer': 'technical-writer',
+    'quick-flow-solo-dev': 'quick-flow-solo-developer',
+  };
+
+  // Short-name aliases for selected specialists. slug -> alias command name.
+  // Emits an extra `<alias>.md` alongside the canonical command.
+  const SPECIALIST_ALIASES = { 'tech-writer': 'tech-writer' };
+
   let generated = 0;
 
   for (const mod of SPECIALIST_MODULES) {
@@ -926,7 +947,7 @@ function bundleSpecialistCommands() {
     for (const agentPath of agentFiles) {
       const raw  = fs.readFileSync(agentPath, 'utf8');
       const slug = path.basename(agentPath, '.md');
-      const cmdName = `arcwright-${slug}`;
+      const cmdName = COMMAND_NAME_MAP[slug] || slug;
 
       // Extract description from frontmatter or XML title tag
       const descMatch    = raw.match(/^description:\s*["']?(.+?)["']?\s*$/m);
@@ -959,6 +980,14 @@ function bundleSpecialistCommands() {
 
       writeFile(path.join(commandsDest, `${cmdName}.md`), body);
       generated++;
+
+      // Emit a short-name alias command if one is defined for this specialist.
+      const alias = SPECIALIST_ALIASES[slug];
+      if (alias && alias !== cmdName) {
+        const aliasBody = body.replace(`name: '${cmdName}'`, `name: '${alias}'`);
+        writeFile(path.join(commandsDest, `${alias}.md`), aliasBody);
+        generated++;
+      }
     }
   }
 

@@ -14,6 +14,13 @@ Load this skill when performing a UX/UI review on your project frontend code. It
 
 Use alongside `excalidraw-dark-standard` when the audit target includes new UI components that need diagramming.
 
+## Front-end Copy & UI: HARD RULES (non-negotiable)
+
+Flag any violation of these as a high-severity finding:
+
+- **NEVER build eyebrow text.** That is the small kicker/overline/label line above a heading (e.g. a tiny, often uppercase, "OUR SERVICES" above an `<h2>`). The heading should lead; no overline/kicker/eyebrow element.
+- **NEVER use em-dashes (the `—` character) in front-end / user-facing copy.** It should be rewritten with commas, parentheses, or a shorter sentence. Hyphens in compound words are fine.
+
 ---
 
 ## Audit Scope

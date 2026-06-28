@@ -7,6 +7,13 @@ description: Mobile-first responsive layouts — fluid containers, flexible unit
 
 **Rule:** Mobile-first development with consistent breakpoints, fluid layouts, relative units, and touch-friendly targets.
 
+## Front-end Copy & UI: HARD RULES (non-negotiable)
+
+These override any template, design suggestion, or generated output.
+
+- **NEVER build eyebrow text.** That is the small kicker/overline/label line above a heading (e.g. a tiny, often uppercase, "OUR SERVICES" sitting above an `<h2>`). Lead with the heading itself; do not add an overline/kicker/eyebrow element.
+- **NEVER use em-dashes (the `—` character) in front-end / user-facing copy.** Rewrite with commas, parentheses, or a shorter sentence. Hyphens in compound words are fine.
+
 ## When to use this skill
 
 - When creating or modifying layouts that need to work on mobile, tablet, and desktop

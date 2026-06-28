@@ -3,6 +3,8 @@
 > Load full `SKILL.md` when executing this skill as a formal procedure.
 
 ## Core Rules
+- **HARD RULE — NEVER build eyebrow text** (the small kicker/overline/label line above a heading). Lead with the heading itself.
+- **HARD RULE — NEVER use em-dashes (the `—` character) in front-end / user-facing copy.** Use commas, parentheses, or rephrase. Hyphens in compound words are fine.
 - Always start with the mobile layout and enhance upward using `min-width` media queries — never write desktop-first with `max-width` overrides
 - Use only the project's established breakpoints (check existing code first); never introduce arbitrary values like `850px`
 - Containers must be fluid: `width: 100%` with `max-width` — never fixed pixel widths for layout containers
