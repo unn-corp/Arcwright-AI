@@ -8,7 +8,7 @@ The `ci.yml` jobs only *report* status until you make them *required*. Two ways:
 # Require the named status checks to pass before merge into main.
 gh api -X PUT repos/<owner>/<repo>/branches/main/protection \
   -H "Accept: application/vnd.github+json" \
-  -f required_status_checks='{"strict":true,"contexts":["static (node)","test (node)","security"]}' \
+  -f required_status_checks='{"strict":true,"contexts":["static (node)","test (node)","security","sast (semgrep)"]}' \
   -F enforce_admins=true \
   -f required_pull_request_reviews='{"required_approving_review_count":1}' \
   -f restrictions=null
@@ -35,7 +35,8 @@ Settings → Rules → Rulesets → New branch ruleset:
 |-------|-----|
 | `static (node)` | format + lint + type-check |
 | `test (node)` | unit tests + 80/80/70 coverage |
-| `security` | secret scan + dep/SAST |
+| `security` | secret scan (gitleaks) + dependency/vuln (trivy + OSV) |
+| `sast (semgrep)` | static analysis of your own code (separate job; runs in the semgrep container) |
 | `pr title` | conventional PR title (squash-merge commit hygiene) |
 
 Keep `python`/E2E jobs required only on repos that have them. Don't require a

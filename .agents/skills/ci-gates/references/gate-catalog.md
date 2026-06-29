@@ -23,6 +23,9 @@ Layer 1 — LOCAL (pre-commit / Claude Code hooks)
   Fast, staged-files-only. format + lint + secret scan.
   Authoritative copy of these checks still lives in CI (a hook can be bypassed
   with --no-verify, so CI must re-run them).
+  gate-ci-verify.js (PostToolUse on git push) closes the loop to Layer 2: after
+  a push it polls GitHub Actions for that commit and reports the verdict, so a
+  bypassed local check can't hide behind a green that nobody looked at.
 
 Layer 2 — PR-CI (GitHub Actions, every push)
   Gates 1–7 in dependency order. Long E2E reserved for the merge gate.

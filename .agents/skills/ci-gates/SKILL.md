@@ -36,10 +36,17 @@ authoritative merge gate. The two stay in sync (a hook can be bypassed with
 
 **CI** (the real merge gate):
 - `.github/workflows/ci.yml` — fast-fail jobs: static (format/lint/type-check),
-  test (unit + 80/80/70 coverage), python (optional), security (gitleaks +
-  OSV-Scanner/OSV.dev + trivy + semgrep), pr-title. OSV-Scanner matches the
+  test (unit + 80/80/70 coverage), python (optional), security (gitleaks + trivy
+  + OSV-Scanner/OSV.dev), sast (semgrep), pr-title. OSV-Scanner matches the
   artifact's committed lockfiles against OSV.dev and fails on a known vuln; fix
   by bumping the dependency to the version it reports. See `references/tooling.md`.
+- The security scanners run as **native release binaries** (not their GitHub
+  Actions or `docker run -v`), and semgrep runs via **`docker cp`** into its
+  image — both deliberate, so the gates work on self-hosted DinD runners where
+  bind-mounts silently mount nothing. The template also carries a commented
+  public-registry override for repos behind a private npm mirror. Full rationale:
+  `references/self-hosted-runners.md` (the DinD trap) and `references/tooling.md`
+  (CI runner realities: gitleaks license, `.gitleaks.toml`, semgrep noise).
 - Config snippets for Vitest/Jest coverage thresholds and pytest `--cov-fail-under`.
 
 See `references/gate-catalog.md` (the gate set + 3-layer model),

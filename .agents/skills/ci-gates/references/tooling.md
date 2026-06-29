@@ -80,6 +80,61 @@ bump, treat it as a tracked dependency upgrade. OSV-Scanner prints the fixed
 version per advisory, so the remediation target is explicit. Run it in CI (the
 `security` job) and before a release.
 
+## CI runner realities (private registries + self-hosted DinD)
+
+The scaffolded gates account for two environment traps. Both bit a real repo;
+the scaffold ships the working forms.
+
+**1. Private npm registry token → E401 on every `npm ci`.** If a runner's
+`~/.npmrc` points at a private mirror (e.g. AWS CodeArtifact) whose auth token
+has expired, `npm ci`/`npm install` fails with `npm error code E401` even for
+public deps. Force the public registry and ignore that userconfig:
+
+```yaml
+env:                                         # job- or workflow-level
+  npm_config_registry: https://registry.npmjs.org/
+  NPM_CONFIG_USERCONFIG: /dev/null
+```
+
+Locally, the same one-off: `npx --registry=https://registry.npmjs.org/ …`. If a
+committed lockfile has private `resolved:` URLs, regenerate it against public npm
+(`rm package-lock.json && npm install --package-lock-only` with the env above and
+a clean `--cache`).
+
+**2. Self-hosted DinD → `docker run -v workspace` mounts nothing.** Prefer
+**native release binaries** for scanners (gitleaks, trivy, osv-scanner) run
+against `$GITHUB_WORKSPACE`, and **`docker cp`** for image-only tools (semgrep).
+The `docker run -v "$PWD:/src"` forms in the tables above are fine on a dev
+machine but pass *vacuously* on a DinD runner — full explanation and the working
+patterns are in [self-hosted-runners.md](./self-hosted-runners.md).
+
+**gitleaks on private repos:** the `gitleaks/gitleaks-action@v2` wrapper requires
+a paid `GITLEAKS_LICENSE` on private repos; the **CLI binary is free** (MIT). The
+scaffold downloads the binary instead of using the action.
+
+**gitleaks allowlist (`.gitleaks.toml`):** to silence documentation/example
+false-positives (e.g. RFC example keys, sample tokens in skill docs) without
+weakening real detection, commit a repo-root config that extends the defaults:
+
+```toml
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example values in docs, not real secrets."
+paths = ['''docs/.*\.md''']
+regexes = ['''Sec-WebSocket-(Key|Accept):\s*\S+''']
+```
+
+The scaffolded gitleaks step auto-loads it (`--config=$GITHUB_WORKSPACE/.gitleaks.toml`)
+when present. Prefer a narrow `paths`/`regexes` allowlist over disabling a rule.
+
+**semgrep noise:** `--config auto` on a mixed repo yields many low-severity style
+findings. Gate on `--severity ERROR` and add `--exclude-rule <full.rule.id>` for
+documented false-positives (CLI tooling flagged by `detect-child-process`, a
+`ws://` example flagged by `detect-insecure-websocket`, etc.). All rules still
+run, so new high-severity issues fail the gate.
+
 ## Conventional commits / PR titles
 
 - Local advisory: `gate-precommit.js` warns when a `-m` subject is not

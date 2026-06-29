@@ -34,11 +34,49 @@ Org-scoped runners live on the **mothership** VPS as Docker containers
 | Labels | `self-hosted, linux, x64, unn, dind` |
 
 So the org-runner target is `[self-hosted, linux, x64, unn]`. The `dind` label
-marks docker-in-docker capability (the security job's container actions —
-gitleaks/trivy/semgrep — need a Docker daemon, which these runners provide).
+marks docker-in-docker capability (the SAST job needs a Docker daemon, which
+these runners provide — but mount it correctly; see the trap below).
 
 The repo-scoped `ci-runner-runner-fcm-*` / `-external-*` containers are bound to
 other repos and will **not** pick up this org's jobs.
+
+## DinD trap: `docker run -v "$GITHUB_WORKSPACE"` mounts an EMPTY dir
+
+These runners are themselves **containers** with the host's Docker socket mounted
+(docker-in-docker sibling). That breaks the obvious ways of running a scanner in
+a container, and the failure is silent in the worst case:
+
+- **`docker run -v "${{ github.workspace }}:/src" img …`** — the `-v` source is
+  resolved by the **host** daemon, where the workspace path (inside the runner
+  container) does not exist. Docker creates an **empty** dir there and mounts it.
+  The scanner then either errors (config not found) or, worse, **passes
+  vacuously** — it scanned nothing. Do **not** trust a green from this pattern.
+- **`container:` jobs** — the runner must inject its own `node` (for JS actions
+  like `actions/checkout`) and a `_temp` script mount into the job container.
+  A self-hosted DinD runner often lacks the matching externals (e.g. the musl
+  `node24_alpine` build for an Alpine image), so `actions/checkout` and even
+  plain `run:` steps fail with `exec: node …: no such file` or
+  `sh: can't open /__w/_temp/…sh`.
+
+**Two patterns that DO work:**
+
+1. **Native release binaries** (preferred for scanners that ship one — gitleaks,
+   trivy, osv-scanner). `curl` the linux binary and run it against
+   `$GITHUB_WORKSPACE` directly. No daemon, no mount. Works on self-hosted and
+   GitHub-hosted alike. This is what the scaffolded `security` job uses.
+2. **`docker cp` into the container** (for tools that only ship an image, e.g.
+   semgrep with its bundled `semgrep-core`). Run a *normal* job (so
+   `actions/checkout` works on the bare runner), then:
+
+   ```bash
+   CID=$(docker create img <scan-cmd> /src)
+   trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+   docker cp "$GITHUB_WORKSPACE/." "$CID:/src"   # daemon API — no path mismatch
+   docker start -a "$CID"                        # runs + propagates exit code
+   ```
+
+   `docker cp` transfers files through the daemon API, so the host/container path
+   mismatch is irrelevant. This is what the scaffolded `sast` (semgrep) job uses.
 
 ## Troubleshooting "queued forever"
 

@@ -26,6 +26,14 @@ concurrency:
 permissions:
   contents: read
 
+# Private npm registry? If a runner's ~/.npmrc points at a private mirror (e.g.
+# AWS CodeArtifact) whose token expires, every `npm ci`/`npm install` 401s even
+# for public deps. Force the public registry and ignore that userconfig by
+# uncommenting this job-level env (see references/tooling.md):
+# env:
+#   npm_config_registry: https://registry.npmjs.org/
+#   NPM_CONFIG_USERCONFIG: /dev/null
+
 jobs:
   # ── Gate 1+2+3: format, lint, type-check (Node/TS) ──────────────────────────
   static-node:
@@ -75,7 +83,16 @@ jobs:
       - run: pyright
       - run: pytest --cov --cov-fail-under=80
 
-  # ── Gate 4+7: security — secret scan, dependency + SAST ─────────────────────
+  # ── Gate 4+7: security — secret scan, dependency vuln + SAST ────────────────
+  # Scanners run as NATIVE release binaries, not via their GitHub Actions or
+  # `docker run -v`. Why: (1) gitleaks-action needs a paid GITLEAKS_LICENSE on
+  # PRIVATE repos; the CLI is free. (2) On self-hosted DinD runners (the default
+  # target here) a `docker run -v "$GITHUB_WORKSPACE:/x"` mounts an EMPTY host
+  # path — the workspace lives inside the runner container, not on the host
+  # daemon — so the scanner sees nothing and fails or passes vacuously. Native
+  # binaries against $GITHUB_WORKSPACE work on both self-hosted and GitHub-hosted
+  # runners. See references/self-hosted-runners.md. Pinned versions — bump
+  # periodically.
   security:
     name: security
     runs-on: [self-hosted, linux, x64]
@@ -84,25 +101,51 @@ jobs:
         with:
           fetch-depth: 0 # gitleaks needs full history for a deep scan
       - name: Secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        # Honors a repo-root .gitleaks.toml allowlist if present (for doc/example
+        # false-positives). See references/tooling.md.
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | tar -xz -C /tmp gitleaks
+          CFG=""; [ -f .gitleaks.toml ] && CFG="--config=$GITHUB_WORKSPACE/.gitleaks.toml"
+          /tmp/gitleaks detect --source="$GITHUB_WORKSPACE" $CFG \
+            --redact --no-banner --exit-code=1 -v
       - name: Dependency + vuln scan (trivy)
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: fs
-          scanners: vuln,secret
-          severity: HIGH,CRITICAL
-          exit-code: "1"
+        run: |
+          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz \
+            | tar -xz -C /tmp trivy
+          /tmp/trivy fs --scanners vuln,secret --severity HIGH,CRITICAL \
+            --exit-code 1 --no-progress "$GITHUB_WORKSPACE"
       - name: Dependency vulnerabilities (OSV-Scanner / OSV.dev)
         # Scans every committed lockfile (the dependency surface of the built
-        # artifact) against the OSV.dev database. Non-zero exit on findings fails
-        # the gate. Runs via the official image (self-hosted runners carry dind).
+        # artifact) against the OSV.dev database. Non-zero exit on findings fails.
         run: |
-          docker run --rm -v "${{ github.workspace }}:/src" \
-            ghcr.io/google/osv-scanner:latest scan source --recursive /src
+          curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 \
+            -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
+          /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
+
+  # ── Gate 7: SAST (semgrep) — separate job, runs in the semgrep container ─────
+  # semgrep ships its OCaml `semgrep-core` in its image but won't pip-install it
+  # reliably on a bare runner; a `container:` job needs runner externals (node,
+  # _temp mount) a self-hosted DinD runner may lack; and `docker run -v` hits the
+  # empty-bind-mount trap above. So: checkout on the runner, then push the tree
+  # INTO the container with `docker cp` (daemon API — no host/container path
+  # mismatch) and `docker start -a` to run it and propagate the exit code.
+  # `--severity ERROR` gates on high-confidence findings only; add
+  # `--exclude-rule <id>` for any documented false-positives. On GitHub-hosted
+  # runners you may instead use `uses: semgrep/semgrep-action@v1` with a token.
+  sast:
+    name: sast (semgrep)
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - uses: actions/checkout@v4
       - name: SAST (semgrep)
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: auto
+        run: |
+          set -euo pipefail
+          CID=$(docker create semgrep/semgrep:1.168.0 \
+            semgrep scan --config auto --severity ERROR --error /src)
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          docker cp "$GITHUB_WORKSPACE/." "$CID:/src"
+          docker start -a "$CID"
 
   # ── Merge gate: PR-title convention (advisory locally, enforced here) ───────
   pr-title:
