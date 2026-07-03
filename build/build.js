@@ -1094,6 +1094,61 @@ function verifyNoLeaks() {
   console.log(`  ✓  No leaks found (${allFiles.length} files scanned)\n`);
 }
 
+// ─── Step 5b: bundleSkillCommands ─────────────────────────────────────────────
+// Give every skill a /slash-command launcher so it is invocable that way on
+// Claude Code, Kiro, and OpenCode. Hermes exposes each skill as /<skill> and
+// Codex as $<skill> natively (the skill files themselves), so this only fills
+// the gap for the command-file platforms. Hand-authored commands are never
+// overwritten. Opt-in module skills (dotnet/electron/tauri/aws/unnamed-pm/docker,
+// gated at install time) are skipped so a default install never ships a launcher
+// whose skill is absent — those stay reachable via their module command (/dotnet
+// etc.) and Hermes/Codex native invocation.
+// team-* included: they drop out under --no-teams, so their launchers cannot ship unconditionally.
+const MODULE_GATED_SKILL = /^(team-|docker-type-check$|dotnet-|electron-|tauri-|aws-serverless-cdk$|unnamed-pm-sync$)/;
+
+function bundleSkillCommands() {
+  console.log('🎯  Generating per-skill slash-command launchers → src/.claude/commands/ + src/.kiro/agents/');
+  const commandsDest   = path.join(PKG_SRC, '.claude', 'commands');
+  const kiroAgentsDest = path.join(PKG_SRC, '.kiro', 'agents');
+  fs.mkdirSync(commandsDest, { recursive: true });
+  fs.mkdirSync(kiroAgentsDest, { recursive: true });
+
+  const existingCmd  = new Set(fs.readdirSync(commandsDest).map(f => f.replace(/\.md$/, '')));
+  const existingKiro = new Set(fs.readdirSync(kiroAgentsDest).map(f => f.replace(/\.json$/, '')));
+
+  const skillDirs = fs.readdirSync(SKILLS_SRC, { withFileTypes: true })
+    .filter(e => e.isDirectory() && fs.existsSync(path.join(SKILLS_SRC, e.name, 'SKILL.md')))
+    .map(e => e.name);
+
+  let generated = 0;
+  for (const skill of skillDirs) {
+    if (MODULE_GATED_SKILL.test(skill)) continue;
+    if (existingCmd.has(skill) && existingKiro.has(skill)) continue;
+
+    const skillMd = readText(path.join(SKILLS_SRC, skill, 'SKILL.md')) || '';
+    const descMatch = skillMd.match(/^description:\s*["']?(.+?)["']?\s*$/m);
+    let desc = descMatch ? descMatch[1].trim() : `Load and run the ${skill} skill.`;
+    if (desc.length > 220) desc = desc.slice(0, 217) + '...';
+
+    if (!existingCmd.has(skill)) {
+      const cmd = `---\ndescription: ${desc}\n---\n\nLoad and run the \`${skill}\` skill (\`.agents/skills/${skill}/SKILL.md\`) against $ARGUMENTS. Follow the skill exactly.\n`;
+      writeFile(path.join(commandsDest, `${skill}.md`), cmd);
+    }
+    if (!existingKiro.has(skill)) {
+      const agent = {
+        name: skill,
+        description: desc,
+        prompt: `Load and run the \`${skill}\` skill (skill://.kiro/skills/${skill}/SKILL.md) against the user's message. Follow the skill exactly.`,
+        tools: ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
+        resources: [`skill://.kiro/skills/${skill}/SKILL.md`],
+      };
+      writeFile(path.join(kiroAgentsDest, `${skill}.json`), JSON.stringify(agent, null, 2) + '\n');
+    }
+    generated++;
+  }
+  console.log(`  ✓  ${generated} skill launchers generated (Hermes /<skill> + Codex $<skill> are native)\n`);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 console.log('🔨  Arcwright Build\n');
@@ -1103,6 +1158,7 @@ buildKiroAssets();
 bundleKiroAgents();
 bundleTrackCommands();
 bundleSpecialistCommands();
+bundleSkillCommands();
 bundleLauncherTemplates();
 verifyNoLeaks();
 
