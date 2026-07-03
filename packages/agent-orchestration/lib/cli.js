@@ -14,6 +14,7 @@ const SUPPORTED_TOOLS = [
   'kiro',
   'codex',
   'hermes',
+  'opencode',
 ].join(', ');
 
 const program = new Command();
@@ -178,12 +179,13 @@ program
       ['kiro',             'Kiro (IDE + CLI)',   '.kiro/steering/*.md',               '.kiro/skills/'],
       ['codex',            'Codex',             'AGENTS.md',                         '.agents/skills/ ($HOME or project)'],
       ['hermes',           'Hermes',            'AGENTS.md (project only)',          '~/.hermes/skills/ (global only)'],
+      ['opencode',         'OpenCode',          'AGENTS.md',                         '.agents/skills/ + .opencode/commands/ ($HOME or project)'],
     ];
     const widths = rows[0].map((_, i) => Math.max(...rows.map(r => r[i].length)));
     for (const row of rows) {
       console.log('  ' + row.map((cell, i) => cell.padEnd(widths[i])).join('   '));
     }
-    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,codex,hermes\n');
+    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,codex,hermes,opencode\n');
   });
 
 // ─── tmux (deprecated, removed in favor of Herdr) ────────────────────────────

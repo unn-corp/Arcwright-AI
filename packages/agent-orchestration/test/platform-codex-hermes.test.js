@@ -5,7 +5,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
-const { writeCodexConfig, writeHermesConfig, sha256 } = installer._internal;
+const { writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, sha256 } = installer._internal;
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(PKG_ROOT, '..', '..');
@@ -193,5 +193,53 @@ describe('writeHermesConfig — global install', () => {
     expect(fs.existsSync(path.join(homeDir, '.hermes', 'skill-bundles'))).toBe(false);
     expect(entries.some(e => e.relPath.startsWith('.hermes/skill-bundles/'))).toBe(false);
     expect(entries.some(e => e.relPath.includes('/team-'))).toBe(false);
+  });
+});
+
+describe('writeOpenCodeConfig — project install', () => {
+  it('writes AGENTS.md with the managed Arcwright block', async () => {
+    await writeOpenCodeConfig(projectDir, ['awm', 'core'], chalk, false, homes(), platform);
+    const agentsMd = path.join(projectDir, 'AGENTS.md');
+    expect(fs.existsSync(agentsMd)).toBe(true);
+    expect(fs.readFileSync(agentsMd, 'utf8')).toContain('<!-- arcwright-agent-start -->');
+  });
+
+  it('copies skills to .agents/skills and commands to .opencode/commands, with matching entries', async () => {
+    const entries = await writeOpenCodeConfig(projectDir, ['awm'], chalk, false, homes(), platform);
+    expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'triage', 'SKILL.md'))).toBe(true);
+    const cmdDir = path.join(projectDir, '.opencode', 'commands');
+    expect(fs.existsSync(cmdDir)).toBe(true);
+    // A command shipped by the build (herdr.md) should be present verbatim.
+    expect(fs.existsSync(path.join(cmdDir, 'herdr.md'))).toBe(true);
+    const cmdEntries = entries.filter(e => e.relPath.startsWith('.opencode/commands/'));
+    expect(cmdEntries.length).toBeGreaterThan(0);
+    for (const e of cmdEntries) {
+      const onDisk = fs.readFileSync(path.join(projectDir, e.relPath));
+      expect(sha256(onDisk)).toBe(e.hash);
+    }
+  });
+
+  it('guards against copying .agents/skills onto itself', async () => {
+    try {
+      const entries = await writeOpenCodeConfig(SRC_DIR, ['awm'], chalk, false, homes(), platform);
+      expect(entries.some(e => e.relPath.startsWith('.agents/skills/'))).toBe(false);
+    } finally {
+      fs.removeSync(path.join(SRC_DIR, 'AGENTS.md'));
+      fs.removeSync(path.join(SRC_DIR, '.opencode'));
+    }
+  });
+});
+
+describe('writeOpenCodeConfig — global install', () => {
+  it('writes ~/.config/opencode/AGENTS.md, ~/.agents/skills, and ~/.config/opencode/commands', async () => {
+    const entries = await writeOpenCodeConfig(projectDir, ['awm'], chalk, true, homes(), platform);
+    expect(fs.existsSync(path.join(homeDir, '.config', 'opencode', 'AGENTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(homeDir, '.agents', 'skills', 'triage', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(homeDir, '.config', 'opencode', 'commands', 'herdr.md'))).toBe(true);
+    // Global skill entries use the '.opencode/skills/' bookkeeping prefix.
+    const skillEntries = entries.filter(e => e.relPath.startsWith('.opencode/skills/'));
+    expect(skillEntries.length).toBeGreaterThan(0);
+    const cmdEntries = entries.filter(e => e.relPath.startsWith('.opencode/commands/'));
+    expect(cmdEntries.length).toBeGreaterThan(0);
   });
 });

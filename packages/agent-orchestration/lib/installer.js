@@ -325,6 +325,15 @@ const PLATFORMS = {
     rulesFile: 'AGENTS.md',
     rulesMarker: '## Arcwright',
   },
+  'opencode': {
+    label: 'OpenCode',
+    agentDir: null,
+    skillsDir: null,
+    steeringDir: null,
+    hooksDir: null,
+    rulesFile: 'AGENTS.md',
+    rulesMarker: '## Arcwright',
+  },
 };
 
 // ─── Cross-platform home resolution ──────────────────────────────────────────
@@ -354,7 +363,7 @@ function getHomes(platform) {
  * Terminal-based tools use Linux home (even on WSL).
  * GUI IDE tools use Windows home when on WSL.
  */
-const TERMINAL_TOOLS = ['claude-code', 'codex', 'hermes'];
+const TERMINAL_TOOLS = ['claude-code', 'codex', 'hermes', 'opencode'];
 
 function resolveToolPath(tool, relativePath, isGlobal, homes, platform) {
   if (!isGlobal) return null; // caller handles project paths
@@ -386,6 +395,13 @@ const GLOBAL_PATHS = {
     // global persona lives in ~/.hermes/SOUL.md, which Arcwright never touches.
     skills: '.hermes/skills',
     skillBundles: '.hermes/skill-bundles',
+  },
+  'opencode': {
+    // OpenCode natively reads ~/.agents/skills (same as Codex), ~/.config/opencode/AGENTS.md,
+    // and ~/.config/opencode/commands/*.md (Claude Code command format, verbatim).
+    claudeMd: '.config/opencode/AGENTS.md',
+    skills: '.agents/skills',
+    commands: '.config/opencode/commands',
   },
 };
 
@@ -673,6 +689,72 @@ async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, p
         }
       }
     }
+  }
+
+  return entries;
+}
+
+// ─── OpenCode config writer ───────────────────────────────────────────────────
+// OpenCode natively reads the exact formats Arcwright already ships, with zero
+// content adaptation: AGENTS.md (same file/markers as Codex/Hermes), SKILL.md
+// skills at .agents/skills (project) and ~/.agents/skills (global), and Claude
+// Code command files (.claude/commands/*.md → .opencode/commands/, verbatim).
+//
+// Returns Array<{relPath, hash}> for every file written.
+async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false) {
+  const entries = [];
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm };
+
+  // ── AGENTS.md ── managed block only (not manifest-tracked, same rationale as Codex).
+  const rulesPath = isGlobal
+    ? resolveToolPath('opencode', GLOBAL_PATHS.opencode.claudeMd, true, homes, platform)
+    : path.join(projectRoot, 'AGENTS.md');
+  const label = isGlobal ? '~/.config/opencode/AGENTS.md' : 'AGENTS.md';
+  await migrateOldClaudeMd(rulesPath);
+  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules));
+  if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
+  else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
+  else console.log(chalk.gray(`  ○ ${label} already up to date`));
+
+  // ── Skills ── OpenCode reads .agents/skills natively (project + ~/.agents/skills global).
+  const skillsSrc = path.join(SRC_DIR, '.agents', 'skills');
+  const skillsDest = isGlobal
+    ? resolveToolPath('opencode', GLOBAL_PATHS.opencode.skills, true, homes, platform)
+    : path.join(projectRoot, '.agents', 'skills');
+  if (await fs.pathExists(skillsSrc)) {
+    if (path.resolve(skillsSrc) === path.resolve(skillsDest)) {
+      console.log(chalk.gray('  ○ .agents/skills/ already the source (skipped copy)'));
+    } else {
+      await fs.ensureDir(skillsDest);
+      await fs.copy(skillsSrc, skillsDest, { overwrite: true, filter: skillCopyFilter(flags) });
+      const allSkillFiles = await glob('**/*', { cwd: skillsSrc, nodir: true });
+      const skillFiles = filterSkillFiles(allSkillFiles, flags);
+      // Global entries use a '.opencode/skills' bookkeeping prefix so orphan
+      // removal resolves them to ~/.agents/skills without colliding with the
+      // '.codex/skills' prefix (which points at the same real path).
+      const relPrefix = isGlobal ? '.opencode/skills' : '.agents/skills';
+      for (const rel of skillFiles) {
+        const content = await fs.readFile(path.join(skillsSrc, rel));
+        entries.push({ relPath: path.join(relPrefix, rel).replace(/\\/g, '/'), hash: sha256(content) });
+      }
+      console.log(chalk.green(`  ✓ ${isGlobal ? '~/.agents/skills/' : '.agents/skills/'} (${skillFiles.length} files)`));
+    }
+  }
+
+  // ── Commands ── OpenCode natively supports Claude Code's command format.
+  const commandsSrc = path.join(SRC_DIR, '.claude', 'commands');
+  const commandsDest = isGlobal
+    ? resolveToolPath('opencode', GLOBAL_PATHS.opencode.commands, true, homes, platform)
+    : path.join(projectRoot, '.opencode', 'commands');
+  if (await fs.pathExists(commandsSrc)) {
+    await fs.ensureDir(commandsDest);
+    await fs.copy(commandsSrc, commandsDest, { overwrite: true });
+    const cmdFiles = await glob('**/*', { cwd: commandsSrc, nodir: true });
+    for (const rel of cmdFiles) {
+      const content = await fs.readFile(path.join(commandsSrc, rel));
+      entries.push({ relPath: path.join('.opencode/commands', rel).replace(/\\/g, '/'), hash: sha256(content) });
+    }
+    console.log(chalk.green(`  ✓ ${isGlobal ? '~/.config/opencode/commands/' : '.opencode/commands/'} (${cmdFiles.length} files)`));
   }
 
   return entries;
@@ -969,6 +1051,7 @@ async function install(opts) {
         { value: 'kiro',            label: 'Kiro (IDE + CLI)', hint: '.kiro/skills/, .kiro/steering/' },
         { value: 'codex',           label: 'Codex',            hint: 'AGENTS.md, .agents/skills/' },
         { value: 'hermes',          label: 'Hermes',           hint: '~/.hermes/skills/, AGENTS.md (project only)' },
+        { value: 'opencode',        label: 'OpenCode',         hint: 'AGENTS.md, .agents/skills/, .opencode/commands/' },
       ],
       initialValues: existingManifest?.tools || ['claude-code'],
       required: false,
@@ -1237,7 +1320,7 @@ async function install(opts) {
 
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
-    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes') continue; // handled separately below
+    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode') continue; // handled separately below
     const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
@@ -1262,6 +1345,14 @@ async function install(opts) {
     const hermesEntries = await writeHermesConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
     if (hermesEntries && hermesEntries.length > 0) {
       newFileEntries.push(...hermesEntries);
+    }
+  }
+
+  // ── OpenCode integration ──────────────────────────────────────────────────
+  if (resolvedTools.includes('opencode')) {
+    const openCodeEntries = await writeOpenCodeConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
+    if (openCodeEntries && openCodeEntries.length > 0) {
+      newFileEntries.push(...openCodeEntries);
     }
   }
 
@@ -1306,13 +1397,20 @@ async function install(opts) {
           } else if (orphan.relPath.startsWith('.hermes/skills/')) {
             const rel = orphan.relPath.slice('.hermes/skills/'.length);
             fullPath = path.join(resolveToolPath('hermes', GLOBAL_PATHS.hermes.skills, true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.opencode/skills/')) {
+            // Bookkeeping prefix — OpenCode's global skills live at $HOME/.agents/skills/.
+            const rel = orphan.relPath.slice('.opencode/skills/'.length);
+            fullPath = path.join(resolveToolPath('opencode', GLOBAL_PATHS.opencode.skills, true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.opencode/commands/')) {
+            const rel = orphan.relPath.slice('.opencode/commands/'.length);
+            fullPath = path.join(resolveToolPath('opencode', GLOBAL_PATHS.opencode.commands, true, homes, platform), rel);
           } else {
             // _arcwright/ module files — in ~/.arcwright/
             fullPath = path.join(effectiveArwDir, orphan.relPath);
           }
         } else {
           // Project install: _arcwright/ files use effectiveArwDir; others use projectRoot
-          if (orphan.relPath.startsWith('.agents/') || orphan.relPath.startsWith('.claude/')) {
+          if (orphan.relPath.startsWith('.agents/') || orphan.relPath.startsWith('.claude/') || orphan.relPath.startsWith('.opencode/')) {
             fullPath = path.join(projectRoot, orphan.relPath);
           } else {
             fullPath = path.join(effectiveArwDir, orphan.relPath);
@@ -2225,6 +2323,6 @@ module.exports = {
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
     writeClaudeSettings, stripInstallerSettingsKeys,
     buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
-    writeCodexConfig, writeHermesConfig,
+    writeCodexConfig, writeHermesConfig, writeOpenCodeConfig,
   },
 };
