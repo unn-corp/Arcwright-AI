@@ -7,6 +7,14 @@
  * Renames directories, files, and content references from the old bmad
  * naming convention to the new arcwright convention.
  *
+ * Note on BMAD lineage: Arcwright's agent roster forked from BMAD around v6.0.x.
+ * Upstream BMAD (currently v6.9.0) has since consolidated its QA (Quinn), Scrum
+ * Master (Bob), and quick-flow (Barry) personas into a single Dev agent (v6.3.0)
+ * and moved to a SKILL.md + TOML activation model (v6.2/v6.4). Arcwright keeps
+ * those as distinct in-process sub-agents on purpose — the Session Agent Registry
+ * model is a core differentiator — so the roster is an intentional divergence, not
+ * stale drift. The rename maps below remain accurate for the old _bmad/ tree.
+ *
  * Usage:
  *   node migrate.js [--dry-run] [--project-root /path/to/project]
  *
