@@ -204,8 +204,6 @@ Available stacks: `html-tailwind`, `react`, `nextjs`, `vue`, `svelte`, `swiftui`
 
 **Note for Android Jetpack Compose Development:** The skill includes an expert library of Android Jetpack Compose markdown guides backed by actual AndroidX source code. When working on Jetpack Compose projects, explicitly read the relevant markdown files located in the `data/jetpack-compose-expert-skill/references/` directory along with the `data/jetpack-compose-expert-skill/SKILL.md` workflow document using your file reading tools to access deep, source-backed knowledge.
 
-**Note for Comprehensive Android Architecture:** For broader Android development patterns including Clean Architecture, MVVM, Room, Hilt, and testing strategies, consult the guidance in `data/claude-android-skill/SKILL.md` and its associated `data/claude-android-skill/references/` folder.
-
 **Note for Web Mobile UI Layout (React/Next.js):** When creating mobile-first web pages or progressive web apps, explicitly read the `data/mobile-ui-layout.md` guide. It contains essential layout patterns, touch target requirements, safe area handling, and production-ready component code (like Bottom Sheets, Pull-to-Refresh) for mobile web layouts.
 
 **Note for Local Business / Lead-Gen / Service-Area Marketing Sites:** When building a marketing site, service page, city page, or any lead-gen landing page for a local service business (plumber, HVAC, electrician, contractor, home services), explicitly read the `data/conversion-landing-local-business.md` guide. It contains above-the-fold mobile checklists, city and service page templates, sticky tap-to-call patterns, copy-pasteable LocalBusiness + AggregateRating JSON-LD schema, performance targets, and a full anti-pattern list.

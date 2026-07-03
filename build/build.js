@@ -67,6 +67,7 @@ const LEAK_PATTERNS = [
 const SHIPPED_COMMANDS = [
   /^arcwright-migrate\.md$/,
   /^tmux\.md$/,
+  /^herdr\.md$/,
   /^gsudo\.md$/,
   /^team\.md$/,
   /^dry\.md$/,
@@ -599,6 +600,7 @@ function bundleKiroAgents() {
     'aws-infra':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_fetch'],
     'unnamed-pm':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'tmux':               ['fs_read', 'fs_write', 'execute_bash'],
+    'herdr':              ['fs_read', 'fs_write', 'execute_bash'],
     'gsudo':              ['execute_bash'],
     // Coding / best-practice skill commands
     'react':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
@@ -709,6 +711,33 @@ tmux select-layout tiled
 See the \`tmux\` skill for full pane-visibility mechanics (opt-in section).
 `;
 
+  /** Kiro CLI addendum for Herdr pane visibility (preferred over tmux). */
+  // In-process `subagent` remains the default; this documents the Herdr path,
+  // which supersedes the tmux one. See the `herdr` skill.
+  const KIRO_HERDR_ADDENDUM = `
+
+## Kiro CLI — Herdr Pane Visibility (opt-in, preferred over tmux)
+
+If the user has explicitly asked for split-pane visibility ("spawn", "watch",
+"open agent") AND \`$HERDR_ENV\` is set, prefer Herdr over tmux. Herdr makes
+visible agents first-class through \`herdr agent start\`, so no spawn wrapper is
+needed. The spawned agent still uses the in-process \`subagent\` orchestration
+above; the pane is only a viewing surface.
+
+\`\`\`bash
+herdr agent start <role> --split right -- \\
+  kiro-cli chat --trust-all-tools --agent arcwright-dev '<task description>'
+# then, when it needs you:
+herdr wait agent-status <role> --status blocked --timeout 600000
+herdr pane run <role> '<follow-up>'      # types + Enter (agent send does NOT)
+herdr pane close <role>
+\`\`\`
+
+\`herdr wait agent-status\` replaces all pane polling; there are no AGENT_SIGNAL
+strings to grep. Default to \`sonnet\`; ask before any \`opus\` upgrade. See the
+\`herdr\` skill for the full mapping and the send/run Enter trap.
+`;
+
   let generated = 0;
   for (const fname of cmdFiles) {
     const srcPath  = path.join(commandsSrc, fname);
@@ -725,9 +754,10 @@ See the \`tmux\` skill for full pane-visibility mechanics (opt-in section).
     const tools = resolveTools(name);
     let prompt = adaptPromptForKiro(body.trim());
 
-    // Append tmux addendum to team agents
+    // Append pane-visibility addenda to team agents (Herdr preferred, tmux legacy)
     if (isTeam(name)) {
       prompt += KIRO_TMUX_ADDENDUM;
+      prompt += KIRO_HERDR_ADDENDUM;
     }
 
     const agent = { name, description: desc, prompt, tools };

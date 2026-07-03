@@ -71,7 +71,7 @@ feature.
 | Pattern | When | Precedent |
 |---|---|---|
 | **Same-account, stack-name split** | Repo's `main` account is a single-tenant silo (no dev account exists/planned) | `customer-redoit-renevations`, `customer-brothers-fabrication` |
-| **Separate account per branch** | Repo is an internal multi-env workload with real dev/prod account separation | `AWS-UnnamedDev`, `AWS-Squidhub` (see `AWS-Platform/bin/aws-platform.ts`) |
+| **Separate account per branch** | Repo is an internal multi-env workload with real dev/prod account separation | internal platform repos with per-branch account IDs (grep the repo's `bin/*.ts` for the account-ID constants) |
 
 Don't default to "dev branch → dev AWS account" without checking which
 pattern the specific repo already follows — grep the repo's own CLAUDE.md and

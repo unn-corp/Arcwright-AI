@@ -117,6 +117,46 @@ describe('install() — update / idempotency', () => {
     expect(second.installDate).toBe(first.installDate); // preserved across runs
     expect(fs.existsSync(path.join(projectDir, '_arcwright', 'awm'))).toBe(true);
   }, 90000);
+
+  it('update --yes restores modules from the manifest instead of the CLI default', async () => {
+    await install(baseOpts()); // modules: 'awm,core' — no awb
+    // Commander always passes the default when the flag is omitted.
+    await install(baseOpts({ action: 'update', modules: 'awm,awb,core,_memory' }));
+
+    const manifest = await readManifest(path.join(projectDir, '_arcwright'));
+    expect(manifest.modules).toEqual(expect.arrayContaining(['awm', 'core']));
+    expect(manifest.modules).not.toContain('awb');
+    expect(fs.existsSync(path.join(projectDir, '_arcwright', 'awb'))).toBe(false);
+  }, 90000);
+
+  it('update --yes still honors an explicit non-default --modules value', async () => {
+    await install(baseOpts()); // modules: 'awm,core'
+    await install(baseOpts({ action: 'update', modules: 'awm,awb,core' }));
+
+    const manifest = await readManifest(path.join(projectDir, '_arcwright'));
+    expect(manifest.modules).toContain('awb');
+    expect(fs.existsSync(path.join(projectDir, '_arcwright', 'awb'))).toBe(true);
+  }, 90000);
+
+  it('repeated updates leave CLAUDE.md managed blocks intact (no marker loss or duplication)', async () => {
+    await install(baseOpts());
+    const claudeMd = path.join(projectDir, 'CLAUDE.md');
+    const first = await fs.readFile(claudeMd, 'utf8');
+
+    await install(baseOpts({ action: 'update' }));
+    await install(baseOpts({ action: 'update' }));
+    const third = await fs.readFile(claudeMd, 'utf8');
+
+    expect(third).toBe(first);
+    const count = (s, needle) => s.split(needle).length - 1;
+    for (const marker of [
+      '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->',
+      '<!-- arcwright-orchestration-start -->', '<!-- arcwright-orchestration-end -->',
+      '<!-- arcwright-proactive-start -->', '<!-- arcwright-proactive-end -->',
+    ]) {
+      expect(count(third, marker)).toBe(1);
+    }
+  }, 120000);
 });
 
 describe('install() — bmad migration', () => {
@@ -140,5 +180,13 @@ describe('install() — global install', () => {
     expect(manifest).toBeTruthy();
     expect(manifest.global).toBe(true);
     expect(fs.existsSync(path.join(homeDir, '.claude'))).toBe(true);
+  }, 60000);
+
+  it('writes the Claude rules file to the global ~/.claude dir, not the cwd project', async () => {
+    await install(baseOpts({ global: true, directory: projectDir }));
+    expect(fs.existsSync(path.join(homeDir, '.claude', 'CLAUDE.md'))).toBe(true);
+    // Pre-fix, --global fell back to <cwd>/.claude/CLAUDE.md and littered the
+    // directory the user happened to run from.
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'CLAUDE.md'))).toBe(false);
   }, 60000);
 });

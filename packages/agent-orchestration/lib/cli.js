@@ -12,6 +12,8 @@ const pkg = require('../package.json');
 const SUPPORTED_TOOLS = [
   'claude-code',
   'kiro',
+  'codex',
+  'hermes',
 ].join(', ');
 
 const program = new Command();
@@ -171,15 +173,17 @@ program
   .action(() => {
     console.log('\nSupported IDE platforms:\n');
     const rows = [
-      ['Platform ID',      'Label',            'Rules file',                        'Agent stubs'],
+      ['Platform ID',      'Label',            'Rules file',                        'Agent stubs / skills'],
       ['claude-code',      'Claude Code',       '.claude/CLAUDE.md',                 '.claude/agents/'],
       ['kiro',             'Kiro (IDE + CLI)',   '.kiro/steering/*.md',               '.kiro/skills/'],
+      ['codex',            'Codex',             'AGENTS.md',                         '.agents/skills/ ($HOME or project)'],
+      ['hermes',           'Hermes',            'AGENTS.md (project only)',          '~/.hermes/skills/ (global only)'],
     ];
     const widths = rows[0].map((_, i) => Math.max(...rows.map(r => r[i].length)));
     for (const row of rows) {
       console.log('  ' + row.map((cell, i) => cell.padEnd(widths[i])).join('   '));
     }
-    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro\n');
+    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,codex,hermes\n');
   });
 
 // ─── tmux ─────────────────────────────────────────────────────────────────────

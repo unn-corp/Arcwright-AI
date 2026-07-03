@@ -134,7 +134,12 @@ function scanStagedForSecrets(includeAll) {
 function extractCommitMessage(cmd) {
   // -m "msg" / -m 'msg' / --message=msg
   let m = cmd.match(/(?:-m|--message)[=\s]+(["'])([\s\S]*?)\1/);
-  if (m) return m[2];
+  if (m) {
+    // Heredoc/command-substitution form: git commit -m "$(cat <<'EOF' ...)".
+    // The captured "message" is the substitution wrapper, not real prose — skip.
+    if (/^\s*\$\(/.test(m[2])) return null;
+    return m[2];
+  }
   m = cmd.match(/(?:-m|--message)[=\s]+(\S+)/);
   if (m) return m[1];
   return null; // -F file / editor commit → can't see it here, skip advisory

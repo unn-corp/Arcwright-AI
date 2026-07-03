@@ -303,6 +303,29 @@ const PLATFORMS = {
     rulesFile: null,  // Kiro uses steering files, not a single rules file
     rulesMarker: null,
   },
+  // codex/hermes are NOT dispatched through writeIdeConfig (see the `continue`
+  // in the IDE-integration loop) — their own writeCodexConfig/writeHermesConfig
+  // handle AGENTS.md + skills directly, using upsertManagedBlock and returning
+  // manifest entries. These PLATFORMS entries exist for `platforms`/label
+  // lookups only; rulesFile/rulesMarker are informational here, not consumed.
+  'codex': {
+    label: 'Codex',
+    agentDir: null,
+    skillsDir: null,
+    steeringDir: null,
+    hooksDir: null,
+    rulesFile: 'AGENTS.md',
+    rulesMarker: '## Arcwright',
+  },
+  'hermes': {
+    label: 'Hermes',
+    agentDir: null,
+    skillsDir: null,
+    steeringDir: null,
+    hooksDir: null,
+    rulesFile: 'AGENTS.md',
+    rulesMarker: '## Arcwright',
+  },
 };
 
 // ─── Cross-platform home resolution ──────────────────────────────────────────
@@ -332,7 +355,7 @@ function getHomes(platform) {
  * Terminal-based tools use Linux home (even on WSL).
  * GUI IDE tools use Windows home when on WSL.
  */
-const TERMINAL_TOOLS = ['claude-code'];
+const TERMINAL_TOOLS = ['claude-code', 'codex', 'hermes'];
 
 function resolveToolPath(tool, relativePath, isGlobal, homes, platform) {
   if (!isGlobal) return null; // caller handles project paths
@@ -353,6 +376,17 @@ const GLOBAL_PATHS = {
     agents: '.kiro/agents',
     skills: '.kiro/skills',
     steering: '.kiro/steering',
+  },
+  'codex': {
+    // Codex reads $HOME/.agents/skills (NOT ~/.codex/skills) and ~/.codex/AGENTS.md.
+    claudeMd: '.codex/AGENTS.md',
+    skills: '.agents/skills',
+  },
+  'hermes': {
+    // Hermes has no project-scoped skills dir and no global rules file — its
+    // global persona lives in ~/.hermes/SOUL.md, which Arcwright never touches.
+    skills: '.hermes/skills',
+    skillBundles: '.hermes/skill-bundles',
   },
 };
 
@@ -486,6 +520,163 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
     console.log(chalk.green(`  ✓ .kiro/agents/ (${agentFiles.length} agents)`) + teamNote);
   }
+}
+
+// ─── Shared skill-copy filtering (Codex / Hermes) ────────────────────────────
+// Same opt-in gating writeKiroConfig and the unconditional project skills copy
+// apply, factored out once here so the two new writers below don't triplicate it.
+
+function skillCopyFilter(flags) {
+  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm } = flags;
+  return (src) => {
+    if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
+    if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
+    if (!resolvedDotnet && (/[/\\]dotnet-[^/\\]+[/\\]?$/.test(src) || /[/\\]dotnet-[^/\\]+[/\\]/.test(src))) return false;
+    if (!resolvedElectron && (/[/\\]electron-[^/\\]+[/\\]?$/.test(src) || /[/\\]electron-[^/\\]+[/\\]/.test(src))) return false;
+    if (!resolvedTauri && (/[/\\]tauri-[^/\\]+[/\\]?$/.test(src) || /[/\\]tauri-[^/\\]+[/\\]/.test(src))) return false;
+    if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
+    if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
+    return true;
+  };
+}
+
+function filterSkillFiles(files, flags) {
+  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm } = flags;
+  return files.filter(f => {
+    if (!resolvedTeams && /^team-/.test(f)) return false;
+    if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
+    if (!resolvedDotnet && /^dotnet-/.test(f)) return false;
+    if (!resolvedElectron && /^electron-/.test(f)) return false;
+    if (!resolvedTauri && /^tauri-/.test(f)) return false;
+    if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
+    if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
+    return true;
+  });
+}
+
+// ─── Codex config writer ──────────────────────────────────────────────────────
+// Codex reads AGENTS.md (global ~/.codex/AGENTS.md, project <root>/AGENTS.md)
+// and SKILL.md natively from $HOME/.agents/skills (global) and
+// <root>/.agents/skills (project). Bypasses writeIdeConfig entirely (see the
+// `continue` in install()'s IDE-integration loop) so it can use
+// upsertManagedBlock (never clobbers user content outside the marker block)
+// and return manifest entries for orphan-removal tracking — the bug
+// writeKiroConfig has (it writes files but returns nothing, so they're never
+// cleaned up on update) is NOT replicated here.
+//
+// Returns Array<{relPath, hash}> for every file written.
+async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false) {
+  const entries = [];
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm };
+
+  // ── AGENTS.md ── managed block only. Never added to manifest entries: like
+  // claude-code's CLAUDE.md, this file can carry user content outside the
+  // block, and orphan removal deletes whole files — tracking it would risk
+  // deleting a user's AGENTS.md if codex is later deselected on update.
+  const rulesPath = isGlobal
+    ? resolveToolPath('codex', GLOBAL_PATHS.codex.claudeMd, true, homes, platform)
+    : path.join(projectRoot, 'AGENTS.md');
+  const label = isGlobal ? '~/.codex/AGENTS.md' : 'AGENTS.md';
+  await migrateOldClaudeMd(rulesPath);
+  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules));
+  if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
+  else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
+  else console.log(chalk.gray(`  ○ ${label} already up to date`));
+
+  // ── Skills ──
+  const skillsSrc = path.join(SRC_DIR, '.agents', 'skills');
+  const skillsDest = isGlobal
+    ? resolveToolPath('codex', GLOBAL_PATHS.codex.skills, true, homes, platform)
+    : path.join(projectRoot, '.agents', 'skills');
+
+  if (await fs.pathExists(skillsSrc)) {
+    if (path.resolve(skillsSrc) === path.resolve(skillsDest)) {
+      // Dest resolves to the repo's own .agents/skills (the build source) —
+      // copying onto itself would be a no-op at best, destructive at worst.
+      console.log(chalk.gray('  ○ .agents/skills/ already the source (skipped copy)'));
+    } else {
+      await fs.ensureDir(skillsDest);
+      await fs.copy(skillsSrc, skillsDest, { overwrite: true, filter: skillCopyFilter(flags) });
+      const allSkillFiles = await glob('**/*', { cwd: skillsSrc, nodir: true });
+      const skillFiles = filterSkillFiles(allSkillFiles, flags);
+      // Global entries use a '.codex/skills/' bookkeeping prefix (distinct from
+      // claude-code's '.agents/skills/' → ~/.claude/skills/ remapping) so
+      // orphan removal resolves them to the real $HOME/.agents/skills/ path
+      // instead of colliding with claude-code's global skill location.
+      const relPrefix = isGlobal ? '.codex/skills' : '.agents/skills';
+      for (const rel of skillFiles) {
+        const content = await fs.readFile(path.join(skillsSrc, rel));
+        entries.push({ relPath: path.join(relPrefix, rel).replace(/\\/g, '/'), hash: sha256(content) });
+      }
+      console.log(chalk.green(`  ✓ ${isGlobal ? '~/.agents/skills/' : '.agents/skills/'} (${skillFiles.length} files)`));
+    }
+  }
+
+  return entries;
+}
+
+// ─── Hermes config writer ─────────────────────────────────────────────────────
+// Hermes reads top-level AGENTS.md from cwd (project only — global installs
+// must never create or touch ~/.hermes/SOUL.md, Hermes' own persona file) and
+// has no project-scoped skills dir, only ~/.hermes/skills/ (global). The 17
+// team-* skills also get a matching ~/.hermes/skill-bundles/<name>.yaml
+// (bundle name = skill name, listing just that skill) so they're reachable
+// as Hermes skill-bundles, not just skills.
+//
+// Returns Array<{relPath, hash}> for every file written.
+async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false) {
+  const entries = [];
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm };
+
+  // ── AGENTS.md ── project only (see rationale above for skipping global).
+  if (!isGlobal) {
+    const rulesPath = path.join(projectRoot, 'AGENTS.md');
+    await migrateOldClaudeMd(rulesPath);
+    const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules));
+    if (result === 'created') console.log(chalk.green('  ✓ AGENTS.md created'));
+    else if (result !== 'noop') console.log(chalk.green('  ✓ AGENTS.md updated'));
+    else console.log(chalk.gray('  ○ AGENTS.md already up to date'));
+  }
+
+  // ── Skills + skill-bundles ── global only.
+  if (isGlobal) {
+    const skillsSrc = path.join(SRC_DIR, '.agents', 'skills');
+    const skillsDest = resolveToolPath('hermes', GLOBAL_PATHS.hermes.skills, true, homes, platform);
+
+    if (await fs.pathExists(skillsSrc)) {
+      if (path.resolve(skillsSrc) === path.resolve(skillsDest)) {
+        console.log(chalk.gray('  ○ .agents/skills/ already the source (skipped copy)'));
+      } else {
+        await fs.ensureDir(skillsDest);
+        await fs.copy(skillsSrc, skillsDest, { overwrite: true, filter: skillCopyFilter(flags) });
+        const allSkillFiles = await glob('**/*', { cwd: skillsSrc, nodir: true });
+        const skillFiles = filterSkillFiles(allSkillFiles, flags);
+        for (const rel of skillFiles) {
+          const content = await fs.readFile(path.join(skillsSrc, rel));
+          entries.push({ relPath: path.join('.hermes/skills', rel).replace(/\\/g, '/'), hash: sha256(content) });
+        }
+        console.log(chalk.green(`  ✓ ~/.hermes/skills/ (${skillFiles.length} files)`));
+
+        if (resolvedTeams) {
+          const bundlesDest = resolveToolPath('hermes', GLOBAL_PATHS.hermes.skillBundles, true, homes, platform);
+          await fs.ensureDir(bundlesDest);
+          const teamSkillNames = [...new Set(
+            skillFiles.map(f => f.split('/')[0]).filter(name => /^team-/.test(name))
+          )];
+          for (const name of teamSkillNames) {
+            const bundleContent = `name: ${name}\nskills:\n  - ${name}\n`;
+            await fs.writeFile(path.join(bundlesDest, `${name}.yaml`), bundleContent, 'utf8');
+            entries.push({ relPath: `.hermes/skill-bundles/${name}.yaml`, hash: sha256(bundleContent) });
+          }
+          if (teamSkillNames.length) {
+            console.log(chalk.green(`  ✓ ~/.hermes/skill-bundles/ (${teamSkillNames.length} bundles)`));
+          }
+        }
+      }
+    }
+  }
+
+  return entries;
 }
 
 // ─── Gitignore writer ─────────────────────────────────────────────────────────
@@ -664,6 +855,15 @@ async function install(opts) {
     }
     return parsed.length ? parsed : ['claude-code'];
   })();
+  let resolvedModules = (() => {
+    const parsed = modules.split(',').map(m => m.trim()).filter(Boolean);
+    if (manifestFallback && parsed.join(',') === 'awm,awb,core,_memory' && existingManifest.modules?.length) {
+      // CLI default — prefer manifest value. Opt-in modules (aws-infra,
+      // unnamed-pm) are excluded here; their own resolved flags re-add them.
+      return existingManifest.modules.filter(m => m !== 'aws-infra' && m !== 'unnamed-pm');
+    }
+    return parsed;
+  })();
   let resolvedTeams = (() => {
     // teams===false means --no-teams was explicitly passed; teams===true is the default
     if (manifestFallback && teams !== false && existingManifest.teams !== undefined) {
@@ -768,6 +968,8 @@ async function install(opts) {
       options: [
         { value: 'claude-code',     label: 'Claude Code',     hint: 'agents, CLAUDE.md, settings.json, tmux setup' },
         { value: 'kiro',            label: 'Kiro (IDE + CLI)', hint: '.kiro/skills/, .kiro/steering/' },
+        { value: 'codex',           label: 'Codex',            hint: 'AGENTS.md, .agents/skills/' },
+        { value: 'hermes',          label: 'Hermes',           hint: '~/.hermes/skills/, AGENTS.md (project only)' },
       ],
       initialValues: existingManifest?.tools || ['claude-code'],
       required: false,
@@ -903,7 +1105,7 @@ async function install(opts) {
     resolvedOpenrouterLaunchers = false;
   }
 
-  const selectedModules = modules.split(',').map(m => m.trim()).filter(Boolean);
+  const selectedModules = resolvedModules;
 
   console.log(`\n${chalk.bold.blue('Arcwright')} ${isUpdate ? 'Update' : 'Install'}`);
   console.log(`  Target:   ${chalk.cyan(isGlobal ? '~/.arcwright (global)' : projectRoot)}`);
@@ -1044,7 +1246,7 @@ async function install(opts) {
 
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
-    if (tool === 'kiro') continue; // handled separately below
+    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes') continue; // handled separately below
     const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
@@ -1054,6 +1256,22 @@ async function install(opts) {
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
     await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
+  }
+
+  // ── Codex integration ─────────────────────────────────────────────────────
+  if (resolvedTools.includes('codex')) {
+    const codexEntries = await writeCodexConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
+    if (codexEntries && codexEntries.length > 0) {
+      newFileEntries.push(...codexEntries);
+    }
+  }
+
+  // ── Hermes integration ────────────────────────────────────────────────────
+  if (resolvedTools.includes('hermes')) {
+    const hermesEntries = await writeHermesConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
+    if (hermesEntries && hermesEntries.length > 0) {
+      newFileEntries.push(...hermesEntries);
+    }
   }
 
   // ── Orphan removal (update only) ──────────────────────────────────────────
@@ -1084,6 +1302,19 @@ async function install(opts) {
           } else if (orphan.relPath.startsWith('.claude/')) {
             // .claude/agents/, .claude/commands/, etc. — resolve from terminal home
             fullPath = resolveToolPath('claude-code', orphan.relPath, true, homes, platform);
+          } else if (orphan.relPath.startsWith('.codex/skills/')) {
+            // Bookkeeping prefix only — Codex's global skills actually live at
+            // $HOME/.agents/skills/, not ~/.codex/skills/ (see GLOBAL_PATHS.codex).
+            const rel = orphan.relPath.slice('.codex/skills/'.length);
+            fullPath = path.join(resolveToolPath('codex', GLOBAL_PATHS.codex.skills, true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.codex/')) {
+            fullPath = resolveToolPath('codex', orphan.relPath, true, homes, platform);
+          } else if (orphan.relPath.startsWith('.hermes/skill-bundles/')) {
+            const rel = orphan.relPath.slice('.hermes/skill-bundles/'.length);
+            fullPath = path.join(resolveToolPath('hermes', GLOBAL_PATHS.hermes.skillBundles, true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.hermes/skills/')) {
+            const rel = orphan.relPath.slice('.hermes/skills/'.length);
+            fullPath = path.join(resolveToolPath('hermes', GLOBAL_PATHS.hermes.skills, true, homes, platform), rel);
           } else {
             // _arcwright/ module files — in ~/.arcwright/
             fullPath = path.join(effectiveArwDir, orphan.relPath);
@@ -1299,8 +1530,8 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
 
   // Write rules/context file
   if (platformCfg.rulesFile) {
-    const rulesPath = isGlobal && GLOBAL_PATHS[tool]?.rules
-      ? resolveToolPath(tool, GLOBAL_PATHS[tool].rules, true, homes, platform)
+    const rulesPath = isGlobal && GLOBAL_PATHS[tool]?.claudeMd
+      ? resolveToolPath(tool, GLOBAL_PATHS[tool].claudeMd, true, homes, platform)
       : path.join(projectRoot, platformCfg.rulesFile);
 
     await fs.ensureDir(path.dirname(rulesPath));
@@ -2005,5 +2236,6 @@ module.exports = {
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
     writeClaudeSettings, stripInstallerSettingsKeys,
     buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
+    writeCodexConfig, writeHermesConfig,
   },
 };

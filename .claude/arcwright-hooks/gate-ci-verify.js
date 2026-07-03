@@ -183,6 +183,6 @@ process.stdin.on('end', () => {
         : lastStatus;
   ok(
     `[ci-verify] CI not finished within ${TIMEOUT_S}s (${hint}) for ${sha.slice(0, 9)}.\n` +
-      `Check later: gh run watch --commit ${sha}  (or raise ARCWRIGHT_CI_TIMEOUT_SECONDS).`
+      `Check later: gh run list --commit ${sha}, then gh run watch <run-id>  (or raise ARCWRIGHT_CI_TIMEOUT_SECONDS).`
   );
 });

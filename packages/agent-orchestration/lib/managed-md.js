@@ -69,6 +69,24 @@ function blockEndIndex(text, startIdx, start, end) {
   return nextComment === -1 ? text.length : startIdx + start.length + nextComment;
 }
 
+/**
+ * Ranges [start, endExclusive) of every current `<!-- name-start --> …
+ * <!-- name-end -->` marker block in the text. Markerless legacy strips must
+ * never begin inside (or run into) one of these — the legacy heading text can
+ * legitimately appear inside a current managed block's content.
+ */
+function markerBlockRanges(text) {
+  const ranges = [];
+  const startRe = /<!--\s*([\w-]+)-start\s*-->/g;
+  let m;
+  while ((m = startRe.exec(text)) !== null) {
+    const endMarker = `<!-- ${m[1]}-end -->`;
+    const endIdx = text.indexOf(endMarker, m.index);
+    ranges.push([m.index, endIdx === -1 ? text.length : endIdx + endMarker.length]);
+  }
+  return ranges;
+}
+
 async function cleanupManagedBlocks(filePath, markerPairs) {
   if (!await fs.pathExists(filePath)) return false;
   if (!markerPairs || markerPairs.length === 0) return false;
@@ -77,9 +95,34 @@ async function cleanupManagedBlocks(filePath, markerPairs) {
   let cleaned = original;
 
   for (const { start, end } of markerPairs) {
-    const startIdx = cleaned.indexOf(start);
-    if (startIdx === -1) continue;
-    const endIdx = blockEndIndex(cleaned, startIdx, start, end);
+    const markerless = !start.trimStart().startsWith('<!--');
+    let startIdx = cleaned.indexOf(start);
+    let endIdx;
+
+    if (markerless) {
+      // Legacy heading pairs: only strip occurrences OUTSIDE current marker
+      // blocks, and never strip past the start of the next marker block.
+      const ranges = markerBlockRanges(cleaned);
+      const inBlock = idx => ranges.some(([s, e]) => idx >= s && idx < e);
+      while (startIdx !== -1 && inBlock(startIdx)) {
+        startIdx = cleaned.indexOf(start, startIdx + start.length);
+      }
+      if (startIdx === -1) continue;
+      // Legacy `end` is the next section's heading — strip up to it, keep it.
+      const endHeading = cleaned.indexOf(end, startIdx + start.length);
+      endIdx = endHeading !== -1 ? endHeading : blockEndIndex(cleaned, startIdx, start, end);
+      const nextBlockStart = ranges
+        .map(([s]) => s)
+        .filter(s => s > startIdx)
+        .sort((a, b) => a - b)[0];
+      if (nextBlockStart !== undefined && endIdx > nextBlockStart) {
+        endIdx = nextBlockStart;
+      }
+    } else {
+      if (startIdx === -1) continue;
+      endIdx = blockEndIndex(cleaned, startIdx, start, end);
+    }
+
     // Remove the block, then collapse the blank lines it left behind.
     cleaned = (cleaned.slice(0, startIdx) + cleaned.slice(endIdx)).replace(/(\n[ \t]*){3,}/g, '\n\n');
   }

@@ -9,7 +9,7 @@ const {
   readManifest, writeManifest, readFilesManifest, writeFilesManifest,
   buildModuleConfig, getFileHeader, getClaudeMdLocations,
   updateGitignore, stripGitignoreBlock,
-  cleanupManagedBlocks, upsertManagedBlock,
+  cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
   writeClaudeSettings, stripInstallerSettingsKeys,
   buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
 } = installer._internal;
@@ -240,6 +240,107 @@ describe('cleanupManagedBlocks', () => {
     fs.writeFileSync(f, `${pair.start}\ndangling content\n`);
     expect(await cleanupManagedBlocks(f, [pair])).toBe(true);
     expect(fs.readFileSync(f, 'utf8')).not.toMatch(/dangling content/);
+  });
+});
+
+describe('cleanupManagedBlocks — markerless legacy pairs vs current marker blocks', () => {
+  const legacy = { start: '## Arcwright', end: '## Agent Spawning' };
+
+  it('skips a legacy heading that only appears inside a current managed block', async () => {
+    const f = path.join(dir, 'L.md');
+    fs.writeFileSync(f, [
+      '# User file',
+      '',
+      '<!-- arcwright-agent-start -->',
+      '## Arcwright',
+      'managed content',
+      '<!-- arcwright-agent-end -->',
+      '',
+      '<!-- arcwright-orchestration-start -->',
+      '## Agent Spawning (in-process, tmux opt-in)',
+      'more managed content',
+      '<!-- arcwright-orchestration-end -->',
+      '',
+    ].join('\n'));
+    expect(await cleanupManagedBlocks(f, [legacy])).toBe(false);
+    const txt = fs.readFileSync(f, 'utf8');
+    expect(txt).toMatch(/<!-- arcwright-agent-end -->/);
+    expect(txt).toMatch(/<!-- arcwright-orchestration-start -->/);
+    expect(txt).toMatch(/managed content/);
+  });
+
+  it('still strips a genuine legacy section outside managed blocks', async () => {
+    const f = path.join(dir, 'L.md');
+    fs.writeFileSync(f, [
+      '# User file',
+      '',
+      '## Arcwright',
+      'old markerless install content',
+      '',
+      '## Agent Spawning (tmux-aware)',
+      'old tmux content',
+      '',
+    ].join('\n'));
+    expect(await cleanupManagedBlocks(f, [legacy])).toBe(true);
+    const txt = fs.readFileSync(f, 'utf8');
+    expect(txt).not.toMatch(/old markerless install content/);
+    expect(txt).toMatch(/# User file/);
+    expect(txt).toMatch(/## Agent Spawning \(tmux-aware\)/); // strip stops at the end heading
+  });
+
+  it('never strips into a following managed block when the end heading only exists inside it', async () => {
+    const f = path.join(dir, 'L.md');
+    fs.writeFileSync(f, [
+      '## Arcwright',
+      'genuine legacy leftovers',
+      '',
+      '<!-- arcwright-orchestration-start -->',
+      '## Agent Spawning (in-process, tmux opt-in)',
+      'current managed content',
+      '<!-- arcwright-orchestration-end -->',
+      '',
+    ].join('\n'));
+    expect(await cleanupManagedBlocks(f, [legacy])).toBe(true);
+    const txt = fs.readFileSync(f, 'utf8');
+    expect(txt).not.toMatch(/genuine legacy leftovers/);
+    expect(txt).toMatch(/<!-- arcwright-orchestration-start -->/);
+    expect(txt).toMatch(/current managed content/);
+    expect(txt).toMatch(/<!-- arcwright-orchestration-end -->/);
+  });
+});
+
+describe('migrateOldClaudeMd — consecutive update cycles do not corrupt CLAUDE.md', () => {
+  // Mirrors what writeIdeConfig does on every install/update: migrate, then
+  // upsert the three managed blocks. Pre-fix, the markerless legacy pairs
+  // matched headings INSIDE the managed blocks and each cycle ate markers and
+  // duplicated content.
+  async function updateCycle(f) {
+    await migrateOldClaudeMd(f);
+    await upsertManagedBlock(f, '<!-- arcwright-agent-start -->',         '<!-- arcwright-agent-end -->',         buildArcwrightRulesEntry(['awm', 'core']));
+    await upsertManagedBlock(f, '<!-- arcwright-orchestration-start -->', '<!-- arcwright-orchestration-end -->', buildTmuxEntry());
+    await upsertManagedBlock(f, '<!-- arcwright-proactive-start -->',     '<!-- arcwright-proactive-end -->',     buildProactiveEntry());
+    return fs.readFileSync(f, 'utf8');
+  }
+  const count = (s, needle) => s.split(needle).length - 1;
+
+  it('is stable and keeps exactly one of each marker across three cycles', async () => {
+    const f = path.join(dir, 'CLAUDE.md');
+    fs.writeFileSync(f, '# My project\n\nUser notes here.\n');
+
+    const first = await updateCycle(f);
+    const second = await updateCycle(f);
+    const third = await updateCycle(f);
+
+    expect(second).toBe(first);
+    expect(third).toBe(second);
+    expect(third).toMatch(/User notes here\./);
+    for (const marker of [
+      '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->',
+      '<!-- arcwright-orchestration-start -->', '<!-- arcwright-orchestration-end -->',
+      '<!-- arcwright-proactive-start -->', '<!-- arcwright-proactive-end -->',
+    ]) {
+      expect(count(third, marker)).toBe(1);
+    }
   });
 });
 
