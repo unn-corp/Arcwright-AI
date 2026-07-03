@@ -6,7 +6,7 @@ import installer from '../lib/installer.js';
 
 const {
   sha256, escapeRe, detectBmad, getHomes, resolveToolPath,
-  readManifest, writeManifest, readFilesManifest, writeFilesManifest,
+  readManifest, writeManifest, readFilesManifest, writeFilesManifest, removeEmptyDirsUpward,
   buildModuleConfig, getFileHeader, getClaudeMdLocations,
   updateGitignore, stripGitignoreBlock,
   cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
@@ -411,5 +411,39 @@ describe('rules-entry builders', () => {
     expect(buildTmuxEntry().length).toBeGreaterThan(0);
     expect(typeof buildProactiveEntry()).toBe('string');
     expect(buildProactiveEntry().length).toBeGreaterThan(0);
+  });
+});
+
+describe('removeEmptyDirsUpward — orphan-cleanup leaves no empty skill dirs', () => {
+  it('removes the now-empty skill dir but keeps the skills root', async () => {
+    const skillsRoot = path.join(dir, 'skills');
+    const foo = path.join(skillsRoot, 'foo');
+    fs.mkdirSync(foo, { recursive: true });
+    fs.writeFileSync(path.join(foo, 'SKILL.md'), 'x');
+    fs.rmSync(path.join(foo, 'SKILL.md')); // simulate orphan file removal
+    await removeEmptyDirsUpward(path.join(foo, 'SKILL.md'));
+    expect(fs.existsSync(foo)).toBe(false);        // empty skill dir cleaned up
+    expect(fs.existsSync(skillsRoot)).toBe(true);  // container root preserved
+  });
+
+  it('keeps a dir that still has sibling files', async () => {
+    const foo = path.join(dir, 'skills', 'foo');
+    fs.mkdirSync(foo, { recursive: true });
+    fs.writeFileSync(path.join(foo, 'SKILL.md'), 'x');
+    fs.writeFileSync(path.join(foo, 'RULES.md'), 'y');
+    fs.rmSync(path.join(foo, 'SKILL.md'));
+    await removeEmptyDirsUpward(path.join(foo, 'SKILL.md'));
+    expect(fs.existsSync(foo)).toBe(true);          // RULES.md still there, dir stays
+    expect(fs.existsSync(path.join(foo, 'RULES.md'))).toBe(true);
+  });
+
+  it('cleans nested empty dirs up to the container root', async () => {
+    const refs = path.join(dir, 'skills', 'foo', 'references');
+    fs.mkdirSync(refs, { recursive: true });
+    fs.writeFileSync(path.join(refs, 'a.md'), 'x');
+    fs.rmSync(path.join(refs, 'a.md'));
+    await removeEmptyDirsUpward(path.join(refs, 'a.md'));
+    expect(fs.existsSync(path.join(dir, 'skills', 'foo'))).toBe(false); // whole empty skill tree gone
+    expect(fs.existsSync(path.join(dir, 'skills'))).toBe(true);         // root kept
   });
 });

@@ -444,6 +444,31 @@ async function writeFilesManifest(arcwrightDir, entries) {
   await fs.writeFile(p, lines.join('\n') + '\n', 'utf8');
 }
 
+// After an orphaned file is removed, its skill/command directory is often left
+// empty (a removed skill's SKILL.md + RULES.md go, the dir stays). Walk up from
+// the removed file and rmdir empty parents, stopping at a non-empty dir or at a
+// known container root (never remove the skills/commands/agents roots themselves).
+const DIR_CLEANUP_STOP = new Set(['skills', 'commands', 'agents', 'skill-bundles', 'steering', 'hooks', '.claude', '.codex', '.hermes', '.kiro', '.config', 'opencode']);
+async function removeEmptyDirsUpward(removedFile) {
+  let dir = path.dirname(removedFile);
+  for (let depth = 0; depth < 5; depth++) {
+    if (DIR_CLEANUP_STOP.has(path.basename(dir))) return;
+    let entries;
+    try {
+      entries = await fs.readdir(dir);
+    } catch {
+      return; // dir already gone or unreadable
+    }
+    if (entries.length > 0) return; // not empty, keep it and everything above
+    try {
+      await fs.rmdir(dir);
+    } catch {
+      return;
+    }
+    dir = path.dirname(dir);
+  }
+}
+
 // ─── Kiro config writer ───────────────────────────────────────────────────────
 
 async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
@@ -1445,6 +1470,7 @@ async function install(opts) {
         }
         if (await fs.pathExists(fullPath)) {
           await fs.remove(fullPath);
+          await removeEmptyDirsUpward(fullPath);
           console.log(chalk.dim(`    ✗ ${orphan.relPath}`));
         }
       }
@@ -2347,7 +2373,7 @@ module.exports = {
   // Internal helpers exported for unit testing (not part of the public CLI API).
   _internal: {
     sha256, escapeRe, detectBmad, getHomes, resolveToolPath,
-    readManifest, writeManifest, readFilesManifest, writeFilesManifest,
+    readManifest, writeManifest, readFilesManifest, writeFilesManifest, removeEmptyDirsUpward,
     buildModuleConfig, getFileHeader, getClaudeMdLocations,
     updateGitignore, stripGitignoreBlock,
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
