@@ -5,7 +5,7 @@ description: "The Inquisitor — single QA agent in-process via the Session Agen
 
 # Agent Team: Solo QA — The Inquisitor
 
-> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `QA` role is spawned once and recorded in the Session Agent Registry; subsequent runs (new test target, follow-up scope) reuse that agent via `SendMessage`. herdr pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `QA` role is spawned once and recorded in the Session Agent Registry; subsequent runs (new test target, follow-up scope) reuse that agent via `SendMessage`. herdr pane variant is offered when `$HERDR_ENV` is set (spawn each role in its own pane in the current session) (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 

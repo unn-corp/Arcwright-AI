@@ -1,37 +1,52 @@
 ---
-description: Choose and spawn an agent team — 17 pre-built compositions, running in-process via the Agent tool + SendMessage reuse. herdr split-pane visibility is opt-in only.
+description: Choose and spawn an agent team (17 pre-built compositions). Runs in-process by default; when inside a Herdr session, offers to spawn each agent in its own Herdr pane instead.
 ---
 
 # /team — Spawn an Agent Team
 
 Arcwright provides 17 pre-built agent teams. Each team is a coordinated group of specialist agents working toward a specific kind of outcome.
 
-**Default mode is in-process** — every team runs via the `Agent` tool with `SendMessage` reuse (governed by a Session Agent Registry, as defined in the [`claude-subagent-protocol`](../.agents/skills/claude-subagent-protocol/SKILL.md) skill). herdr split-pane visibility is **opt-in only** — only when the user explicitly asks for it (e.g. "spawn", "open agents", "I want to watch") AND `$HERDR_ENV` is set. The pane is a viewing surface; the in-process orchestration inside it is still governed by the protocol skill.
+**Default mode is in-process:** every team runs via the `Agent` tool with `SendMessage` reuse (governed by a Session Agent Registry, as defined in the [`claude-subagent-protocol`](../.agents/skills/claude-subagent-protocol/SKILL.md) skill).
+
+**When running inside Herdr (`$HERDR_ENV` is set), offer the user a visible-pane option** (see Step 1b): spawn each team agent in its own Herdr pane in the current session, so the user can watch them work. The pane is a viewing surface; the in-process orchestration inside it is still governed by the protocol skill.
 
 The old `tmux-protocol` skill (AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling) is retired. Do not reintroduce those signals.
 
 ## Instructions
 
-### Step 1: Ask the User to Choose
+### Step 1: Ask the User to Choose a Team
 
 Present the table below to the user and ask which team they want to spawn. If they describe a goal instead of picking a team, suggest the best-fit team based on the descriptions.
+
+### Step 1b: Offer the execution mode (only when `$HERDR_ENV` is set)
+
+Check whether Herdr is active: `[ "${HERDR_ENV:-}" = "1" ]` (you are running inside a Herdr pane). Then:
+
+- **If Herdr is active,** after the user picks a team, ask one short question offering how to run it:
+  > "Run this team in-process (default), or spawn each agent in its own Herdr pane in this session so you can watch them work?"
+  Accept: in-process (default) / herdr panes. If they want panes, ask whether to place them in the **current tab** (split panes beside this one) or a **new tab** in the session (default: current tab, split right).
+- **If Herdr is not active** (`$HERDR_ENV` unset), do not ask; run in-process. Only fall back to a visible-pane path if the user explicitly requests it by other means.
 
 ### Step 2: Load the Team Skill
 
 Read `.agents/skills/team-{code}/SKILL.md` for the full spawn protocol, agent chain, registry path, model/policy, and wind-down rules.
 
-### Step 3: (Opt-in) herdr pane visibility
+### Step 3: Load Herdr pane mechanics (only if the user chose panes)
 
-If the user has explicitly asked for split-pane visibility AND `$HERDR_ENV` is set, also read `.agents/skills/herdr/SKILL.md` (the "Watching agents in panes (opt-in)" section) for pane mechanics. The in-process flow inside each pane is still governed by the team skill + `claude-subagent-protocol`. If the user did not ask for pane visibility, skip this step — in-process is the path.
+If the user chose the Herdr-pane mode in Step 1b, also read `.agents/skills/herdr/SKILL.md` (the "Watching agents in panes (opt-in)" section) for `herdr agent start` / `herdr wait agent-status` mechanics. The in-process flow inside each pane is still governed by the team skill + `claude-subagent-protocol`.
 
 ### Step 4: Spawn the Team
 
-- **Default (in-process):** follow the in-process chain in the skill. For each role in the team:
+- **In-process (default):** follow the in-process chain in the skill. For each role in the team:
   - If the role is not yet in the Session Agent Registry → invoke the `Agent` tool, capture the returned `agentId`, write a row to `_arcwright-output/sessions/<session-id>/agent-registry.md`.
   - If the role is already in the registry and the task is on the same scope → `SendMessage(to: <agentId>, ...)` to reuse the existing agent.
   - Pass handoff context from prior step outputs into the next prompt's `## Inputs` section.
   - The master orchestrator owns the loop. Sequential handoff is blocking — wait for each Agent call to return before proceeding.
-- **Opt-in (herdr):** open a herdr pane for each role per the team skill's herdr variant block, and register the panes in the session file. Pane content is still driven by the in-process flow above.
+- **Herdr panes (if chosen in Step 1b):** spawn each team role into its own pane in the current Herdr session so the user can watch:
+  - Per role: `herdr agent start <role> --split right -- claude --dangerously-skip-permissions '<role prompt with handoff context>'` (use `--new-tab` instead of `--split right` if the user chose a new tab). Rename the pane to the role for clarity: `herdr pane rename <pane-id> <role>`.
+  - Wait on a role that needs input with `herdr wait agent-status <role> --status blocked --timeout 600000`; read its output with `herdr pane read <role>`; send follow-ups with `herdr pane run <role> '<message>'` (which presses Enter, unlike `herdr agent send`).
+  - Register each spawned pane (role, pane-id) in the session file alongside the registry. Close a pane when its role is done with `herdr pane close <role>`.
+  - The pane is a viewing surface only. Each spawned agent still uses the Agent tool + SendMessage per `claude-subagent-protocol` internally, defaults to `sonnet`, and asks before any `opus` escalation.
 
 ---
 

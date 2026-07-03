@@ -6,7 +6,7 @@ allowed-tools: Read, Grep, Glob, Write, Edit, Agent, SendMessage, Bash
 
 # Agent Team: Dev + QA
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). herdr pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). herdr pane variant is offered when `$HERDR_ENV` is set (spawn each role in its own pane in the current session) (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 

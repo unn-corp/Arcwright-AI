@@ -5,7 +5,7 @@ description: "Ghost — single quick-flow-solo-dev agent in-process via the Sess
 
 # Agent Team: Solo Dev — Ghost
 
-> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Solo Dev` role is spawned once and recorded in the Session Agent Registry; every queued task reuses that agent via `SendMessage`. herdr pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Solo Dev` role is spawned once and recorded in the Session Agent Registry; every queued task reuses that agent via `SendMessage`. herdr pane variant is offered when `$HERDR_ENV` is set (spawn each role in its own pane in the current session) (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 

@@ -5,7 +5,7 @@ description: "The Library — in-process Tech Writer drafts, Architect reviews f
 
 # Agent Team: Docs + Arch Review — The Library
 
-> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Agent` tool + `SendMessage` reuse with a Session Agent Registry is the canonical path. herdr pane variant is opt-in (see the [herdr](../herdr/SKILL.md) skill).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Agent` tool + `SendMessage` reuse with a Session Agent Registry is the canonical path. herdr pane variant is offered when `$HERDR_ENV` is set (spawn each role in its own pane in the current session) (see the [herdr](../herdr/SKILL.md) skill).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 

@@ -5,7 +5,7 @@ description: "The Blueprint Room — UX and Architect produce design artifacts t
 
 # Agent Team: UX + Architecture — The Blueprint Room
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). Spawn-once + reuse via Session Agent Registry. herdr pane variant is opt-in (see the `herdr` skill).
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). Spawn-once + reuse via Session Agent Registry. herdr pane variant is offered when `$HERDR_ENV` is set (spawn each role in its own pane in the current session) (see the `herdr` skill).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
