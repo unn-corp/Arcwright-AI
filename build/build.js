@@ -104,6 +104,7 @@ const SHIPPED_COMMANDS = [
   /^dotnet\.md$/,
   /^electron\.md$/,
   /^tauri\.md$/,
+  /^strands\.md$/,
   /^aws-infra\.md$/,
   /^unnamed-pm\.md$/,
   /^react\.md$/,
@@ -615,6 +616,7 @@ function bundleKiroAgents() {
     'dotnet':             ['fs_read', 'execute_bash', 'grep'],
     'electron':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'tauri':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'strands':            ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'aws-infra':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_fetch'],
     'unnamed-pm':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'herdr':              ['fs_read', 'fs_write', 'execute_bash'],
@@ -1104,7 +1106,7 @@ function verifyNoLeaks() {
 // whose skill is absent — those stay reachable via their module command (/dotnet
 // etc.) and Hermes/Codex native invocation.
 // team-* included: they drop out under --no-teams, so their launchers cannot ship unconditionally.
-const MODULE_GATED_SKILL = /^(team-|docker-type-check$|dotnet-|electron-|tauri-|aws-serverless-cdk$|unnamed-pm-sync$)/;
+const MODULE_GATED_SKILL = /^(team-|docker-type-check$|dotnet-|electron-|tauri-|strands-|aws-serverless-cdk$|unnamed-pm-sync$)/;
 
 function bundleSkillCommands() {
   console.log('🎯  Generating per-skill slash-command launchers → src/.claude/commands/ + src/.kiro/agents/');

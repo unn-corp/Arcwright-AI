@@ -446,7 +446,7 @@ async function writeFilesManifest(arcwrightDir, entries) {
 
 // ─── Kiro config writer ───────────────────────────────────────────────────────
 
-async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false) {
+async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
   const kiroAgentsSrc = path.join(SRC_DIR, '.kiro', 'agents');
 
@@ -470,6 +470,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
       if (!resolvedDotnet && (/[/\\]dotnet-[^/\\]+[/\\]?$/.test(src) || /[/\\]dotnet-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedElectron && (/[/\\]electron-[^/\\]+[/\\]?$/.test(src) || /[/\\]electron-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedTauri && (/[/\\]tauri-[^/\\]+[/\\]?$/.test(src) || /[/\\]tauri-[^/\\]+[/\\]/.test(src))) return false;
+      if (!resolvedStrands && (/[/\\]strands-[^/\\]+[/\\]?$/.test(src) || /[/\\]strands-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
       if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
       return true;
@@ -482,6 +483,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
       if (!resolvedDotnet && /^dotnet-/.test(f)) return false;
       if (!resolvedElectron && /^electron-/.test(f)) return false;
       if (!resolvedTauri && /^tauri-/.test(f)) return false;
+      if (!resolvedStrands && /^strands-/.test(f)) return false;
       if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
       if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
       return true;
@@ -493,6 +495,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     if (!resolvedDotnet) skipNotes.push('dotnet-*');
     if (!resolvedElectron) skipNotes.push('electron-*');
     if (!resolvedTauri) skipNotes.push('tauri-*');
+    if (!resolvedStrands) skipNotes.push('strands-*');
     if (!resolvedAwsInfra) skipNotes.push('aws-serverless-cdk');
     if (!resolvedUnnamedPm) skipNotes.push('unnamed-pm-sync');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
@@ -517,6 +520,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
       if (!resolvedDotnet && f === 'dotnet.json') return false;
       if (!resolvedElectron && f === 'electron.json') return false;
       if (!resolvedTauri && f === 'tauri.json') return false;
+      if (!resolvedStrands && f === 'strands.json') return false;
       if (!resolvedAwsInfra && (f === 'aws-infra.json' || f === 'arcwright-aws-infra.json')) return false;
       if (!resolvedUnnamedPm && (f === 'unnamed-pm.json' || f === 'arcwright-unnamed-pm.json')) return false;
       return true;
@@ -530,6 +534,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     if (!resolvedDotnet) skipNotes.push('/dotnet');
     if (!resolvedElectron) skipNotes.push('/electron');
     if (!resolvedTauri) skipNotes.push('/tauri');
+    if (!resolvedStrands) skipNotes.push('/strands');
     if (!resolvedAwsInfra) skipNotes.push('/aws-infra');
     if (!resolvedUnnamedPm) skipNotes.push('/unnamed-pm');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
@@ -542,13 +547,14 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
 // apply, factored out once here so the two new writers below don't triplicate it.
 
 function skillCopyFilter(flags) {
-  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm } = flags;
+  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm } = flags;
   return (src) => {
     if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
     if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
     if (!resolvedDotnet && (/[/\\]dotnet-[^/\\]+[/\\]?$/.test(src) || /[/\\]dotnet-[^/\\]+[/\\]/.test(src))) return false;
     if (!resolvedElectron && (/[/\\]electron-[^/\\]+[/\\]?$/.test(src) || /[/\\]electron-[^/\\]+[/\\]/.test(src))) return false;
     if (!resolvedTauri && (/[/\\]tauri-[^/\\]+[/\\]?$/.test(src) || /[/\\]tauri-[^/\\]+[/\\]/.test(src))) return false;
+    if (!resolvedStrands && (/[/\\]strands-[^/\\]+[/\\]?$/.test(src) || /[/\\]strands-[^/\\]+[/\\]/.test(src))) return false;
     if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
     if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
     return true;
@@ -556,13 +562,14 @@ function skillCopyFilter(flags) {
 }
 
 function filterSkillFiles(files, flags) {
-  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm } = flags;
+  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm } = flags;
   return files.filter(f => {
     if (!resolvedTeams && /^team-/.test(f)) return false;
     if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
     if (!resolvedDotnet && /^dotnet-/.test(f)) return false;
     if (!resolvedElectron && /^electron-/.test(f)) return false;
     if (!resolvedTauri && /^tauri-/.test(f)) return false;
+    if (!resolvedStrands && /^strands-/.test(f)) return false;
     if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
     if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
     return true;
@@ -580,9 +587,9 @@ function filterSkillFiles(files, flags) {
 // cleaned up on update) is NOT replicated here.
 //
 // Returns Array<{relPath, hash}> for every file written.
-async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false) {
+async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const entries = [];
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
 
   // ── AGENTS.md ── managed block only. Never added to manifest entries: like
   // claude-code's CLAUDE.md, this file can carry user content outside the
@@ -639,9 +646,9 @@ async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, pl
 // as Hermes skill-bundles, not just skills.
 //
 // Returns Array<{relPath, hash}> for every file written.
-async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false) {
+async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const entries = [];
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
 
   // ── AGENTS.md ── project only (see rationale above for skipping global).
   if (!isGlobal) {
@@ -701,9 +708,9 @@ async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, p
 // Code command files (.claude/commands/*.md → .opencode/commands/, verbatim).
 //
 // Returns Array<{relPath, hash}> for every file written.
-async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false) {
+async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const entries = [];
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
 
   // ── AGENTS.md ── managed block only (not manifest-tracked, same rationale as Codex).
   const rulesPath = isGlobal
@@ -800,6 +807,7 @@ async function updateGitignore(projectRoot, mode, chalk) {
       '.claude/commands/dotnet.md',
       '.claude/commands/electron.md',
       '.claude/commands/tauri.md',
+      '.claude/commands/strands.md',
       '.claude/agents/arcwright-*.md',
       '.kiro/agents/',
       '.kiro/skills/',
@@ -852,6 +860,7 @@ async function install(opts) {
     dotnet = false,  // include curated dotnet-* skills and /dotnet command
     electron = false,  // include curated electron-* skills and /electron command
     tauri = false,  // include curated tauri-* skills and /tauri command
+    strands = false,  // include curated strands-* skills and /strands command
     awsInfra = false,  // include aws-infra module + aws-serverless-cdk skill + /aws-infra command
     unnamedPm = false,  // include unnamed-pm module + unnamed-pm-sync skill + /unnamed-pm command
     gitignore = null,  // null | 'full' | 'skills' | 'output-only' | 'none'
@@ -980,6 +989,13 @@ async function install(opts) {
     }
     return tauri === true;
   })();
+  let resolvedStrands = (() => {
+    // strands===true means --strands was explicitly passed; false is the default
+    if (manifestFallback && strands !== true && existingManifest.strands !== undefined) {
+      return existingManifest.strands === true;
+    }
+    return strands === true;
+  })();
   let resolvedAwsInfra = (() => {
     if (manifestFallback && awsInfra !== true && existingManifest.awsInfra !== undefined) {
       return existingManifest.awsInfra === true;
@@ -1100,6 +1116,14 @@ async function install(opts) {
     });
     if (isCancel(tauriChoice)) { process.exit(0); }
     resolvedTauri = tauriChoice;
+
+    // AWS Strands Agents opt-in — curated strands-* skills + /strands command
+    const strandsChoice = await confirm({
+      message: 'Install AWS Strands Agents skills? (curated strands-*, only useful if you build agents with the Strands SDK on AWS)',
+      initialValue: existingManifest?.strands === true,
+    });
+    if (isCancel(strandsChoice)) { process.exit(0); }
+    resolvedStrands = strandsChoice;
 
     // AWS serverless infrastructure opt-in — aws-infra module + aws-serverless-cdk skill + /aws-infra
     const awsInfraChoice = await confirm({
@@ -1251,6 +1275,7 @@ async function install(opts) {
       if (!resolvedDotnet && (/[/\\]dotnet-[^/\\]+[/\\]?$/.test(src) || /[/\\]dotnet-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedElectron && (/[/\\]electron-[^/\\]+[/\\]?$/.test(src) || /[/\\]electron-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedTauri && (/[/\\]tauri-[^/\\]+[/\\]?$/.test(src) || /[/\\]tauri-[^/\\]+[/\\]/.test(src))) return false;
+      if (!resolvedStrands && (/[/\\]strands-[^/\\]+[/\\]?$/.test(src) || /[/\\]strands-[^/\\]+[/\\]/.test(src))) return false;
       if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
       if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
       return true;
@@ -1264,6 +1289,7 @@ async function install(opts) {
       if (!resolvedDotnet && /^dotnet-/.test(f)) return false;
       if (!resolvedElectron && /^electron-/.test(f)) return false;
       if (!resolvedTauri && /^tauri-/.test(f)) return false;
+      if (!resolvedStrands && /^strands-/.test(f)) return false;
       if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
       if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
       return true;
@@ -1280,6 +1306,7 @@ async function install(opts) {
     if (!resolvedDotnet) skipNotes.push('dotnet-*');
     if (!resolvedElectron) skipNotes.push('electron-*');
     if (!resolvedTauri) skipNotes.push('tauri-*');
+    if (!resolvedStrands) skipNotes.push('strands-*');
     if (!resolvedAwsInfra) skipNotes.push('aws-serverless-cdk');
     if (!resolvedUnnamedPm) skipNotes.push('unnamed-pm-sync');
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
@@ -1321,7 +1348,7 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode') continue; // handled separately below
-    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri);
+    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
     }
@@ -1329,12 +1356,12 @@ async function install(opts) {
 
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
-    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
+    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
   }
 
   // ── Codex integration ─────────────────────────────────────────────────────
   if (resolvedTools.includes('codex')) {
-    const codexEntries = await writeCodexConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
+    const codexEntries = await writeCodexConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
     if (codexEntries && codexEntries.length > 0) {
       newFileEntries.push(...codexEntries);
     }
@@ -1342,7 +1369,7 @@ async function install(opts) {
 
   // ── Hermes integration ────────────────────────────────────────────────────
   if (resolvedTools.includes('hermes')) {
-    const hermesEntries = await writeHermesConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
+    const hermesEntries = await writeHermesConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
     if (hermesEntries && hermesEntries.length > 0) {
       newFileEntries.push(...hermesEntries);
     }
@@ -1350,7 +1377,7 @@ async function install(opts) {
 
   // ── OpenCode integration ──────────────────────────────────────────────────
   if (resolvedTools.includes('opencode')) {
-    const openCodeEntries = await writeOpenCodeConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri);
+    const openCodeEntries = await writeOpenCodeConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
     if (openCodeEntries && openCodeEntries.length > 0) {
       newFileEntries.push(...openCodeEntries);
     }
@@ -1462,6 +1489,7 @@ async function install(opts) {
     dotnet: resolvedDotnet,
     electron: resolvedElectron,
     tauri: resolvedTauri,
+    strands: resolvedStrands,
     awsInfra: resolvedAwsInfra,
     unnamedPm: resolvedUnnamedPm,
     tmux: resolvedTmux,
@@ -1602,7 +1630,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
-async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none', resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false) {
+async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none', resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const stubEntries = [];
   const platformCfg = PLATFORMS[tool];
   if (!platformCfg) {
@@ -1705,6 +1733,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         if (!resolvedDotnet && f === 'dotnet.md') return false;
         if (!resolvedElectron && f === 'electron.md') return false;
         if (!resolvedTauri && f === 'tauri.md') return false;
+        if (!resolvedStrands && f === 'strands.md') return false;
         if (!resolvedAwsInfra && f === 'aws-infra.md') return false;
         if (!resolvedUnnamedPm && f === 'unnamed-pm.md') return false;
         return true;
@@ -1725,6 +1754,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         if (!resolvedDotnet) skipNotes.push('/dotnet');
         if (!resolvedElectron) skipNotes.push('/electron');
         if (!resolvedTauri) skipNotes.push('/tauri');
+        if (!resolvedStrands) skipNotes.push('/strands');
         if (!resolvedAwsInfra) skipNotes.push('/aws-infra');
         if (!resolvedUnnamedPm) skipNotes.push('/unnamed-pm');
         const skipNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
