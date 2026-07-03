@@ -287,6 +287,25 @@ function ClientComponent() {
 
 **Note**: Server Actions always use POST, so no HTTP caching. Prefer Route Handlers for cacheable reads.
 
+## Pagination
+
+For large or growing datasets, use cursor-based pagination, not `OFFSET`. `OFFSET` forces the database to scan and discard every skipped row, so the query gets slower as the page number grows; a cursor (typically the last row's id or a sort key) lets the database seek directly to the next page.
+
+```tsx
+// Bad: OFFSET gets slower as offset grows
+const posts = await db.post.findMany({
+  skip: (page - 1) * pageSize,
+  take: pageSize,
+});
+
+// Good: cursor-based, constant time regardless of page depth
+const posts = await db.post.findMany({
+  take: pageSize,
+  ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+  orderBy: { id: 'asc' },
+});
+```
+
 ## Quick Reference
 
 | Pattern | Use Case | HTTP Method | Caching |

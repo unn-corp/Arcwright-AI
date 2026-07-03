@@ -157,3 +157,44 @@ export function ClientForm({ onSubmit }: { onSubmit: (data: FormData) => Promise
 | Pass server action to client | Yes | - |
 | Pass `string/number/boolean` | Yes | - |
 | Pass plain object/array | Yes | - |
+
+## Canonical Pattern: Composing Server and Client Across a Boundary
+
+A realistic boundary crossing has three parts: a Server Component page that reads route state, a Suspense boundary that isolates the data-dependent subtree, and a Server Component that does the actual fetch and renders serializable props down to any Client Components.
+
+```tsx
+// app/products/page.tsx (Server Component)
+import { Suspense } from 'react'
+import { ProductList, ProductListSkeleton } from '@/components/products'
+
+interface SearchParams {
+  category?: string
+  sort?: 'price' | 'name' | 'date'
+  page?: string
+}
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
+
+  return (
+    <Suspense
+      key={JSON.stringify(params)}
+      fallback={<ProductListSkeleton />}
+    >
+      <ProductList
+        category={params.category}
+        sort={params.sort}
+        page={Number(params.page) || 1}
+      />
+    </Suspense>
+  )
+}
+```
+
+**The `key={JSON.stringify(params)}` trick**: without a key, React reuses the same Suspense subtree across filter/sort changes and the old list stays on screen while new data streams in behind it (stale content, no loading state). Keying the boundary on the serialized params forces React to remount the subtree and show `fallback` again whenever the params actually change.
+
+`ProductList` is itself a Server Component doing its own fetch, so no props need to cross into client code here at all. Client Components (an `AddToCartButton`, a filter form) sit further down the tree and only ever receive the plain, already-serializable values `ProductList` computed, never the raw fetch result.

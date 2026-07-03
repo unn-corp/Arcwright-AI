@@ -1,6 +1,6 @@
 ---
 name: next-best-practices
-description: Next.js best practices - file conventions, RSC boundaries, data patterns, async APIs, metadata, error handling, route handlers, image/font optimization, bundling
+description: Next.js and App Router best practices - file conventions, RSC boundaries and Server/Client composition, Server Actions, data patterns, caching strategies, async APIs, metadata, error handling, route handlers, streaming/Suspense, parallel routes, image/font optimization, bundling
 user-invocable: false
 ---
 
@@ -46,6 +46,12 @@ See [directives.md](./directives.md) for:
 - `'use client'`, `'use server'` (React)
 - `'use cache'` (Next.js)
 
+## Client Components
+
+See [client-components.md](./client-components.md) for:
+- Interactive components calling a Server Action with `useTransition`
+- Keeping the `'use client'` boundary as low as possible
+
 ## Functions
 
 See [functions.md](./functions.md) for:
@@ -75,6 +81,19 @@ See [route-handlers.md](./route-handlers.md) for:
 - GET handler conflicts with `page.tsx`
 - Environment behavior (no React DOM)
 - When to use vs Server Actions
+
+## Server Actions
+
+See [server-actions.md](./server-actions.md) for:
+- Auth check, try/catch, and cache invalidation together
+- FormData validation and redirect-on-success (progressive enhancement)
+
+## Caching Strategies
+
+See [caching-strategies.md](./caching-strategies.md) for:
+- Data cache options (`no-store`, `force-cache`, `revalidate`, `tags`)
+- Invalidating with `revalidateTag` vs `revalidatePath`
+- Route-level vs per-fetch cache scope
 
 ## Metadata & OG Images
 
@@ -130,10 +149,12 @@ See [hydration-error.md](./hydration-error.md) for:
 See [suspense-boundaries.md](./suspense-boundaries.md) for:
 - CSR bailout with `useSearchParams` and `usePathname`
 - Which hooks require Suspense boundaries
+- Streaming pattern for progressive rendering of independent sections
 
 ## Parallel & Intercepting Routes
 
 See [parallel-routes.md](./parallel-routes.md) for:
+- Non-modal parallel routes for independent dashboard panels
 - Modal patterns with `@slot` and `(.)` interceptors
 - `default.tsx` for fallbacks
 - Closing modals correctly with `router.back()`
@@ -150,4 +171,8 @@ See [self-hosting.md](./self-hosting.md) for:
 See [debug-tricks.md](./debug-tricks.md) for:
 - MCP endpoint for AI-assisted debugging
 - Rebuild specific routes with `--debug-build-paths`
+
+## Pitfalls
+
+See [pitfalls.md](./pitfalls.md) for a quick do's and don'ts checklist across all of the above.
 

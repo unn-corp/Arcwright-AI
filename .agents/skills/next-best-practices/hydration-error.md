@@ -72,6 +72,25 @@ function Input() {
 <div><p>Content</p></div>
 ```
 
+### Theme/Locale Providers That Read Browser State on Mount
+
+A client-side theme provider (dark mode detection, `localStorage` reads) commonly renders different attributes on the client than the server sent, tripping a hydration warning on the `<html>` or `<body>` tag even though the app is working correctly.
+
+```tsx
+// app/layout.tsx
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+```
+
+`suppressHydrationWarning` only silences the warning for that element's own attributes, it does not suppress mismatches in children, so it's safe to use on `<html>`/`<body>` for this specific case without hiding real bugs elsewhere in the tree.
+
 ### Third-party Scripts
 
 Scripts that modify DOM during hydration.

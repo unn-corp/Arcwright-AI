@@ -36,6 +36,57 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 ```
 
+## Dynamic Metadata with generateStaticParams
+
+For a dynamic route that's also pre-rendered at build time, pair `generateMetadata` with `generateStaticParams` and fill out the `openGraph`/`twitter` fields directly on the `Metadata` object (this is separate from the file-based `opengraph-image.tsx` convention below, use it when you already have an image URL and don't need Next.js to render one):
+
+```tsx
+// app/products/[slug]/page.tsx
+import { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+
+type Props = { params: Promise<{ slug: string }> }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  const product = await getProduct(slug)
+
+  if (!product) return {}
+
+  return {
+    title: product.name,
+    description: product.description,
+    openGraph: {
+      title: product.name,
+      description: product.description,
+      images: [{ url: product.image, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: product.description,
+      images: [product.image],
+    },
+  }
+}
+
+export async function generateStaticParams() {
+  const products = await db.product.findMany({ select: { slug: true } })
+  return products.map((p) => ({ slug: p.slug }))
+}
+
+export default async function ProductPage({ params }: Props) {
+  const { slug } = await params
+  const product = await getProduct(slug)
+
+  if (!product) notFound()
+
+  return <ProductDetail product={product} />
+}
+```
+
+`generateMetadata` and the page component both destructure the same `params`, so pair this with the `cache()` wrapper below to avoid fetching the product twice.
+
 ## Avoid Duplicate Fetches
 
 Use React `cache()` when the same data is needed for both metadata and page:

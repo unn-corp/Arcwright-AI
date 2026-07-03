@@ -106,6 +106,17 @@ export async function GET(request: Request) {
 }
 ```
 
+Typing the handler's first argument as `NextRequest` instead of the plain `Request` gives you `request.nextUrl.searchParams` directly, no manual `new URL(request.url)` needed:
+
+```tsx
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  const category = request.nextUrl.searchParams.get('category')
+  return NextResponse.json(await getProducts(category))
+}
+```
+
 ## Response Helpers
 
 ```tsx

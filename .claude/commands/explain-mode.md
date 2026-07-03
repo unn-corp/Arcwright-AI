@@ -16,15 +16,14 @@ Opposite dial from `/caveman`.
 
 Determine mode from `$ARGUMENTS`:
 
-### `explain` or empty → Explanatory Mode
-Load `.agents/skills/output-style-explanatory/SKILL.md`.
-Attach one-sentence "why" rationale inline to every non-trivial action.
-Format: `<action> — <why>`. Persist for the session.
+### `explain` or empty → Explain Mode
+Load `.agents/skills/output-style-explanatory/SKILL.md` and run its **explain** mode:
+attach a one-sentence "why" rationale inline to every non-trivial action. Persist for the session.
 
-### `learn` → Learning Mode
-Load `.agents/skills/output-style-learning/SKILL.md`.
-Explain concepts on first encounter (2–4 sentences), leave LEARN MORE checkpoints after
-meaningful steps, name recognizable patterns. Persist for the session.
+### `learn` → Learn Mode
+Load `.agents/skills/output-style-explanatory/SKILL.md` and run its **learn** mode:
+explain mode plus concept explanations on first encounter, LEARN MORE checkpoints after
+meaningful steps, and pattern naming. Persist for the session.
 
 ### `off` → Deactivate
 Return to standard output style (no explicit rationale unless asked).

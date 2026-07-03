@@ -2,6 +2,50 @@
 
 Parallel routes render multiple pages in the same layout. Intercepting routes show a different UI when navigating from within your app vs direct URL access. Together they enable modal patterns.
 
+## Non-Modal Parallel Routes (Independent Dashboard Panels)
+
+Parallel routes don't require interception at all. The simplest use case is a layout with multiple independently-loading panels, each with its own `page.tsx` and `loading.tsx`, rendered as named slots (`@slot`) passed as props to the layout.
+
+```tsx
+// app/dashboard/layout.tsx
+export default function DashboardLayout({
+  children,
+  analytics,
+  team,
+}: {
+  children: React.ReactNode
+  analytics: React.ReactNode
+  team: React.ReactNode
+}) {
+  return (
+    <div className="dashboard-grid">
+      <main>{children}</main>
+      <aside className="analytics-panel">{analytics}</aside>
+      <aside className="team-panel">{team}</aside>
+    </div>
+  )
+}
+
+// app/dashboard/@analytics/page.tsx
+export default async function AnalyticsSlot() {
+  const stats = await getAnalytics()
+  return <AnalyticsChart data={stats} />
+}
+
+// app/dashboard/@analytics/loading.tsx
+export default function AnalyticsLoading() {
+  return <ChartSkeleton />
+}
+
+// app/dashboard/@team/page.tsx
+export default async function TeamSlot() {
+  const members = await getTeamMembers()
+  return <TeamList members={members} />
+}
+```
+
+Each slot streams in independently: a slow `@analytics` fetch shows `ChartSkeleton` without blocking `@team` or `children` from rendering. This is the pattern to reach for when the goal is independent loading states for sibling panels, not a modal, no `(.)` interceptor or `default.tsx` gymnastics required beyond the usual parallel-route rule that every slot still needs a `default.tsx` for hard navigation (see below).
+
 ## File Structure
 
 ```

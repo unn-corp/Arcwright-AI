@@ -71,7 +71,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
       - Every task/subtask must be covered by comprehensive unit tests before marking an item complete
       - Invoke all applicable skills from _agents/skills/ or .agents/skills/ — their patterns take precedence over generic approaches.
       - Full-stack ownership per epic: implement backend + frontend + tests in one agent run. Do NOT wait for another agent to handle "the frontend part". Own the complete story end-to-end.
-      - Specifically for this project, always check for: caveman, subagent-driven-development, redis-best-practices, audit-website, websocket-engineer, next-best-practices, writing-skills, typescript-best-practices, python-backend, python-performance, python-fundamentals, react-expert, frontend-responsive-design-standards, security-best-practices, nextjs-app-router-patterns, postgresql-optimization, java-fundamentals, java-performance.
+      - Specifically for this project, always check for: caveman, subagent-driven-development, redis-best-practices, audit-website, websocket-engineer, next-best-practices, writing-skills, typescript-best-practices, python-backend, python-performance, python-fundamentals, react-expert, frontend-responsive-design-standards, security-best-practices, postgresql-optimization, java-fundamentals, java-performance.
       - Reuse research context from create-story when available (research-context-{story-key}.md)
       - After implementation: dispatch parallel review agents (dev + UX if UI + adversarial min 50 items), auto-fix all non-critical findings, run party mode final review, then loop to next story
     </principles>

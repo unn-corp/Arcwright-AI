@@ -8,8 +8,8 @@ Apply Next.js 14+ App Router patterns to the current task.
 
 ## Instructions
 
-1. Load `.agents/skills/nextjs-app-router-patterns/SKILL.md` for the full reference.
-2. Apply the skill's guidance — Server Components, streaming, parallel routes, intercepting routes, advanced data fetching patterns.
+1. Load `.agents/skills/next-best-practices/SKILL.md` and its App Router sub-files (`rsc-boundaries.md`, `client-components.md`, `server-actions.md`, `parallel-routes.md`, `suspense-boundaries.md`, `caching-strategies.md`, `route-handlers.md`) for the full reference.
+2. Apply the skill's guidance: Server Components, client boundaries, Server Actions, streaming, parallel/intercepting routes, caching, and advanced data fetching patterns.
 
 ## Arguments
 
