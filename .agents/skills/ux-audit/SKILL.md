@@ -166,6 +166,7 @@ Trigger when: diff contains zero `.tsx`, `.jsx`, `.css` files.
 ## Reference Documents
 
 Always read before auditing:
+- `DESIGN.md` (repo root) — the canonical visual design system (frontmatter tokens are normative). See the `design-md` skill. Audit hardcoded colors/typography/spacing/radius against its actual token VALUES, not just semantic names. If a UI-touching change ships with no `DESIGN.md`, raise a Major finding: the project has no design-system source of truth.
 - `docs/frontend/styling-standards.md` — design tokens, component catalog, dialog patterns
 - `docs/frontend/form-patterns.md` — React Hook Form, validation patterns
 - `docs/frontend/page-layout-patterns.md` — PageHeader/PageBody, tabbed routing

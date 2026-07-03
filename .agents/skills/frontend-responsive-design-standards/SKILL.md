@@ -7,6 +7,8 @@ description: Mobile-first responsive layouts — fluid containers, flexible unit
 
 **Rule:** Mobile-first development with consistent breakpoints, fluid layouts, relative units, and touch-friendly targets.
 
+**Design system first:** Before applying the stock scales below, check for `DESIGN.md` at the repo root (see the `design-md` skill). If it exists, its `spacing` and `rounded` token values are the project's scale and win over the stock Tailwind defaults here; use its concrete values. If it is missing on a project doing real UI work, one should be created (the `design-md` skill covers this).
+
 ## Front-end Copy & UI: HARD RULES (non-negotiable)
 
 These override any template, design suggestion, or generated output.

@@ -86,6 +86,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
 
       <!-- UX Design/Frontend critical process rules -->
       <r>CRITICAL: Check for 'docs/design/system-architecture.md' on EVERY invocation involving UI changes, initialize it if it is missing.</r>
+      <r>CRITICAL: Follow the `design-md` skill on EVERY invocation involving visual design (colors, typography, spacing, radius, elevation, components). Check for `DESIGN.md` at the repo root: if it exists, read it in full first and treat its frontmatter tokens as normative; if it is missing, create it at the repo root in the DESIGN.md format with ALL tokens and values written inline in the frontmatter. Keep it updated whenever a new token or component pattern is introduced. `DESIGN.md` is the sole canonical visual-design source of truth.</r>
       <r>CRITICAL: Execute a 'find_by_name' for 'package.json', 'next.config.js' or framework-equivalent to definitively identify stack before guessing router or entry point paths.</r>
       <r>CRITICAL: Explicitly search via 'find_by_name' or 'grep_search' for existing UI pattern libraries, catalogs, Component Library pages (e.g. `/components`, Storybook, index) BEFORE proposing new designs. IF FOUND, THIS IS THE ABSOLUTE SOURCE OF TRUTH. New/edited components MUST be registered here.</r>
       <r>CRITICAL: Search for design token definitions (`tailwind.config.ts`, `globals.css`, `theme.ts`) to map colors to semantic names exactly.</r>

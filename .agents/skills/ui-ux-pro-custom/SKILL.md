@@ -88,6 +88,13 @@ Extract key information from user request:
 - **Industry**: healthcare, fintech, gaming, education, etc.
 - **Stack**: React, Vue, Next.js, or default to `html-tailwind`
 
+### Step 0: Check for an existing DESIGN.md (REQUIRED first)
+
+Before generating anything, check for `DESIGN.md` at the repo root (see the `design-md` skill).
+If it exists, it is the canonical design system: use its frontmatter tokens and prose as the
+source of truth and skip regeneration unless the user explicitly asks for a rebrand. Only
+generate a new design system (Step 2) when `DESIGN.md` is absent or a rebrand is requested.
+
 ### Step 2: Generate Design System (REQUIRED)
 
 **Always start with `--design-system`** to get comprehensive recommendations with reasoning:
@@ -121,6 +128,16 @@ This creates:
 
 - `design-system/MASTER.md` — Global Source of Truth with all design rules
 - `design-system/pages/` — Folder for page-specific overrides
+
+### Step 2c: Emit the canonical DESIGN.md (REQUIRED)
+
+Transcribe the generated design system into a `DESIGN.md` at the repo root, following the
+`design-md` skill: YAML frontmatter with ALL tokens and their concrete values (colors incl.
+required `primary`, typography, rounded, spacing, components) plus the markdown body sections
+(Overview, Colors, Typography, Layout, Elevation & Depth, Shapes, Components, Do's and Don'ts,
+in that order). `DESIGN.md` is the sole canonical visual-design source of truth; the
+`design-system/pages/<page>.md` overrides above stay as page-specific deviations but use the
+same tokens-plus-prose shape and defer to root `DESIGN.md`.
 
 **With page-specific override:**
 

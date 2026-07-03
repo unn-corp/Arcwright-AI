@@ -25,7 +25,7 @@ allowed-tools: Bash, Read, Edit, Write, Glob
 Compare the implementation against reference screenshots or photos already in memory. Use when you have a visual target (URL screenshots captured earlier, or provided photo paths).
 
 ### Mode 2 — Match Intent (Verify)
-No reference. Verify the build renders correctly, looks polished, and contains no visual regressions at both viewports. Use after implementing any UI from a spec or description.
+Verify the build renders correctly, looks polished, and contains no visual regressions at both viewports. Use after implementing any UI from a spec or description. First check for `DESIGN.md` at the repo root (see the `design-md` skill): if it exists, score Colour, Typography, Components, and Shapes against its actual token values and its prose (Overview, Do's and Don'ts) rather than a generic "looks polished" bar, and cite the specific token or prose line any correction violates. Only fall back to a subjective intent bar when no `DESIGN.md` exists.
 
 ---
 
