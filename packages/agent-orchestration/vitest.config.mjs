@@ -8,6 +8,13 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['test/**/*.test.js'],
+    // Run test files serially. The integration + platform suites share one
+    // mutable resource (the built src/ tree): install.integration.test.js runs
+    // `node build/build.js` which wipes and rebuilds src/, while the platform
+    // writers read/write it. Parallel files race on that (ENOTEMPTY on the wipe,
+    // or missing-file assertions on a concurrent read). Serial execution removes
+    // the race; the suite is small so the wall-clock cost is negligible.
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       include: ['lib/filter.js', 'lib/customization.js', 'lib/installer.js', 'lib/managed-md.js'],
