@@ -214,8 +214,9 @@ function adaptPromptForKiro(body) {
 function buildGenericPackage() {
   console.log('📦  Building generic package → packages/agent-orchestration/src/');
 
-  // Wipe and recreate src/
-  if (fs.existsSync(PKG_SRC)) fs.rmSync(PKG_SRC, { recursive: true });
+  // Wipe and recreate src/. force + retries: on reused CI workspaces (self-hosted
+  // runners) recursive rmSync can race to ENOTEMPTY on nested dirs; retry through it.
+  if (fs.existsSync(PKG_SRC)) fs.rmSync(PKG_SRC, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   fs.mkdirSync(PKG_SRC, { recursive: true });
 
   let totalCopied  = 0;
