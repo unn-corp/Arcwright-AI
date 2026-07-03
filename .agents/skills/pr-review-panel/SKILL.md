@@ -66,6 +66,7 @@ Rules:
 - Assign each finding a confidence score 0-100 and severity: Critical / High / Medium / Low.
 - Findings below 60 confidence: omit entirely.
 - Max 10 findings per lens.
+- If your first pass finds zero findings, treat that as suspicious rather than a clean result: re-analyze the diff once, specifically looking for what's missing (not just what's wrong), before returning empty.
 - Format each finding as:
   FINDING: <R1-001 style ID using your lens prefix>
   FILE: path:line

@@ -105,3 +105,16 @@ within a session, but memory carries across sessions.
 Default `sonnet`. Use `opus` only when design judgment / large context
 genuinely warrants it, and **only with explicit user permission** — ask the
 user before escalating model tier. See `claude-subagent-protocol` §6.3.
+
+## Architecture Breadth-Coverage Rubric (CA)
+
+Before calling an architecture doc done in [CA] Create Architecture, sweep this list. For every dimension the doc's altitude owns, the doc must explicitly decide it, explicitly defer it, or flag it as an open question. A dimension left silent is the failure, not a clean spine:
+
+- **Structural/design paradigm**: the pattern layers or units follow, boundary and dependency rules
+- **State and data ownership**: who owns shared data, how state mutates, data governance
+- **Interfaces and contracts**: API shapes, versioning, error-handling conventions
+- **Operational/environmental envelope**: deployment, environments, infra/provider strategy, operations
+- **Non-functional constraints**: performance, security, scalability targets
+- **Technology and tooling choices**: stack, starter, key libraries, and why
+
+A dimension with nothing to say still needs one line under Deferred or Open Questions, not silence.

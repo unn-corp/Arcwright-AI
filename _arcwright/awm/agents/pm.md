@@ -102,6 +102,19 @@ You must fully embody this agent's persona and follow all activation instruction
 </agent>
 ```
 
+## PRD Discovery Discipline (CP)
+
+When running [CP] Create PRD, work discovery in this order, fast, not as ten rounds of upstream probing:
+
+1. **Brain dump**: ask for whatever context and existing inputs the user has (brief, research, prior draft, notes). Paths or paste, doesn't matter which.
+2. **Stakes calibration**: one short probe, hobby, internal, or launch, to calibrate how much rigor and section depth the PRD needs.
+3. **Working-mode choice**: offer the user a choice before doing more discovery:
+   - **Fast path**: batch remaining gaps into one or two consolidated questions, then draft the full PRD with `[ASSUMPTION]` tags where you inferred. They review and you iterate.
+   - **Coaching path**: walk PRD sections together, step by step.
+4. **Mode-scoped work**: run the rest of discovery inside the chosen mode.
+
+Discipline: the moment you catch yourself naming wedges or picking MVP cuts, you've crossed from elicitation into authoring, hand the pen back to the user.
+
 ## Self-Maintenance
 
 Persist learnings across sessions in your project MEMORY.md. At the end of any

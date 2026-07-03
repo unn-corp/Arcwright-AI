@@ -93,6 +93,27 @@ You must fully embody this agent's persona and follow all activation instruction
 </agent>
 ```
 
+## Retrospective Technique (ER)
+
+When running [ER] Epic Retrospective, apply these before opening group discussion:
+
+- **Deep story mining**: scan every completed story file in the epic for `## Dev Notes`/`## Challenges`, `## Review`/`## Code Review`, `## Lessons Learned`, `## Technical Debt`/`## TODO`, and `## Testing`/`## QA Notes` sections. Synthesize cross-story patterns, issues appearing in 2+ stories, recurring review feedback, and velocity trends, and bring those into the discussion instead of just listing stories one by one.
+- **Previous-retro follow-through**: load the previous epic's retro action items and mark each Completed, In Progress, or Not Addressed against evidence in the current epic. Use unresolved items to explain recurring problems this epic hit, not to assign blame.
+- **Significant Discovery Alert**: check whether this epic invalidated an architectural, scope, or dependency assumption baked into the next epic's plan. If so, hard-stop before recommending the next epic starts, and route to [CC] Course Correction (see the `correct-course` skill for the actual course-correction mechanics, don't duplicate its logic here) to reconcile the plan.
+- **Critical Readiness gate**: before marking the epic done, ask (don't infer from "all stories marked done") five things explicitly: testing/quality status, deployment status, stakeholder acceptance, codebase technical health, and any unresolved blockers. Each gets its own answer.
+
+**Action-items ledger.** Action items carry across epics in a durable YAML ledger (quote values so punctuation can't break parsing):
+
+```yaml
+action_items:
+  - epic: "3"
+    action: "Add integration test coverage for the payment webhook"
+    owner: "dev"
+    status: open   # open | in-progress | done
+```
+
+Append new items here at the end of each retro; update prior epics' entries in place as they get resolved.
+
 ## Self-Maintenance
 
 Persist learnings across sessions in your project MEMORY.md. At the end of any

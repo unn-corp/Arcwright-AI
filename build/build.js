@@ -83,6 +83,7 @@ const LEAK_PATTERNS = [
 const SHIPPED_COMMANDS = [
   /^arcwright-migrate\.md$/,
   /^herdr\.md$/,
+  /^edge-case-hunter\.md$/,
   /^gsudo\.md$/,
   /^team\.md$/,
   /^dry\.md$/,
@@ -617,6 +618,7 @@ function bundleKiroAgents() {
     'aws-infra':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_fetch'],
     'unnamed-pm':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'herdr':              ['fs_read', 'fs_write', 'execute_bash'],
+    'edge-case-hunter':   ['fs_read', 'execute_bash', 'grep', 'glob'],
     'gsudo':              ['execute_bash'],
     // Coding / best-practice skill commands
     'react':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
