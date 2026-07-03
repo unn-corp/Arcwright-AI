@@ -146,9 +146,15 @@ export const skills: Skill[] = [
     category: 'devops',
   },
   {
+    name: 'herdr',
+    slug: 'herdr',
+    description: 'Herdr terminal workspace reference: sessions, workspaces, tabs, panes, agent spawning, wait-on-status, and the plugin catalog. Includes one optional section on watching in-process agents in panes.',
+    category: 'devops',
+  },
+  {
     name: 'tmux',
     slug: 'tmux',
-    description: 'Pane/window/session mechanics + opt-in visibility for watching in-process agents. See the "Watching agents in panes (opt-in)" section.',
+    description: 'Pane/window/session mechanics reference for teams migrating an existing tmux setup. Superseded by the herdr skill for new opt-in visibility usage.',
     category: 'devops',
   },
   // Quality / Debug
@@ -210,7 +216,7 @@ export const skills: Skill[] = [
   {
     name: 'Claude Subagent Protocol',
     slug: 'claude-subagent-protocol',
-    description: 'In-process agent orchestration: Agent tool + SendMessage reuse + Session Agent Registry. The default orchestration method; tmux is opt-in visibility only. Replaces the retired tmux-protocol skill.',
+    description: 'In-process agent orchestration: Agent tool + SendMessage reuse + Session Agent Registry. The default orchestration method; Herdr is opt-in visibility only. Replaces the retired tmux-protocol skill.',
     category: 'workflow',
   },
   {

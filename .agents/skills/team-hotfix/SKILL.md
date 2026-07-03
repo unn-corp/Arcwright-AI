@@ -5,7 +5,7 @@ description: "Rapid Response — emergency fix with strict guardrails (max 4 fil
 
 # Agent Team: Hotfix — Rapid Response
 
-> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Dev` and `Security` roles are each spawned once and recorded in the Session Agent Registry; their results are passed forward as handoff context. tmux split-pane variant is opt-in only (see step blocks).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Dev` and `Security` roles are each spawned once and recorded in the Session Agent Registry; their results are passed forward as handoff context. herdr pane variant is opt-in (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -143,26 +143,6 @@ Capture the returned `agentId`, write the `dev` row, then capture the result int
 
 ---
 
-#### tmux Variant (opt-in visibility only)
-
-For opt-in pane visibility, see the [`tmux`](../tmux/SKILL.md) skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process Agent tool + SendMessage flow inside it is still governed by the `claude-subagent-protocol` skill. Note: pane snippets may still reference `AGENT_SIGNAL::TASK_DONE` for tmux-internal signaling — this is opt-in only and does **not** apply in the default in-process flow.
-
-```bash
-# 1. Split Dev pane (top-right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Dev agent in the Hotfix (Rapid Response) team managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/dev.md. GUARDRAILS: touch MAX 4 files, isolated subsystem only, no cross-cutting changes. Your task queue comes from the master pane. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 2. Split Security pane (bottom-right)
-tmux split-window -v -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the Security reviewer in the Hotfix (Rapid Response) team managed by Conductor (master-orchestrator). Activate with a security-only review lens. In this team: review the Dev fix for security regressions, new vulnerabilities, or unsafe patterns introduced by the fix. You are NOT reviewing for architectural quality. Your task queue comes from the master pane. Wait for your first task.'"
-sleep 8
-
-# 3. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
-```
-
----
-
 ### 3. Security Review
 
 **What this step does:** Security reviews the fix for regressions and new vulnerabilities — not architectural quality.
@@ -198,16 +178,6 @@ Capture the returned `agentId`, write the `security` row, then capture the resul
 
 ---
 
-#### tmux Variant (opt-in visibility only)
-
-For opt-in pane visibility, see the [`tmux`](../tmux/SKILL.md) skill's "Watching agents in panes (opt-in)" section. Note: pane snippets may still reference `AGENT_SIGNAL::TASK_DONE` for tmux-internal signaling — this is opt-in only and does **not** apply in the default in-process flow.
-
-```bash
-tmux send-keys -t {security_pane_id} "TASK-{id}-review: Review hotfix for security regressions only. Files changed: {$STEP_2_OUTPUT}. Issue: {issue_description}. Signal TASK_DONE::approved or TASK_DONE::blocked." Enter
-```
-
----
-
 ## Team Wind-down
 
 Rapid Response has no pane to close in the default in-process flow. To wind down:
@@ -217,7 +187,7 @@ Rapid Response has no pane to close in the default in-process flow. To wind down
 3. **Close the registry** by renaming the file to `agent-registry.closed.md` (or deleting) at session end. Live agents end with the session.
 4. **New hotfix in same session?** If the new issue is disjoint, spawn fresh for both roles and replace the registry rows. If related, decide per-row.
 
-There is no `kill-pane` / `tmux send-keys "/exit"` analogue in-process. See `claude-subagent-protocol` §12 for the full wind-down model.
+There is no pane-close analogue in-process. See `claude-subagent-protocol` §12 for the full wind-down model.
 
 ## Kiro Pipeline
 

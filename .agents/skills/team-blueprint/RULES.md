@@ -16,7 +16,7 @@ Load `claude-subagent-protocol` for the full protocol. This is the team-specific
 
 ## Non-negotiables
 
-1. **In-process is the default.** `Agent` tool for first use; `SendMessage` for the PM's later steps. tmux is opt-in visibility only.
+1. **In-process is the default.** `Agent` tool for first use; `SendMessage` for the PM's later steps. herdr pane visibility is opt-in only.
 2. **Sonnet-first, always.** Default all three roles to `sonnet`. Architect may use `opus` **only with explicit user permission** (ask before spawning — see `claude-subagent-protocol` §6.3). PM and Analyst stay on `sonnet`.
 3. **No legacy signals.** `AGENT_SIGNAL`, `STEP COMPLETE`, `PEER_SIGNAL`, `STATUS_CHECK`, the retired pane-based orchestration skill, and `session-state.md` pane tables — all retired in-process.
 4. **Reuse over re-spawn.** PM is reused twice (steps 2 and 4) via `SendMessage` to the same `agentId`. Don't spawn a fresh PM mid-team.

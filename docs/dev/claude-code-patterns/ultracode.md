@@ -168,7 +168,8 @@ banned — they would break the cache.)
 ## Relevance to Arcwright
 
 Ultracode is the native engine for the kind of fan-out Arcwright tracks and teams
-currently coordinate with tmux panes and `.agents/orchestration/session-*.md` files:
+coordinate in-process (`Agent` tool + `SendMessage` reuse via the Session Agent
+Registry), with Herdr panes as an opt-in visibility layer:
 
 | Arcwright pattern | Ultracode shape |
 |-------------------|-----------------|

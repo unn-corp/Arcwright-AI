@@ -1,12 +1,12 @@
 ---
-description: Choose and spawn an agent team — 17 pre-built compositions, running in-process via the Agent tool + SendMessage reuse. tmux split-pane visibility is opt-in only.
+description: Choose and spawn an agent team — 17 pre-built compositions, running in-process via the Agent tool + SendMessage reuse. herdr split-pane visibility is opt-in only.
 ---
 
 # /team — Spawn an Agent Team
 
 Arcwright provides 17 pre-built agent teams. Each team is a coordinated group of specialist agents working toward a specific kind of outcome.
 
-**Default mode is in-process** — every team runs via the `Agent` tool with `SendMessage` reuse (governed by a Session Agent Registry, as defined in the [`claude-subagent-protocol`](../.agents/skills/claude-subagent-protocol/SKILL.md) skill). tmux split-pane visibility is **opt-in only** — only when the user explicitly asks for it (e.g. "spawn", "open agents", "I want to watch") AND `$TMUX` is set. The pane is a viewing surface; the in-process orchestration inside it is still governed by the protocol skill.
+**Default mode is in-process** — every team runs via the `Agent` tool with `SendMessage` reuse (governed by a Session Agent Registry, as defined in the [`claude-subagent-protocol`](../.agents/skills/claude-subagent-protocol/SKILL.md) skill). herdr split-pane visibility is **opt-in only** — only when the user explicitly asks for it (e.g. "spawn", "open agents", "I want to watch") AND `$HERDR_ENV` is set. The pane is a viewing surface; the in-process orchestration inside it is still governed by the protocol skill.
 
 The old `tmux-protocol` skill (AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling) is retired. Do not reintroduce those signals.
 
@@ -20,9 +20,9 @@ Present the table below to the user and ask which team they want to spawn. If th
 
 Read `.agents/skills/team-{code}/SKILL.md` for the full spawn protocol, agent chain, registry path, model/policy, and wind-down rules.
 
-### Step 3: (Opt-in) tmux pane visibility
+### Step 3: (Opt-in) herdr pane visibility
 
-If the user has explicitly asked for split-pane visibility AND `$TMUX` is set, also read `.agents/skills/tmux/SKILL.md` (the "Watching agents in panes (opt-in)" section) for pane mechanics. The in-process flow inside each pane is still governed by the team skill + `claude-subagent-protocol`. If the user did not ask for pane visibility, skip this step — in-process is the path.
+If the user has explicitly asked for split-pane visibility AND `$HERDR_ENV` is set, also read `.agents/skills/herdr/SKILL.md` (the "Watching agents in panes (opt-in)" section) for pane mechanics. The in-process flow inside each pane is still governed by the team skill + `claude-subagent-protocol`. If the user did not ask for pane visibility, skip this step — in-process is the path.
 
 ### Step 4: Spawn the Team
 
@@ -31,7 +31,7 @@ If the user has explicitly asked for split-pane visibility AND `$TMUX` is set, a
   - If the role is already in the registry and the task is on the same scope → `SendMessage(to: <agentId>, ...)` to reuse the existing agent.
   - Pass handoff context from prior step outputs into the next prompt's `## Inputs` section.
   - The master orchestrator owns the loop. Sequential handoff is blocking — wait for each Agent call to return before proceeding.
-- **Opt-in (tmux):** open a tmux pane for each role per the team skill's tmux variant block, and register the panes in the session file. Pane content is still driven by the in-process flow above.
+- **Opt-in (herdr):** open a herdr pane for each role per the team skill's herdr variant block, and register the panes in the session file. Pane content is still driven by the in-process flow above.
 
 ---
 

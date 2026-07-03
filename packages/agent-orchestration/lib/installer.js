@@ -15,7 +15,6 @@ const os = require('os');
 const { execSync } = require('child_process');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
-const { setupTmux } = require('./tmuxInstaller');
 const { detectPlatform } = require('./platform');
 const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
 
@@ -177,13 +176,13 @@ async function setupOpenRouterLaunchers(platform, homes, chalk) {
     ? path.join(winHome, 'bin')
     : winHome;
 
-  const mkCmd = (tmuxFn) =>
-    `@echo off\n${editNote}\nwsl.exe -d ${distro} -- bash -ic "${tmuxFn}"\n`;
+  const mkCmd = (herdrFn) =>
+    `@echo off\n${editNote}\nwsl.exe -d ${distro} -- bash -ic "${herdrFn}"\n`;
   const cmds = [
-    { name: 'claude-glm.cmd',     body: mkCmd('tmux-claude-glm') },
-    { name: 'claude-minimax.cmd', body: mkCmd('tmux-claude-minimax') },
-    { name: 'claude-qwen.cmd',    body: mkCmd('tmux-claude-qwen') },
-    { name: 'claude-sub.cmd',     body: mkCmd('tmux-claude') },
+    { name: 'claude-glm.cmd',     body: mkCmd('herdr-claude-glm') },
+    { name: 'claude-minimax.cmd', body: mkCmd('herdr-claude-minimax') },
+    { name: 'claude-qwen.cmd',    body: mkCmd('herdr-claude-qwen') },
+    { name: 'claude-sub.cmd',     body: mkCmd('herdr-claude') },
   ];
   for (const { name, body } of cmds) {
     const dest = path.join(cmdTargetDir, name);
@@ -202,10 +201,10 @@ async function setupOpenRouterLaunchers(platform, homes, chalk) {
   const psBlock  = [
     PS_START,
     `# Edit "-d ${distro}" below if you switch WSL distros.`,
-    `function claude-glm     { wsl.exe -d ${distro} -- bash -ic "tmux-claude-glm" }`,
-    `function claude-minimax { wsl.exe -d ${distro} -- bash -ic "tmux-claude-minimax" }`,
-    `function claude-qwen    { wsl.exe -d ${distro} -- bash -ic "tmux-claude-qwen" }`,
-    `function claude-sub     { wsl.exe -d ${distro} -- bash -ic "tmux-claude" }`,
+    `function claude-glm     { wsl.exe -d ${distro} -- bash -ic "herdr-claude-glm" }`,
+    `function claude-minimax { wsl.exe -d ${distro} -- bash -ic "herdr-claude-minimax" }`,
+    `function claude-qwen    { wsl.exe -d ${distro} -- bash -ic "herdr-claude-qwen" }`,
+    `function claude-sub     { wsl.exe -d ${distro} -- bash -ic "herdr-claude" }`,
     PS_END,
     '',
   ].join('\n');
@@ -703,7 +702,7 @@ async function updateGitignore(projectRoot, mode, chalk) {
       '_arcwright-output/',
       '.agents/skills/',
       '.claude/commands/arcwright-*.md',
-      '.claude/commands/tmux.md',
+      '.claude/commands/herdr.md',
       '.claude/commands/gsudo.md',
       '.claude/commands/team.md',
       '.claude/commands/dry*.md',
@@ -966,7 +965,7 @@ async function install(opts) {
     const platformChoices = await multiselect({
       message: 'Which AI tools / IDEs are you installing for?',
       options: [
-        { value: 'claude-code',     label: 'Claude Code',     hint: 'agents, CLAUDE.md, settings.json, tmux setup' },
+        { value: 'claude-code',     label: 'Claude Code',     hint: 'agents, CLAUDE.md, settings.json, herdr skill' },
         { value: 'kiro',            label: 'Kiro (IDE + CLI)', hint: '.kiro/skills/, .kiro/steering/' },
         { value: 'codex',           label: 'Codex',            hint: 'AGENTS.md, .agents/skills/' },
         { value: 'hermes',          label: 'Hermes',           hint: '~/.hermes/skills/, AGENTS.md (project only)' },
@@ -981,7 +980,7 @@ async function install(opts) {
 
     // Agent teams opt-in — 17 team-* skills + /team slash command
     const teamsChoice = await confirm({
-      message: 'Install agent teams? (17 pre-built multi-agent compositions + /team command — requires tmux for split-pane mode)',
+      message: 'Install agent teams? (17 pre-built multi-agent compositions + /team command, in-process by default)',
       initialValue: existingManifest?.teams !== false,
     });
     if (isCancel(teamsChoice)) { process.exit(0); }
@@ -1035,15 +1034,7 @@ async function install(opts) {
     if (isCancel(unnamedPmChoice)) { process.exit(0); }
     resolvedUnnamedPm = unnamedPmChoice;
 
-    // tmux setup opt-in — runs for both project and global installs (tmux config is always global)
-    if (resolvedTools.includes('claude-code') && resolvedTmux === null) {
-      const tmuxChoice = await confirm({
-        message: 'Set up tmux config? (writes ~/.tmux.conf + ~/.config/tmux/ — for AI agent workflows with Claude Code)',
-        initialValue: existingManifest?.tmux !== false,
-      });
-      if (isCancel(tmuxChoice)) { process.exit(0); }
-      resolvedTmux = tmuxChoice;
-    }
+    // tmux setup removed — Herdr replaces it (herdr.dev). No prompt.
 
     // OpenRouter launchers opt-in — off by default
     if (resolvedTools.includes('claude-code') && resolvedOpenrouterLaunchers === null) {
@@ -1335,10 +1326,7 @@ async function install(opts) {
     }
   }
 
-  // ── tmux setup (claude-code only; runs for both project and global installs) ─
-  if (resolvedTmux && resolvedTools.includes('claude-code')) {
-    await setupTmux(projectRoot, chalk, platform);
-  }
+  // tmux setup removed — Herdr replaces it (herdr.dev; see the `herdr` skill).
 
   // ── WSL audio (Claude Code /voice — WSL2 + WSLg only, idempotent) ─────────
   if (resolvedTools.includes('claude-code')) {
@@ -1545,11 +1533,11 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         updated += arcwrightEntry;
         changed = true;
       }
-      // Only add tmux entry for Claude Code (the only tool with tmux-native pane support)
-      // Detect the OLD tmux-aware header (from pre-stage-2 installs) OR the absence
-      // of the new header — covers both fresh installs and updates where the
-      // section content has changed but the marker hasn't moved yet.
+      // Only add the orchestration entry for Claude Code. Treat either the new
+      // Herdr heading or the older tmux-opt-in heading as "already present" so an
+      // in-place update does not double-add the section.
       if (tool === 'claude-code'
+          && !existing.includes('## Agent Spawning (in-process, Herdr pane opt-in)')
           && !existing.includes('## Agent Spawning (in-process, tmux opt-in)')) {
         updated += tmuxEntry;
         changed = true;
@@ -1842,17 +1830,18 @@ function buildArcwrightRulesEntry(modules) {
 function buildTmuxEntry() {
   return [
     '',
-    '## Agent Spawning (in-process, tmux opt-in)',
+    '## Agent Spawning (in-process, Herdr pane opt-in)',
     '',
     'Default orchestration is **in-process** via the `Agent` tool + `SendMessage`',
     'reuse. See `.agents/skills/claude-subagent-protocol/SKILL.md` for the full',
     'protocol (Session Agent Registry, sonnet-first, permission-before-opus).',
     '',
-    '`tmux` is **opt-in visibility only** — load `.agents/skills/tmux/SKILL.md`',
+    '`herdr` is **opt-in visibility only** — load `.agents/skills/herdr/SKILL.md`',
     '("Watching agents in panes" section) only when the user has explicitly asked',
-    'for split-pane visibility AND `$TMUX` is set. The pane is just a viewing',
-    'surface; the in-process orchestration inside it is still governed by the',
-    '`claude-subagent-protocol` skill.',
+    'for split-pane visibility AND `$HERDR_ENV` is set. Spawn with',
+    '`herdr agent start`, wait with `herdr wait agent-status`. The pane is just a',
+    'viewing surface; the in-process orchestration inside it is still governed by',
+    'the `claude-subagent-protocol` skill.',
     '',
     'The old `tmux-protocol` skill (AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling)',
     'is retired. Do not reintroduce those signals.',
@@ -2226,7 +2215,7 @@ async function uninstall(opts = {}) {
 }
 
 module.exports = {
-  install, status, setupTmux, uninstall,
+  install, status, uninstall,
   // Internal helpers exported for unit testing (not part of the public CLI API).
   _internal: {
     sha256, escapeRe, detectBmad, getHomes, resolveToolPath,

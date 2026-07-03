@@ -1,5 +1,5 @@
 # Claude Code multi-provider launchers
-# Source this from ~/.bashrc. Provides provider-aware launchers + tmux variants.
+# Source this from ~/.bashrc. Provides provider-aware launchers + Herdr session variants.
 # Every launcher runs `claude --dangerously-skip-permissions`.
 #
 # Installed by @arcwright-ai/agent-orchestration
@@ -64,14 +64,18 @@ claude-qwen() { claude-or "qwen/qwen3-coder" "$@"; }
 # --- Plain Anthropic subscription (no third-party routing) ---
 claude-sub() { claude --dangerously-skip-permissions "$@"; }
 
-# --- tmux variants: open (or attach) a named session, keep pane alive after exit ---
-_arc_tmux() {
+# --- Herdr variants: open (or attach) a named Herdr session per provider ---
+_arc_herdr() {
   local name="$1" cmd="$2"
   local self="$HOME/.config/openrouter/claude-or.sh"
-  if [ -n "$TMUX" ]; then eval "$cmd"; return; fi
-  tmux new-session -A -s "$name" "bash -c 'source \"$self\"; $cmd; exec bash'"
+  if [ "${HERDR_ENV:-}" = "1" ]; then eval "$cmd"; return; fi
+  if command -v herdr >/dev/null 2>&1; then
+    herdr --session "$name"
+  else
+    eval "$cmd"
+  fi
 }
-tmux-claude-glm()     { _arc_tmux "glm"     "claude-glm"; }
-tmux-claude-minimax() { _arc_tmux "minimax" "claude-minimax"; }
-tmux-claude-qwen()    { _arc_tmux "qwen"    "claude-qwen"; }
-tmux-claude()         { _arc_tmux "claude"  "claude-sub"; }
+herdr-claude-glm()     { _arc_herdr "glm"     "claude-glm"; }
+herdr-claude-minimax() { _arc_herdr "minimax" "claude-minimax"; }
+herdr-claude-qwen()    { _arc_herdr "qwen"    "claude-qwen"; }
+herdr-claude()         { _arc_herdr "claude"  "claude-sub"; }

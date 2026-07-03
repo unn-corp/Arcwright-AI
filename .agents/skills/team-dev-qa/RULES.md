@@ -10,11 +10,11 @@ Load this before running a Dev + QA loop. For the full protocol, see SKILL.md.
 ## Non-Negotiables
 
 1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed by
-   the Session Agent Registry. tmux is opt-in visibility only.
+   the Session Agent Registry. herdr pane visibility is opt-in only.
 2. **Sonnet-first, always.** Default every spawn in this team to `sonnet`. No silent
    opus escalations. Ask the user before any opus spawn or effort upgrade.
 3. **No legacy signals.** `AGENT_SIGNAL`, `STEP COMPLETE`, `PEER_SIGNAL`,
-   `STATUS_CHECK`, `$SPAWNER_PANE`, `tmux-protocol` skill, `session-state.md` pane
+   `STATUS_CHECK`, `$SPAWNER_PANE`, the retired pane-based orchestration skill, `session-state.md` pane
    tables — all retired. The Agent tool return value is the sole completion signal.
 4. **Spawn-once + SendMessage reuse.** First Dev spawn records `dev.agentId` in
    the registry. First QA spawn records `qa.agentId`. The fix-pass loop sends

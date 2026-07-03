@@ -7,18 +7,18 @@ export default function TmuxPage() {
       <section className="px-4 sm:px-6 pt-12 pb-8 border-b border-surface-light bg-surface/20">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-baseline gap-3 mb-3">
-            <span className="font-mono text-cta text-sm">@arcwright-ai/tmux-setup</span>
+            <span className="font-mono text-cta text-sm">herdr.dev</span>
             <span className="font-mono text-muted/40 text-sm">→</span>
-            <span className="font-mono text-muted text-sm">standalone package</span>
+            <span className="font-mono text-muted text-sm">terminal workspace manager</span>
           </div>
           <h1 className="font-mono text-4xl sm:text-5xl font-bold text-foreground mb-4">
-            tmux Setup
+            Herdr
           </h1>
           <p className="font-sans text-muted text-lg max-w-2xl leading-relaxed">
-            Standalone tmux configuration: a visibility tool, not a spawn mechanism.
-            Pane mechanics, live pane titles, and an optional viewing surface for
-            in-process agents. The Agent tool + SendMessage flow is the canonical
-            orchestration substrate; tmux panes are an opt-in add-on.
+            A terminal workspace manager built for AI coding agents: a visibility tool,
+            not a spawn mechanism. Sessions, workspaces, tabs, and panes, with first-class
+            agent spawning and blocking status waits. The Agent tool + SendMessage flow
+            is the canonical orchestration substrate; Herdr panes are an opt-in add-on.
           </p>
         </div>
       </section>

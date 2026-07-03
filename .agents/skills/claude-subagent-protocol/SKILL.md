@@ -1,6 +1,6 @@
 ---
 name: "claude-subagent-protocol"
-description: "Default in-process Agent tool orchestration for Arcwright — spawn-once + SendMessage reuse via a Session Agent Registry, sonnet-first with permission-before-opus, no legacy signals, tmux opt-in visibility only."
+description: "Default in-process Agent tool orchestration for Arcwright — spawn-once + SendMessage reuse via a Session Agent Registry, sonnet-first with permission-before-opus, no legacy signals, herdr pane visibility opt-in only."
 allowed-tools: Read, Grep, Glob, Write, Edit
 ---
 
@@ -11,7 +11,7 @@ allowed-tools: Read, Grep, Glob, Write, Edit
 / team). Load this skill before executing any multi-step orchestration.
 
 The previous `tmux-protocol` skill has been retired. Pane-based agent visibility
-is now opt-in only and lives in the `tmux` skill's "Watching agents in panes" section.
+is now opt-in only and lives in the `herdr` skill's "Watching agents in panes" section.
 Most users do not need it.
 
 Always run [`project-context`](.agents/skills/project-context/SKILL.md) before
@@ -49,14 +49,14 @@ orchestrator `SendMessage`s that existing agent — it does not spawn a fresh on
 
 **Do NOT load this skill when:**
 
-- The user has explicitly opted into tmux split-pane visibility AND `$TMUX` is set.
-  In that case, also load the `tmux` skill (opt-in section) — but the in-process
+- The user has explicitly opted into herdr split-pane visibility AND `$HERDR_ENV` is set.
+  In that case, also load the `herdr` skill (opt-in section) — but the in-process
   flow inside that pane is still governed by this skill.
 - You are running as a subagent yourself (subagents do not spawn further subagents —
   they send their result back to the spawner and exit).
 - Performing a single isolated task with no multi-step orchestration.
 
-**The default is in-process. tmux is a viewing surface, not a different protocol.**
+**The default is in-process. herdr is a viewing surface, not a different protocol.**
 
 ---
 
@@ -719,12 +719,12 @@ polling, no stall detection, no heartbeat signals.
 | `PEER_SIGNAL::` | Retired — no cross-pane notification needed in-process. |
 | `STATUS_CHECK` | Retired — sequential execution eliminates stall detection. |
 | `$SPAWNER_PANE` env var / `master pane` field | Retired — the orchestrator's own Agent tool return value carries the result. |
-| `tmux-protocol` skill reference | Retired — the skill is gone; pane-only visibility is now an opt-in section in the `tmux` skill. |
+| `tmux-protocol` skill reference | Retired — the skill is gone; pane-only visibility is now an opt-in section in the `herdr` skill. |
 | `session-state.md` pane-ID table | Retired — replaced by the Session Agent Registry (§3). |
 
 If you find yourself about to write any of these strings in an in-process flow,
-**stop**. The completion model is the Agent tool's return value, period. tmux
-visibility snippets live in the `tmux` skill, used only when the user explicitly
+**stop**. The completion model is the Agent tool's return value, period. herdr
+visibility snippets live in the `herdr` skill, used only when the user explicitly
 opted in.
 
 ---
@@ -742,16 +742,16 @@ still alive.
 | Session ending | The orchestrator may delete the registry file or rename to `agent-registry.closed.md`. Live agents are torn down with the session. |
 | User wants to inspect live agents | `claude agents` (or `claude agents --json` for parseable output). |
 
-There is no `kill-pane` / `tmux send-keys "/exit"` analogue in-process. The
+There is no `herdr pane close` / send-`/exit`-then-close analogue in-process. The
 in-process wind-down is: stop dispatching, let the session end.
 
 ---
 
 ## 13. Cross-References
 
-- **[`tmux`](.agents/skills/tmux/SKILL.md)** — pane mechanics reference plus the
+- **[`herdr`](.agents/skills/herdr/SKILL.md)** — pane mechanics reference plus the
   opt-in "Watching agents in panes" section. Load this skill when the user has
-  explicitly opted into split-pane visibility AND `$TMUX` is set. The pane is a
+  explicitly opted into split-pane visibility AND `$HERDR_ENV` is set. The pane is a
   viewing surface; the in-process orchestration inside it is still governed by
   this skill.
 

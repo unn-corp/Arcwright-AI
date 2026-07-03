@@ -13,9 +13,9 @@ One row, role `qa`, at `_arcwright-output/sessions/<session-id>/agent-registry.m
 
 ## Non-Negotiables
 
-1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed by the Session Agent Registry. tmux is opt-in visibility only.
+1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed by the Session Agent Registry. herdr pane visibility is opt-in only.
 2. **Sonnet-first.** Default every spawn to `sonnet`. QA is verification only — opus not recommended. Only with explicit user permission if failure triage warrants it. Ask before escalating.
-3. **No legacy signals.** The Agent tool return value is the sole completion signal. Do not reintroduce `AGENT_SIGNAL` / `STEP COMPLETE` / `PEER_SIGNAL` / `STATUS_CHECK` / `$SPAWNER_PANE` / `tmux-protocol` skill references / `session-state.md` pane tables in the in-process flow.
+3. **No legacy signals.** The Agent tool return value is the sole completion signal. Do not reintroduce `AGENT_SIGNAL` / `STEP COMPLETE` / `PEER_SIGNAL` / `STATUS_CHECK` / `$SPAWNER_PANE` / the retired pane-based orchestration skill / `session-state.md` pane tables in the in-process flow.
 4. **Reuse over re-spawn.** First run → spawn, record `agentId` in the registry. **Every subsequent run on the same target → `SendMessage(to: <agentId>, ...)`**. Only spawn fresh if the new target is genuinely disjoint.
 5. **Registry path.** `_arcwright-output/sessions/<session-id>/agent-registry.md`. One row: `qa`. See `claude-subagent-protocol` §3.
 6. **Trust but verify.** QA writes test reports (and may run playwright-cli). After the run, verify the report was written to the expected path and that the verdict is structured. See `claude-subagent-protocol` §9.

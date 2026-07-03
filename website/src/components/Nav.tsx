@@ -19,7 +19,7 @@ const NAV_LINKS = [
   { label: 'Agents', to: '/agents' },
   { label: 'Workflows', to: '/workflows' },
   { label: 'Skills', to: '/skills' },
-  { label: 'tmux', to: '/tmux' },
+  { label: 'Herdr', to: '/herdr' },
 ];
 
 export default function Nav() {

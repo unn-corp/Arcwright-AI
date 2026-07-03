@@ -154,7 +154,8 @@ You can also auto-select by directory (e.g. work account anywhere under
 
 On Windows the convenience is a PowerShell script (`claude-wsl.ps1` on your `PATH`,
 e.g. `~/.local/bin/`) that translates the current Windows dir to a WSL path, shows a
-numbered account menu, and launches `claude` inside WSL + tmux:
+numbered account menu, and launches `claude` inside WSL via a named [Herdr](https://herdr.dev)
+session:
 
 ```powershell
 [CmdletBinding()]
@@ -176,20 +177,24 @@ if (-not $Account) {
 }
 
 switch ($Account) {
-    'Work' { $claudeCmd = 'env CLAUDE_CONFIG_DIR="$HOME/.claude-work" claude --dangerously-skip-permissions' }
-    'Alt'  { $claudeCmd = 'env CLAUDE_CONFIG_DIR="$HOME/.claude-alt" claude --dangerously-skip-permissions' }
-    default { $claudeCmd = 'env -u CLAUDE_CONFIG_DIR claude --dangerously-skip-permissions' }
+    'Work' { $envArg = '--env CLAUDE_CONFIG_DIR=$HOME/.claude-work' }
+    'Alt'  { $envArg = '--env CLAUDE_CONFIG_DIR=$HOME/.claude-alt' }
+    default { $envArg = '' }
 }
 
-# Per-account tmux session so accounts don't reattach to each other's session.
+# Per-account herdr session so accounts don't reattach to each other's session.
 $Session = "$Session-$($Account.ToLower())"
-$bashCmd = "cd '$wslPath' && tmux new-session -A -s '$Session' '$claudeCmd'"
+$bashCmd = "cd '$wslPath' && herdr --session '$Session' agent start claude $envArg -- claude --dangerously-skip-permissions && herdr --session '$Session'"
 & wsl @(if ($Distro) {'-d',$Distro}) bash -lc $bashCmd
 ```
 
-Wrapping the launch in `env CLAUDE_CONFIG_DIR=...` (rather than just exporting it)
-guarantees the child `claude` gets the right account even if the tmux **server** already
-has a stale value cached from an earlier session.
+Herdr has first-class named sessions (`herdr --session <name>` creates or attaches one
+directly, no wrapper script needed). `herdr agent start ... --env KEY=VALUE -- <argv>`
+spawns `claude` inside that session with the account's `CLAUDE_CONFIG_DIR` passed
+explicitly, which is what guarantees the right account even if the Herdr **server**
+already has a stale value cached from an earlier session — the second `herdr --session`
+call then attaches you to watch it. See the `herdr` skill for the full command
+reference.
 
 ---
 

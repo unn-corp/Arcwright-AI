@@ -12,14 +12,13 @@ spawn / reuse / signal contract.
 
 1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed
    by the Session Agent Registry at
-   `_arcwright-output/sessions/<session-id>/agent-registry.md`. tmux is opt-in
-   visibility only.
+   `_arcwright-output/sessions/<session-id>/agent-registry.md`. herdr pane visibility is opt-in only.
 2. **Sonnet-first, always — including Security.** Default every spawn
    (`security`, `qa`, `dev`) to `sonnet`. Security is **not** a silent-opus
    default. Ask the user before any opus spawn or effort upgrade
    (`claude-subagent-protocol` §6.3).
 3. **No legacy signals.** `AGENT_SIGNAL`, `STEP COMPLETE`, `PEER_SIGNAL`,
-   `STATUS_CHECK`, `$SPAWNER_PANE`, `tmux-protocol`, `session-state.md` — all
+   `STATUS_CHECK`, `$SPAWNER_PANE`, the retired pane-based orchestration skill, `session-state.md` — all
    retired. The Agent tool return value is the sole completion signal.
 4. **Reuse over re-spawn — Security is the load-bearing case.** All three
    roles are reused across remediation loop iterations. Security is

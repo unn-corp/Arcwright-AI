@@ -1,24 +1,25 @@
-import { Terminal, Layers, Eye, Scissors } from 'lucide-react';
+import { Terminal, Layers, Eye, Smartphone } from 'lucide-react';
 
 const FEATURES = [
-  { icon: Layers, label: 'Catppuccin Frappe theme', detail: 'Powerline status bar, Nerd Font optimised' },
-  { icon: Scissors, label: 'Pane & window mechanics', detail: 'Splits, navigation, layouts, resizing, clipboard integration' },
-  { icon: Eye, label: 'Pane title sync', detail: "Auto-updates from Claude Code's OSC 2 title" },
-  { icon: Terminal, label: 'Actions popup', detail: 'Window, pane, clipboard, and launch shortcuts' },
+  { icon: Layers, label: 'Sessions, workspaces, tabs, panes', detail: 'One more level than tmux, with stable short IDs (w1, w1:t1, w1:p1)' },
+  { icon: Terminal, label: 'First-class agent spawning', detail: '`herdr agent start` splits a pane and launches an agent in one call, no wrapper script' },
+  { icon: Eye, label: 'Blocking status waits', detail: '`herdr wait agent-status` replaces polling loops entirely' },
+  { icon: Smartphone, label: 'Phone PWA (collie, opt-in)', detail: 'Reply to a blocked agent from your phone keyboard, over Tailscale' },
 ];
 
 export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {}) {
   return (
-    <section id="tmux" className="pt-8 pb-16 px-4 sm:px-6">
+    <section id="herdr" className="pt-8 pb-16 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         {!hideHeader && (
           <div className="mb-12 text-center">
             <h2 className="font-mono text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              tmux Setup
+              Herdr
             </h2>
             <p className="font-sans text-muted max-w-xl mx-auto">
-              A visibility layer for AI agent workflows. tmux provides pane mechanics,
-              live pane titles, and an optional viewing surface for in-process agents.
+              A visibility layer for AI agent workflows. Herdr (herdr.dev) is a terminal
+              workspace manager built for AI coding agents, an optional viewing surface
+              for in-process agents.
             </p>
           </div>
         )}
@@ -32,15 +33,13 @@ export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {
                 <div className="w-3 h-3 bg-yellow-500/70" />
                 <div className="w-3 h-3 bg-cta/70" />
               </div>
-              <span className="font-mono text-xs text-muted ml-2">arcwright — tmux</span>
+              <span className="font-mono text-xs text-muted ml-2">arcwright — herdr</span>
             </div>
             <div className="p-5 font-mono text-xs leading-loose">
-              <div className="text-muted">$ <span className="text-foreground">npx @arcwright-ai/tmux-setup</span></div>
-              <div className="text-cta mt-2">✓ Catppuccin Frappe theme applied</div>
-              <div className="text-cta">✓ Pane title sync enabled</div>
-              <div className="text-cta">✓ Clipboard integration (WSL2 → Windows)</div>
-              <div className="text-cta">✓ Actions popup installed</div>
-              <div className="text-cta">✓ Pane mechanics ready (split, navigate, resize)</div>
+              <div className="text-muted">$ <span className="text-foreground">herdr agent start architect --split right -- claude</span></div>
+              <div className="text-cta mt-2">✓ Session attached</div>
+              <div className="text-cta">✓ Pane split, agent spawned</div>
+              <div className="text-cta">✓ Watching for blocked / done status</div>
               <div className="mt-4 text-muted/60">
                 ─── Arcwright · 2 panes ────────────────────
               </div>
@@ -77,18 +76,18 @@ export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {
             <div className="mt-2 bg-bg border border-surface-light p-4">
               <div className="text-xs font-mono text-muted mb-2">Note</div>
               <p className="font-sans text-xs text-muted leading-relaxed">
-                tmux is a <span className="text-foreground">visibility tool</span>, not a spawn
+                Herdr is a <span className="text-foreground">visibility tool</span>, not a spawn
                 mechanism. The in-process <code className="font-mono text-foreground">Agent</code> tool +{' '}
                 <code className="font-mono text-foreground">SendMessage</code> flow is the canonical
-                orchestration substrate. tmux panes are an opt-in viewing surface. See the{' '}
-                <code className="font-mono text-cta/80">tmux</code> skill.
+                orchestration substrate. Herdr panes are an opt-in viewing surface. See the{' '}
+                <code className="font-mono text-cta/80">herdr</code> skill.
               </p>
             </div>
 
             <div className="mt-2 bg-bg border border-surface-light p-4">
-              <div className="text-xs font-mono text-muted mb-2">Standalone install</div>
+              <div className="text-xs font-mono text-muted mb-2">Get Herdr</div>
               <code className="font-mono text-sm text-foreground">
-                npx @arcwright-ai/tmux-setup
+                herdr.dev
               </code>
             </div>
           </div>

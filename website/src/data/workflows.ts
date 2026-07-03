@@ -1,6 +1,6 @@
 // Workflow data for the website. Replaces the retired "track" system (nano /
 // small / compact / medium / extended / large / rv) with four native
-// orchestration runtimes plus an opt-in tmux visibility layer. See
+// orchestration runtimes plus an opt-in Herdr visibility layer. See
 // `.agents/skills/triage/SKILL.md` and `.agents/skills/claude-subagent-protocol/SKILL.md`.
 
 export type WorkflowCategory = 'router' | 'runtime' | 'loop' | 'visibility';
@@ -61,12 +61,12 @@ export const workflows: Workflow[] = [
     icon: 'target',
   },
   {
-    slug: 'tmux-opt-in',
-    name: 'tmux Opt-In Visibility',
+    slug: 'herdr-opt-in',
+    name: 'Herdr Opt-In Visibility',
     category: 'visibility',
-    trigger: 'tmux split-pane (when $TMUX is set)',
+    trigger: 'herdr agent start (when $HERDR_ENV is set)',
     description:
-      'Watch agents work in split panes. PURELY a viewing surface — the in-process Agent tool + SendMessage flow inside the pane is still governed by claude-subagent-protocol. Add to whichever runtime above was chosen, not as a primary mode.',
+      'Watch agents work in split panes via Herdr (herdr.dev). PURELY a viewing surface — the in-process Agent tool + SendMessage flow inside the pane is still governed by claude-subagent-protocol. Add to whichever runtime above was chosen, not as a primary mode.',
     bestFor:
       'When you want to see what agents are doing, or want a long-running task visible while you do other work.',
     icon: 'eye',

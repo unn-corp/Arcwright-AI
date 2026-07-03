@@ -10,12 +10,12 @@ Load this before running the Engine Room (Dev + QA + Architect). For the full pr
 ## Non-Negotiables
 
 1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed by
-   the Session Agent Registry. tmux is opt-in visibility only.
+   the Session Agent Registry. herdr pane visibility is opt-in only.
 2. **Sonnet-first, always.** Default every spawn in this team to `sonnet`. The
    Architect may use `opus` only with explicit user permission. The skill asks
    the user before any opus spawn or effort upgrade.
 3. **No legacy signals.** `AGENT_SIGNAL`, `STEP COMPLETE`, `PEER_SIGNAL`,
-   `STATUS_CHECK`, `$SPAWNER_PANE`, `tmux-protocol` skill, `session-state.md` pane
+   `STATUS_CHECK`, `$SPAWNER_PANE`, the retired pane-based orchestration skill, `session-state.md` pane
    tables — all retired. The Agent tool return value is the sole completion signal.
 4. **Spawn-once + SendMessage reuse.** First Dev spawn records `dev.agentId`,
    first QA spawn records `qa.agentId`, first Architect spawn records

@@ -3,7 +3,7 @@
   "profiles": [
     {
       "name": "Claude Subscription",
-      "commandline": "wsl.exe -d Ubuntu -- bash -ic \"tmux-claude\"",
+      "commandline": "wsl.exe -d Ubuntu -- bash -ic \"herdr-claude\"",
       "icon": "🟣",
       "startingDirectory": "%USERPROFILE%",
       "colorScheme": "Campbell Powershell",
@@ -11,7 +11,7 @@
     },
     {
       "name": "Claude via GLM (Z.ai)",
-      "commandline": "wsl.exe -d Ubuntu -- bash -ic \"tmux-claude-glm\"",
+      "commandline": "wsl.exe -d Ubuntu -- bash -ic \"herdr-claude-glm\"",
       "icon": "🤖",
       "startingDirectory": "%USERPROFILE%",
       "colorScheme": "One Half Dark",
@@ -19,7 +19,7 @@
     },
     {
       "name": "Claude via MiniMax",
-      "commandline": "wsl.exe -d Ubuntu -- bash -ic \"tmux-claude-minimax\"",
+      "commandline": "wsl.exe -d Ubuntu -- bash -ic \"herdr-claude-minimax\"",
       "icon": "🦑",
       "startingDirectory": "%USERPROFILE%",
       "colorScheme": "One Half Dark",
@@ -27,7 +27,7 @@
     },
     {
       "name": "Claude via Qwen-Coder (OpenRouter)",
-      "commandline": "wsl.exe -d Ubuntu -- bash -ic \"tmux-claude-qwen\"",
+      "commandline": "wsl.exe -d Ubuntu -- bash -ic \"herdr-claude-qwen\"",
       "icon": "🐳",
       "startingDirectory": "%USERPROFILE%",
       "colorScheme": "One Half Dark",

@@ -6,10 +6,11 @@ How Claude Code agents stay alive across tasks and how ended agents resume with 
 intact. Two categories: agents that are still **running**, and agents that **ended** but can
 pick up where they left off.
 
-Arcwright currently uses tmux panes + `.agents/orchestration/session-*.md` files for
-cross-task persistence. The mechanisms below are the platform-level equivalents — they
-complement (not replace) that protocol. Cross-reference [orchestration.md](../orchestration.md)
-and [subagents.md](../subagents.md).
+Arcwright's default cross-task persistence is in-process (`Agent` tool + `SendMessage`
+reuse via the Session Agent Registry, see `claude-subagent-protocol`); Herdr panes are an
+opt-in visibility layer on top, not a persistence mechanism. The mechanisms below are the
+platform-level equivalents — they complement (not replace) that protocol. Cross-reference
+[orchestration.md](../orchestration.md) and [subagents.md](../subagents.md).
 
 ---
 
@@ -211,7 +212,7 @@ Arcwright layers two complementary reuse mechanisms on top of these primitives:
   exception (it runs as the session itself).
 
 tmux-based session files (`.agents/orchestration/session-*.md`) are retired; see
-[`tmux`](../../.agents/skills/tmux/SKILL.md) for the new opt-in visibility model.
+[`herdr`](../../.agents/skills/herdr/SKILL.md) for the current opt-in visibility model.
 
 ---
 

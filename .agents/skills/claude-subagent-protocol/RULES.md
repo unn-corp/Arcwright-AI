@@ -10,7 +10,7 @@ Load this before any Agent tool call sequence. For the full protocol, see SKILL.
 ## Non-Negotiables
 
 1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed
-   by a Session Agent Registry. tmux is opt-in visibility only.
+   by a Session Agent Registry. herdr pane visibility is opt-in only.
 2. **Sonnet-first, always.** Default every spawn to `sonnet`. Use `opus` only
    when design judgment / security sign-off / large context genuinely warrants
    it, **and** the user has explicitly approved. **Ask before escalating.**

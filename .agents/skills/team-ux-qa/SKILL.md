@@ -5,7 +5,7 @@ description: "The Atelier — UX Designer implements (can write code), QA valida
 
 # Agent Team: UX + QA — The Atelier
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). Spawn-once + reuse via Session Agent Registry. tmux is opt-in visibility only.
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). Spawn-once + reuse via Session Agent Registry. herdr pane variant is opt-in (see the `herdr` skill).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -116,9 +116,9 @@ Capture result into `$STEP_1_OUTPUT`. Pass to step 2.
 
 ---
 
-#### tmux Variant (opt-in)
+#### Pane Visibility (opt-in)
 
-For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. In-process flow inside the pane is still governed by `claude-subagent-protocol`.
+For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process Agent tool + SendMessage flow is still governed by `claude-subagent-protocol`.
 
 ---
 
@@ -149,9 +149,9 @@ Capture result into `$STEP_2_OUTPUT`. If pass: task complete. If fail: pass to s
 
 ---
 
-#### tmux Variant (opt-in)
+#### Pane Visibility (opt-in)
 
-For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section.
+For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process Agent tool + SendMessage flow is still governed by `claude-subagent-protocol`.
 
 ---
 
@@ -181,9 +181,9 @@ Capture result into `$STEP_3_OUTPUT`. Return to step 2 (re-engage the existing Q
 
 ---
 
-#### tmux Variant (opt-in)
+#### Pane Visibility (opt-in)
 
-For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section.
+For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process Agent tool + SendMessage flow is still governed by `claude-subagent-protocol`.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: triage
-description: Workflow router — given a task, recommend an execution approach: plain in-process agent(s), an ultracode dynamic workflow, or a /goal loop. Optional tmux opt-in visibility for users who want to watch.
+description: Workflow router — given a task, recommend an execution approach: plain in-process agent(s), an ultracode dynamic workflow, or a /goal loop. Optional herdr opt-in visibility for users who want to watch.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -39,11 +39,11 @@ The four runtime options, in order of capability:
    loop. Best when the completion condition is a verification check, not a
    single deliverable ("all tests pass", "no type errors", "every PR has a
    changelog entry").
-4. **tmux opt-in visibility** — *additive* layer on top of (1)–(3). Only when
-   the user has explicitly asked to watch the agents and `$TMUX` is set. The
+4. **herdr opt-in visibility** — *additive* layer on top of (1)–(3). Only when
+   the user has explicitly asked to watch the agents and `$HERDR_ENV` is set. The
    pane is a viewing surface, never the spawn mechanism.
 
-> **Default is in-process. tmux is opt-in visibility only.** Per the
+> **Default is in-process. herdr is opt-in visibility only.** Per the
 > `claude-subagent-protocol` skill, in-process `Agent` tool calls + `SendMessage`
 > reuse is the canonical orchestration substrate regardless of which runtime
 > the router recommends. See §6 for the cross-link.
@@ -122,27 +122,27 @@ condition-writing patterns, and persistence semantics.
 > "Run `/goal all files in `packages/api/src/` have no `any` types and pass
 > `tsc --noEmit`."
 
-### 2.4 tmux opt-in visibility (additive)
+### 2.4 herdr opt-in visibility (additive)
 
-**Do not include this by default.** tmux is *visibility*, not a runtime. The
-orchestration still happens in-process inside the session; tmux is just a
+**Do not include this by default.** herdr is *visibility*, not a runtime. The
+orchestration still happens in-process inside the session; herdr is just a
 viewing surface for it.
 
 **Include it only when ALL of these are true:**
 
 - The user has explicitly asked to "watch" / "see the agents" / "show me in
   panes" (or any equivalent phrasing that opts into visibility).
-- `$TMUX` is set in the current shell (a tmux session is running).
+- `$HERDR_ENV` is set in the current shell (a herdr session is running).
 - The recommended runtime (1, 2, or 3) would benefit from pane-by-pane view
   (typical for `ultracode` and `/goal` over a long duration; rare for plain
   in-process over a short one).
 
-**Mechanics.** Load the `tmux` skill, "Watching agents in panes (opt-in)"
+**Mechanics.** Load the `herdr` skill, "Watching agents in panes (opt-in)"
 section. The pane mirrors the in-process session; the in-process flow inside
 the pane is still governed by `claude-subagent-protocol`.
 
 **Trigger form (for the user's response):**
-> "Run the ultracode workflow above, with tmux pane visibility enabled so you
+> "Run the ultracode workflow above, with herdr pane visibility enabled so you
 > can watch the parallel lanes."
 
 ---
@@ -158,7 +158,7 @@ Map the task to a runtime by its shape. This is the canonical heuristic.
 | 12+ files, multi-stage, dependencies between stages | **`ultracode` dynamic workflow** (pipeline by default) |
 | Unknown-size discovery (audits, sweeps, "find every X") | **`ultracode` dynamic workflow** with loop-until-dry or budget-bound loop |
 | Completion is a verification check ("tests pass", "no type errors", "lint clean") | **`/goal` loop** |
-| User wants to observe agents as they work AND `$TMUX` is set AND work spans multiple turns | **Add tmux opt-in visibility** to whichever runtime above was chosen |
+| User wants to observe agents as they work AND `$HERDR_ENV` is set AND work spans multiple turns | **Add herdr opt-in visibility** to whichever runtime above was chosen |
 | Genuinely ambiguous — could be a single change or a sweep; user intent unclear | **Ask one clarifying question** before routing |
 
 ### 3.1 Examples (worked)
@@ -171,7 +171,7 @@ Map the task to a runtime by its shape. This is the canonical heuristic.
 | "Find every place we use the deprecated `foo()` and propose a fix" | `ultracode` workflow with loop-until-dry | Unknown-size discovery — the work is "exhausted", not "delivered" |
 | "Get this codebase to pass `tsc --noEmit` cleanly" | `/goal` loop | Completion is a verification check |
 | "Make every merged PR this week have a CHANGELOG entry" | `/goal` loop | Open-ended duration, clear end state |
-| "Run the migration and let me watch the agents in panes" | `ultracode` workflow + tmux opt-in visibility | User explicitly asked to watch; `$TMUX` is set |
+| "Run the migration and let me watch the agents in panes" | `ultracode` workflow + herdr opt-in visibility | User explicitly asked to watch; `$HERDR_ENV` is set |
 | "I have a bug in the login flow" | **Out of scope for the router** — load `systematic-debugging` first | The router doesn't triage bugs; debugging is a separate skill |
 
 ### 3.2 What if two runtimes both fit?
@@ -209,7 +209,7 @@ recommended command; this skill does not execute the work.
 ```
 Workflow router recommendation:
 
-Runtime:    <plain-agent | ultracode | /goal | [plain-agent + tmux-visibility] etc.>
+Runtime:    <plain-agent | ultracode | /goal | [plain-agent + herdr-visibility] etc.>
 Trigger:    <the exact command / phrase / spawn description>
 Rationale:  <one sentence — why this runtime fits this task shape>
 Model:      sonnet (default); opus may help at <step> — workflow will ask.
@@ -254,11 +254,11 @@ Next step:  You: send `/goal` to start the loop.
 ```
 Workflow router recommendation:
 
-Runtime:    plain-agent (parallel fan-out) + tmux opt-in visibility
-Trigger:    Spawn `arcwright-architect` + `arcwright-ux-designer` in parallel; mirror in tmux panes.
+Runtime:    plain-agent (parallel fan-out) + herdr opt-in visibility
+Trigger:    Spawn `arcwright-architect` + `arcwright-ux-designer` in parallel; mirror in herdr panes.
 Rationale:  Two disjoint design perspectives; you asked to watch.
 Model:      sonnet.
-Next step:  Confirm — I'll set up the tmux panes first, then dispatch the fan-out.
+Next step:  Confirm — I'll set up the herdr panes first, then dispatch the fan-out.
 
 ```
 
@@ -279,7 +279,7 @@ elsewhere.
 | A test run | `arcwright-qa` directly, or `team-dev-qa` if iterative dev+QA is wanted |
 | To explore / document an unknown UI, or scaffold a first test from a goal | `browser-use` skill (agentic discovery) — then encode confirmed steps as `playwright-cli` / `.spec.ts`. A natural *discovery stage* inside an ultracode workflow or `/goal` loop. |
 | A long-lived process (cron, scheduled task) | `/loop` (intervals within a session) or `/schedule` (Anthropic cloud routines) — both are Claude Code primitives, not Arcwright runtimes |
-| A tmux pane / window / session cheat-sheet | `/tmux` — the consolidated tmux skill |
+| A herdr pane / tab / workspace cheat-sheet | `/herdr` — the consolidated herdr skill |
 | An explanation of what Arcwright is | `project-context` first, then point at `README.md` |
 
 If the router's recommendation is "spawn role X directly" and the user
@@ -301,9 +301,9 @@ ultracode.
   context block it produces influences the router's decision (e.g. "this
   codebase has no tests" pushes "make tests pass" out of `/goal`'s reach).
 
-- **[`tmux`](../tmux/SKILL.md)** — only when the router adds tmux
+- **[`herdr`](../herdr/SKILL.md)** — only when the router adds herdr
   opt-in visibility (§2.4). The "Watching agents in panes" section is the
-  only relevant part; the rest is general tmux mechanics.
+  only relevant part; the rest is general herdr mechanics.
 
 - **[`docs/dev/claude-code-patterns/ultracode.md`](../../../docs/dev/claude-code-patterns/ultracode.md)** —
   full ultracode API: script syntax, hooks (`agent` / `pipeline` / `parallel`
@@ -353,4 +353,4 @@ ultracode.
 - Plain in-process for "I know what to do, just do it."
 - `ultracode` for "I know the shape, it's just big."
 - `/goal` for "I know the end state, find the path."
-- tmux opt-in when "I want to watch."
+- herdr opt-in when "I want to watch."

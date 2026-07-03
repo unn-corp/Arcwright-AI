@@ -42,8 +42,8 @@ program
   .option('--tauri', 'Install curated Tauri v2 skills (tauri-* — architecture, IPC, capabilities, plugins, distribution, mobile) + /tauri command')
   .option('--aws-infra', 'Install the AWS-Infra module (aws-infra agent + aws-serverless-cdk skill + /aws-infra command)')
   .option('--unnamed-pm', 'Install the Unnamed-PM module (unnamed-pm agent + unnamed-pm-sync skill + /unnamed-pm command)')
-  .option('--tmux', 'Set up tmux config (~/.tmux.conf + ~/.config/tmux/ — default when claude-code is selected)')
-  .option('--no-tmux', 'Skip tmux setup')
+  .option('--tmux', '(deprecated, no-op) tmux support was removed in favor of Herdr')
+  .option('--no-tmux', '(deprecated, no-op) tmux support was removed in favor of Herdr')
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before installing (default when bmad is detected)')
   .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
@@ -98,8 +98,8 @@ program
   .option('--tauri', 'Install curated Tauri v2 skills (tauri-*) + /tauri command')
   .option('--aws-infra', 'Install the AWS-Infra module (aws-infra agent + aws-serverless-cdk skill + /aws-infra command)')
   .option('--unnamed-pm', 'Install the Unnamed-PM module (unnamed-pm agent + unnamed-pm-sync skill + /unnamed-pm command)')
-  .option('--tmux', 'Set up tmux config (~/.tmux.conf + ~/.config/tmux/ — default when claude-code is selected)')
-  .option('--no-tmux', 'Skip tmux setup')
+  .option('--tmux', '(deprecated, no-op) tmux support was removed in favor of Herdr')
+  .option('--no-tmux', '(deprecated, no-op) tmux support was removed in favor of Herdr')
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before updating (default when bmad is detected)')
   .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
@@ -186,24 +186,17 @@ program
     console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,codex,hermes\n');
   });
 
-// ─── tmux ─────────────────────────────────────────────────────────────────────
+// ─── tmux (deprecated, removed in favor of Herdr) ────────────────────────────
 
 program
   .command('tmux')
-  .description('Set up tmux for AI agent workflows — writes config, scripts, and walks through WSL prerequisites')
-  .option('-d, --directory <path>', 'Project root (used for tmux-ai/tmux-claude aliases)', process.cwd())
-  .addHelpText('after', `
-Examples:
-  # Interactive tmux setup
-  npx @arcwright-ai/agent-orchestration tmux
-
-  # tmux setup for a specific project directory
-  npx @arcwright-ai/agent-orchestration tmux --directory /path/to/project
-`)
-  .action(async (opts) => {
-    const { setupTmux } = require('./installer');
+  .description('(removed) tmux support was replaced by Herdr — see the herdr skill and /herdr command')
+  .option('-d, --directory <path>', 'Ignored', process.cwd())
+  .action(async () => {
     const chalk = (await import('chalk')).default;
-    await setupTmux(path.resolve(opts.directory), chalk);
+    console.log(chalk.yellow('tmux support has been removed from Arcwright in favor of Herdr (herdr.dev).'));
+    console.log(chalk.dim('Use the `herdr` skill and the /herdr command for terminal-workspace agent orchestration.'));
+    console.log(chalk.dim('Collie phone-PWA setup: docs/herdr-collie-tailscale-pwa.md.'));
   });
 
 // ─── migrate ─────────────────────────────────────────────────────────────────

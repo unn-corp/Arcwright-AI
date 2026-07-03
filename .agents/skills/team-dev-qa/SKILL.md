@@ -1,12 +1,12 @@
 ---
 name: "team-dev-qa"
-description: "Dev + QA iterative loop in-process — Dev implements, QA validates with playwright-cli, failures loop back to Dev. Re-engages the existing QA agent via SendMessage for re-validation. tmux is opt-in visibility only."
+description: "Dev + QA iterative loop in-process — Dev implements, QA validates with playwright-cli, failures loop back to Dev. Re-engages the existing QA agent via SendMessage for re-validation. herdr pane visibility is opt-in only."
 allowed-tools: Read, Grep, Glob, Write, Edit, Agent, SendMessage, Bash
 ---
 
 # Agent Team: Dev + QA
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). herdr pane variant is opt-in (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -120,7 +120,7 @@ write the `dev` row to the registry, then proceed.
 
 Capture result into `$STEP_1_OUTPUT`. Pass to step 2.
 
-> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
+> For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -147,7 +147,7 @@ registry `qa` row. Subsequent fix-pass re-validations reuse this row via
 
 Capture result into `$STEP_2_OUTPUT`. If pass: task complete. If fail: pass to step 3.
 
-> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
+> For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -174,7 +174,7 @@ Capture result into `$STEP_3_OUTPUT`. **Re-engage the existing QA agent with the
 new test target via SendMessage** for re-validation — return to step 2 using the
 QA reuse example. When QA passes: task complete. Final output — no next step.
 
-> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
+> For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 

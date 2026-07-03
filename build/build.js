@@ -11,7 +11,7 @@
  *     All _arcwright/{awb,awm,core,_memory} modules.
  *     All .agents/skills/ (SKILL.md already generic — no scrubbing needed).
  *     .claude/commands/*.md (no transforms).
- *     docs/dev/tmux/ scripts.
+ *     model-launcher templates.
  *
  *   Kiro assets → packages/agent-orchestration/src/.kiro/
  *     Skills copied 1:1 → .kiro/skills/
@@ -66,7 +66,6 @@ const LEAK_PATTERNS = [
 /** Slash command files to ship. Shared by bundleKiroAgents() and bundleTrackCommands(). */
 const SHIPPED_COMMANDS = [
   /^arcwright-migrate\.md$/,
-  /^tmux\.md$/,
   /^herdr\.md$/,
   /^gsudo\.md$/,
   /^team\.md$/,
@@ -470,14 +469,14 @@ function generateWorkflowsSteering(steeringDir) {
     '',
     '# Arcwright — Workflows',
     '',
-    'Arcwright has moved off bespoke tracks and tmux-based subagent spawning.',
+    'Arcwright has moved off bespoke tracks and pane-based subagent spawning.',
     'Pick the right runtime for the task; the in-process `Agent` tool +',
     '`SendMessage` reuse is the substrate underneath every option below.',
     '',
     '## 1. Triage router (entry point)',
     '',
     '`/triage` is the workflow router. Given a task it recommends one of the',
-    'three runtimes below (or, on top of any of them, tmux opt-in visibility).',
+    'three runtimes below (or, on top of any of them, Herdr opt-in visibility).',
     'See `.agents/skills/triage/SKILL.md` for the full decision tree. Use it',
     'when the user has not named a runtime explicitly.',
     '',
@@ -493,20 +492,20 @@ function generateWorkflowsSteering(steeringDir) {
     '| `ultracode` dynamic workflow | 12+ files, multi-stage, unknown-size discovery, or work larger than one context | `ultracode <describe the work>` (or `/effort ultracode` for session default) |',
     '| `/goal` loop | Completion is a verification check ("tests pass", "no type errors", "lint clean") | `/goal <condition>` |',
     '',
-    'In-process is the default for every runtime. tmux is **opt-in visibility**',
+    'In-process is the default for every runtime. Herdr is **opt-in visibility**',
     'only — the pane mirrors the in-process session; the in-process flow inside',
     'it is still governed by `.agents/skills/claude-subagent-protocol/`.',
     '',
-    '## 3. tmux opt-in visibility (additive)',
+    '## 3. Herdr opt-in visibility (additive)',
     '',
-    'Add tmux pane visibility only when **all** of these are true:',
+    'Add Herdr pane visibility only when **all** of these are true:',
     '',
     '- The user has explicitly asked to watch the agents as they work.',
-    '- `$TMUX` is set in the current shell.',
+    '- `$HERDR_ENV` is set in the current shell.',
     '- The recommended runtime would benefit from pane-by-pane view (typical',
     '  for `ultracode` and `/goal` over a long duration).',
     '',
-    'See `.agents/skills/tmux/SKILL.md`, "Watching agents in panes" section.',
+    'See `.agents/skills/herdr/SKILL.md`, "Watching agents in panes" section.',
     'The pane is a viewing surface, never the spawn mechanism.',
     '',
     '## 4. Defaults and the permission gate',
@@ -527,7 +526,7 @@ function generateWorkflowsSteering(steeringDir) {
     '',
     '- `.agents/skills/triage/SKILL.md` — the router (decision tree, output format).',
     '- `.agents/skills/claude-subagent-protocol/SKILL.md` — the in-process protocol underneath every runtime.',
-    '- `.agents/skills/tmux/SKILL.md` — pane mechanics and opt-in visibility.',
+    '- `.agents/skills/herdr/SKILL.md` — pane mechanics and opt-in visibility.',
     '- `docs/dev/claude-code-patterns/ultracode.md` — full ultracode API (hooks, patterns, limits, resume).',
     '- `docs/dev/claude-code-patterns/orchestration.md` — full `/goal` and `/loop` reference.',
     '',
@@ -600,7 +599,6 @@ function bundleKiroAgents() {
     'tauri':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'aws-infra':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_fetch'],
     'unnamed-pm':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
-    'tmux':               ['fs_read', 'fs_write', 'execute_bash'],
     'herdr':              ['fs_read', 'fs_write', 'execute_bash'],
     'gsudo':              ['execute_bash'],
     // Coding / best-practice skill commands
@@ -654,8 +652,8 @@ function bundleKiroAgents() {
 
   /** Kiro CLI addendum appended to team/team-style agent prompts. */
   // Default is the in-process `subagent` tool (DAG pipeline with `stages` and
-  // `depends_on`). tmux is opt-in visibility only — see the `tmux` skill.
-  const KIRO_TMUX_ADDENDUM = `
+  // `depends_on`). Herdr panes are opt-in visibility only — see the `herdr` skill.
+  const KIRO_ORCHESTRATION_ADDENDUM = `
 
 ## Kiro CLI — In-Process Orchestration (default) and Pane Visibility (opt-in)
 
@@ -685,45 +683,13 @@ Stages with no \`depends_on\` run in parallel; dependent stages wait. Default
 \`model\` is \`sonnet\` for every stage. Promote to \`opus\` only with explicit
 user permission (ask the user before escalating).
 
-**Opt-in — visible panes via \`execute_bash\` + tmux:**
+**Opt-in — visible panes via Herdr:**
 
 If the user has explicitly asked for split-pane visibility ("spawn", "watch",
-"open agent") AND \`$TMUX\` is set, you may spawn a Kiro agent into a new
-tmux pane as a *viewing surface*. The spawned agent still uses the in-process
-orchestration above — the pane is just a window onto it.
-
-\`\`\`bash
-tmux split-window -h -c "#{pane_current_path}" \\
-  "kiro-cli chat --trust-all-tools --agent arcwright-dev '<task description>'"
-sleep 8
-NEW_PANE=$(tmux list-panes -F "#{pane_id}" | tail -1)
-tmux select-layout tiled
-\`\`\`
-
-**Key differences from Claude Code pane mode (opt-in only):**
-- Use \`kiro-cli chat --trust-all-tools --agent <agent-name>\` instead of \`claude --dangerously-skip-permissions\`
-- Agent names reference \`.kiro/agents/*.json\` configs (e.g. \`arcwright-dev\`, \`arcwright-qa\`)
-- Skills are at \`.kiro/skills/\` not \`.agents/skills/\`
-- The old AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling protocol from the
-  retired \`tmux-protocol\` skill does **NOT** apply. The in-process
-  \`subagent\` tool return value is the completion signal.
-- Default to \`sonnet\`. Ask the user before any \`opus\` or effort upgrade.
-
-See the \`tmux\` skill for full pane-visibility mechanics (opt-in section).
-`;
-
-  /** Kiro CLI addendum for Herdr pane visibility (preferred over tmux). */
-  // In-process `subagent` remains the default; this documents the Herdr path,
-  // which supersedes the tmux one. See the `herdr` skill.
-  const KIRO_HERDR_ADDENDUM = `
-
-## Kiro CLI — Herdr Pane Visibility (opt-in, preferred over tmux)
-
-If the user has explicitly asked for split-pane visibility ("spawn", "watch",
-"open agent") AND \`$HERDR_ENV\` is set, prefer Herdr over tmux. Herdr makes
-visible agents first-class through \`herdr agent start\`, so no spawn wrapper is
-needed. The spawned agent still uses the in-process \`subagent\` orchestration
-above; the pane is only a viewing surface.
+"open agent") AND \`$HERDR_ENV\` is set, spawn a Kiro agent into a Herdr pane as
+a *viewing surface*. Herdr makes visible agents first-class through
+\`herdr agent start\`, so no spawn wrapper is needed. The spawned agent still
+uses the in-process \`subagent\` orchestration above; the pane is only a window.
 
 \`\`\`bash
 herdr agent start <role> --split right -- \\
@@ -734,9 +700,15 @@ herdr pane run <role> '<follow-up>'      # types + Enter (agent send does NOT)
 herdr pane close <role>
 \`\`\`
 
-\`herdr wait agent-status\` replaces all pane polling; there are no AGENT_SIGNAL
-strings to grep. Default to \`sonnet\`; ask before any \`opus\` upgrade. See the
-\`herdr\` skill for the full mapping and the send/run Enter trap.
+**Key differences from Claude Code pane mode (opt-in only):**
+- Use \`kiro-cli chat --trust-all-tools --agent <agent-name>\` instead of \`claude --dangerously-skip-permissions\`
+- Agent names reference \`.kiro/agents/*.json\` configs (e.g. \`arcwright-dev\`, \`arcwright-qa\`)
+- Skills are at \`.kiro/skills/\` not \`.agents/skills/\`
+- \`herdr wait agent-status\` replaces all pane polling; there are no AGENT_SIGNAL
+  strings to grep. The in-process \`subagent\` tool return value is the completion signal.
+- Default to \`sonnet\`. Ask the user before any \`opus\` or effort upgrade.
+
+See the \`herdr\` skill for the full mapping and the send/run Enter trap.
 `;
 
   let generated = 0;
@@ -755,10 +727,9 @@ strings to grep. Default to \`sonnet\`; ask before any \`opus\` upgrade. See the
     const tools = resolveTools(name);
     let prompt = adaptPromptForKiro(body.trim());
 
-    // Append pane-visibility addenda to team agents (Herdr preferred, tmux legacy)
+    // Append the in-process orchestration + Herdr pane-visibility addendum to team agents
     if (isTeam(name)) {
-      prompt += KIRO_TMUX_ADDENDUM;
-      prompt += KIRO_HERDR_ADDENDUM;
+      prompt += KIRO_ORCHESTRATION_ADDENDUM;
     }
 
     const agent = { name, description: desc, prompt, tools };
@@ -905,7 +876,7 @@ function bundleTrackCommands() {
     return;
   }
 
-  // Bundle all slash commands: arcwright-migrate, tmux, gsudo, and utility commands
+  // Bundle all slash commands: arcwright-migrate, herdr, gsudo, and utility commands
   // (track commands removed in stage 1; the function name is kept for continuity)
   const cmdFiles = fs.readdirSync(commandsSrc)
     .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
@@ -1030,38 +1001,6 @@ function bundleSpecialistCommands() {
   console.log('');
 }
 
-// ─── Step 4: bundleTmuxSetup ──────────────────────────────────────────────────
-
-function bundleTmuxSetup() {
-  console.log('⌨️   Bundling tmux setup → src/tmux/');
-
-  // Single source of truth: packages/tmux-setup/src/tmux/
-  const tmuxSrc = path.join(PROJECT_ROOT, 'packages', 'tmux-setup', 'src', 'tmux');
-  const destDir = path.join(PKG_SRC, 'tmux');
-
-  if (!fs.existsSync(tmuxSrc)) {
-    console.log('  ⚠  packages/tmux-setup/src/tmux/ not found — skipping tmux bundle');
-    return;
-  }
-
-  const files = walk(tmuxSrc, tmuxSrc);
-  let copied = 0;
-  for (const { full, rel } of files) {
-    if (isExcluded(rel)) continue;
-    const dest = path.join(destDir, rel);
-    const content = readText(full);
-    if (content !== null) {
-      writeFile(dest, content);
-    } else {
-      copyFile(full, dest);
-    }
-    copied++;
-  }
-
-  console.log(`  ✓  packages/tmux-setup/src/tmux/  (${copied} files)  → src/tmux/`);
-  console.log('');
-}
-
 // ─── Step 5: bundleLauncherTemplates ─────────────────────────────────────────
 
 function bundleLauncherTemplates() {
@@ -1145,7 +1084,6 @@ buildKiroAssets();
 bundleKiroAgents();
 bundleTrackCommands();
 bundleSpecialistCommands();
-bundleTmuxSetup();
 bundleLauncherTemplates();
 verifyNoLeaks();
 

@@ -14,11 +14,6 @@ const NPM_PACKAGES = [
     description: 'Agents, skills, workflows, IDE configs',
     url: 'https://www.npmjs.com/package/@arcwright-ai/agent-orchestration',
   },
-  {
-    name: '@arcwright-ai/tmux-setup',
-    description: 'tmux config + scripts for AI workflows',
-    url: 'https://www.npmjs.com/package/@arcwright-ai/tmux-setup',
-  },
 ];
 
 export default function Footer() {
@@ -80,6 +75,15 @@ export default function Footer() {
               >
                 <ExternalLink size={14} aria-hidden="true" />
                 Documentation
+              </a>
+              <a
+                href="https://herdr.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
+              >
+                <ExternalLink size={14} aria-hidden="true" />
+                Herdr (herdr.dev)
               </a>
             </div>
           </div>

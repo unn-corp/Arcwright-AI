@@ -193,8 +193,8 @@ export default function WorkflowsPage() {
                     runtime: '/goal loop',
                   },
                   {
-                    shape: 'User wants to watch AND $TMUX is set AND work is long',
-                    runtime: 'Add tmux opt-in visibility to whichever runtime above was chosen',
+                    shape: 'User wants to watch AND $HERDR_ENV is set AND work is long',
+                    runtime: 'Add Herdr opt-in visibility to whichever runtime above was chosen',
                   },
                   {
                     shape: 'Genuinely ambiguous — could be a single change or a sweep',

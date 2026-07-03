@@ -13,9 +13,9 @@ Two rows (`dev`, `security`) at `_arcwright-output/sessions/<session-id>/agent-r
 
 ## Non-Negotiables
 
-1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed by the Session Agent Registry. tmux is opt-in visibility only.
+1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed by the Session Agent Registry. herdr pane visibility is opt-in only.
 2. **Sonnet-first.** Default every spawn to `sonnet`. Opus only with explicit user permission — ask before escalating. Security role is the most common candidate for opus.
-3. **No legacy signals.** The Agent tool return value is the sole completion signal. Do not reintroduce `AGENT_SIGNAL` / `STEP COMPLETE` / `PEER_SIGNAL` / `STATUS_CHECK` / `$SPAWNER_PANE` / `tmux-protocol` skill references / `session-state.md` pane tables in the in-process flow.
+3. **No legacy signals.** The Agent tool return value is the sole completion signal. Do not reintroduce `AGENT_SIGNAL` / `STEP COMPLETE` / `PEER_SIGNAL` / `STATUS_CHECK` / `$SPAWNER_PANE` / the retired pane-based orchestration skill / `session-state.md` pane tables in the in-process flow.
 4. **Reuse over re-spawn (within a hotfix cycle).** First use of `dev` or `security` → spawn, record `agentId` in the registry. Rework on the same fix → `SendMessage(to: <agentId>, ...)` to the same agent.
 5. **Spawn fresh on a new hotfix.** A second, disjoint hotfix in the same session → spawn fresh for both roles and replace the registry rows.
 6. **Registry path.** `_arcwright-output/sessions/<session-id>/agent-registry.md`. Two rows: `dev` and `security`. See `claude-subagent-protocol` §3.

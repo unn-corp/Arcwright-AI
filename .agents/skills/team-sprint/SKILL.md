@@ -1,12 +1,12 @@
 ---
 name: "team-sprint"
-description: "The Strike Team — in-process SM + Dev + QA loop. SM manages sprint queue (reused across stories), Dev implements each story, QA validates, SM marks done. tmux is opt-in visibility only."
+description: "The Strike Team — in-process SM + Dev + QA loop. SM manages sprint queue (reused across stories), Dev implements each story, QA validates, SM marks done. herdr pane visibility is opt-in only."
 allowed-tools: Read, Grep, Glob, Write, Edit, Agent, SendMessage, Bash
 ---
 
 # Agent Team: Sprint — The Strike Team
 
-> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). tmux split-pane variant is opt-in (see step blocks).
+> **Default orchestration:** in-process via [`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md). herdr pane variant is opt-in (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -116,7 +116,7 @@ the sprint.
 
 Capture result into `$STEP_1_OUTPUT`. Pass first story details to step 2.
 
-> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
+> For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -143,7 +143,7 @@ registry `dev` row. Subsequent stories and the fix-pass loop reuse this row via
 
 Capture result into `$STEP_2_OUTPUT`. Pass to step 3.
 
-> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
+> For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -170,7 +170,7 @@ registry `qa` row. Subsequent stories and the fix-pass loop reuse this row via
 
 Capture result into `$STEP_3_OUTPUT`. If pass: proceed to step 4. If fail: pass to step 3b.
 
-> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
+> For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -195,7 +195,7 @@ The Dev agent already exists in the registry. **SendMessage** to its existing
 
 Capture result into `$STEP_3B_OUTPUT`. Return to step 3 (re-engage the existing QA agent via `SendMessage` to re-validate). When QA passes: proceed to step 4.
 
-> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
+> For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 
@@ -221,7 +221,7 @@ done/remaining counts.
 
 Capture result into `$STEP_4_OUTPUT`. If next story: return to step 2 with new story (Dev/QA may also be reused). If sprint complete: present summary to user. Final output — no next step.
 
-> For opt-in pane visibility, see the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
+> For opt-in pane visibility, see the `herdr` skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it still uses Agent tool + SendMessage.
 
 ---
 

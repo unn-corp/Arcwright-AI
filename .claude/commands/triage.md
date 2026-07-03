@@ -1,5 +1,5 @@
 ---
-description: Recommend an execution approach for the user's task — plain in-process agent(s), an ultracode dynamic workflow, a /goal loop, or a tmux opt-in visible run.
+description: Recommend an execution approach for the user's task — plain in-process agent(s), an ultracode dynamic workflow, a /goal loop, or a herdr opt-in visible run.
 handoffs:
   - label: "Refresh project context (CLAUDE.md / AGENTS.md)"
     prompt: "/claude-md capture"
@@ -9,7 +9,7 @@ handoffs:
 
 Use the `triage` skill (workflow-router) to recommend an execution approach
 for the user's task: plain in-process agent(s), an `ultracode` dynamic
-workflow, a `/goal` loop, or (opt-in) a tmux-visible run. Output a
+workflow, a `/goal` loop, or (opt-in) a herdr-visible run. Output a
 recommendation + the exact trigger + a one-sentence rationale. The router
 does not start the work — you do.
 

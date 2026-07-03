@@ -1,7 +1,8 @@
 {
   "name": "@arcwright-ai/tmux-setup",
   "version": "1.1.19",
-  "description": "tmux setup for AI agent workflows — Catppuccin theme, pane title sync, clipboard integration, and multi-agent orchestration scripts",
+  "description": "DEPRECATED: Arcwright moved to Herdr (herdr.dev) for terminal-workspace agent orchestration. Use the herdr skill / /herdr command. This tmux package is no longer maintained.",
+  "deprecated": "Deprecated in favor of Herdr (herdr.dev). See the herdr skill and docs/herdr-collie-tailscale-pwa.md.",
   "keywords": [
     "tmux",
     "claude",

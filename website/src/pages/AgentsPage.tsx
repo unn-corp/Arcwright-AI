@@ -21,7 +21,7 @@ export default function AgentsPage() {
           </p>
           <div className="mt-6 font-mono text-sm text-muted/60 border-l-2 border-cta/40 pl-4">
             Spawn in-process via the Agent tool. Reuse across follow-ups with SendMessage
-            and the Session Agent Registry. tmux pane visibility is an opt-in add-on.
+            and the Session Agent Registry. Herdr pane visibility is an opt-in add-on.
           </div>
         </div>
       </section>

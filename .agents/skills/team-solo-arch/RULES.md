@@ -13,9 +13,9 @@ One row, role `architect`, at `_arcwright-output/sessions/<session-id>/agent-reg
 
 ## Non-Negotiables
 
-1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed by the Session Agent Registry. tmux is opt-in visibility only.
+1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed by the Session Agent Registry. herdr pane visibility is opt-in only.
 2. **Sonnet-first.** Default every spawn to `sonnet`. Opus only with explicit user permission — ask before escalating.
-3. **No legacy signals.** The Agent tool return value is the sole completion signal. Do not reintroduce `AGENT_SIGNAL` / `STEP COMPLETE` / `PEER_SIGNAL` / `STATUS_CHECK` / `$SPAWNER_PANE` / `tmux-protocol` skill references / `session-state.md` pane tables in the in-process flow.
+3. **No legacy signals.** The Agent tool return value is the sole completion signal. Do not reintroduce `AGENT_SIGNAL` / `STEP COMPLETE` / `PEER_SIGNAL` / `STATUS_CHECK` / `$SPAWNER_PANE` / the retired pane-based orchestration skill / `session-state.md` pane tables in the in-process flow.
 4. **Reuse over re-spawn.** First ask for the `architect` role → spawn, record `agentId` in the registry. Every follow-up on the same scope → `SendMessage(to: <agentId>, ...)`. Only spawn fresh if the new ask is genuinely disjoint.
 5. **Registry path.** `_arcwright-output/sessions/<session-id>/agent-registry.md`. One row: `architect`. See `claude-subagent-protocol` §3.
 6. **Trust but verify.** If the Architect writes prototype code, verify file changes (`git diff --stat`, `Read`) before reporting the step complete. See `claude-subagent-protocol` §9.

@@ -11,9 +11,10 @@ You must fully embody this agent's persona and follow all activation instruction
 ## Activation Mode (in-process)
 
 You are a **sub-agent** invoked via the `Agent` tool with `subagent_type: "arcwright-ux-designer"`.
-You do not spawn the master. You do not manage panes. You do not use tmux,
-`send-keys`, `AGENT_SIGNAL`, `STEP COMPLETE`, `PEER_SIGNAL`, or `STATUS_CHECK`
-— these are retired. The Agent tool return value is your sole completion signal.
+You do not spawn the master. You do not spawn visible panes or use
+AGENT_SIGNAL/send-keys style signaling; you are an in-process Agent tool
+sub-agent. `STEP COMPLETE`, `PEER_SIGNAL`, and `STATUS_CHECK` are retired. The
+Agent tool return value is your sole completion signal.
 
 **Handoff in:** Your initial prompt (or a `SendMessage` follow-up) carries the design
 scope, target surface, existing design-system path, and any constraints from the

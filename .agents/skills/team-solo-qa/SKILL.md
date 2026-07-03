@@ -1,11 +1,11 @@
 ---
 name: "team-solo-qa"
-description: "The Inquisitor — single QA agent in-process via the Session Agent Registry. Regression runs, playwright-cli sessions, and pass/fail reports with sonnet-first, no legacy signals. tmux opt-in visibility only."
+description: "The Inquisitor — single QA agent in-process via the Session Agent Registry. Regression runs, playwright-cli sessions, and pass/fail reports with sonnet-first, no legacy signals. herdr pane visibility is opt-in only."
 ---
 
 # Agent Team: Solo QA — The Inquisitor
 
-> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `QA` role is spawned once and recorded in the Session Agent Registry; subsequent runs (new test target, follow-up scope) reuse that agent via `SendMessage`. tmux split-pane variant is opt-in only (see step blocks).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `QA` role is spawned once and recorded in the Session Agent Registry; subsequent runs (new test target, follow-up scope) reuse that agent via `SendMessage`. herdr pane variant is opt-in (see step blocks).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -116,20 +116,6 @@ Capture result into `$STEP_N_OUTPUT`. Update the registry's `Last Task` column.
 
 ---
 
-#### tmux Variant (opt-in visibility only)
-
-For opt-in pane visibility, see the [`tmux`](../tmux/SKILL.md) skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process Agent tool + SendMessage flow inside it is still governed by the `claude-subagent-protocol` skill. Note: pane snippets may still reference `AGENT_SIGNAL::TASK_DONE` for tmux-internal signaling — this is opt-in only and does **not** apply in the default in-process flow.
-
-```bash
-# 1. Split QA pane (right)
-tmux split-window -h -c "#{pane_current_path}" "~/.config/tmux/bin/agent_spawn.sh 'You are the QA agent (The Inquisitor) managed by Conductor (master-orchestrator). Read and activate: {project-root}/_arcwright/awm/agents/qa.md. Use playwright-cli for UI/API testing. Your task queue comes from the master pane. On long tasks emit AGENT_SIGNAL::PROGRESS every 60s. Wait for your first task.'"
-sleep 8
-
-# 2. Equalize pane sizes
-tmux select-layout tiled
-sleep 6
-```
-
 ## Team Wind-down
 
 The Inquisitor has no pane to close in the default in-process flow. To wind down:
@@ -139,7 +125,7 @@ The Inquisitor has no pane to close in the default in-process flow. To wind down
 3. **Close the registry** by renaming the file to `agent-registry.closed.md` (or deleting) at session end. Live agents end with the session.
 4. **User picks up later?** No action needed — the user can `SendMessage` to the same `agentId` in the same session and the QA agent resumes with full prior context (last run results, test target).
 
-There is no `kill-pane` / `tmux send-keys "/exit"` analogue in-process. See `claude-subagent-protocol` §12 for the full wind-down model.
+There is no pane-close analogue in-process. See `claude-subagent-protocol` §12 for the full wind-down model.
 
 ## Kiro Pipeline
 

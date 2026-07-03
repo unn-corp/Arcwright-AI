@@ -15,7 +15,7 @@ Load `claude-subagent-protocol` for the full protocol. This is the team-specific
 
 ## Non-negotiables
 
-1. **In-process is the default.** `Agent` tool for first use; `SendMessage` for revisions and re-reviews. tmux is opt-in visibility only.
+1. **In-process is the default.** `Agent` tool for first use; `SendMessage` for revisions and re-reviews. herdr pane visibility is opt-in only.
 2. **Sonnet-first, always.** Default both roles to `sonnet`. Architect may use `opus` **only with explicit user permission** (ask before spawning — see `claude-subagent-protocol` §6.3). Tech Writer stays on `sonnet`.
 3. **No legacy signals.** `AGENT_SIGNAL`, `STEP COMPLETE`, `PEER_SIGNAL`, `STATUS_CHECK`, the retired pane-based orchestration skill, and `session-state.md` pane tables — all retired in-process.
 4. **Reuse over re-spawn.** Tech Writer's revisions and Architect's re-reviews go through `SendMessage` to the original `agentId`. Don't spawn a fresh tech-writer or architect mid-team.

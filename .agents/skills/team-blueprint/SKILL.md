@@ -5,7 +5,7 @@ description: "War Room — in-process strategic planning council with PM, Analys
 
 # Agent Team: Blueprint — The War Room
 
-> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Agent` tool + `SendMessage` reuse with a Session Agent Registry is the canonical path. tmux split-pane is opt-in visibility only (see the [tmux](../tmux/SKILL.md) skill).
+> **Default orchestration:** in-process via the [`claude-subagent-protocol`](../claude-subagent-protocol/SKILL.md) skill. The `Agent` tool + `SendMessage` reuse with a Session Agent Registry is the canonical path. herdr pane variant is opt-in (see the [herdr](../herdr/SKILL.md) skill).
 >
 > **Kiro CLI:** this team is available as a Kiro `subagent` pipeline. See `## Kiro Pipeline` at the end of this skill.
 
@@ -218,11 +218,11 @@ See `claude-subagent-protocol` §12 for the full wind-down model.
 
 Default is in-process. The Agent tool return value is the sole completion signal for every step — no `AGENT_SIGNAL`, no `STEP COMPLETE`, no polling. See `claude-subagent-protocol` §11 for the full no-legacy-signals rule.
 
-For opt-in pane visibility (the `tmux` skill's "Watching agents in panes" section), `AGENT_SIGNAL::TASK_DONE::...` is still allowed **inside that opt-in block** — but it does not apply to the default in-process flow.
+For opt-in pane visibility (the `herdr` skill's "Watching agents in panes" section), `AGENT_SIGNAL::TASK_DONE::...` is still allowed **inside that opt-in block** for pane-internal signaling — but it does not apply to the default in-process flow.
 
-#### tmux Variant (opt-in — only when user explicitly requests pane visibility AND $TMUX is set)
+#### Pane Visibility (opt-in — only when user explicitly requests pane visibility AND $HERDR_ENV is set)
 
-For opt-in pane visibility, see the [`tmux`](../tmux/SKILL.md) skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface; the in-process orchestration inside it is still governed by this skill. Do not use this variant by default.
+For opt-in pane visibility, see the [`herdr`](../herdr/SKILL.md) skill's "Watching agents in panes (opt-in)" section (spawn with `herdr agent start`, wait with `herdr wait agent-status`). The pane is a viewing surface; the in-process orchestration inside it is still governed by this skill. Do not use this variant by default.
 
 ## Kiro Pipeline
 

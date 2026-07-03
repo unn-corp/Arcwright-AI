@@ -2,7 +2,7 @@
 
 > AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
 
-Arcwright installs a structured system of specialist AI agents, in-process subagent orchestration, and a 47-skill library into any project. The orchestrator routes work through spec, research, UX, implementation, review, and QA — using **in-process `Agent` tool calls with `SendMessage` reuse** by default. tmux pane visibility is opt-in for users who want to watch.
+Arcwright installs a structured system of specialist AI agents, in-process subagent orchestration, and a 47-skill library into any project. The orchestrator routes work through spec, research, UX, implementation, review, and QA — using **in-process `Agent` tool calls with `SendMessage` reuse** by default. Herdr pane visibility is opt-in for users who want to watch.
 
 ---
 
@@ -16,7 +16,7 @@ Arcwright installs a structured system of specialist AI agents, in-process subag
 - [Specialist Agents](#specialist-agents)
 - [Agent Teams Catalog](#agent-teams-catalog)
 - [Supported IDEs](#supported-ides)
-- [tmux Setup](#tmux-setup)
+- [Herdr Setup](#herdr-setup)
 - [Migrating from bmad](#migrating-from-bmad)
 - [Building from Source](#building-from-source)
 - [License](#license)
@@ -74,9 +74,8 @@ catalog and recipes: [`docs/hooks-guide.md`](docs/hooks-guide.md).
 | Package | Description | Install |
 |---------|-------------|---------|
 | `@arcwright-ai/agent-orchestration` | Agents, skills, workflows, IDE configs, slash commands | `npx @arcwright-ai/agent-orchestration` |
-| `@arcwright-ai/tmux-setup` | tmux config + scripts for AI agent workflows | `npx @arcwright-ai/tmux-setup` |
 
-The tmux setup is also bundled inside the main package — you can install it with `npx @arcwright-ai/agent-orchestration tmux` or decline during the main install and grab it later from the standalone package. The two installs produce identical files.
+Arcwright ships a `herdr` skill and a `/herdr` command for [Herdr](https://herdr.dev), a terminal workspace manager built for AI coding agents. Herdr is installed and run by you, not by the Arcwright installer — the skill is a reference for using it once it's on your machine. See [Herdr Setup](#herdr-setup) below.
 
 ---
 
@@ -98,7 +97,7 @@ The `/team` command is an interactive team selector. It presents all 17 teams or
 
 **Teams run in-process by default** — each teammate is spawned via the `Agent` tool and the orchestrator captures returned `agentId` values into a **Session Agent Registry** (role → agentId table). Subsequent tasks for the same role re-engage the existing agent via `SendMessage(to: agentId, ...)`, so context carries across turns instead of being rebuilt from scratch. See `.agents/skills/claude-subagent-protocol/SKILL.md` for the full protocol (canonical spawn pattern, sonnet-first default, permission-before-opus).
 
-**tmux pane visibility is opt-in.** When the user has explicitly asked to watch agents in split panes **and** `$TMUX` is set, load the `tmux` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface — the in-process orchestration inside it is still governed by `claude-subagent-protocol`.
+**Herdr pane visibility is opt-in.** When the user has explicitly asked to watch agents in split panes **and** `$HERDR_ENV` is set, load the `herdr` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface — the in-process orchestration inside it is still governed by `claude-subagent-protocol`.
 
 Not sure which team to use? Run `/triage <task>` first — the **workflow router** recommends plain in-process agent(s), an `ultracode` dynamic workflow, or a `/goal` loop based on the task's shape (see `.agents/skills/triage/SKILL.md`).
 
@@ -108,8 +107,8 @@ See the full team catalog below.
 
 | Command | Purpose |
 |---------|---------|
-| `/triage` | Workflow router — given a task, recommends an execution approach: plain in-process agent(s), an `ultracode` dynamic workflow, or a `/goal` loop. Optional tmux opt-in visibility for users who want to watch. |
-| `/tmux` | Runs the tmux setup installer (`npx @arcwright-ai/tmux-setup`). Installs Catppuccin theme, Actions popup, pane title sync, clipboard integration, and pane-visibility scripts. tmux panes are a *viewing surface* for in-process orchestration, not the spawn mechanism. |
+| `/triage` | Workflow router — given a task, recommends an execution approach: plain in-process agent(s), an `ultracode` dynamic workflow, or a `/goal` loop. Optional Herdr opt-in visibility for users who want to watch. |
+| `/herdr` | Loads the Herdr terminal-workspace reference (sessions, workspaces, tabs, panes, agent spawning, wait-on-status) for the [Herdr](https://herdr.dev) terminal manager. Herdr panes are a *viewing surface* for in-process orchestration, not the spawn mechanism. |
 | `/gsudo` | Loads the gsudo skill and runs a command with Windows elevated privileges. Works from WSL2, Git Bash, or native Windows. Takes `$ARGUMENTS` for the command to run. |
 | `/arcwright-migrate` | Migrates an existing bmad installation to arcwright naming. Runs a dry-run first, then applies the rename. See [Migrating from bmad](#migrating-from-bmad). |
 
@@ -154,7 +153,7 @@ Plus meta-agents for building new agents, workflows, and modules (Arcwright Buil
 
 17 pre-built team compositions. Use `/team <code>` or just `/team` for the picker.
 
-Each team runs **in-process by default** — the orchestrator spawns each role via the `Agent` tool, captures the returned `agentId` into a Session Agent Registry, and re-engages roles across tasks via `SendMessage`. tmux split-pane visibility is opt-in; see the `tmux` skill's "Watching agents in panes" section.
+Each team runs **in-process by default** — the orchestrator spawns each role via the `Agent` tool, captures the returned `agentId` into a Session Agent Registry, and re-engages roles across tasks via `SendMessage`. Herdr split-pane visibility is opt-in; see the `herdr` skill's "Watching agents in panes" section.
 
 Not sure which team matches your task? Run `/triage <task>` first — the workflow router recommends an approach (plain in-process, ultracode, `/goal`, or one of the 17 teams) based on the task's shape.
 
@@ -263,7 +262,6 @@ Global installs write to user-level config dirs instead of a project:
 | Core modules | `~/.arcwright/` | `~/.arcwright/` (WSL Linux home) |
 | Claude Code assets | `~/.claude/` | `~/.claude/` (WSL Linux home) |
 | Kiro assets | `~/.kiro/` | `/mnt/c/Users/<name>/.kiro/` (Windows home) |
-| tmux config | `~/.tmux.conf`, `~/.config/tmux/` | `~/.tmux.conf`, `~/.config/tmux/` |
 
 **Updating a global install:**
 
@@ -274,7 +272,6 @@ npx @arcwright-ai/agent-orchestration update --global
 The updater reads the global manifest at `~/.arcwright/_config/manifest.yaml`, applies changes for new versions, removes orphaned files from prior versions, and preserves:
 - User-created agent overlays at `~/.arcwright/overlays/customize-agents/`
 - Your `config.yaml` (only version metadata is refreshed)
-- tmux config files if they already exist (installer prompts before overwriting)
 
 Global installs skip the project-level gitignore prompt. On `update --yes --global`, the installer restores your previous choices for `--tools`, `--teams`, and `--docker-check` from the manifest automatically — no need to re-pass flags.
 
@@ -293,37 +290,32 @@ revert steps: [`docs/multi-account-setup.md`](docs/multi-account-setup.md).
 
 ---
 
-## tmux Setup
+## Herdr Setup
 
-Standalone tmux configuration. **tmux is a visibility tool, not a spawn mechanism** — the default Arcwright orchestration runs in-process via the `Agent` tool + `SendMessage` reuse (see `claude-subagent-protocol` skill). You only need tmux panes if you want to watch agents run.
+Arcwright ships a `herdr` skill and a `/herdr` command for [Herdr](https://herdr.dev), a terminal workspace manager built for AI coding agents (hierarchy: session → workspace → tab → pane, with first-class agent spawning and blocking status waits). Herdr is a standalone app you install yourself from [herdr.dev](https://herdr.dev) — Arcwright doesn't install or configure it, the skill and command are just a reference layer for using it once it's on your machine.
 
-```bash
-npx @arcwright-ai/tmux-setup
-```
-
-Or from inside the main install:
+**Herdr is a visibility tool, not a spawn mechanism** — the default Arcwright orchestration runs in-process via the `Agent` tool + `SendMessage` reuse (see the `claude-subagent-protocol` skill). You only need Herdr panes if you want to watch agents run.
 
 ```bash
-npx @arcwright-ai/agent-orchestration tmux
+/herdr
 ```
 
-**What it installs:**
+Loads the Herdr quick reference: pane splits/focus/resize, `herdr pane run`/`herdr pane read`, `herdr wait agent-status`/`herdr wait output`, named sessions (`herdr --session <name>`), workspaces, tabs, worktrees, and the plugin catalog.
 
-- **Catppuccin Frappe theme** with Powerline status bar
-- **Actions popup** (click `⚙ Actions` on the status bar) — a 4-column interactive menu:
-  - **Window & Session** — zoom, switch windows, new/kill window, rename/kill session, detach
-  - **Pane Controls** — split vertical/horizontal, kill, swap, break to new window, move pane between windows
-  - **Tools & Clipboard** — float terminal, scratch terminal (Alt+I), save/restore session, copy mode, paste image, open URL in browser
-  - **Launch** — Neovim (E or Alt+E), NvimTree (N), Yazi (Y), Lazygit (G), Lazydocker (D) — each opens in a vertical split using the pane's current directory
-- **Pane title sync** — each pane's window name auto-updates from Claude Code's OSC 2 title
-- **Clipboard integration** — WSL2 uses Windows clipboard, native Linux uses xclip, macOS uses pbcopy
-- **Agent orchestration scripts** — `dispatch.sh`, `float_term.sh`, `paste_image_wrapper.sh`, `watch-sync.sh`
-- **Status widgets** — CPU, RAM, Claude usage, session + window IDs, CWD, time
-- **Shell aliases** — `tmux-ai` (open tmux at your project) and `tmux-claude` (same, but launch Claude in the first pane)
+**Spawning a visible agent (opt-in):**
 
-**Pane-based agent visibility is opt-in.** To watch a running agent in a split pane, see the "Watching agents in panes (opt-in)" section of the `.agents/skills/tmux/SKILL.md` skill. The pane mirrors the in-process session; the in-process flow inside it is still governed by `claude-subagent-protocol`.
+```bash
+herdr agent start <role> --split right -- \
+  claude --dangerously-skip-permissions '<task>'
 
-**Requires:** tmux 3.4+, a Nerd Font (JetBrainsMono NFM recommended), WSL2 or native Linux/macOS.
+herdr wait agent-status <role> --status blocked --timeout 600000
+herdr pane run <role> '<follow-up>'
+herdr pane close <role>
+```
+
+The pane is only a viewing surface — the spawned agent still runs in-process (`Agent` tool + `SendMessage`), governed by `claude-subagent-protocol`. Full command reference, including a tmux → Herdr mapping table for anyone migrating an old setup: `.agents/skills/herdr/SKILL.md`.
+
+**Watching agents from your phone:** the `collie` Herdr plugin puts a phone PWA in front of your agent herd over Tailscale, so you can reply to a blocked agent from your phone keyboard. It's remote shell access to your machine by design and not installed by default — full install, security posture, and teardown steps are in [`docs/herdr-collie-tailscale-pwa.md`](docs/herdr-collie-tailscale-pwa.md).
 
 ---
 
@@ -367,7 +359,6 @@ The slash command guides the AI through a 7-step verification pass after the ren
 node build/build.js
 
 cd packages/agent-orchestration && npm publish --access public
-cd ../tmux-setup && npm publish --access public
 ```
 
 The build pipeline:
@@ -375,10 +366,9 @@ The build pipeline:
 1. **buildGenericPackage** — copies `_arcwright/{awb,awm,core,_memory}/` and `.agents/skills/` → `src/`
 2. **buildKiroAssets** — copies skills to `.kiro/skills/`, generates steering docs
 3. **bundleSlashCommands** — copies the 11 slash commands → `src/.claude/commands/`
-4. **bundleTmuxSetup** — copies tmux scripts from `packages/tmux-setup/src/tmux/` → `src/tmux/` (single source of truth, identical to standalone package)
-5. **verifyNoLeaks** — scans for Squidhub content patterns; build fails if any found
+4. **verifyNoLeaks** — scans for Squidhub content patterns; build fails if any found
 
-Source of truth lives in `_arcwright/` (modules) and `packages/tmux-setup/src/tmux/` (tmux). `packages/agent-orchestration/src/` is wiped and regenerated on every build — never edit it directly.
+Source of truth lives in `_arcwright/` (modules). `packages/agent-orchestration/src/` is wiped and regenerated on every build — never edit it directly.
 
 ---
 

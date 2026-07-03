@@ -44,7 +44,7 @@ function AnimatedRoutes() {
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/workflows" element={<WorkflowsPage />} />
-        <Route path="/tmux" element={<TmuxPage />} />
+        <Route path="/herdr" element={<TmuxPage />} />
       </Routes>
     </div>
   );

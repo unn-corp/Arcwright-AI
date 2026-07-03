@@ -61,7 +61,7 @@ export default function Hero() {
         <p className="font-sans text-lg sm:text-xl text-muted max-w-2xl mx-auto mb-4 leading-relaxed">
           From <code className="font-mono text-sm text-cta/80">/triage</code> to runtime — plain
           in-process agents, ultracode dynamic workflows, or <code className="font-mono text-sm text-cta/80">/goal</code> loops.
-          Specialists stay alive across tasks via SendMessage reuse; tmux is opt-in visibility.
+          Specialists stay alive across tasks via SendMessage reuse; Herdr is opt-in visibility.
         </p>
 
         {/* Install command */}
