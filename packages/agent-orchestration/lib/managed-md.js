@@ -111,10 +111,8 @@ async function cleanupManagedBlocks(filePath, markerPairs) {
       // Legacy `end` is the next section's heading — strip up to it, keep it.
       const endHeading = cleaned.indexOf(end, startIdx + start.length);
       endIdx = endHeading !== -1 ? endHeading : blockEndIndex(cleaned, startIdx, start, end);
-      const nextBlockStart = ranges
-        .map(([s]) => s)
-        .filter(s => s > startIdx)
-        .sort((a, b) => a - b)[0];
+      const laterStarts = ranges.map(([s]) => s).filter(s => s > startIdx);
+      const nextBlockStart = laterStarts.length ? Math.min(...laterStarts) : undefined;
       if (nextBlockStart !== undefined && endIdx > nextBlockStart) {
         endIdx = nextBlockStart;
       }
