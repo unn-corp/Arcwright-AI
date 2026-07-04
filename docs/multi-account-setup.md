@@ -147,6 +147,39 @@ claude-pick() {
 }
 ```
 
+### Native Linux / macOS — fzf picker (accounts and providers in one menu)
+
+If you also installed the Arcwright model launchers (`--model-launchers`, which sources `~/.config/openrouter/claude-or.sh` and defines `claude-glm`, `claude-minimax`, `claude-qwen`, `claude-sub`), you can drive both the Anthropic account switch and the alternate providers from a single fuzzy menu. Requires `fzf`.
+
+```bash
+# Add to ~/.bashrc / ~/.zshrc, below the claude-or.sh source line.
+claude-devo() {
+  local choice
+  choice=$(printf '%s\n' \
+    "personal : default ~/.claude (Anthropic)" \
+    "work     : ~/.claude-work (Anthropic)" \
+    "alt      : ~/.claude-alt (Anthropic)" \
+    "glm      : Z.ai GLM (direct)" \
+    "minimax  : MiniMax (direct)" \
+    "qwen     : Qwen via OpenRouter" \
+    "sub      : plain Anthropic subscription" \
+    | fzf --prompt='claude > ' --height=10 --border --no-sort) || return
+
+  case "${choice%% *}" in
+    personal) unset CLAUDE_CONFIG_DIR;                       claude --dangerously-skip-permissions "$@" ;;
+    work)     export CLAUDE_CONFIG_DIR="$HOME/.claude-work"; claude --dangerously-skip-permissions "$@" ;;
+    alt)      export CLAUDE_CONFIG_DIR="$HOME/.claude-alt";  claude --dangerously-skip-permissions "$@" ;;
+    glm)      unset CLAUDE_CONFIG_DIR; claude-glm     "$@" ;;
+    minimax)  unset CLAUDE_CONFIG_DIR; claude-minimax "$@" ;;
+    qwen)     unset CLAUDE_CONFIG_DIR; claude-qwen    "$@" ;;
+    sub)      unset CLAUDE_CONFIG_DIR; claude-sub     "$@" ;;
+  esac
+}
+# Usage: run `claude-devo`, then fuzzy-pick an account or provider.
+```
+
+Add or remove rows to match the accounts you created in the Setup steps and the providers you enabled. The Anthropic rows switch `CLAUDE_CONFIG_DIR` (a separate login, history, and settings per account); the provider rows call the Arcwright model launchers, which route to Z.ai, MiniMax, or OpenRouter using the keys in `~/.config/{zai,minimax,openrouter}/`. Each account still shares the same skills/commands/agents via the symlinks from the Setup steps, so switching account never changes your Arcwright tooling.
+
 You can also auto-select by directory (e.g. work account anywhere under
 `~/Projects/Work`) via `PROMPT_COMMAND` — see the bashrc snippet at the end.
 
