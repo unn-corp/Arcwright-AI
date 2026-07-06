@@ -152,6 +152,7 @@ describe('setupHerdr', () => {
     expect(toml).toContain('resume_agents_on_restore = true');
     expect(toml).toContain('new_cwd = "follow"');
     expect(toml).toContain('agent_panel_sort = "spaces"');
+    expect(toml).toContain('system_monitor = true');
     expect(run.calls).toContain('herdr integration install claude');
     expect(run.calls).toContain('herdr integration install codex');
   });

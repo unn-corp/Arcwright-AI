@@ -168,6 +168,9 @@ async function setupHerdr(deps = {}) {
     await upsertTomlSetting(configPath, 'session', 'resume_agents_on_restore', 'true');
     await upsertTomlSetting(configPath, 'terminal', 'new_cwd', '"follow"');
     await upsertTomlSetting(configPath, 'ui', 'agent_panel_sort', '"spaces"');
+    // Top-of-space CPU/RAM/GPU monitor strip. Only takes effect on a herdr
+    // build that ships the feature (the Arcwright herdr fork); harmless otherwise.
+    await upsertTomlSetting(configPath, 'ui', 'system_monitor', 'true');
     log(chalk.dim('     installed clipboard, restore, and agent-launch standards'));
   } catch {
     log(chalk.yellow('     could not install Herdr standard assets (continuing)'));
