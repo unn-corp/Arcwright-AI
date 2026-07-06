@@ -190,6 +190,16 @@ program
     console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,codex,hermes,opencode\n');
   });
 
+// ─── Herdr ──────────────────────────────────────────────────────────────────
+
+program
+  .command('herdr')
+  .description('Configure an existing Herdr install with Arcwright defaults')
+  .action(async () => {
+    const { setupHerdr } = require('./herdrSetup');
+    await setupHerdr();
+  });
+
 // ─── tmux (deprecated, removed in favor of Herdr) ────────────────────────────
 
 program

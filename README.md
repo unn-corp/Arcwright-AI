@@ -75,7 +75,7 @@ catalog and recipes: [`docs/hooks-guide.md`](docs/hooks-guide.md).
 |---------|-------------|---------|
 | `@arcwright-ai/agent-orchestration` | Agents, skills, workflows, IDE configs, slash commands | `npx @arcwright-ai/agent-orchestration` |
 
-Arcwright ships a `herdr` skill and a `/herdr` command for [Herdr](https://herdr.dev), a terminal workspace manager built for AI coding agents. Herdr is installed and run by you, not by the Arcwright installer — the skill is a reference for using it once it's on your machine. See [Herdr Setup](#herdr-setup) below.
+Arcwright ships a `herdr` skill and managed defaults for [Herdr](https://herdr.dev), a terminal workspace manager built for AI coding agents. You install Herdr itself; Arcwright configures it when detected. See [Herdr Setup](#herdr-setup) below.
 
 ---
 
@@ -292,13 +292,19 @@ revert steps: [`docs/multi-account-setup.md`](docs/multi-account-setup.md).
 
 ## Herdr Setup
 
-Arcwright ships a `herdr` skill and a `/herdr` command for [Herdr](https://herdr.dev), a terminal workspace manager built for AI coding agents (hierarchy: session → workspace → tab → pane, with first-class agent spawning and blocking status waits). Herdr is a standalone app you install yourself from [herdr.dev](https://herdr.dev) — Arcwright doesn't install or configure it, the skill and command are just a reference layer for using it once it's on your machine.
+Arcwright ships a `herdr` skill and configures an existing [Herdr](https://herdr.dev) installation. Herdr remains a standalone app that you install from [herdr.dev](https://herdr.dev). Run the setup again at any time with:
+
+```bash
+arcwright herdr
+```
+
+The managed defaults install Claude and Codex integrations, the standard plugin set, MIME-aware `Ctrl+V` for text and images, native conversation restoration, `--yolo` for Codex, and `--dangerously-skip-permissions` for Claude. Claude sessions record their `CLAUDE_CONFIG_DIR`, so restored conversations return to the correct account when multiple profiles are used.
+
+New panes and tabs use `terminal.new_cwd = "follow"`. Give each space its own root with `herdr workspace create --cwd /path/to/project`; descendants inherit that directory unless `--cwd` is supplied explicitly. Agents are grouped by space with `ui.agent_panel_sort = "spaces"`. Herdr 0.7.1 cannot hide agents belonging to inactive spaces.
 
 **Herdr is a visibility tool, not a spawn mechanism** — the default Arcwright orchestration runs in-process via the `Agent` tool + `SendMessage` reuse (see the `claude-subagent-protocol` skill). You only need Herdr panes if you want to watch agents run.
 
-```bash
-/herdr
-```
+Use `/herdr` inside an agent conversation to load the command reference.
 
 Loads the Herdr quick reference: pane splits/focus/resize, `herdr pane run`/`herdr pane read`, `herdr wait agent-status`/`herdr wait output`, named sessions (`herdr --session <name>`), workspaces, tabs, worktrees, and the plugin catalog.
 

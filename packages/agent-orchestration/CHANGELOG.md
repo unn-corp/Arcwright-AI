@@ -3,6 +3,11 @@
 ## 1.2.3
 
 ### Added
+- **Managed Herdr runtime standard.** Existing Herdr installs now receive Claude and Codex
+  integrations, native conversation restoration, space-grouped agents, follow-cwd behavior,
+  MIME-aware `Ctrl+V` for clipboard text/images, unrestricted Codex/Claude launch policies,
+  and account-aware Claude resume across multiple `CLAUDE_CONFIG_DIR` profiles. Run or repair
+  the setup with `arcwright herdr`.
 - **Optional multi-provider Claude Code launchers** (`--model-launchers`, off by default).
   Installs provider-aware shell launchers that route Claude Code through alternate models:
   - `claude-glm` — GLM via Z.ai's native Anthropic endpoint (`https://api.z.ai/api/anthropic`),

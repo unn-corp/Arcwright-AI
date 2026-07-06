@@ -137,6 +137,25 @@ herdr plugin list                     # installed plugins
 herdr --default-config                # full commented config reference
 ```
 
+## 9. Arcwright runtime defaults
+
+Run `arcwright herdr` to install or repair the managed Herdr standard. It enables native
+Claude/Codex conversation restoration, profile-aware Claude resume, unrestricted agent launch
+flags, and MIME-aware `Ctrl+V` for text and images.
+
+New tabs and panes inherit their space directory:
+
+```toml
+[terminal]
+new_cwd = "follow"
+
+[ui]
+agent_panel_sort = "spaces"
+```
+
+Create a space with its default directory using `herdr workspace create --cwd /path/to/project`.
+Herdr 0.7.1 groups the agent panel by space but cannot filter out inactive-space agents.
+
 ---
 
 # Watching agents in panes (opt-in)

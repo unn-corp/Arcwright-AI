@@ -7,13 +7,19 @@
  * integration, installs the default plugin set (best-effort, per-plugin), and
  * writes a managed keybindings block into ~/.config/herdr/config.toml.
  *
- * Not wired into the installer CLI yet (Phase 2/3). Exported for reuse + tests.
+ * It runs during Claude/Codex installation and through `arcwright herdr`.
  */
 
 const os = require('os');
 const path = require('path');
 const { execSync } = require('child_process');
 const { upsertManagedBlock } = require('./managed-md');
+const {
+  installHerdrAssets,
+  upsertTomlSetting,
+  SHELL_START,
+  SHELL_END,
+} = require('./herdrAssets');
 
 // TOML comment markers delimiting the Arcwright-managed keybindings block.
 const KEYS_START = '# >>> arcwright-herdr-keys >>>';
@@ -89,17 +95,26 @@ function parsePluginIds(jsonOutput) {
 }
 
 /**
- * Build the managed keybindings TOML block for the plugins that are installed.
- * Returns null when none of the keybinding-bearing plugins are present, so the
- * caller can skip writing an empty block.
+ * Build the managed keybindings TOML block for installed plugins and clipboard.
+ * Returns null only when neither contributes a binding.
  */
-function buildKeybindingsBlock(installedIds) {
+function buildKeybindingsBlock(installedIds, options = {}) {
+  const clipboard = options.clipboard !== false;
   const blocks = KEYBINDINGS.filter((k) => installedIds.has(k.id)).map((k) =>
     k.toml.join('\n')
   );
+  if (clipboard) {
+    blocks.push([
+      '[[keys.command]]',
+      'key = "ctrl+v"',
+      'type = "shell"',
+      'command = "$HOME/.local/bin/herdr-clipboard-paste"',
+      'description = "Paste clipboard text or image"',
+    ].join('\n'));
+  }
   if (blocks.length === 0) return null;
   return (
-    '# Arcwright default plugin keybindings. Safe to edit; this block is rewritten\n' +
+    '# Arcwright default keybindings. Safe to edit; this block is rewritten\n' +
     '# on update. Delete the markers above and below to opt out of management.\n' +
     blocks.join('\n\n')
   );
@@ -117,6 +132,7 @@ function defaultRun(cmd) {
  * @param {(cmd:string)=>string} [deps.run] exec shim (mocked in tests)
  * @param {object} [deps.chalk] chalk instance (optional; plain when absent)
  * @param {string} [deps.configPath] override config.toml path (tests)
+ * @param {string} [deps.homeDir] override home directory (tests)
  * @param {boolean} [deps.quiet] suppress console output
  * @returns {Promise<{status:string, version?:string, installed:string[], skipped:string[]}>}
  */
@@ -126,6 +142,7 @@ async function setupHerdr(deps = {}) {
   const log = deps.quiet ? () => {} : (s) => console.log(s);
   const configPath =
     deps.configPath || path.join(os.homedir(), '.config', 'herdr', 'config.toml');
+  const homeDir = deps.homeDir || os.homedir();
 
   const { installed, version } = detectHerdr(run);
   if (!installed) {
@@ -136,12 +153,24 @@ async function setupHerdr(deps = {}) {
 
   log(chalk.green(`  ✓  herdr ${version || ''} detected`));
 
-  // Claude Code integration (agent-state hooks). Best-effort.
+  // Agent-state integrations. Best-effort.
+  for (const agent of ['claude', 'codex']) {
+    try {
+      run(`herdr integration install ${agent}`);
+      log(chalk.dim(`     installed ${agent} integration`));
+    } catch {
+      log(chalk.yellow(`     could not install ${agent} integration (continuing)`));
+    }
+  }
+
   try {
-    run('herdr integration install claude');
-    log(chalk.dim('     installed Claude Code integration'));
+    await installHerdrAssets(homeDir);
+    await upsertTomlSetting(configPath, 'session', 'resume_agents_on_restore', 'true');
+    await upsertTomlSetting(configPath, 'terminal', 'new_cwd', '"follow"');
+    await upsertTomlSetting(configPath, 'ui', 'agent_panel_sort', '"spaces"');
+    log(chalk.dim('     installed clipboard, restore, and agent-launch standards'));
   } catch {
-    log(chalk.yellow('     could not install Claude integration (continuing)'));
+    log(chalk.yellow('     could not install Herdr standard assets (continuing)'));
   }
 
   // Default plugins — install any not already present.
@@ -171,8 +200,22 @@ async function setupHerdr(deps = {}) {
     }
   }
 
+  let clipboard = false;
+  try {
+    clipboard = Boolean(run('command -v wl-paste').trim());
+  } catch {
+    /* MIME-aware clipboard standard currently targets Linux/Wayland. */
+  }
+  if (clipboard) {
+    try {
+      await upsertTomlSetting(configPath, 'keys', 'remote_image_paste', '""');
+    } catch {
+      log(chalk.yellow('     could not disable Herdr image-only Ctrl+V binding'));
+    }
+  }
+
   // Managed keybindings block for whatever ended up installed.
-  const block = buildKeybindingsBlock(present);
+  const block = buildKeybindingsBlock(present, { clipboard });
   if (block) {
     try {
       const result = await upsertManagedBlock(configPath, KEYS_START, KEYS_END, block);
@@ -206,7 +249,11 @@ module.exports = {
   detectHerdr,
   parsePluginIds,
   buildKeybindingsBlock,
+  upsertTomlSetting,
+  installHerdrAssets,
   DEFAULT_PLUGINS,
   KEYS_START,
   KEYS_END,
+  SHELL_START,
+  SHELL_END,
 };

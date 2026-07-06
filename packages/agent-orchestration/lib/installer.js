@@ -17,6 +17,7 @@ const { execSync } = require('child_process');
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const { detectPlatform } = require('./platform');
 const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
+const { setupHerdr } = require('./herdrSetup');
 
 // ─── WSL audio setup (Claude Code /voice) ────────────────────────────────────
 
@@ -1477,7 +1478,11 @@ async function install(opts) {
     }
   }
 
-  // tmux setup removed — Herdr replaces it (herdr.dev; see the `herdr` skill).
+  // Configure an existing Herdr install; Herdr itself remains user-installed.
+  if (resolvedTools.some((tool) => tool === 'claude-code' || tool === 'codex')) {
+    console.log(chalk.bold('\nHerdr setup:'));
+    await setupHerdr({ chalk });
+  }
 
   // ── WSL audio (Claude Code /voice — WSL2 + WSLg only, idempotent) ─────────
   if (resolvedTools.includes('claude-code')) {

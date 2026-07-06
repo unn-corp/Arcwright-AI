@@ -12,7 +12,7 @@ const cliPath = path.join(__dirname, '..', 'lib', 'cli.js');
 const isNpx = __dirname.includes('_npx') || __dirname.includes('.npm') || __dirname.includes('npx');
 
 // Inject 'install' as default subcommand when none is provided
-const SUBCOMMANDS = ['install', 'update', 'uninstall', 'status', 'platforms', 'tmux'];
+const SUBCOMMANDS = ['install', 'update', 'uninstall', 'status', 'platforms', 'herdr', 'tmux'];
 const userArgs = process.argv.slice(2);
 const hasSubcommand = userArgs.length > 0 && SUBCOMMANDS.includes(userArgs[0]);
 const effectiveArgs = hasSubcommand ? userArgs : ['install', ...userArgs];
