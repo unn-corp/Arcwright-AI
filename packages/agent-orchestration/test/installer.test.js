@@ -12,6 +12,7 @@ const {
   cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
   writeClaudeSettings, stripInstallerSettingsKeys,
   buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
+  ensureHermesCliInstalled, setupHermesModelSurface,
 } = installer._internal;
 
 // Silent chalk stub (every helper that logs takes a chalk-like object).
@@ -121,6 +122,55 @@ describe('buildModuleConfig', () => {
     expect(cfg.user_name).toBe('Lance');
     expect(cfg.output_folder).toBe('{project-root}/_arcwright-output');
     expect(cfg.awm_output_folder).toBe('{project-root}/_arcwright-output/awm');
+  });
+});
+
+describe('Hermes model surface helpers', () => {
+  it('installs Hermes through the official installer when hermes is absent', async () => {
+    const calls = [];
+    const run = (cmd) => {
+      calls.push(cmd);
+      if (cmd.startsWith('command -v hermes')) throw new Error('missing');
+      return '';
+    };
+    await ensureHermesCliInstalled({ linux: dir, windows: null }, chalk, run);
+    expect(calls.some((cmd) => cmd.includes('https://hermes-agent.nousresearch.com/install.sh'))).toBe(true);
+  });
+
+  it('does not run the installer when ~/.local/bin/hermes already exists', async () => {
+    const localBin = path.join(dir, '.local', 'bin');
+    fs.mkdirSync(localBin, { recursive: true });
+    fs.writeFileSync(path.join(localBin, 'hermes'), '#!/bin/sh\n');
+    const calls = [];
+    const run = (cmd) => {
+      calls.push(cmd);
+      if (cmd.startsWith('command -v hermes')) throw new Error('missing');
+      return '';
+    };
+    await ensureHermesCliInstalled({ linux: dir, windows: null }, chalk, run);
+    expect(calls.some((cmd) => cmd.includes('install.sh'))).toBe(false);
+  });
+
+  it('configures Hermes custom provider, OmniRoute base URL, key, and fallback model', async () => {
+    const calls = [];
+    const run = (cmd) => {
+      calls.push(cmd);
+      if (cmd.startsWith('command -v hermes')) return '/usr/local/bin/hermes\n';
+      return '';
+    };
+    const result = await setupHermesModelSurface({
+      homes: { linux: dir, windows: null },
+      chalk,
+      baseUrl: 'https://omniroute.example/v1',
+      apiKey: 'test-key',
+      model: 'agent-fallback',
+      run,
+    });
+    expect(result.configured).toBe(true);
+    expect(calls).toContain("'/usr/local/bin/hermes' config set model.provider custom");
+    expect(calls).toContain("'/usr/local/bin/hermes' config set model.base_url 'https://omniroute.example/v1'");
+    expect(calls).toContain("'/usr/local/bin/hermes' config set model.default 'agent-fallback'");
+    expect(calls).toContain("'/usr/local/bin/hermes' config set model.api_key 'test-key'");
   });
 });
 

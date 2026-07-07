@@ -49,7 +49,11 @@ program
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before installing (default when bmad is detected)')
   .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
-  .option('--model-launchers', 'Install alternate-model launchers (claude-glm, claude-minimax, claude-qwen, claude-sub — provider-aware) — off by default')
+  .option('--model-surface', 'Install/configure Hermes CLI as the primary model surface through OmniRoute agent-fallback (Claude/Codex subscription groups + free fallback)')
+  .option('--omniroute-base-url <url>', 'OmniRoute OpenAI-compatible base URL for --model-surface (default: env ARCWRIGHT_OMNIROUTE_BASE_URL / OMNIROUTE_BASE_URL / http://omniroute:20128/v1)')
+  .option('--omniroute-api-key <key>', 'OmniRoute gateway API key for --model-surface (prefer env ARCWRIGHT_OMNIROUTE_API_KEY or OMNIROUTE_API_KEY)')
+  .option('--omniroute-model <id>', 'Hermes model id for --model-surface (default: agent-fallback)', 'agent-fallback')
+  .option('--model-launchers', 'Also install legacy Claude direct-provider launchers (claude-glm, claude-minimax, claude-qwen, claude-sub) — Hermes + OmniRoute is preferred')
   .addOption(new Option('--openrouter-launchers', 'Alias for --model-launchers (kept for compatibility)').hideHelp())
   .option('--channel <channel>', 'Release channel to track: stable | next (default: stable)', 'stable')
   .option('--hooks <mode>', 'Autonomy posture: safe | full | none (default: prompted, safe with --yes). safe = auto-accept edits + destructive-command/secret guards + SessionStart context; full = + tsc/pyright on edits; none = conservative, ask first')
@@ -72,6 +76,9 @@ Examples:
 
   # Global install (applies to all projects)
   npx @arcwright-ai/agent-orchestration --global --yes
+
+  # Primary model surface: Hermes CLI → OmniRoute agent-fallback
+  ARCWRIGHT_OMNIROUTE_API_KEY=... npx @arcwright-ai/agent-orchestration --tools codex --model-surface --global --yes
 
   # Install with gitignore mode set (skips the gitignore prompt)
   npx @arcwright-ai/agent-orchestration --yes --gitignore output-only
@@ -106,7 +113,11 @@ program
   .option('--gitignore <mode>', 'Gitignore mode: full | skills | output-only | none (default: prompted interactively, or output-only with --yes)')
   .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before updating (default when bmad is detected)')
   .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
-  .option('--model-launchers', 'Install alternate-model launchers (claude-glm, claude-minimax, claude-qwen, claude-sub — provider-aware) — off by default')
+  .option('--model-surface', 'Install/configure Hermes CLI as the primary model surface through OmniRoute agent-fallback (Claude/Codex subscription groups + free fallback)')
+  .option('--omniroute-base-url <url>', 'OmniRoute OpenAI-compatible base URL for --model-surface (default: env ARCWRIGHT_OMNIROUTE_BASE_URL / OMNIROUTE_BASE_URL / http://omniroute:20128/v1)')
+  .option('--omniroute-api-key <key>', 'OmniRoute gateway API key for --model-surface (prefer env ARCWRIGHT_OMNIROUTE_API_KEY or OMNIROUTE_API_KEY)')
+  .option('--omniroute-model <id>', 'Hermes model id for --model-surface (default: agent-fallback)', 'agent-fallback')
+  .option('--model-launchers', 'Also install legacy Claude direct-provider launchers (claude-glm, claude-minimax, claude-qwen, claude-sub) — Hermes + OmniRoute is preferred')
   .addOption(new Option('--openrouter-launchers', 'Alias for --model-launchers (kept for compatibility)').hideHelp())
   .option('--channel <channel>', 'Release channel to track: stable | next (default: stable)', 'stable')
   .option('--hooks <mode>', 'Autonomy posture: safe | full | none (default: prompted, safe with --yes). safe = auto-accept edits + destructive-command/secret guards + SessionStart context; full = + tsc/pyright on edits; none = conservative, ask first')

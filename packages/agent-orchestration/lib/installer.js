@@ -74,9 +74,79 @@ async function setupWslAudio(platform, chalk) {
   return [result, null];
 }
 
-// ─── OpenRouter launchers setup ──────────────────────────────────────────────
+// ─── Model surface / launcher setup ──────────────────────────────────────────
 
 const TEMPLATES_DIR = path.join(__dirname, 'templates', 'launchers');
+const HERMES_INSTALL_URL = 'https://hermes-agent.nousresearch.com/install.sh';
+const DEFAULT_OMNIROUTE_MODEL = 'agent-fallback';
+const DEFAULT_OMNIROUTE_BASE_URL = 'http://omniroute:20128/v1';
+
+function commandExists(command, run = execSync) {
+  try {
+    run(`command -v ${command}`, { stdio: 'pipe', shell: '/bin/bash' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hermesCommandPath(home, run = execSync) {
+  try {
+    return run('command -v hermes', { encoding: 'utf8', stdio: 'pipe', shell: '/bin/bash' }).trim();
+  } catch {
+    const localHermes = path.join(home, '.local', 'bin', 'hermes');
+    return fs.existsSync(localHermes) ? localHermes : 'hermes';
+  }
+}
+
+/**
+ * Install Hermes CLI if it is not already present. The official installer is
+ * intentionally used rather than reimplementing Hermes' dependency bootstrap.
+ */
+async function ensureHermesCliInstalled(homes, chalk, run = execSync) {
+  if (commandExists('hermes', run) || await fs.pathExists(path.join(homes.linux, '.local', 'bin', 'hermes'))) {
+    if (chalk) console.log(chalk.dim('  · hermes CLI already installed'));
+    return { installed: false, skipped: false };
+  }
+
+  if (chalk) console.log(chalk.dim('  · Installing Hermes CLI via official Nous Research installer...'));
+  run(`curl -fsSL ${HERMES_INSTALL_URL} | bash`, {
+    stdio: 'inherit',
+    shell: '/bin/bash',
+    env: { ...process.env, HOME: homes.linux },
+    timeout: 1200000,
+  });
+  if (chalk) console.log(chalk.green('  ✓ hermes CLI installed'));
+  return { installed: true, skipped: false };
+}
+
+/**
+ * Configure Hermes as the primary model surface through OmniRoute. The API key
+ * is optional so installs can still lay down Hermes + Arcwright skills and tell
+ * the user exactly which env var/flag is missing.
+ */
+async function setupHermesModelSurface({ homes, chalk, baseUrl, apiKey, model = DEFAULT_OMNIROUTE_MODEL, run = execSync }) {
+  const hermesBin = hermesCommandPath(homes.linux, run);
+  const resolvedBaseUrl = baseUrl || process.env.ARCWRIGHT_OMNIROUTE_BASE_URL || process.env.OMNIROUTE_BASE_URL || DEFAULT_OMNIROUTE_BASE_URL;
+  const resolvedApiKey = apiKey || process.env.ARCWRIGHT_OMNIROUTE_API_KEY || process.env.OMNIROUTE_API_KEY || '';
+
+  const quote = (value) => `'${String(value).replace(/'/g, `'\\''`)}'`;
+  run(`${quote(hermesBin)} config set model.provider custom`, { stdio: 'pipe', shell: '/bin/bash', env: { ...process.env, HOME: homes.linux } });
+  run(`${quote(hermesBin)} config set model.base_url ${quote(resolvedBaseUrl)}`, { stdio: 'pipe', shell: '/bin/bash', env: { ...process.env, HOME: homes.linux } });
+  run(`${quote(hermesBin)} config set model.default ${quote(model)}`, { stdio: 'pipe', shell: '/bin/bash', env: { ...process.env, HOME: homes.linux } });
+
+  if (resolvedApiKey) {
+    run(`${quote(hermesBin)} config set model.api_key ${quote(resolvedApiKey)}`, { stdio: 'pipe', shell: '/bin/bash', env: { ...process.env, HOME: homes.linux } });
+    if (chalk) console.log(chalk.green(`  ✓ Hermes model surface → OmniRoute (${resolvedBaseUrl}, model=${model})`));
+    return { configured: true, missingApiKey: false, baseUrl: resolvedBaseUrl, model };
+  }
+
+  if (chalk) {
+    console.log(chalk.yellow(`  ⚠ Hermes model surface partially configured (${resolvedBaseUrl}, model=${model})`));
+    console.log(chalk.dim('    Set ARCWRIGHT_OMNIROUTE_API_KEY or OMNIROUTE_API_KEY, then rerun with --model-surface.'));
+  }
+  return { configured: false, missingApiKey: true, baseUrl: resolvedBaseUrl, model };
+}
 
 // Per-provider key files installed under ~/.config/<provider>/key.
 // GLM and MiniMax use their OWN native Anthropic endpoints (OpenRouter's
@@ -894,6 +964,10 @@ async function install(opts) {
     migrateBmad = null,  // null = prompt if bmad detected; true/false = explicit
     openrouterLaunchers = null, // legacy alias for modelLaunchers
     modelLaunchers = null, // null = interactive prompt, true/false = explicit
+    modelSurface = null, // Hermes + OmniRoute primary model surface
+    omnirouteBaseUrl = '',
+    omnirouteApiKey = '',
+    omnirouteModel = DEFAULT_OMNIROUTE_MODEL,
     channel = 'stable', // release channel: 'stable' | 'next'
     hooks = null, // Claude Code hooks to seed: null = prompt | 'none' | 'safe' | 'full'
   } = opts;
@@ -907,6 +981,7 @@ async function install(opts) {
   const launchersFlag = typeof modelLaunchers === 'boolean' ? modelLaunchers
     : (typeof openrouterLaunchers === 'boolean' ? openrouterLaunchers : null);
   let resolvedOpenrouterLaunchers = launchersFlag;
+  let resolvedModelSurface = typeof modelSurface === 'boolean' ? modelSurface : null;
 
   let isGlobal = opts.global || false;
 
@@ -956,6 +1031,12 @@ async function install(opts) {
   // Restore hooks mode from manifest on --yes updates (so re-runs preserve choice).
   if (manifestFallback && resolvedHooks === null && existingManifest.hooks) {
     resolvedHooks = existingManifest.hooks;
+  }
+  if (manifestFallback && resolvedModelSurface === null && existingManifest.modelSurface !== undefined) {
+    resolvedModelSurface = existingManifest.modelSurface === true;
+  }
+  if (manifestFallback && resolvedOpenrouterLaunchers === null && existingManifest.modelLaunchers !== undefined) {
+    resolvedOpenrouterLaunchers = existingManifest.modelLaunchers === true;
   }
 
   // Restore userName from manifest on --yes updates (so config.yaml gets the right name
@@ -1103,6 +1184,21 @@ async function install(opts) {
       resolvedTools = platformChoices;
     }
 
+    // Hermes + OmniRoute primary model surface. This is independent from the
+    // lower-level Hermes integration but selecting it also installs/configures
+    // Hermes because Hermes is the user-facing surface.
+    if (resolvedModelSurface === null) {
+      const surfaceChoice = await confirm({
+        message: 'Use Hermes + OmniRoute as the primary model surface? (installs Hermes CLI; routes agent-fallback through grouped Claude/Codex subscriptions with free fallback)',
+        initialValue: existingManifest?.modelSurface === true,
+      });
+      if (isCancel(surfaceChoice)) { process.exit(0); }
+      resolvedModelSurface = surfaceChoice;
+      if (surfaceChoice && !resolvedTools.includes('hermes')) {
+        resolvedTools = [...resolvedTools, 'hermes'];
+      }
+    }
+
     // Agent teams opt-in — 17 team-* skills + /team slash command
     const teamsChoice = await confirm({
       message: 'Install agent teams? (17 pre-built multi-agent compositions + /team command, in-process by default)',
@@ -1169,10 +1265,12 @@ async function install(opts) {
 
     // tmux setup removed — Herdr replaces it (herdr.dev). No prompt.
 
-    // OpenRouter launchers opt-in — off by default
+    // Claude Code direct-provider launchers. Kept for users who explicitly want
+    // separate Claude launcher functions; Hermes + OmniRoute is the preferred
+    // model surface for grouped subscriptions.
     if (resolvedTools.includes('claude-code') && resolvedOpenrouterLaunchers === null) {
       const orChoice = await confirm({
-        message: 'Install alternate-model launchers? (claude-glm, claude-minimax, claude-qwen, claude-sub — route Claude Code through Z.ai / MiniMax / OpenRouter)',
+        message: 'Also install legacy Claude direct-provider launchers? (claude-glm, claude-minimax, claude-qwen, claude-sub; Hermes + OmniRoute is preferred)',
         initialValue: false,
       });
       if (isCancel(orChoice)) { process.exit(0); }
@@ -1227,6 +1325,14 @@ async function install(opts) {
   // Finalize resolvedOpenrouterLaunchers — default to false (opt-in only)
   if (resolvedOpenrouterLaunchers === null) {
     resolvedOpenrouterLaunchers = false;
+  }
+  // Finalize model surface — default off, but if enabled make Hermes an
+  // installed tool even when --tools omitted it.
+  if (resolvedModelSurface === null) {
+    resolvedModelSurface = false;
+  }
+  if (resolvedModelSurface && !resolvedTools.includes('hermes')) {
+    resolvedTools = [...resolvedTools, 'hermes'];
   }
 
   const selectedModules = resolvedModules;
@@ -1399,6 +1505,19 @@ async function install(opts) {
     if (hermesEntries && hermesEntries.length > 0) {
       newFileEntries.push(...hermesEntries);
     }
+    console.log(chalk.bold('\nHermes setup:'));
+    await ensureHermesCliInstalled(homes, chalk);
+    if (resolvedModelSurface) {
+      await setupHermesModelSurface({
+        homes,
+        chalk,
+        baseUrl: omnirouteBaseUrl,
+        apiKey: omnirouteApiKey,
+        model: omnirouteModel || DEFAULT_OMNIROUTE_MODEL,
+      });
+    } else {
+      console.log(chalk.dim('  · OmniRoute model surface not enabled (pass --model-surface to configure agent-fallback)'));
+    }
   }
 
   // ── OpenCode integration ──────────────────────────────────────────────────
@@ -1524,6 +1643,9 @@ async function install(opts) {
     awsInfra: resolvedAwsInfra,
     unnamedPm: resolvedUnnamedPm,
     tmux: resolvedTmux,
+    modelSurface: resolvedModelSurface,
+    omnirouteBaseUrl: omnirouteBaseUrl || process.env.ARCWRIGHT_OMNIROUTE_BASE_URL || process.env.OMNIROUTE_BASE_URL || DEFAULT_OMNIROUTE_BASE_URL,
+    omnirouteModel: omnirouteModel || DEFAULT_OMNIROUTE_MODEL,
     modelLaunchers: resolvedOpenrouterLaunchers,
     openrouterLaunchers: resolvedOpenrouterLaunchers, // legacy alias, kept for older readers
     channel: resolvedChannelFinal || resolvedChannel,  // release channel: 'stable' | 'next'
@@ -2385,5 +2507,6 @@ module.exports = {
     writeClaudeSettings, stripInstallerSettingsKeys,
     buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
     writeCodexConfig, writeHermesConfig, writeOpenCodeConfig,
+    commandExists, ensureHermesCliInstalled, setupHermesModelSurface,
   },
 };

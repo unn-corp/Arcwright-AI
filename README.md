@@ -203,7 +203,7 @@ Not sure which team matches your task? Run `/triage <task>` first — the workfl
 
 ## Supported IDEs
 
-Claude Code, Kiro (IDE + CLI), Cursor, Windsurf, Cline, GitHub Copilot, Gemini
+Claude Code, Kiro (IDE + CLI), Codex, Hermes, OpenCode
 
 ```bash
 # Install for specific IDEs
@@ -215,7 +215,7 @@ npx @arcwright-ai/agent-orchestration --global
 
 Cross-platform: Windows (WSL2), Linux, macOS.
 
-WSL2 dual-home aware — terminal tools (Claude Code, Gemini) use the Linux home (`~`); GUI IDEs (Kiro, Cursor, Windsurf, Cline, Copilot) use the Windows home (`/mnt/c/Users/<name>`).
+WSL2 dual-home aware — terminal tools (Claude Code, Codex, Hermes, OpenCode) use the Linux home (`~`); GUI IDEs (Kiro) use the Windows home (`/mnt/c/Users/<name>`).
 
 ### Install Flags
 
@@ -224,12 +224,17 @@ WSL2 dual-home aware — terminal tools (Claude Code, Gemini) use the Linux home
 | `--yes`, `-y` | false | Skip interactive prompts, accept all defaults |
 | `--global`, `-g` | false | Install to `~/.arcwright` / `~/.claude/` / `~/.kiro/` |
 | `--directory <path>`, `-d` | cwd | Target project root |
-| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,cursor,windsurf,cline,github-copilot,gemini` |
+| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,codex,hermes,opencode` |
 | `--modules <ids>` | `awm,awb,core,_memory` | Which modules to install |
 | `--user-name <name>` | prompted | Your name (written into config.yaml) |
 | `--output-folder <path>` | `_arcwright-output` | Where Arcwright writes output artifacts |
 | `--no-teams` | teams included | Skip the 17 team-* skills and `/team` command |
 | `--docker-check` | not installed | Opt in to `/docker-check` and the `docker-type-check` skill |
+| `--model-surface` | false | Install/configure Hermes CLI as the primary model surface through OmniRoute `agent-fallback` (grouped Claude/Codex subscriptions + free fallback). Selects Hermes automatically and installs the Hermes CLI if missing. |
+| `--omniroute-base-url <url>` | env or `http://omniroute:20128/v1` | OmniRoute OpenAI-compatible base URL for `--model-surface` |
+| `--omniroute-api-key <key>` | env | OmniRoute gateway API key for `--model-surface`; prefer `ARCWRIGHT_OMNIROUTE_API_KEY` or `OMNIROUTE_API_KEY` |
+| `--omniroute-model <id>` | `agent-fallback` | Hermes model id used by `--model-surface` |
+| `--model-launchers` | false | Also install legacy Claude direct-provider launchers (`claude-glm`, `claude-minimax`, `claude-qwen`, `claude-sub`). Hermes + OmniRoute is the preferred path. |
 | `--gitignore <mode>` | prompted | One of: `full`, `skills`, `output-only`, `none` (see gitignore section below) |
 | `--channel <stable\|next>` | `stable` | Release channel to track. Recorded in the manifest; `next` opts into pre-release builds when available. |
 | `--hooks <safe\|full\|none>` | prompted (`safe`) | Autonomy posture in `.claude/settings.json` (asked interactively; **`safe` with `--yes`**). `safe` = autonomous: auto-accept edits + destructive-command/secret guards + SessionStart context. `full` adds tsc/pyright typecheck on edits. `none` = conservative (ask-first, no hooks). Idempotent merge; scripts land in `.claude/arcwright-hooks/`. See [`docs/hooks-guide.md`](docs/hooks-guide.md). |
@@ -261,6 +266,8 @@ Global installs write to user-level config dirs instead of a project:
 |--------|---------------|----------------|
 | Core modules | `~/.arcwright/` | `~/.arcwright/` (WSL Linux home) |
 | Claude Code assets | `~/.claude/` | `~/.claude/` (WSL Linux home) |
+| Codex assets | `~/.codex/AGENTS.md`, `~/.agents/skills/` | same, WSL Linux home |
+| Hermes assets | `~/.hermes/skills/`, `~/.hermes/skill-bundles/` | same, WSL Linux home |
 | Kiro assets | `~/.kiro/` | `/mnt/c/Users/<name>/.kiro/` (Windows home) |
 
 **Updating a global install:**
@@ -287,6 +294,14 @@ conversation transcripts — across all of them via symlinks. Works the same on 
 Linux/macOS and on WSL2 (the only Windows-specific part is the launcher, which becomes a
 small shell function on Linux). Full walkthrough, launchers for both platforms, and
 revert steps: [`docs/multi-account-setup.md`](docs/multi-account-setup.md).
+
+**Hermes as the preferred global CLI agent:** for Codex global `AGENTS.md` bases or other
+machine-wide coding-agent policy, use Hermes CLI as the default model surface when OmniRoute
+is available. Enable it with `--model-surface`; Arcwright selects the Hermes integration,
+installs the Hermes CLI package if `hermes` is missing, and configures the colon-less
+`agent-fallback` model id when an OmniRoute gateway key is available. OmniRoute then groups
+paid Claude/Codex subscription capacity with free-model fallback. Operational details are in
+[`packages/agent-orchestration/docs/dev/model-launchers.md`](packages/agent-orchestration/docs/dev/model-launchers.md#preferred-global-cli-agent-hermes-through-omniroute).
 
 ---
 

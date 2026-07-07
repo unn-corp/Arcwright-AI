@@ -19,6 +19,9 @@ concurrency:
 
 permissions:
   contents: read
+  # Required by the pr-title semantic check (amannn/action-semantic-pull-request)
+  # to read the pull request; without it the job 403s "Resource not accessible".
+  pull-requests: read
 
 # All deps are public npm. The self-hosted runners carry a user-level ~/.npmrc
 # pointed at a private AWS CodeArtifact mirror with a frequently-expired token,
