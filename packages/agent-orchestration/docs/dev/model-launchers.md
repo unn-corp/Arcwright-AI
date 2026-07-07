@@ -1,22 +1,122 @@
-# Alternate-Model Claude Code Launchers (Provider-Aware)
+# Model Surface And Alternate Launchers
 
-Run Claude Code against alternate models — **GLM (Z.ai)**, **MiniMax**, and selected
-**OpenRouter** models — from the same terminal workflow, alongside a plain Anthropic
-subscription launcher.
+Use **Hermes CLI through OmniRoute** as the primary model surface for grouped Claude/Codex
+subscriptions with free-model fallback. Legacy Claude Code direct-provider launchers are still
+available for users who want one process pinned to Z.ai, MiniMax, OpenRouter, or a plain
+Anthropic subscription.
 
-This feature is **optional and off by default**. Enable it with
-`npx @arcwright-ai/agent-orchestration --model-launchers`.
+The primary surface is **optional and off by default**. Enable it with:
+
+```bash
+ARCWRIGHT_OMNIROUTE_API_KEY=<gateway-key> \
+  npx @arcwright-ai/agent-orchestration --model-surface --global --yes
+```
+
+The older direct-provider shell functions are enabled separately with `--model-launchers`.
+
+---
+
+## Preferred Global CLI Agent: Hermes Through OmniRoute
+
+For a Codex global `AGENTS.md` or other machine-wide coding-agent base, prefer
+**Hermes CLI** as the default launcher when the host has OmniRoute available. In that setup,
+Hermes is the user-facing coding agent and OmniRoute is the model gateway behind it.
+
+Arcwright installer behavior:
+
+- `--model-surface` selects the Hermes integration automatically.
+- If `hermes` is not on `PATH`, Arcwright runs the official Nous Research CLI installer:
+  `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash`.
+- Arcwright installs Hermes skills into `~/.hermes/skills/` and team bundles into
+  `~/.hermes/skill-bundles/` for global installs.
+- When an OmniRoute API key is available, Arcwright configures Hermes with
+  `model.provider=custom`, `model.base_url=<omniroute>`, `model.default=agent-fallback`, and
+  `model.api_key=<gateway-key>`.
+- API key source order: `--omniroute-api-key`, `ARCWRIGHT_OMNIROUTE_API_KEY`,
+  `OMNIROUTE_API_KEY`.
+- Base URL source order: `--omniroute-base-url`, `ARCWRIGHT_OMNIROUTE_BASE_URL`,
+  `OMNIROUTE_BASE_URL`, then `http://omniroute:20128/v1`.
+
+**Server state, 2026-07-07:** the Global Agent container's Hermes config at
+`/home/agent/.hermes/config.yaml` on the persistent `global-agent-hermes` volume is set to
+`provider=custom`, `base_url=http://omniroute:20128/v1`, and `default=agent-fallback`. The
+container is on `dokploy-network`, so this is an internal service URL with no tunnel or
+Cloudflare Access path. The config uses the `global-agent` OmniRoute gateway key, scoped for
+`agent-fallback`, `claude/*`, `codex/*`, and exact approved free model ids with provider token
+limits.
+
+The global `unnamed-agent` AgentProfile (`01KVTHEY1EZ66KSG6BBGAR9BAQ`) now has its
+`hermes-cli` `defaultModel` set to `hermes/agent-fallback`, replacing the prior direct free
+OpenRouter model (`hermes/openrouter:...:free`). That means dispatched `@unnamed-agent` dev
+work now consumes the paid Claude/Codex subscription pools before falling back to free models.
+
+The intended model is a colon-less Hermes model id such as:
+
+```bash
+hermes -z "<prompt>" -m agent-fallback
+```
+
+That shape matters. Because the model id has no explicit provider segment, Hermes does not
+emit a `--provider` override. It uses its configured default provider instead:
+
+```bash
+hermes config set model.provider custom
+hermes config set model.base_url http://omniroute:20128/v1
+hermes config set model.default agent-fallback
+```
+
+OmniRoute then resolves `agent-fallback` as a grouped subscription chain, for example:
+
+| Group | Purpose |
+|-------|---------|
+| `claude/*` | Primary paid Claude subscription capacity |
+| `codex/*` | Secondary paid Codex/OpenAI subscription capacity |
+| Free model ids | Graceful fallback when subscription capacity is exhausted |
+
+Runner mechanics:
+
+1. AgentProfile model is `hermes/agent-fallback`.
+2. `RunnerSelectionService` routes the `hermes/` prefix to the Hermes runner.
+3. `buildHermesArgs` strips `hermes/`, yielding `agent-fallback`.
+4. Because `agent-fallback` contains no `:`, the runner does not pass `--provider`.
+5. Hermes uses its configured `custom` provider, which points at OmniRoute.
+6. OmniRoute serves the first available model in the grouped fallback chain.
+
+The practical rule for global agent docs is:
+
+- Use **Hermes CLI** for default global autonomous coding work.
+- Let **OmniRoute** choose the backing model group through `agent-fallback`.
+- Avoid provider-qualified Hermes ids like `hermes/openrouter:...` for this path, because they
+  bypass the configured OmniRoute default provider.
+- Treat subscription-backed groups as real paid quota, even when the chain eventually falls
+  through to free models.
+- Do not treat `OPENROUTER_API_KEY` in the runner environment as authoritative for this path.
+  `buildEnv` may set it from `OPENAI_API_KEY`, but the Hermes custom provider authenticates
+  with the key in `/home/agent/.hermes/config.yaml`.
+
+Change or revert through the UnnamedDev script:
+
+```bash
+AWS_PROFILE=unnamed-prod MAIN_TABLE_NAME=Unnamed-prod-Main AWS_REGION=us-east-1 \
+  npx tsx app/scripts/set-hermes-omniroute-model.ts --apply
+```
+
+To revert, edit that script's `NEW_MODEL` back to the direct free OpenRouter id and rerun it
+with `--apply`.
+
+This is the same runner-side pattern documented in
+`global-agent/OMNIROUTE.md` in the UnnamedDev Hermes deployment bundle.
 
 ---
 
 ## The Central Lesson: Use Native Provider Endpoints for Reasoning Models
 
-GLM and MiniMax are **reasoning models** — they emit `thinking` blocks. When routed through
+GLM and MiniMax are **reasoning models** that emit `thinking` blocks. When routed through
 **OpenRouter's Anthropic-compatibility shim**, those thinking blocks come back with **empty
 signatures**, which breaks Claude Code's agentic loop: you get **HTTP 200 responses with
 empty or malformed bodies** mid-task, and the session stalls or errors out.
 
-**The fix is to route each reasoning model through its provider's OWN native Anthropic
+**The fix is to route each reasoning model through its provider's own native Anthropic
 endpoint**, which handles thinking blocks correctly:
 
 | Provider | Endpoint (`ANTHROPIC_BASE_URL`) | Use for |
