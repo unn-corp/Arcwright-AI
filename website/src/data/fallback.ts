@@ -64,10 +64,10 @@ The track system (nano / small / compact / medium / extended / large / rv) has b
 
 ## Supported IDEs
 
-Claude Code, Kiro (IDE + CLI), Cursor, Windsurf, Cline, GitHub Copilot, Gemini
+Claude Code, Kiro (IDE + CLI), Codex, Hermes, OpenCode, Grok (xAI CLI)
 
 \`\`\`bash
-npx @arcwright-ai/agent-orchestration --tools claude-code,kiro
+npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,codex,hermes,opencode,grok
 \`\`\`
 
 ---

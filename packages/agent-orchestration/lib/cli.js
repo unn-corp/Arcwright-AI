@@ -8,14 +8,9 @@
 const { Command, Option } = require('commander');
 const path = require('path');
 const pkg = require('../package.json');
+const { getSupportedToolIds, PLATFORMS } = require('./installer');
 
-const SUPPORTED_TOOLS = [
-  'claude-code',
-  'kiro',
-  'codex',
-  'hermes',
-  'opencode',
-].join(', ');
+const SUPPORTED_TOOLS = getSupportedToolIds().join(', ');
 
 const program = new Command();
 
@@ -70,6 +65,10 @@ Examples:
 
   # Install with specific IDEs
   npx @arcwright-ai/agent-orchestration --tools claude-code,kiro --yes
+
+  # Install for Grok (xAI CLI / Grok Build)
+  npx @arcwright-ai/agent-orchestration --tools grok --yes
+  npx @arcwright-ai/agent-orchestration --tools grok --global --yes
 
   # Install into a specific directory
   npx @arcwright-ai/agent-orchestration --directory /path/to/project --yes
@@ -187,18 +186,17 @@ program
   .action(() => {
     console.log('\nSupported IDE platforms:\n');
     const rows = [
-      ['Platform ID',      'Label',            'Rules file',                        'Agent stubs / skills'],
-      ['claude-code',      'Claude Code',       '.claude/CLAUDE.md',                 '.claude/agents/'],
-      ['kiro',             'Kiro (IDE + CLI)',   '.kiro/steering/*.md',               '.kiro/skills/'],
-      ['codex',            'Codex',             'AGENTS.md',                         '.agents/skills/ ($HOME or project)'],
-      ['hermes',           'Hermes',            'AGENTS.md (project only)',          '~/.hermes/skills/ (global only)'],
-      ['opencode',         'OpenCode',          'AGENTS.md',                         '.agents/skills/ + .opencode/commands/ ($HOME or project)'],
+      ['Platform ID', 'Label', 'Rules file', 'Agent stubs / skills'],
+      ...getSupportedToolIds().map((id) => {
+        const p = PLATFORMS[id];
+        return [id, p.label, p.rulesFile || '(steering/other)', p.summary || ''];
+      }),
     ];
     const widths = rows[0].map((_, i) => Math.max(...rows.map(r => r[i].length)));
     for (const row of rows) {
       console.log('  ' + row.map((cell, i) => cell.padEnd(widths[i])).join('   '));
     }
-    console.log('\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,codex,hermes,opencode\n');
+    console.log(`\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools ${getSupportedToolIds().join(',')}\n`);
   });
 
 // ─── Herdr ──────────────────────────────────────────────────────────────────

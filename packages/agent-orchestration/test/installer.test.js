@@ -13,6 +13,7 @@ const {
   writeClaudeSettings, stripInstallerSettingsKeys,
   buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
   ensureHermesCliInstalled, setupHermesModelSurface,
+  getSupportedToolIds, getToolPromptOptions, parseToolIds,
 } = installer._internal;
 
 // Silent chalk stub (every helper that logs takes a chalk-like object).
@@ -24,6 +25,27 @@ beforeEach(() => {
 });
 afterEach(() => {
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+describe('supported tools (installer options)', () => {
+  it('includes grok alongside the other first-class targets', () => {
+    const ids = getSupportedToolIds();
+    expect(ids).toEqual(['claude-code', 'kiro', 'codex', 'hermes', 'opencode', 'grok']);
+  });
+
+  it('exposes grok in the interactive multiselect options', () => {
+    const options = getToolPromptOptions();
+    const grok = options.find((o) => o.value === 'grok');
+    expect(grok).toBeTruthy();
+    expect(grok.label).toMatch(/Grok/i);
+    expect(grok.hint).toBeTruthy();
+  });
+
+  it('parseToolIds accepts grok and rejects unknown ids', () => {
+    expect(parseToolIds('grok')).toEqual(['grok']);
+    expect(parseToolIds('claude-code,grok')).toEqual(['claude-code', 'grok']);
+    expect(() => parseToolIds('grok,not-a-tool')).toThrow(/Unknown --tools id/);
+  });
 });
 
 describe('sha256', () => {

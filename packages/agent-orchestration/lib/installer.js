@@ -354,10 +354,22 @@ const FILES_MANIFEST_FILE = '_config/files-manifest.csv';
 /**
  * All supported platforms and what files they write.
  * Each platform writes its own agent stub + optional CLAUDE.md / rules file.
+ *
+ * `hint` feeds the interactive installer multiselect.
+ * `summary` feeds `arcwright platforms` (agent stubs / skills column).
+ * Order here is the installer option order.
+ *
+ * codex/hermes/opencode/grok are NOT dispatched through writeIdeConfig (see
+ * the `continue` in the IDE-integration loop) — their own write*Config
+ * helpers handle AGENTS.md + skills (and commands/agents where relevant)
+ * with upsertManagedBlock and manifest entries. PLATFORMS entries still
+ * drive --tools validation, the interactive prompt, and `platforms`.
  */
 const PLATFORMS = {
   'claude-code': {
     label: 'Claude Code',
+    hint: 'agents, CLAUDE.md, settings.json, herdr skill',
+    summary: '.claude/agents/',
     agentDir: '.claude/agents',
     skillsDir: null,
     steeringDir: null,
@@ -366,20 +378,20 @@ const PLATFORMS = {
     rulesMarker: '## Arcwright',
   },
   'kiro': {
-    label: 'Kiro',
+    label: 'Kiro (IDE + CLI)',
+    hint: '.kiro/skills/, .kiro/steering/',
+    summary: '.kiro/skills/',
     agentDir: '.kiro/agents',
     skillsDir: '.kiro/skills',
     steeringDir: '.kiro/steering',
-    rulesFile: null,  // Kiro uses steering files, not a single rules file
+    // Display-only: Kiro uses steering files, not a single rules file.
+    rulesFile: '.kiro/steering/*.md',
     rulesMarker: null,
   },
-  // codex/hermes are NOT dispatched through writeIdeConfig (see the `continue`
-  // in the IDE-integration loop) — their own writeCodexConfig/writeHermesConfig
-  // handle AGENTS.md + skills directly, using upsertManagedBlock and returning
-  // manifest entries. These PLATFORMS entries exist for `platforms`/label
-  // lookups only; rulesFile/rulesMarker are informational here, not consumed.
   'codex': {
     label: 'Codex',
+    hint: 'AGENTS.md, .agents/skills/',
+    summary: '.agents/skills/ ($HOME or project)',
     agentDir: null,
     skillsDir: null,
     steeringDir: null,
@@ -389,6 +401,8 @@ const PLATFORMS = {
   },
   'hermes': {
     label: 'Hermes',
+    hint: '~/.hermes/skills/, AGENTS.md (project only)',
+    summary: '~/.hermes/skills/ (global only)',
     agentDir: null,
     skillsDir: null,
     steeringDir: null,
@@ -398,6 +412,8 @@ const PLATFORMS = {
   },
   'opencode': {
     label: 'OpenCode',
+    hint: 'AGENTS.md, .agents/skills/, .opencode/commands/',
+    summary: '.agents/skills/ + .opencode/commands/ ($HOME or project)',
     agentDir: null,
     skillsDir: null,
     steeringDir: null,
@@ -405,7 +421,52 @@ const PLATFORMS = {
     rulesFile: 'AGENTS.md',
     rulesMarker: '## Arcwright',
   },
+  'grok': {
+    label: 'Grok',
+    hint: '~/.grok/AGENTS.md, skills, commands, agents',
+    summary: '~/.grok/skills|commands|agents/ (global); .agents/skills + .grok/* (project)',
+    agentDir: '.grok/agents',
+    skillsDir: null,
+    steeringDir: null,
+    hooksDir: null,
+    // Project uses root AGENTS.md; global uses ~/.grok/AGENTS.md (see GLOBAL_PATHS).
+    rulesFile: 'AGENTS.md / ~/.grok/AGENTS.md',
+    rulesMarker: '## Arcwright',
+  },
 };
+
+/** Ordered list of supported --tools ids (keys of PLATFORMS). */
+function getSupportedToolIds() {
+  return Object.keys(PLATFORMS);
+}
+
+/** Multiselect options for the interactive installer prompt. */
+function getToolPromptOptions() {
+  return getSupportedToolIds().map((id) => ({
+    value: id,
+    label: PLATFORMS[id].label,
+    hint: PLATFORMS[id].hint || '',
+  }));
+}
+
+/**
+ * Parse a comma-separated --tools string. Drops empty/`none` tokens.
+ * Throws if any remaining id is not in PLATFORMS.
+ */
+function parseToolIds(toolsCsv) {
+  const parsed = (toolsCsv || '')
+    .split(',')
+    .map((t) => t.trim())
+    .filter((t) => t && t !== 'none');
+  const known = new Set(getSupportedToolIds());
+  const unknown = parsed.filter((t) => !known.has(t));
+  if (unknown.length) {
+    throw new Error(
+      `Unknown --tools id(s): ${unknown.join(', ')}. Supported: ${getSupportedToolIds().join(', ')}`
+    );
+  }
+  return parsed;
+}
 
 // ─── Cross-platform home resolution ──────────────────────────────────────────
 
@@ -434,7 +495,7 @@ function getHomes(platform) {
  * Terminal-based tools use Linux home (even on WSL).
  * GUI IDE tools use Windows home when on WSL.
  */
-const TERMINAL_TOOLS = ['claude-code', 'codex', 'hermes', 'opencode'];
+const TERMINAL_TOOLS = ['claude-code', 'codex', 'hermes', 'opencode', 'grok'];
 
 function resolveToolPath(tool, relativePath, isGlobal, homes, platform) {
   if (!isGlobal) return null; // caller handles project paths
@@ -473,6 +534,17 @@ const GLOBAL_PATHS = {
     claudeMd: '.config/opencode/AGENTS.md',
     skills: '.agents/skills',
     commands: '.config/opencode/commands',
+  },
+  'grok': {
+    // Grok (xAI CLI / Grok Build) discovers:
+    //   - AGENTS.md / CLAUDE.md under ~/.grok/ (global) and project roots
+    //   - SKILL.md from ~/.grok/skills/, .grok/skills/, .agents/skills/, and Claude compat paths
+    //   - slash commands from ~/.grok/commands/ and .grok/commands/ (Claude Code *.md format)
+    //   - agent defs from ~/.grok/agents/ and .grok/agents/
+    claudeMd: '.grok/AGENTS.md',
+    skills: '.grok/skills',
+    commands: '.grok/commands',
+    agents: '.grok/agents',
   },
 };
 
@@ -519,7 +591,7 @@ async function writeFilesManifest(arcwrightDir, entries) {
 // empty (a removed skill's SKILL.md + RULES.md go, the dir stays). Walk up from
 // the removed file and rmdir empty parents, stopping at a non-empty dir or at a
 // known container root (never remove the skills/commands/agents roots themselves).
-const DIR_CLEANUP_STOP = new Set(['skills', 'commands', 'agents', 'skill-bundles', 'steering', 'hooks', '.claude', '.codex', '.hermes', '.kiro', '.config', 'opencode']);
+const DIR_CLEANUP_STOP = new Set(['skills', 'commands', 'agents', 'skill-bundles', 'steering', 'hooks', '.claude', '.codex', '.hermes', '.kiro', '.config', 'opencode', '.grok']);
 async function removeEmptyDirsUpward(removedFile) {
   let dir = path.dirname(removedFile);
   for (let depth = 0; depth < 5; depth++) {
@@ -863,6 +935,95 @@ async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes,
   return entries;
 }
 
+// ─── Grok config writer ───────────────────────────────────────────────────────
+// Grok (xAI CLI / Grok Build) natively reads:
+//   - AGENTS.md / CLAUDE.md (project roots + ~/.grok/ for global rules)
+//   - SKILL.md skills at ~/.grok/skills/ (global), .agents/skills/ + .grok/skills/
+//     (project; also Claude/Cursor compat paths)
+//   - slash commands as flat *.md under ~/.grok/commands/ and .grok/commands/
+//     (Claude Code command format, verbatim — same as OpenCode)
+//   - agent definitions under ~/.grok/agents/ and .grok/agents/
+//
+// fs.copy with overwrite merges into dest and does NOT delete files that only
+// exist in dest, so Grok's bundled skills under ~/.grok/skills/ (help, docx,
+// create-skill, etc.) are preserved across installs.
+//
+// Returns Array<{relPath, hash}> for every file written.
+async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
+  const entries = [];
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
+
+  // ── AGENTS.md ── managed block only (not manifest-tracked, same rationale as Codex).
+  const rulesPath = isGlobal
+    ? resolveToolPath('grok', GLOBAL_PATHS.grok.claudeMd, true, homes, platform)
+    : path.join(projectRoot, 'AGENTS.md');
+  const label = isGlobal ? '~/.grok/AGENTS.md' : 'AGENTS.md';
+  await migrateOldClaudeMd(rulesPath);
+  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules));
+  if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
+  else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
+  else console.log(chalk.gray(`  ○ ${label} already up to date`));
+
+  // ── Skills ── global → ~/.grok/skills/; project → .agents/skills/ (Grok scans
+  // both .agents/skills and .grok/skills; .agents/skills is shared with Codex/
+  // OpenCode so multi-tool project installs do not duplicate skill trees).
+  const skillsSrc = path.join(SRC_DIR, '.agents', 'skills');
+  const skillsDest = isGlobal
+    ? resolveToolPath('grok', GLOBAL_PATHS.grok.skills, true, homes, platform)
+    : path.join(projectRoot, '.agents', 'skills');
+  if (await fs.pathExists(skillsSrc)) {
+    if (path.resolve(skillsSrc) === path.resolve(skillsDest)) {
+      console.log(chalk.gray('  ○ .agents/skills/ already the source (skipped copy)'));
+    } else {
+      await fs.ensureDir(skillsDest);
+      await fs.copy(skillsSrc, skillsDest, { overwrite: true, filter: skillCopyFilter(flags) });
+      const allSkillFiles = await glob('**/*', { cwd: skillsSrc, nodir: true });
+      const skillFiles = filterSkillFiles(allSkillFiles, flags);
+      const relPrefix = isGlobal ? '.grok/skills' : '.agents/skills';
+      for (const rel of skillFiles) {
+        const content = await fs.readFile(path.join(skillsSrc, rel));
+        entries.push({ relPath: path.join(relPrefix, rel).replace(/\\/g, '/'), hash: sha256(content) });
+      }
+      console.log(chalk.green(`  ✓ ${isGlobal ? '~/.grok/skills/' : '.agents/skills/'} (${skillFiles.length} files)`));
+    }
+  }
+
+  // ── Commands ── Grok treats flat *.md under commands/ as slash commands
+  // (Claude Code format, verbatim — same compatibility path OpenCode uses).
+  const commandsSrc = path.join(SRC_DIR, '.claude', 'commands');
+  const commandsDest = isGlobal
+    ? resolveToolPath('grok', GLOBAL_PATHS.grok.commands, true, homes, platform)
+    : path.join(projectRoot, '.grok', 'commands');
+  if (await fs.pathExists(commandsSrc)) {
+    await fs.ensureDir(commandsDest);
+    await fs.copy(commandsSrc, commandsDest, { overwrite: true });
+    const cmdFiles = await glob('**/*', { cwd: commandsSrc, nodir: true });
+    for (const rel of cmdFiles) {
+      const content = await fs.readFile(path.join(commandsSrc, rel));
+      entries.push({ relPath: path.join('.grok/commands', rel).replace(/\\/g, '/'), hash: sha256(content) });
+    }
+    console.log(chalk.green(`  ✓ ${isGlobal ? '~/.grok/commands/' : '.grok/commands/'} (${cmdFiles.length} files)`));
+  }
+
+  // ── Agent stubs ── Grok loads agent defs from ~/.grok/agents/ (global) and
+  // .grok/agents/ (project). Reuse the same lightweight activation stubs Claude
+  // Code gets; Grok's agent frontmatter is a compatible superset (name +
+  // description + body).
+  const agentDest = isGlobal
+    ? resolveToolPath('grok', GLOBAL_PATHS.grok.agents, true, homes, platform)
+    : path.join(projectRoot, '.grok', 'agents');
+  const stubModules = ['awm', 'awb'];
+  if (resolvedAwsInfra) stubModules.push('aws-infra');
+  if (resolvedUnnamedPm) stubModules.push('unnamed-pm');
+  const stubEntries = await writeClaudeAgentStubs(SRC_DIR, agentDest, chalk, stubModules, {
+    relPrefix: '.grok/agents',
+    logLabel: isGlobal ? '~/.grok/agents/' : '.grok/agents/',
+  });
+  entries.push(...stubEntries);
+
+  return entries;
+}
+
 // ─── Gitignore writer ─────────────────────────────────────────────────────────
 
 /**
@@ -1045,7 +1206,13 @@ async function install(opts) {
     resolvedUserName = existingManifest.userName;
   }
   let resolvedTools = (() => {
-    const parsed = tools ? tools.split(',').map(t => t.trim()).filter(t => t !== 'none') : [];
+    let parsed;
+    try {
+      parsed = tools ? parseToolIds(tools) : [];
+    } catch (err) {
+      console.error(chalk.red(`\n  ✗ ${err.message}\n`));
+      process.exit(1);
+    }
     if (manifestFallback && parsed.join(',') === 'claude-code' && existingManifest.tools?.length) {
       // CLI default — prefer manifest value
       return existingManifest.tools;
@@ -1169,13 +1336,7 @@ async function install(opts) {
 
     const platformChoices = await multiselect({
       message: 'Which AI tools / IDEs are you installing for?',
-      options: [
-        { value: 'claude-code',     label: 'Claude Code',     hint: 'agents, CLAUDE.md, settings.json, herdr skill' },
-        { value: 'kiro',            label: 'Kiro (IDE + CLI)', hint: '.kiro/skills/, .kiro/steering/' },
-        { value: 'codex',           label: 'Codex',            hint: 'AGENTS.md, .agents/skills/' },
-        { value: 'hermes',          label: 'Hermes',           hint: '~/.hermes/skills/, AGENTS.md (project only)' },
-        { value: 'opencode',        label: 'OpenCode',         hint: 'AGENTS.md, .agents/skills/, .opencode/commands/' },
-      ],
+      options: getToolPromptOptions(),
       initialValues: existingManifest?.tools || ['claude-code'],
       required: false,
     });
@@ -1479,7 +1640,7 @@ async function install(opts) {
 
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
-    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode') continue; // handled separately below
+    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode' || tool === 'grok') continue; // handled separately below
     const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
@@ -1525,6 +1686,14 @@ async function install(opts) {
     const openCodeEntries = await writeOpenCodeConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
     if (openCodeEntries && openCodeEntries.length > 0) {
       newFileEntries.push(...openCodeEntries);
+    }
+  }
+
+  // ── Grok integration ──────────────────────────────────────────────────────
+  if (resolvedTools.includes('grok')) {
+    const grokEntries = await writeGrokConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    if (grokEntries && grokEntries.length > 0) {
+      newFileEntries.push(...grokEntries);
     }
   }
 
@@ -1576,13 +1745,24 @@ async function install(opts) {
           } else if (orphan.relPath.startsWith('.opencode/commands/')) {
             const rel = orphan.relPath.slice('.opencode/commands/'.length);
             fullPath = path.join(resolveToolPath('opencode', GLOBAL_PATHS.opencode.commands, true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.grok/skills/')) {
+            const rel = orphan.relPath.slice('.grok/skills/'.length);
+            fullPath = path.join(resolveToolPath('grok', GLOBAL_PATHS.grok.skills, true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.grok/commands/')) {
+            const rel = orphan.relPath.slice('.grok/commands/'.length);
+            fullPath = path.join(resolveToolPath('grok', GLOBAL_PATHS.grok.commands, true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.grok/agents/')) {
+            const rel = orphan.relPath.slice('.grok/agents/'.length);
+            fullPath = path.join(resolveToolPath('grok', GLOBAL_PATHS.grok.agents, true, homes, platform), rel);
+          } else if (orphan.relPath.startsWith('.grok/')) {
+            fullPath = resolveToolPath('grok', orphan.relPath, true, homes, platform);
           } else {
             // _arcwright/ module files — in ~/.arcwright/
             fullPath = path.join(effectiveArwDir, orphan.relPath);
           }
         } else {
           // Project install: _arcwright/ files use effectiveArwDir; others use projectRoot
-          if (orphan.relPath.startsWith('.agents/') || orphan.relPath.startsWith('.claude/') || orphan.relPath.startsWith('.opencode/')) {
+          if (orphan.relPath.startsWith('.agents/') || orphan.relPath.startsWith('.claude/') || orphan.relPath.startsWith('.opencode/') || orphan.relPath.startsWith('.grok/')) {
             fullPath = path.join(projectRoot, orphan.relPath);
           } else {
             fullPath = path.join(effectiveArwDir, orphan.relPath);
@@ -2247,9 +2427,11 @@ async function migrateOldClaudeMd(filePath) {
  * Returns an array of { relPath, hash } manifest entries so the caller
  * can merge them into newFileEntries for orphan-removal tracking.
  */
-async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules) {
+async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options = {}) {
   const STUB_MODULES = ['awm', 'awb', 'aws-infra', 'unnamed-pm'];
   const selectedStubModules = (modules || STUB_MODULES).filter(m => STUB_MODULES.includes(m));
+  const relPrefix = options.relPrefix || '.claude/agents';
+  const logLabel = options.logLabel || '.claude/agents/';
 
   const manifestEntries = [];
   let written = 0;
@@ -2305,13 +2487,13 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules) {
       await fs.writeFile(stubPath, stub, 'utf8');
       written++;
 
-      const relManifestPath = `.claude/agents/${stubName}`;
+      const relManifestPath = `${relPrefix}/${stubName}`;
       manifestEntries.push({ relPath: relManifestPath, hash: sha256(stub) });
     }
   }
 
   if (written > 0) {
-    console.log(chalk.green(`  ✓ ${written} Claude Code agent stubs → .claude/agents/`));
+    console.log(chalk.green(`  ✓ ${written} agent stubs → ${logLabel}`));
   }
 
   return manifestEntries;
@@ -2497,6 +2679,8 @@ async function uninstall(opts = {}) {
 
 module.exports = {
   install, status, uninstall,
+  // Public helpers for CLI surfaces (platforms list, --tools help text).
+  PLATFORMS, getSupportedToolIds, getToolPromptOptions, parseToolIds,
   // Internal helpers exported for unit testing (not part of the public CLI API).
   _internal: {
     sha256, escapeRe, detectBmad, getHomes, resolveToolPath,
@@ -2506,7 +2690,8 @@ module.exports = {
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
     writeClaudeSettings, stripInstallerSettingsKeys,
     buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
-    writeCodexConfig, writeHermesConfig, writeOpenCodeConfig,
+    writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig,
     commandExists, ensureHermesCliInstalled, setupHermesModelSurface,
+    PLATFORMS, getSupportedToolIds, getToolPromptOptions, parseToolIds,
   },
 };

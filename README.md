@@ -224,7 +224,7 @@ WSL2 dual-home aware — terminal tools (Claude Code, Codex, Hermes, OpenCode) u
 | `--yes`, `-y` | false | Skip interactive prompts, accept all defaults |
 | `--global`, `-g` | false | Install to `~/.arcwright` / `~/.claude/` / `~/.kiro/` |
 | `--directory <path>`, `-d` | cwd | Target project root |
-| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,codex,hermes,opencode` |
+| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,codex,hermes,opencode,grok` |
 | `--modules <ids>` | `awm,awb,core,_memory` | Which modules to install |
 | `--user-name <name>` | prompted | Your name (written into config.yaml) |
 | `--output-folder <path>` | `_arcwright-output` | Where Arcwright writes output artifacts |
@@ -268,6 +268,8 @@ Global installs write to user-level config dirs instead of a project:
 | Claude Code assets | `~/.claude/` | `~/.claude/` (WSL Linux home) |
 | Codex assets | `~/.codex/AGENTS.md`, `~/.agents/skills/` | same, WSL Linux home |
 | Hermes assets | `~/.hermes/skills/`, `~/.hermes/skill-bundles/` | same, WSL Linux home |
+| OpenCode assets | `~/.config/opencode/AGENTS.md`, `~/.agents/skills/`, `~/.config/opencode/commands/` | same, WSL Linux home |
+| Grok assets | `~/.grok/AGENTS.md`, `~/.grok/skills/`, `~/.grok/commands/`, `~/.grok/agents/` | same, WSL Linux home |
 | Kiro assets | `~/.kiro/` | `/mnt/c/Users/<name>/.kiro/` (Windows home) |
 
 **Updating a global install:**
