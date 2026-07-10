@@ -156,6 +156,30 @@ agent_panel_sort = "spaces"
 Create a space with its default directory using `herdr workspace create --cwd /path/to/project`.
 Herdr 0.7.1 groups the agent panel by space but cannot filter out inactive-space agents.
 
+## 10. Troubleshooting: a `type=shell` keybind fires but does nothing
+
+Symptom: `Ctrl+V` MIME paste (or any custom `type=shell` keybind that shells out to `herdr`)
+silently stops working. Config looks correct, `herdr server reload-config` returns `applied`,
+detach/reattach changes nothing.
+
+Cause: **the herdr binary was rebuilt/replaced on disk while the server kept running.** The
+long-lived server still executes the old inode, so `current_exe()` — which herdr injects as
+`HERDR_BIN_PATH` into every spawned keybind — resolves to a stale `…/herdr (deleted)` path.
+Scripts that call `"$HERDR_BIN_PATH" pane send-text …` then exec a nonexistent binary and fail.
+It is **not** the keymap, the config, or the terminal (Konsole etc.). Common right after building
+a herdr fork.
+
+Diagnose: `ls -la /proc/<herdr-server-pid>/exe` shows `-> …/herdr (deleted)`. Or point the
+binding at a wrapper that logs `HERDR_BIN_PATH` and watch for the ` (deleted)` suffix — one
+keypress proves the binding fires with a good env except that path.
+
+Fix: any herdr-invoking keybind script must recover the real path when `HERDR_BIN_PATH` is not
+executable — **strip the ` (deleted)` suffix** (`${HERDR% (deleted)}`), don't rely on
+`command -v herdr` (the keybind process usually has no `~/.local/bin` on PATH). Arcwright's
+shipped `clipboard-paste.sh` does this. Or restart the server (`herdr server stop && herdr`) so
+`current_exe()` is valid again. When verifying such a fix, reproduce the *real* invocation
+(`/bin/sh -lc` + the server's PATH + the `(deleted)` `HERDR_BIN_PATH`), not a direct run.
+
 ---
 
 # Watching agents in panes (opt-in)
