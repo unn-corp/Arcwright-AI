@@ -1778,7 +1778,9 @@ async function install(opts) {
   }
 
   // Configure an existing Herdr install; Herdr itself remains user-installed.
-  if (resolvedTools.some((tool) => tool === 'claude-code' || tool === 'codex')) {
+  // Herdr session restore is agent-agnostic once integrations are installed.
+  // Trigger for any terminal CLI we wire resume support for.
+  if (resolvedTools.some((tool) => ['claude-code', 'codex', 'hermes', 'opencode', 'grok'].includes(tool))) {
     console.log(chalk.bold('\nHerdr setup:'));
     await setupHerdr({ chalk });
   }

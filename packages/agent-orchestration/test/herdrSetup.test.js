@@ -114,17 +114,19 @@ describe('Herdr standards', () => {
     fs.mkdirSync(stubDir, { recursive: true });
     fs.writeFileSync(path.join(stubDir, 'claude'), '#!/bin/sh\nprintf "claude:%s:%s\\n" "${CLAUDE_CONFIG_DIR:-default}" "$*"\n', { mode: 0o755 });
     fs.writeFileSync(path.join(stubDir, 'codex'), '#!/bin/sh\nprintf "codex:%s\\n" "$*"\n', { mode: 0o755 });
+    fs.writeFileSync(path.join(stubDir, 'grok'), '#!/bin/sh\nprintf "grok:%s\\n" "$*"\n', { mode: 0o755 });
     const stateDir = path.join(dir, '.local/state/herdr/claude-session-profiles');
     fs.mkdirSync(stateDir, { recursive: true });
     fs.writeFileSync(path.join(stateDir, 'session-1'), `${path.join(dir, '.claude-work')}\n`);
 
     const launcher = path.join(dir, '.config/arcwright/herdr-agent-launchers.sh');
-    const output = execFileSync('/bin/bash', ['-c', `source "$1"; claude --resume session-1; codex resume session-2`, 'test', launcher], {
+    const output = execFileSync('/bin/bash', ['-c', `source "$1"; claude --resume session-1; codex resume session-2; grok --resume session-3`, 'test', launcher], {
       encoding: 'utf8',
       env: { ...process.env, HOME: dir, PATH: `${stubDir}:${process.env.PATH}` },
     });
     expect(output).toContain(`claude:${path.join(dir, '.claude-work')}:--dangerously-skip-permissions --resume session-1`);
     expect(output).toContain('codex:--yolo resume session-2');
+    expect(output).toContain('grok:--always-approve --resume session-3');
   });
 });
 
@@ -155,6 +157,9 @@ describe('setupHerdr', () => {
     expect(toml).toContain('system_monitor = true');
     expect(run.calls).toContain('herdr integration install claude');
     expect(run.calls).toContain('herdr integration install codex');
+    expect(run.calls).toContain('herdr integration install hermes');
+    expect(run.calls).toContain('herdr integration install opencode');
+    expect(run.calls).toContain('herdr integration install grok');
   });
 
   it('skips already-installed plugins', async () => {

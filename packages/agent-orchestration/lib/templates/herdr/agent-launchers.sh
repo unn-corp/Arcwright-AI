@@ -41,3 +41,14 @@ claude() {
     "$claude_bin" ${bypass_flag:+"$bypass_flag"} "$@"
   fi
 }
+
+# Grok (xAI CLI / Grok Build). Herdr resume launches `grok --resume <id>`.
+# Mirror the always-approve posture used for Claude/Codex so restored panes
+# don't immediately block on permission prompts.
+grok() {
+  local arg
+  for arg in "$@"; do
+    [[ "$arg" == --always-approve ]] && { command grok "$@"; return; }
+  done
+  command grok --always-approve "$@"
+}

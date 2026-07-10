@@ -153,8 +153,10 @@ async function setupHerdr(deps = {}) {
 
   log(chalk.green(`  ✓  herdr ${version || ''} detected`));
 
-  // Agent-state integrations. Best-effort.
-  for (const agent of ['claude', 'codex']) {
+  // Agent-state integrations used for native conversation restore on Herdr
+  // server restart (`[session] resume_agents_on_restore = true`). Best-effort:
+  // agents that aren't installed on this machine skip cleanly.
+  for (const agent of ['claude', 'codex', 'hermes', 'opencode', 'grok']) {
     try {
       run(`herdr integration install ${agent}`);
       log(chalk.dim(`     installed ${agent} integration`));
