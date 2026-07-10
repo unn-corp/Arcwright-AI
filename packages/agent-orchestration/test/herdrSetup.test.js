@@ -80,6 +80,25 @@ describe('buildKeybindingsBlock', () => {
   it('always emits the universal clipboard binding', () => {
     expect(buildKeybindingsBlock(new Set(['herdr-tab-rename']))).toMatch(/key = "ctrl\+v"/);
   });
+  it('writes the clipboard command as an absolute path, never $HOME (herdr does not expand env vars)', () => {
+    const block = buildKeybindingsBlock(new Set(), { homeDir: '/home/tester' });
+    expect(block).toMatch(/command = "\/home\/tester\/\.local\/bin\/herdr-clipboard-paste"/);
+    expect(block).not.toMatch(/\$HOME/);
+  });
+  it('skips keys already bound outside the managed block (avoids duplicate-key partial reloads)', () => {
+    const existingKeys = new Set(['ctrl+v', 'prefix+p']);
+    const block = buildKeybindingsBlock(new Set(['jt.command-palette', 'url.fzf-picker']), {
+      existingKeys,
+    });
+    // prefix+p and ctrl+v are user-owned → skipped; alt+u is not → emitted.
+    expect(block).not.toMatch(/key = "prefix\+p"/);
+    expect(block).not.toMatch(/key = "ctrl\+v"/);
+    expect(block).toMatch(/key = "alt\+u"/);
+  });
+  it('returns null when every candidate key is already user-bound', () => {
+    const existingKeys = new Set(['prefix+p', 'ctrl+v']);
+    expect(buildKeybindingsBlock(new Set(['jt.command-palette']), { existingKeys })).toBeNull();
+  });
 });
 
 describe('Herdr standards', () => {

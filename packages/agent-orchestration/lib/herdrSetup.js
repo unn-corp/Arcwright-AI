@@ -10,6 +10,7 @@
  * It runs during Claude/Codex installation and through `arcwright herdr`.
  */
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -40,6 +41,7 @@ const DEFAULT_PLUGINS = [
 const KEYBINDINGS = [
   {
     id: 'jt.command-palette',
+    key: 'prefix+p',
     toml: [
       '[[keys.command]]',
       'key = "prefix+p"',
@@ -50,6 +52,7 @@ const KEYBINDINGS = [
   },
   {
     id: 'herdr-file-viewer',
+    key: 'prefix+f',
     toml: [
       '[[keys.command]]',
       'key = "prefix+f"',
@@ -59,6 +62,7 @@ const KEYBINDINGS = [
   },
   {
     id: 'url.fzf-picker',
+    key: 'alt+u',
     toml: [
       '[[keys.command]]',
       'key = "alt+u"',
@@ -67,6 +71,28 @@ const KEYBINDINGS = [
     ],
   },
 ];
+
+// Keys already declared OUTSIDE the Arcwright-managed block in config.toml.
+// Writing a second [[keys.command]] for one of these makes herdr's reload go
+// `partial` (it keeps the first, disables ours) and spams duplicate-key warnings
+// forever, so the managed block must skip any key the user already bound by hand.
+function existingKeysOutsideBlock(configPath) {
+  let text;
+  try {
+    text = fs.readFileSync(configPath, 'utf8');
+  } catch {
+    return new Set();
+  }
+  // Drop the managed region so our own prior block never counts as "existing".
+  const start = text.indexOf(KEYS_START);
+  const end = text.indexOf(KEYS_END);
+  if (start !== -1 && end !== -1 && end > start) {
+    text = text.slice(0, start) + text.slice(end + KEYS_END.length);
+  }
+  const keys = new Set();
+  for (const m of text.matchAll(/^\s*key\s*=\s*"([^"]+)"/gm)) keys.add(m[1]);
+  return keys;
+}
 
 /** Return { installed, version } for the herdr CLI. */
 function detectHerdr(run = defaultRun) {
@@ -100,15 +126,19 @@ function parsePluginIds(jsonOutput) {
  */
 function buildKeybindingsBlock(installedIds, options = {}) {
   const clipboard = options.clipboard !== false;
-  const blocks = KEYBINDINGS.filter((k) => installedIds.has(k.id)).map((k) =>
-    k.toml.join('\n')
-  );
-  if (clipboard) {
+  const homeDir = options.homeDir || os.homedir();
+  const existingKeys = options.existingKeys || new Set();
+  const blocks = KEYBINDINGS.filter(
+    (k) => installedIds.has(k.id) && !existingKeys.has(k.key)
+  ).map((k) => k.toml.join('\n'));
+  if (clipboard && !existingKeys.has('ctrl+v')) {
     blocks.push([
       '[[keys.command]]',
       'key = "ctrl+v"',
       'type = "shell"',
-      'command = "$HOME/.local/bin/herdr-clipboard-paste"',
+      // Absolute path — herdr does NOT expand $HOME/env vars in command strings,
+      // so a "$HOME/..." command silently no-ops when it becomes the live binding.
+      `command = "${path.join(homeDir, '.local', 'bin', 'herdr-clipboard-paste')}"`,
       'description = "Paste clipboard text or image"',
     ].join('\n'));
   }
@@ -219,8 +249,15 @@ async function setupHerdr(deps = {}) {
     }
   }
 
-  // Managed keybindings block for whatever ended up installed.
-  const block = buildKeybindingsBlock(present, { clipboard });
+  // Managed keybindings block for whatever ended up installed. Skip any key the
+  // user already bound outside the managed block so reloads stay `applied` (no
+  // duplicate-key `partial` warnings), and write the clipboard command with an
+  // absolute path (herdr does not expand $HOME).
+  const block = buildKeybindingsBlock(present, {
+    clipboard,
+    homeDir,
+    existingKeys: existingKeysOutsideBlock(configPath),
+  });
   if (block) {
     try {
       const result = await upsertManagedBlock(configPath, KEYS_START, KEYS_END, block);
