@@ -1,0 +1,282 @@
+# ez-ffmpeg Reference
+
+**Detection Keywords**: high-level API, simple transcoding, builder pattern, easy ffmpeg, video conversion, format conversion
+**Aliases**: ez-ffmpeg, ezffmpeg, simple ffmpeg rust
+
+**Version**: 0.13.1 | [Repository](https://github.com/YeautyYE/ez-ffmpeg) | [Docs](https://docs.rs/ez-ffmpeg)
+
+Safe, ergonomic Rust FFmpeg interface with Builder pattern API.
+
+**New in 0.13**: `-shortest` support (`set_shortest`), forced keyframes at exact times (`set_force_key_frames`), bitstream filters (`set_video/audio/subtitle_bsf`), matroska attachments (fonts/cover art), graph-level `sws/swr` opts, `find_stream_info` toggle + per-stream probe/decoder codec opts, built-in GPU effect catalog (`wgpu_filter::effects` — 13 effects), YUV-passthrough WGSL mode, in-place frame mutation helpers (`make_frame_writable`).
+**Breaking in 0.13**: `stop()` returns `Result<()>` (worker panics surface as `Error::WorkerPanicked`); `FrameFilter` hooks take `&mut FrameFilterContext` and return boxed `FrameFilterError` instead of `String`; builder setters are infallible — validation moved to `build()` (`OpenInputError/OpenOutputError::InvalidOption`); `set_framerate(num, den)` replaces the `AVRational` form; `set_audio_sample_fmt("s16")` takes a name string; `set_input_opt(s)` deprecated → `set_format_opt(s)`; `StreamInfo`/`VSyncMethod` are `#[non_exhaustive]` (matches need `..`).
+
+## Prerequisites
+
+- **FFmpeg**: 7.0 through 8.x installed on system — one build links either major (see [installation.md](installation.md) for platform-specific setup)
+- **Rust**: 1.80+ (MSRV)
+
+## Table of Contents
+
+- [Related Guides](#related-guides)
+- [Core Pattern](#core-pattern)
+- [Builder Methods Quick Reference](#builder-methods-quick-reference)
+- [Input Configuration](#input-configuration)
+- [Output Configuration](#output-configuration)
+- [High-Frequency Examples](#high-frequency-examples)
+- [Scenario Index](#scenario-index)
+- [Installation](#installation)
+- [Features](#features)
+
+## Related Guides
+
+| Guide | Content |
+|-------|---------|
+| [ffmpeg_next.md](ffmpeg_next.md) | Medium-level API for codec control |
+| [ffmpeg_sys_next.md](ffmpeg_sys_next.md) | Low-level unsafe FFI |
+| [installation.md](installation.md) | Platform-specific setup |
+
+## Core Pattern
+
+```rust
+use ez_ffmpeg::{FfmpegContext, Input, Output};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Basic pipeline
+    FfmpegContext::builder()
+        .input(Input::from("input.mp4").set_format_opt("key", "value"))
+        .filter_desc("scale=1280:720")  // Optional FFmpeg filter
+        .output(Output::from("output.mp4").set_video_codec("libx264"))
+        .build()?
+        .start()?
+        .wait()?;  // Blocks until completion
+
+    Ok(())
+}
+```
+
+### Async Pattern
+
+For async workflows, enable the `async` feature:
+
+```rust
+use ez_ffmpeg::{FfmpegContext, Input, Output};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    FfmpegContext::builder()
+        .input(Input::from("input.mp4"))
+        .output(Output::from("output.mp4"))
+        .build()?
+        .start()?
+        .await?;  // Non-blocking async
+
+    Ok(())
+}
+```
+
+## Builder Methods Quick Reference
+
+| Method | Purpose | Example |
+|--------|---------|---------|
+| `input()` | Add single input | `.input("video.mp4")` |
+| `inputs()` | Add multiple inputs | `.inputs(vec![input1, input2])` |
+| `output()` | Add output | `.output("out.mp4")` |
+| `filter_desc()` | FFmpeg filter string | `.filter_desc("scale=1280:720")` |
+| `copyts()` | Preserve timestamps | `.copyts()` |
+| `independent_readrate()` | Multi-input sync | `.independent_readrate()` |
+
+## Input Configuration
+
+The `input()` method accepts both string paths (`&str`, `String`) and `Input` objects via the `Into<Input>` trait.
+
+```rust
+use ez_ffmpeg::Input;
+use ez_ffmpeg::filter::frame_pipeline_builder::FramePipelineBuilder;
+use ffmpeg_sys_next::AVMediaType;
+
+// Simple string input
+FfmpegContext::builder()
+    .input("video.mp4")  // &str automatically converts to Input
+    // ...
+
+// Configured Input object
+let input = Input::from("video.mp4")
+    .set_format("mp4")                    // Force format
+    .set_format_opt("key", "value")       // Demuxer option (0.13: replaces set_input_opt)
+    .set_start_time_us(60_000_000)        // Start time in microseconds
+    .set_recording_time_us(30_000_000)    // Recording duration in microseconds
+    .set_stop_time_us(90_000_000)         // Stop time in microseconds
+    .set_hwaccel("videotoolbox")          // Hardware acceleration
+    .set_video_codec("h264_cuvid")        // Decoder
+    .set_video_codec_opt("threads", "4")  // Decoder option (0.13, per media type)
+    .set_readrate(1.0);                   // Read rate control
+
+// Probing control (0.13) — skip or tune avformat_find_stream_info
+let low_latency_input = Input::from("rtmp://live/stream")
+    .set_find_stream_info(false)               // Skip probing (faster start; stream params must be self-describing)
+    .set_find_stream_info_codec_opt("threads", "1"); // Or keep probing but tune its decoders
+
+// With custom frame pipeline (see filters.md for FrameFilter implementation)
+let pipeline = FramePipelineBuilder::from(AVMediaType::AVMEDIA_TYPE_VIDEO)
+    .filter("my_filter", Box::new(MyFrameFilter));
+let input_with_pipeline = Input::from("video.mp4")
+    .add_frame_pipeline(pipeline);
+```
+
+## Output Configuration
+
+The `output()` method accepts both string paths (`&str`, `String`) and `Output` objects via the `Into<Output>` trait.
+
+```rust
+use ez_ffmpeg::Output;
+use ez_ffmpeg::filter::frame_pipeline_builder::FramePipelineBuilder;
+use ffmpeg_sys_next::AVMediaType;
+
+// Simple string output
+FfmpegContext::builder()
+    .input("input.mp4")
+    .output("output.mp4")  // &str automatically converts to Output
+    // ...
+
+// Configured Output object
+let output = Output::from("output.mp4")
+    .set_format("mp4")                    // Container format
+    .set_video_codec("libx264")           // Video encoder
+    .set_video_codec_opt("preset", "fast") // Encoder option
+    .set_video_codec_opt("crf", "23")     // Quality
+    .set_audio_codec("aac")               // Audio encoder
+    .set_audio_codec_opt("b", "128k")     // Audio bitrate
+    .set_recording_time_us(60_000_000)    // Duration limit (60s); "t" is not a muxer AVOption
+    .set_max_video_frames(1)              // Frame limit (thumbnails)
+    .set_video_qscale(2)                  // Quality scale
+    .set_framerate(30, 1)                 // Output framerate (num, den — 0.13 signature)
+    .set_pix_fmt("yuv420p")               // Output pixel format
+    .set_audio_sample_fmt("s16")          // Sample format by name (0.13: was AVSampleFormat enum)
+    .set_start_time_us(0)                 // Output start time
+    .set_recording_time_us(30_000_000)    // Output recording duration
+    .set_stop_time_us(30_000_000)         // Output stop time
+    .add_stream_map("0:v")                // Map video stream
+    .add_stream_map("0:a")                // Map audio stream
+    .add_stream_map_with_copy("0:a")      // Copy stream without re-encode
+    .add_metadata("title", "My Video");   // Output metadata
+
+// New in 0.13 — invalid values fail at build() as OpenOutputError::InvalidOption
+let output_013 = Output::from("output.mkv")
+    .set_shortest(true)                        // -shortest: truncate to shortest stream
+    .set_shortest_buf_duration_us(30_000_000)  // Tolerated stream gap (default 10s)
+    .set_force_key_frames("0,5,10.5")          // Keyframes at exact seconds (list form only, no expr:)
+    .set_video_bsf("h264_mp4toannexb")         // Bitstream filter chain, no re-encode
+    .set_sws_opts("flags=lanczos")             // Opts for auto-inserted scalers
+    .set_swr_opts("dither_method=triangular")  // Opts for auto-inserted resamplers
+    .add_attachment("assets/DejaVuSans.ttf")   // mkv attachment (fonts for ASS subs)
+    .add_attachment_with_mimetype("cover.png", "image/png");
+
+// Stream disable flags (equivalent to FFmpeg's -vn, -an, -sn, -dn)
+let audio_only = Output::from("audio.mp3")
+    .disable_video();                     // Disable video, keep audio only
+
+let video_only = Output::from("video.mp4")
+    .disable_audio();                     // Disable audio, keep video only
+
+// With custom frame pipeline (see filters.md for FrameFilter implementation)
+let pipeline = FramePipelineBuilder::from(AVMediaType::AVMEDIA_TYPE_VIDEO)
+    .filter("my_filter", Box::new(MyFrameFilter));
+let output_with_pipeline = Output::from("output.mp4")
+    .add_frame_pipeline(pipeline);
+```
+
+## High-Frequency Examples
+
+**Transcoding** (format conversion):
+```rust
+FfmpegContext::builder()
+    .input("input.mp4")
+    .output("output.mov")
+    .build()?.start()?.wait()?;
+```
+
+**Async Processing** (requires `async` feature + tokio runtime):
+```rust
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    FfmpegContext::builder()
+        .input("input.mp4")
+        .output("output.mp4")
+        .build()?.start()?.await?;
+    Ok(())
+}
+```
+
+**Multi-Input with Timestamp Sync**:
+```rust
+use ez_ffmpeg::{FfmpegContext, Input, Output};
+
+let input1 = Input::from("video1.mp4").set_readrate(1.0);
+let input2 = Input::from("video2.mp4").set_readrate(1.0);
+let output = Output::from("output.mp4")
+    .set_video_codec("libx264");
+
+FfmpegContext::builder()
+    .copyts()                    // Preserve timestamps
+    .independent_readrate()      // Sync multiple inputs
+    .inputs(vec![input1, input2])
+    .filter_desc("[0:v][1:v]overlay=10:10")
+    .output(output)
+    .build()?.start()?.wait()?;
+```
+
+## Scenario Index
+
+| Scenario | File | Use Cases |
+|----------|------|-----------|
+| **CLI Migration** | [cli_migration.md](ez_ffmpeg/cli_migration.md) | FFmpeg CLI to Rust conversion, option mapping |
+| Video Processing | [video.md](ez_ffmpeg/video.md) | Transcoding, clipping, merging, thumbnail, watermark |
+| Audio Processing | [audio.md](ez_ffmpeg/audio.md) | Extraction, conversion, resampling |
+| Streaming | [streaming.md](ez_ffmpeg/streaming.md) | RTMP push, HLS generation, re-streaming |
+| Device Capture | [capture.md](ez_ffmpeg/capture.md) | Camera, microphone, screen capture |
+| Media Query | [query.md](ez_ffmpeg/query.md) | Duration, metadata, codecs, devices |
+| Filters | [filters.md](ez_ffmpeg/filters.md) | Built-in filters, custom FrameFilter, wgpu GPU filters (OpenGL deprecated) |
+| Advanced | [advanced.md](ez_ffmpeg/advanced.md) | Hardware accel, custom I/O, frame pipelines |
+
+## Installation
+
+> **Full installation guide**: See [installation.md](installation.md) for comprehensive platform-specific instructions, troubleshooting, Docker/CI configuration, and the `build` feature fallback.
+
+### Quick Start
+
+```toml
+[dependencies]
+ez-ffmpeg = { version = "0.13.1", features = ["async"] }
+```
+
+**System dependencies** (one-time setup, see [installation.md](installation.md) for complete list):
+- **macOS**: `brew install ffmpeg`
+- **Linux**: `sudo apt install libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev libswscale-dev libswresample-dev pkg-config clang`
+- **Windows**: See [installation.md](installation.md) for vcpkg setup
+
+**Feature options**:
+```toml
+# Static linking (Windows recommended)
+ez-ffmpeg = { version = "0.13.1", features = ["async", "static"] }
+
+# Build FFmpeg from source (last resort when system FFmpeg unavailable).
+# ez-ffmpeg has NO `build` feature — enable it through the underlying sys crate:
+ez-ffmpeg = { version = "0.13.1", features = ["async"] }
+ffmpeg-sys-next = { version = "8.1.0", features = ["build"] }
+```
+
+> ez-ffmpeg's own features are `async`, `static`, `rtmp`, `flv`, `subtitle`, `wgpu`, `opengl` (deprecated). The `build` (compile-FFmpeg-from-source) feature lives on `ffmpeg-sys-next` / `ffmpeg-next`; see [installation.md](installation.md) for license options (GPL, non-free).
+
+## Features
+
+| Feature | Purpose |
+|---------|---------|
+| `async` | Tokio async support |
+| `wgpu` | GPU-accelerated custom WGSL filters (headless, no display) |
+| `subtitle` | Native pure-Rust ASS/SRT subtitle burn-in (no libass) |
+| `rtmp` | Embedded high-concurrency RTMP server |
+| `flv` | FLV muxing/demuxing (pulled in by `rtmp`) |
+| `static` | Static linking (Windows) |
+| `opengl` | GPU filters — **deprecated since 0.11.0, use `wgpu`** |
+
+> `analysis` (detection/measurement) and `recipes` (thumbnail/gif/HLS ladder) need **no** feature flag — they are in the default build.
