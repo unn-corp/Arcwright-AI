@@ -1,3 +1,7 @@
 [submodule "herdr"]
 	path = herdr
 	url = https://github.com/unn-corp/herdr.git
+[submodule "collie"]
+	path = collie
+	url = https://github.com/unn-corp/collie.git
+	branch = dev
