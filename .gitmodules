@@ -13,3 +13,7 @@
 	path = ungate
 	url = https://github.com/unn-corp/ungate.git
 	branch = main
+[submodule "hermes-agent"]
+	path = hermes-agent
+	url = https://github.com/unn-corp/hermes-agent.git
+	branch = main
