@@ -1,6 +1,6 @@
 # Arcwright
 
-> AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
+> AI-native agile workflow orchestration for Claude Code, Kiro, Cursor, and more coding agents.
 
 Arcwright installs a structured system of specialist AI agents, in-process subagent orchestration, and a 47-skill library into any project. The orchestrator routes work through spec, research, UX, implementation, review, and QA — using **in-process `Agent` tool calls with `SendMessage` reuse** by default. Herdr pane visibility is opt-in for users who want to watch.
 
@@ -81,7 +81,7 @@ Arcwright ships a `herdr` skill and managed defaults for [Herdr](https://herdr.d
 
 ## Slash Commands
 
-Arcwright ships slash commands for Claude Code (and the equivalents for Kiro / Cursor / etc. where supported). All commands live in `.claude/commands/` after install.
+Arcwright ships native slash commands for Claude Code, Kiro, and Cursor. Cursor commands install to `.cursor/commands/`; Claude Code commands install to `.claude/commands/`.
 
 For new work, the recommended entry point is **`/triage <task description>`** — the workflow router (`.agents/skills/triage/SKILL.md`) reads the task and recommends an execution approach:
 
@@ -203,11 +203,11 @@ Not sure which team matches your task? Run `/triage <task>` first — the workfl
 
 ## Supported IDEs
 
-Claude Code, Kiro (IDE + CLI), Codex, Hermes, OpenCode
+Claude Code, Kiro (IDE + CLI), Cursor (IDE + Agent CLI), Codex, Hermes, OpenCode, Grok (xAI CLI)
 
 ```bash
 # Install for specific IDEs
-npx @arcwright-ai/agent-orchestration --tools claude-code,kiro
+npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor
 
 # Global install (applies to all projects via ~/ config dirs)
 npx @arcwright-ai/agent-orchestration --global
@@ -224,7 +224,7 @@ WSL2 dual-home aware — terminal tools (Claude Code, Codex, Hermes, OpenCode) u
 | `--yes`, `-y` | false | Skip interactive prompts, accept all defaults |
 | `--global`, `-g` | false | Install to `~/.arcwright` / `~/.claude/` / `~/.kiro/` |
 | `--directory <path>`, `-d` | cwd | Target project root |
-| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,codex,hermes,opencode,grok` |
+| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,cursor,codex,hermes,opencode,grok` |
 | `--modules <ids>` | `awm,awb,core,_memory` | Which modules to install |
 | `--user-name <name>` | prompted | Your name (written into config.yaml) |
 | `--output-folder <path>` | `_arcwright-output` | Where Arcwright writes output artifacts |
@@ -271,6 +271,7 @@ Global installs write to user-level config dirs instead of a project:
 | OpenCode assets | `~/.config/opencode/AGENTS.md`, `~/.agents/skills/`, `~/.config/opencode/commands/` | same, WSL Linux home |
 | Grok assets | `~/.grok/AGENTS.md`, `~/.grok/skills/`, `~/.grok/commands/`, `~/.grok/agents/` | same, WSL Linux home |
 | Kiro assets | `~/.kiro/` | `/mnt/c/Users/<name>/.kiro/` (Windows home) |
+| Cursor assets | Project: `AGENTS.md`, `.cursor/rules/arcwright.mdc`, `.cursor/commands/` | same; global install stages `~/.cursor/arcwright-user-rules.md` for Cursor Settings → Rules → User Rules |
 
 **Updating a global install:**
 

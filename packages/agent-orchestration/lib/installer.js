@@ -359,7 +359,7 @@ const FILES_MANIFEST_FILE = '_config/files-manifest.csv';
  * `summary` feeds `arcwright platforms` (agent stubs / skills column).
  * Order here is the installer option order.
  *
- * codex/hermes/opencode/grok are NOT dispatched through writeIdeConfig (see
+ * codex/hermes/opencode/grok/cursor are NOT dispatched through writeIdeConfig (see
  * the `continue` in the IDE-integration loop) — their own write*Config
  * helpers handle AGENTS.md + skills (and commands/agents where relevant)
  * with upsertManagedBlock and manifest entries. PLATFORMS entries still
@@ -432,6 +432,17 @@ const PLATFORMS = {
     // Project uses root AGENTS.md; global uses ~/.grok/AGENTS.md (see GLOBAL_PATHS).
     rulesFile: 'AGENTS.md / ~/.grok/AGENTS.md',
     rulesMarker: '## Arcwright',
+  },
+  'cursor': {
+    label: 'Cursor (IDE + Agent CLI)',
+    hint: '.cursor/rules/, .cursor/commands/, AGENTS.md',
+    summary: '.cursor/rules/ + .cursor/commands/ + AGENTS.md (project)',
+    agentDir: null,
+    skillsDir: null,
+    steeringDir: null,
+    hooksDir: null,
+    rulesFile: '.cursor/rules/arcwright.mdc',
+    rulesMarker: '<!-- arcwright-cursor-start -->',
   },
 };
 
@@ -545,6 +556,12 @@ const GLOBAL_PATHS = {
     skills: '.grok/skills',
     commands: '.grok/commands',
     agents: '.grok/agents',
+  },
+  'cursor': {
+    // Cursor project rules and commands are intentionally project-scoped.
+    // Cursor User Rules are stored by the app rather than in a supported
+    // user-level rules directory, so global installs stage a paste-ready file.
+    userRules: '.cursor/arcwright-user-rules.md',
   },
 };
 
@@ -1024,6 +1041,104 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
   return entries;
 }
 
+// ─── Cursor config writer ───────────────────────────────────────────────────
+// Cursor's native project integration is MDC rules plus Markdown commands. Its
+// Agent CLI also reads root AGENTS.md, so Arcwright writes both surfaces. Cursor
+// User Rules are app-managed (not a supported rules directory), therefore a
+// global install stages a paste-ready file instead of writing an undocumented
+// config location.
+
+function buildCursorRule(modules) {
+  return [
+    '---',
+    'description: Arcwright workflow and skill guidance',
+    'alwaysApply: true',
+    '---',
+    '',
+    '<!-- arcwright-cursor-start -->',
+    '# Arcwright',
+    '',
+    `Arcwright is installed for these modules: ${modules.join(', ')}.`,
+    '',
+    '- Start by reading the root `AGENTS.md`, then load the relevant `SKILL.md` from `.agents/skills/` before applying a matching workflow.',
+    '- Arcwright custom commands are available in `.cursor/commands/`; use them when the user invokes an Arcwright slash command.',
+    '- Treat commands written for other agents as workflow instructions, not as a requirement to call unavailable tool names. Use Cursor\'s available tools and keep the same verification and handoff intent.',
+    '- Keep user-owned instructions and files intact. Do not edit `_arcwright/` workflow assets unless the user explicitly asks to customize Arcwright.',
+    '<!-- arcwright-cursor-end -->',
+    '',
+  ].join('\n');
+}
+
+function adaptCursorCommand(content) {
+  // Cursor commands are plain Markdown, unlike Claude Code's frontmatter-based
+  // command format. Preserve the workflow body while making its argument
+  // placeholder understandable to Cursor's command runner.
+  return content
+    .replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, '')
+    .replace(/\$ARGUMENTS\b/g, "the user's command input");
+}
+
+function filterCommandNames(files, flags) {
+  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm } = flags;
+  return files.filter((f) => {
+    if (!resolvedTeams && f === 'team.md') return false;
+    if (!resolvedDockerCheck && f === 'docker-check.md') return false;
+    if (!resolvedDotnet && f === 'dotnet.md') return false;
+    if (!resolvedElectron && f === 'electron.md') return false;
+    if (!resolvedTauri && f === 'tauri.md') return false;
+    if (!resolvedStrands && f === 'strands.md') return false;
+    if (!resolvedAwsInfra && f === 'aws-infra.md') return false;
+    if (!resolvedUnnamedPm && f === 'unnamed-pm.md') return false;
+    return true;
+  });
+}
+
+async function writeCursorConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
+  const entries = [];
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
+  const rule = buildCursorRule(modules);
+
+  if (isGlobal) {
+    const userRulesPath = resolveToolPath('cursor', GLOBAL_PATHS.cursor.userRules, true, homes, platform);
+    await fs.ensureDir(path.dirname(userRulesPath));
+    await fs.writeFile(userRulesPath, rule, 'utf8');
+    entries.push({ relPath: '.cursor/arcwright-user-rules.md', hash: sha256(rule) });
+    console.log(chalk.green('  ✓ ~/.cursor/arcwright-user-rules.md staged'));
+    console.log(chalk.dim('    Paste it into Cursor Settings → Rules → User Rules; Cursor only supports project-scoped rule files.'));
+    return entries;
+  }
+
+  // AGENTS.md is read by Cursor Agent CLI, and is a supported simple-rule
+  // alternative in the Cursor IDE. Preserve user content outside our block.
+  const agentsPath = path.join(projectRoot, 'AGENTS.md');
+  const agentsResult = await upsertManagedBlock(agentsPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules));
+  if (agentsResult === 'created') console.log(chalk.green('  ✓ AGENTS.md created'));
+  else if (agentsResult !== 'noop') console.log(chalk.green('  ✓ AGENTS.md updated'));
+  else console.log(chalk.gray('  ○ AGENTS.md already up to date'));
+
+  const rulesPath = path.join(projectRoot, '.cursor', 'rules', 'arcwright.mdc');
+  await fs.ensureDir(path.dirname(rulesPath));
+  await fs.writeFile(rulesPath, rule, 'utf8');
+  entries.push({ relPath: '.cursor/rules/arcwright.mdc', hash: sha256(rule) });
+  console.log(chalk.green('  ✓ .cursor/rules/arcwright.mdc updated'));
+
+  const commandsSrc = path.join(SRC_DIR, '.claude', 'commands');
+  const commandsDest = path.join(projectRoot, '.cursor', 'commands');
+  if (await fs.pathExists(commandsSrc)) {
+    await fs.ensureDir(commandsDest);
+    const allFiles = (await fs.readdir(commandsSrc)).filter((f) => f.endsWith('.md'));
+    const files = filterCommandNames(allFiles, flags);
+    for (const f of files) {
+      const adapted = adaptCursorCommand(await fs.readFile(path.join(commandsSrc, f), 'utf8'));
+      await fs.writeFile(path.join(commandsDest, f), adapted, 'utf8');
+      entries.push({ relPath: `.cursor/commands/${f}`, hash: sha256(adapted) });
+    }
+    console.log(chalk.green(`  ✓ ${files.length} Cursor commands → .cursor/commands/`));
+  }
+
+  return entries;
+}
+
 // ─── Gitignore writer ─────────────────────────────────────────────────────────
 
 /**
@@ -1069,6 +1184,8 @@ async function updateGitignore(projectRoot, mode, chalk) {
       '.kiro/agents/',
       '.kiro/skills/',
       '.kiro/steering/arcwright-*.md',
+      '.cursor/rules/arcwright.mdc',
+      '.cursor/commands/',
     ],
     'skills': [
       '_arcwright-output/',
@@ -1640,7 +1757,7 @@ async function install(opts) {
 
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
-    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode' || tool === 'grok') continue; // handled separately below
+    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode' || tool === 'grok' || tool === 'cursor') continue; // handled separately below
     const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
     if (ideEntries && ideEntries.length > 0) {
       newFileEntries.push(...ideEntries);
@@ -1694,6 +1811,14 @@ async function install(opts) {
     const grokEntries = await writeGrokConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
     if (grokEntries && grokEntries.length > 0) {
       newFileEntries.push(...grokEntries);
+    }
+  }
+
+  // ── Cursor integration ───────────────────────────────────────────────────
+  if (resolvedTools.includes('cursor')) {
+    const cursorEntries = await writeCursorConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    if (cursorEntries && cursorEntries.length > 0) {
+      newFileEntries.push(...cursorEntries);
     }
   }
 
@@ -1756,13 +1881,15 @@ async function install(opts) {
             fullPath = path.join(resolveToolPath('grok', GLOBAL_PATHS.grok.agents, true, homes, platform), rel);
           } else if (orphan.relPath.startsWith('.grok/')) {
             fullPath = resolveToolPath('grok', orphan.relPath, true, homes, platform);
+          } else if (orphan.relPath.startsWith('.cursor/')) {
+            fullPath = resolveToolPath('cursor', orphan.relPath, true, homes, platform);
           } else {
             // _arcwright/ module files — in ~/.arcwright/
             fullPath = path.join(effectiveArwDir, orphan.relPath);
           }
         } else {
           // Project install: _arcwright/ files use effectiveArwDir; others use projectRoot
-          if (orphan.relPath.startsWith('.agents/') || orphan.relPath.startsWith('.claude/') || orphan.relPath.startsWith('.opencode/') || orphan.relPath.startsWith('.grok/')) {
+          if (orphan.relPath.startsWith('.agents/') || orphan.relPath.startsWith('.claude/') || orphan.relPath.startsWith('.opencode/') || orphan.relPath.startsWith('.grok/') || orphan.relPath.startsWith('.cursor/')) {
             fullPath = path.join(projectRoot, orphan.relPath);
           } else {
             fullPath = path.join(effectiveArwDir, orphan.relPath);
@@ -2692,7 +2819,8 @@ module.exports = {
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
     writeClaudeSettings, stripInstallerSettingsKeys,
     buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
-    writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig,
+    writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig, writeCursorConfig,
+    buildCursorRule, adaptCursorCommand, filterCommandNames,
     commandExists, ensureHermesCliInstalled, setupHermesModelSurface,
     PLATFORMS, getSupportedToolIds, getToolPromptOptions, parseToolIds,
   },

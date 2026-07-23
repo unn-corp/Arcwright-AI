@@ -1,12 +1,13 @@
 {
   "name": "@arcwright-ai/agent-orchestration",
   "version": "1.2.3",
-  "description": "Arcwright — AI-native agile workflow system for Claude Code, Kiro, Codex, Hermes, OpenCode, Grok, and compatible AI assistants. Supports Windows (WSL2) and Linux (Fedora/Ubuntu/Arch).",
+  "description": "Arcwright — AI-native agile workflow system for Claude Code, Kiro, Cursor, Codex, Hermes, OpenCode, Grok, and compatible AI assistants. Supports Windows (WSL2) and Linux (Fedora/Ubuntu/Arch).",
   "keywords": [
     "arcwright",
     "ai-agents",
     "claude",
     "kiro",
+    "cursor",
     "codex",
     "hermes",
     "opencode",

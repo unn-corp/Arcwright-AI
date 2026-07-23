@@ -7,6 +7,7 @@ export interface IDE {
 export const ides: IDE[] = [
   { id: 'claude-code', name: 'Claude Code', flag: 'claude-code' },
   { id: 'kiro', name: 'Kiro', flag: 'kiro' },
+  { id: 'cursor', name: 'Cursor', flag: 'cursor' },
   { id: 'codex', name: 'Codex', flag: 'codex' },
   { id: 'hermes', name: 'Hermes', flag: 'hermes' },
   { id: 'opencode', name: 'OpenCode', flag: 'opencode' },
