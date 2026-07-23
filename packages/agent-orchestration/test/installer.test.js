@@ -28,9 +28,9 @@ afterEach(() => {
 });
 
 describe('supported tools (installer options)', () => {
-  it('includes grok alongside the other first-class targets', () => {
+  it('includes Cursor alongside the other first-class targets', () => {
     const ids = getSupportedToolIds();
-    expect(ids).toEqual(['claude-code', 'kiro', 'codex', 'hermes', 'opencode', 'grok']);
+    expect(ids).toEqual(['claude-code', 'kiro', 'codex', 'hermes', 'opencode', 'grok', 'cursor']);
   });
 
   it('exposes grok in the interactive multiselect options', () => {
@@ -41,9 +41,10 @@ describe('supported tools (installer options)', () => {
     expect(grok.hint).toBeTruthy();
   });
 
-  it('parseToolIds accepts grok and rejects unknown ids', () => {
+  it('parseToolIds accepts Cursor and rejects unknown ids', () => {
     expect(parseToolIds('grok')).toEqual(['grok']);
     expect(parseToolIds('claude-code,grok')).toEqual(['claude-code', 'grok']);
+    expect(parseToolIds('cursor')).toEqual(['cursor']);
     expect(() => parseToolIds('grok,not-a-tool')).toThrow(/Unknown --tools id/);
   });
 });
@@ -116,6 +117,10 @@ describe('getHomes / resolveToolPath', () => {
   it('GUI tools use the windows home on WSL', () => {
     const p = resolveToolPath('kiro', '.kiro/x', true, { linux: '/lin', windows: '/mnt/c' }, 'windows-wsl');
     expect(p).toBe('/mnt/c/.kiro/x');
+  });
+  it('Cursor uses the windows home on WSL', () => {
+    const p = resolveToolPath('cursor', '.cursor/x', true, { linux: '/lin', windows: '/mnt/c' }, 'windows-wsl');
+    expect(p).toBe('/mnt/c/.cursor/x');
   });
 });
 
