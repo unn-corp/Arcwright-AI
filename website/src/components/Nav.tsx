@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import { Package, ExternalLink } from 'lucide-react';
 
 // Simple GitHub SVG icon (not in lucide-react)
