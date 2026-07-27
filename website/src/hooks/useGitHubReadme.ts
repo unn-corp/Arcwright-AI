@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fallbackReadme } from '../data/fallback';
 
-const README_URL = 'https://raw.githubusercontent.com/UNN-Devotek/Arcwright-AI/main/README.md';
+const README_URL = 'https://raw.githubusercontent.com/unn-corp/Arcwright-AI/main/README.md';
 const CACHE_KEY = 'arcwright_readme_cache';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 

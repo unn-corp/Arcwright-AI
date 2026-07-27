@@ -87,7 +87,7 @@ export default function Hero() {
         {/* CTAs */}
         <div className="flex flex-wrap items-center justify-center gap-4">
           <a
-            href="https://github.com/UNN-Devotek/Arcwright-AI"
+            href="https://github.com/unn-corp/Arcwright-AI"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-cta text-bg font-sans font-semibold text-sm px-5 py-2.5 hover:bg-cta/90 transition-colors duration-200 cursor-pointer"

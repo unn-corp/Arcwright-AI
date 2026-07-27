@@ -11,7 +11,7 @@ function GithubIcon({ size = 16, className = '' }: { size?: number; className?: 
   );
 }
 
-const GITHUB_API = 'https://api.github.com/repos/UNN-Devotek/Arcwright-AI';
+const GITHUB_API = 'https://api.github.com/repos/unn-corp/Arcwright-AI';
 
 const NAV_LINKS = [
   { label: 'Home', to: '/' },
@@ -87,7 +87,7 @@ export default function Nav() {
           {/* Actions */}
           <div className="flex items-center gap-3">
             <a
-              href="https://github.com/UNN-Devotek/Arcwright-AI"
+              href="https://github.com/unn-corp/Arcwright-AI"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors duration-200 cursor-pointer"

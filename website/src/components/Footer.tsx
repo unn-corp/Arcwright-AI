@@ -58,7 +58,7 @@ export default function Footer() {
             <h4 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">Links</h4>
             <div className="space-y-2">
               <a
-                href="https://github.com/UNN-Devotek/Arcwright-AI"
+                href="https://github.com/unn-corp/Arcwright-AI"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
@@ -68,7 +68,7 @@ export default function Footer() {
                 <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200" aria-hidden="true" />
               </a>
               <a
-                href="https://github.com/UNN-Devotek/Arcwright-AI/blob/main/README.md"
+                href="https://github.com/unn-corp/Arcwright-AI/blob/main/README.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
