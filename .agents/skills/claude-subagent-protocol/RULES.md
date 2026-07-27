@@ -9,6 +9,13 @@ Load this before any Agent tool call sequence. For the full protocol, see SKILL.
 
 ## Non-Negotiables
 
+> **HARD CAP — never more than 6 agents running at the same time.** Concurrent,
+> not total: a 20-agent job runs as four waves of ≤6. Global to the session, not
+> per-message — still-running agents from an earlier message count, and so do
+> background agents. Covers `Agent` calls, `Workflow` `parallel()`/`pipeline()`
+> batches, Kiro `subagent` stages at one dependency level, and live Herdr panes.
+> Chunk bigger fan-outs; never dispatch them all at once. See SKILL.md §8.
+
 1. **In-process is the default.** `Agent` tool + `SendMessage` reuse, governed
    by a Session Agent Registry. herdr pane visibility is opt-in only.
 2. **Sonnet-first, always.** Default every spawn to `sonnet`. Use `opus` only

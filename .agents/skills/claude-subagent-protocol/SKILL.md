@@ -585,9 +585,15 @@ content. Apply the wrapping pattern proactively at that point.
 
 ## 8. Concurrency Rules
 
-- **Max parallel spawns from a single assistant message: 5.** Arcwright convention.
-  Practical limit is higher; the conservative cap ensures no skill ever queues.
-  Current peak demand is 3 (research ×3 or review sub-agents ×3).
+- **HARD CAP: never more than 6 agents running at the same time.** This is a
+  cap on *concurrent* agents, not total agents — a 20-agent job is fine, run as
+  four waves of ≤6. The cap is global to the session, not per-message: agents
+  spawned in an earlier message that are still running count against it, and
+  background agents count while running. A finished agent frees its slot.
+  Applies to every spawning surface — `Agent` tool calls, `Workflow`
+  `parallel()`/`pipeline()` batches, Kiro `subagent` stages sharing a
+  dependency level (stages without `depends_on`), and live Herdr panes.
+  Chunk larger fan-outs rather than dispatching them all at once.
 - **Result delivery order: not guaranteed.** Collect results by name or index,
   never by arrival order. Named capture variables (§7.1) make this explicit.
 - **File contention is a user error.** Parallel agents writing the same file
