@@ -344,6 +344,8 @@ function detectBmad(projectRoot) {
 
 // Modules available in src/
 const AVAILABLE_MODULES = ['awm', 'awb', 'core', '_memory'];
+/** Modules installed only when their opt-in flag is passed (--aws-infra, --unnamed-pm). */
+const OPTIONAL_MODULES = ['aws-infra', 'unnamed-pm'];
 
 // Manifest file location (relative to _arcwright/)
 const MANIFEST_FILE = '_config/manifest.yaml';
@@ -2085,6 +2087,10 @@ async function status(opts) {
     console.log(`  IDEs:      ${chalk.dim((manifest.tools || []).join(', ') || 'none')}\n`);
   }
 
+  // Core modules are reported whether installed or not. The opt-in modules are
+  // reported only when present — listing them unconditionally would be noise for
+  // the majority who never enable them, but omitting them entirely (as this loop
+  // did) made --aws-infra and --unnamed-pm installs invisible to `status`.
   for (const mod of AVAILABLE_MODULES) {
     const modDir = path.join(arcwrightDir, mod);
     if (await fs.pathExists(modDir)) {
@@ -2093,6 +2099,12 @@ async function status(opts) {
     } else {
       console.log(`  ${chalk.gray('○')} ${mod} (not installed)`);
     }
+  }
+  for (const mod of OPTIONAL_MODULES) {
+    const modDir = path.join(arcwrightDir, mod);
+    if (!await fs.pathExists(modDir)) continue;
+    const files = await glob('**/*', { cwd: modDir, nodir: true });
+    console.log(`  ${chalk.green('✓')} ${mod} (${files.length} files)`);
   }
 
   const filesManifest = await readFilesManifest(arcwrightDir);
