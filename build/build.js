@@ -58,10 +58,31 @@ const EXCLUDE_ALWAYS = [
   '.backup',
   '.bak',
   'session-state-',  // timestamped session snapshots
+  '__pycache__',     // compiled bytecode — version-specific, useless to consumers
+  '.pyc',
 ];
 
 /** Text file extensions — binary files are copied without modification. */
 const TEXT_EXTS = new Set(['.md', '.yaml', '.yml', '.json', '.xml', '.csv', '.txt', '.js', '.sh', '.conf', '.py']);
+
+/**
+ * Extensions verifyNoLeaks() will NOT read. Everything else is scanned.
+ *
+ * This is a denylist on purpose. It used to reuse TEXT_EXTS (an allowlist), so
+ * 41 shipped files were silently exempt from the hard gate — including .ts,
+ * .ps1, .dot, .svg, .excalidraw and the extensionless LICENSE files — while the
+ * build still printed "✓ No leaks found (N files scanned)", which reads as full
+ * coverage. With a denylist, a new text format is covered by default; the worst
+ * case is a harmless read of an unlisted binary rather than a silent gap.
+ */
+const LEAK_SCAN_SKIP_EXTS = new Set([
+  '.html',  // workflow diagram may carry generic visual references
+  '.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp', '.bmp',
+  '.woff', '.woff2', '.ttf', '.otf', '.eot',
+  '.zip', '.gz', '.tgz', '.bz2', '.xz', '.7z', '.tar',
+  '.pdf', '.mp4', '.mp3', '.wav', '.mov', '.webm',
+  '.pyc', '.pyo', '.so', '.dylib', '.dll', '.exe', '.bin', '.wasm',
+]);
 
 /**
  * Content patterns that indicate Squidhub-specific material leaked into the
@@ -320,7 +341,7 @@ function buildKiroAssets() {
 
   // 2a. Copy .agents/skills/ → src/.kiro/skills/, rewriting paths/CLI refs for Kiro
   const kiroSkillsDest = path.join(PKG_SRC, '.kiro', 'skills');
-  const skillsCopied   = copySkillsTo(kiroSkillsDest, 'src/.kiro/skills/', adaptContentForKiro);
+  copySkillsTo(kiroSkillsDest, 'src/.kiro/skills/', adaptContentForKiro);
 
   // 2b. Generate steering docs in src/.kiro/steering/
   const steeringDir = path.join(PKG_SRC, '.kiro', 'steering');
@@ -1057,14 +1078,15 @@ function verifyNoLeaks() {
   const allFiles = walk(PKG_SRC, PKG_SRC);
   const leaks    = [];
 
+  let scanned = 0;
   for (const { full, rel } of allFiles) {
-    // Skip binary files and HTML (workflow diagram may have generic visual refs)
+    // Skip known-binary formats; scan everything else (see LEAK_SCAN_SKIP_EXTS).
     const ext = path.extname(full).toLowerCase();
-    if (ext === '.html') continue;
-    if (!TEXT_EXTS.has(ext)) continue;
+    if (LEAK_SCAN_SKIP_EXTS.has(ext)) continue;
 
     let content;
     try { content = fs.readFileSync(full, 'utf8'); } catch { continue; }
+    scanned++;
 
     for (const pattern of LEAK_PATTERNS) {
       if (pattern.test(content)) {
@@ -1089,7 +1111,9 @@ function verifyNoLeaks() {
     process.exit(1);
   }
 
-  console.log(`  ✓  No leaks found (${allFiles.length} files scanned)\n`);
+  // Report what was actually read, not the total walked — the old message
+  // counted skipped binaries as "scanned".
+  console.log(`  ✓  No leaks found (${scanned} of ${allFiles.length} files scanned; rest are binary)\n`);
 }
 
 // ─── Step 5b: bundleSkillCommands ─────────────────────────────────────────────
