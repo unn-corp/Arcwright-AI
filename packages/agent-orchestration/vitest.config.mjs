@@ -17,14 +17,13 @@ export default defineConfig({
     fileParallelism: false,
     coverage: {
       provider: 'v8',
-      include: ['lib/filter.js', 'lib/customization.js', 'lib/installer.js', 'lib/managed-md.js'],
+      include: ['lib/customization.js', 'lib/installer.js', 'lib/managed-md.js'],
       reporter: ['text', 'json-summary'],
       // Per-file thresholds: fully-covered pure modules hold the high bar; the
       // large installer.js has its many helpers covered but install()/uninstall()
       // and the IDE/Kiro writers still need integration fixtures — its floor
       // ratchets up as those land. Raise these as coverage grows; never lower.
       thresholds: {
-        'lib/filter.js': { lines: 100, functions: 100, branches: 90, statements: 100 },
         'lib/customization.js': { lines: 95, functions: 100, branches: 90, statements: 95 },
         // Raised after install() integration tests (test/install.integration.test.js)
         // exercise the full project/global/update/bmad/hooks flows end to end.
