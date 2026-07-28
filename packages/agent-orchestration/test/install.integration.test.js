@@ -5,7 +5,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
-const { install } = installer;
+const { install, uninstall } = installer;
 const { readManifest } = installer._internal;
 
 const PKG_ROOT = path.resolve(__dirname, '..');
@@ -117,6 +117,28 @@ describe('install() — fresh project install', () => {
     expect(cfg).toMatch(/planning_artifacts:.*\.arcout\/planning-artifacts/);
     expect(cfg).not.toMatch(/_arcwright-output/);
   }, 60000);
+
+  it('uninstall leaves no Arcwright content behind', async () => {
+    await install(baseOpts({ tools: 'cursor,codex', awsInfra: true }));
+
+    const agentsMd = path.join(projectDir, 'AGENTS.md');
+    const cursorRule = path.join(projectDir, '.cursor', 'rules', 'arcwright.mdc');
+    expect(await fs.readFile(agentsMd, 'utf8')).toMatch(/arcwright-agent-start/);
+    expect(fs.existsSync(cursorRule)).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '_arcwright', 'aws-infra'))).toBe(true);
+
+    await uninstall({ directory: projectDir, yes: true });
+
+    // AGENTS.md is where Codex/OpenCode/Grok/Hermes/Cursor get their block, but
+    // uninstall only knew about CLAUDE.md — leaving "To update Arcwright: npx …"
+    // in the user's file permanently.
+    expect(await fs.readFile(agentsMd, 'utf8')).not.toMatch(/arcwright-/);
+    // Owned outright by the installer and marked alwaysApply, so an orphan kept
+    // injecting Arcwright guidance into every Cursor session post-uninstall.
+    expect(fs.existsSync(cursorRule)).toBe(false);
+    // Module removal was a hardcoded four, so optional modules survived.
+    expect(fs.existsSync(path.join(projectDir, '_arcwright', 'aws-infra'))).toBe(false);
+  }, 90000);
 
   it('isolates home-directed writes into the throwaway HOME, not the real one', async () => {
     await install(baseOpts());

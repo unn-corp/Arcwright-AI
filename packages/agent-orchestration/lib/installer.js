@@ -2700,17 +2700,29 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
  * three write sites in writeIdeConfig + writeGlobalClaudeMd.
  */
 function getClaudeMdLocations(projectRoot, isGlobal, platform, homes) {
+  // Every instruction file Arcwright writes a managed block into. Used by
+  // uninstall to strip those blocks back out, so anything missing here stays
+  // behind and keeps instructing the user's agent after they uninstall.
+  //
+  // AGENTS.md is not optional: Codex, OpenCode, Grok, Hermes and Cursor all
+  // receive their block there rather than in CLAUDE.md. Omitting it left a full
+  // Arcwright block — "To update Arcwright: npx …" and all — in the user's
+  // AGENTS.md forever.
   if (isGlobal) {
     return [
-      // Global install: rules + root CLAUDE.md are both under ~/.claude/
-      resolveToolPath('claude-code', '.claude/CLAUDE.md', true, homes, platform),
-    ];
+      resolveToolPath('claude-code', GLOBAL_PATHS['claude-code'].claudeMd, true, homes, platform),
+      resolveToolPath('codex', GLOBAL_PATHS.codex.claudeMd, true, homes, platform),
+      resolveToolPath('opencode', GLOBAL_PATHS.opencode.claudeMd, true, homes, platform),
+      resolveToolPath('grok', GLOBAL_PATHS.grok.claudeMd, true, homes, platform),
+    ].filter(Boolean);
   }
   return [
     // Project install: rules file lives in .claude/CLAUDE.md, root CLAUDE.md
-    // may also exist.
+    // may also exist, and AGENTS.md carries the block for the AGENTS.md-based
+    // tools (Codex, OpenCode, Grok, Hermes, Cursor).
     path.join(projectRoot, '.claude', 'CLAUDE.md'),
     path.join(projectRoot, 'CLAUDE.md'),
+    path.join(projectRoot, 'AGENTS.md'),
   ];
 }
 
@@ -2837,6 +2849,21 @@ async function uninstall(opts = {}) {
   if (settingsChanged) console.log(chalk.green('  ✓ .claude/settings.json (installer keys removed)'));
   else console.log(chalk.gray('  ○ .claude/settings.json (no installer keys to remove)'));
 
+  // 3b. Remove Arcwright-owned rule files that are whole files rather than a
+  // managed block inside a user file. .cursor/rules/arcwright.mdc is generated
+  // entirely by the installer and carries `alwaysApply: true`, so leaving it
+  // behind meant Cursor kept injecting Arcwright guidance into every session
+  // after the user uninstalled. Only files Arcwright authors in full belong
+  // here — never a user-owned file like AGENTS.md, which is handled by
+  // managed-block stripping above.
+  if (!isGlobal) {
+    const cursorRule = path.join(projectRoot, '.cursor', 'rules', 'arcwright.mdc');
+    if (await fs.pathExists(cursorRule)) {
+      await fs.remove(cursorRule);
+      console.log(chalk.green('  ✓ .cursor/rules/arcwright.mdc (removed)'));
+    }
+  }
+
   // 4. Optionally remove installed dirs per the manifest.
   // Library contract: `--yes` opts in automatically. The CLI layer
   // (`cli.js`) is responsible for the interactive prompt and is expected
@@ -2860,7 +2887,15 @@ async function uninstall(opts = {}) {
       // `.customize.yaml` overlays — leave in place so the next install can
       // detect prior state and preserve user-owned files. Callers wanting a
       // full wipe can `rm -rf _arcwright/` themselves.
-      for (const sub of ['awm', 'awb', 'core', '_memory']) {
+      // Drive this from the manifest, not a hardcoded list. The literal
+      // ['awm','awb','core','_memory'] predates the optional modules, so an
+      // install that used --aws-infra or --unnamed-pm left those directories
+      // behind. Fall back to the four for manifests written before `modules`
+      // was recorded.
+      const installedModules = Array.isArray(manifest.modules) && manifest.modules.length
+        ? manifest.modules
+        : ['awm', 'awb', 'core', '_memory'];
+      for (const sub of installedModules) {
         const d = path.join(manifestDir, sub);
         if (await fs.pathExists(d)) await fs.remove(d);
       }

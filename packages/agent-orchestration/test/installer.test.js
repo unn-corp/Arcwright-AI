@@ -209,13 +209,23 @@ describe('getFileHeader', () => {
 });
 
 describe('getClaudeMdLocations', () => {
-  it('project install returns .claude/CLAUDE.md and root CLAUDE.md', () => {
+  // These are the files uninstall strips managed blocks from, so anything
+  // missing here stays behind and keeps instructing the user's agent.
+  it('project install covers CLAUDE.md and AGENTS.md', () => {
     const locs = getClaudeMdLocations('/proj', false, 'linux', { linux: '/h' });
-    expect(locs).toEqual([path.join('/proj', '.claude', 'CLAUDE.md'), path.join('/proj', 'CLAUDE.md')]);
+    expect(locs).toEqual([
+      path.join('/proj', '.claude', 'CLAUDE.md'),
+      path.join('/proj', 'CLAUDE.md'),
+      // Codex, OpenCode, Grok, Hermes and Cursor all write their block here.
+      path.join('/proj', 'AGENTS.md'),
+    ]);
   });
-  it('global install returns the single ~/.claude/CLAUDE.md', () => {
+  it('global install covers every per-tool global rules file', () => {
     const locs = getClaudeMdLocations('/proj', true, 'linux', { linux: '/h', windows: null });
-    expect(locs).toEqual(['/h/.claude/CLAUDE.md']);
+    expect(locs).toContain('/h/.claude/CLAUDE.md');
+    expect(locs).toContain('/h/.codex/AGENTS.md');
+    expect(locs).toContain('/h/.config/opencode/AGENTS.md');
+    expect(locs).toContain('/h/.grok/AGENTS.md');
   });
 });
 
