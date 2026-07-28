@@ -1124,6 +1124,49 @@ function bundleLauncherTemplates() {
 
 // ─── Step 6: verifyNoLeaks ────────────────────────────────────────────────────
 
+/**
+ * Every `references/…`, `templates/…` or `scripts/…` path a SKILL.md cites must
+ * exist in that skill's directory.
+ *
+ * These are the sidecars a skill tells the agent to open mid-run, so a wrong
+ * path fails at execution time, not at build time — which is how
+ * excalidraw-diagram-generator shipped a manifest listing three
+ * `templates/*.json` files that were actually `.excalidraw`, and python-backend
+ * shipped a table pointing at four reference documents that were never written.
+ *
+ * Deliberately limited to those three directory names. `assets/` and `data/`
+ * are excluded because skills legitimately cite paths there that their own
+ * pipeline generates (scroll-world names the .webp/.mp4 files it will produce).
+ */
+function verifySkillReferences() {
+  console.log('🔗  Verifying skill sidecar references...');
+  const broken = [];
+  if (!fs.existsSync(SKILLS_SRC)) return;
+
+  for (const skill of fs.readdirSync(SKILLS_SRC)) {
+    const md = path.join(SKILLS_SRC, skill, 'SKILL.md');
+    if (!fs.existsSync(md)) continue;
+    const src = fs.readFileSync(md, 'utf8');
+    const re = /(?:^|[\s(`"'])((?:references|templates|scripts)\/[A-Za-z0-9._/-]+\.[A-Za-z0-9]+)/g;
+    for (const m of src.matchAll(re)) {
+      const rel = m[1];
+      if (rel.includes('*')) continue;
+      if (!fs.existsSync(path.join(SKILLS_SRC, skill, rel))) {
+        broken.push(`${skill}: ${rel}`);
+      }
+    }
+  }
+
+  const unique = [...new Set(broken)];
+  if (unique.length) {
+    console.error(`\n  ❌  SKILL REFERENCE CHECK FAILED — ${unique.length} broken path(s):\n`);
+    for (const b of unique) console.error(`     ${b}`);
+    console.error('\n  Fix the path in SKILL.md, or add the missing file.\n');
+    process.exit(1);
+  }
+  console.log('  ✓  All skill sidecar references resolve\n');
+}
+
 function verifyNoLeaks() {
   console.log('🔍  Verifying no Squidhub content leaks in src/...');
 
@@ -1234,6 +1277,7 @@ bundleTrackCommands();
 bundleSpecialistCommands();
 bundleSkillCommands();
 bundleLauncherTemplates();
+verifySkillReferences();
 verifyNoLeaks();
 
 console.log('✅  Build complete!');
