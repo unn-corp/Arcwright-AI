@@ -2255,12 +2255,31 @@ function getFileHeader(tool) {
 }
 
 /**
+ * Skill-listing budget, as a fraction of the context window. Claude Code's own
+ * default (0.01) drops skill descriptions for anyone with many skills, which
+ * makes those skills undiscoverable.
+ *
+ * Sized from the actual catalogue rather than guessed. Arcwright ships 152
+ * skills whose names + descriptions total ~28.7k characters, roughly 7.2k
+ * tokens. The previous 0.03 was chosen when there were "50+" skills and no
+ * longer covers that: 3% of a 200k context is 6k tokens, so the listing
+ * overflowed and skills were silently truncated at session start. 5% gives 10k
+ * tokens at 200k, leaving headroom for the user's own skills on top.
+ */
+const SKILL_LISTING_BUDGET = 0.05;
+
+/**
+ * Earlier defaults this installer wrote. stripInstallerSettingsKeys() must
+ * still recognise them, or an uninstall leaves a stale value behind on every
+ * machine that installed before the bump.
+ */
+const LEGACY_SKILL_LISTING_BUDGETS = [0.03];
+
+/**
  * Write / merge .claude/settings.json with Arcwright-required env vars and
  * skill-listing budget. Enables CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS so the
- * SendMessage agent-reuse primitive works out of the box. Bumps
- * skillListingBudgetFraction to 0.03 (3%) so the 50+ Arcwright skills + user
- * skills don't get truncated at session start (default 0.01 / 1% drops
- * descriptions for users with many skills installed). Sets
+ * SendMessage agent-reuse primitive works out of the box. Sets
+ * skillListingBudgetFraction (see SKILL_LISTING_BUDGET) and
  * fallbackModel: ["sonnet"] so overload/flag-fallbacks land on a fast
  * mid-tier model without pinning a version.
  * Merges with any existing settings — never overwrites user values.
@@ -2295,10 +2314,10 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
     settings.env.CLAUDE_CODE_NO_FLICKER = '1';
   }
 
-  // Bump skill-listing budget so Arcwright's 50+ skills don't get truncated
-  // on session start. Only set if user hasn't customized it already.
+  // Bump skill-listing budget so Arcwright's skills don't get truncated on
+  // session start. Only set if the user hasn't customized it already.
   if (settings.skillListingBudgetFraction === undefined) {
-    settings.skillListingBudgetFraction = 0.03;
+    settings.skillListingBudgetFraction = SKILL_LISTING_BUDGET;
   }
 
   // Set fallbackModel: ["sonnet"] so overload/flag-fallbacks land on a fast
@@ -2327,7 +2346,7 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
   if (before !== after) {
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
     const hookNote = (hooksMode === 'safe' || hooksMode === 'full') ? `, hooks=${hooksMode}` : '';
-    console.log(chalk.green(`  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=0.03, fallbackModel=["sonnet"]${hookNote})`));
+    console.log(chalk.green(`  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=${SKILL_LISTING_BUDGET}, fallbackModel=["sonnet"]${hookNote})`));
   } else {
     console.log(chalk.gray('  ○ .claude/settings.json already up to date'));
   }
@@ -2698,7 +2717,7 @@ async function stripGitignoreBlock(projectRoot) {
  * Installer-written defaults:
  *   env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS === '1'
  *   env.CLAUDE_CODE_NO_FLICKER === '1'
- *   skillListingBudgetFraction === 0.03
+ *   skillListingBudgetFraction === SKILL_LISTING_BUDGET (or a legacy default)
  *   fallbackModel === ['sonnet']
  */
 async function stripInstallerSettingsKeys(claudeDir) {
@@ -2722,7 +2741,12 @@ async function stripInstallerSettingsKeys(claudeDir) {
       delete settings.env;
     }
   }
-  if (settings.skillListingBudgetFraction === 0.03) {
+  // Current default plus every earlier one, so an uninstall on a machine that
+  // installed before the budget was raised still cleans up after itself.
+  if (
+    settings.skillListingBudgetFraction === SKILL_LISTING_BUDGET ||
+    LEGACY_SKILL_LISTING_BUDGETS.includes(settings.skillListingBudgetFraction)
+  ) {
     delete settings.skillListingBudgetFraction;
     touched = true;
   }

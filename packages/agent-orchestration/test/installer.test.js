@@ -427,7 +427,7 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
     expect(s.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS).toBe('1');
     expect(s.env.CLAUDE_CODE_NO_FLICKER).toBe('1');
-    expect(s.skillListingBudgetFraction).toBe(0.03);
+    expect(s.skillListingBudgetFraction).toBe(0.05);
     expect(s.fallbackModel).toEqual(['sonnet']);
   });
   it('never clobbers a user-customized value', async () => {
@@ -498,6 +498,17 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.skillListingBudgetFraction).toBeUndefined();
     expect(s.fallbackModel).toBeUndefined();
     expect(s.env).toBeUndefined(); // both env keys removed → env dropped
+  });
+  it('stripInstallerSettingsKeys also removes a legacy budget default', async () => {
+    // Machines that installed before the budget was raised carry 0.03. If strip
+    // only recognised the current default, uninstall would strand it there.
+    fs.writeFileSync(
+      path.join(dir, 'settings.json'),
+      JSON.stringify({ skillListingBudgetFraction: 0.03 })
+    );
+    expect(await stripInstallerSettingsKeys(dir)).toBe(true);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    expect(s.skillListingBudgetFraction).toBeUndefined();
   });
   it('stripInstallerSettingsKeys preserves user-customized values', async () => {
     fs.writeFileSync(
