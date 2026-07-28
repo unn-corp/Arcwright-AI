@@ -17,7 +17,7 @@ export default defineConfig({
     fileParallelism: false,
     coverage: {
       provider: 'v8',
-      include: ['lib/customization.js', 'lib/installer.js', 'lib/managed-md.js'],
+      include: ['lib/customization.js', 'lib/installer.js', 'lib/managed-md.js', 'lib/migrate.js'],
       reporter: ['text', 'json-summary'],
       // Per-file thresholds: fully-covered pure modules hold the high bar; the
       // large installer.js has its many helpers covered but install()/uninstall()
@@ -29,6 +29,10 @@ export default defineConfig({
         // exercise the full project/global/update/bmad/hooks flows end to end.
         'lib/installer.js': { lines: 55, functions: 80, branches: 44, statements: 52 },
         'lib/managed-md.js': { lines: 90, functions: 100, branches: 85, statements: 90 },
+        // migrate.js had no tests at all until the dry-run duplicate-reporting
+        // bug surfaced. Floor set just under current coverage; raise it as the
+        // remaining branches (cleanupConfig, the CLI reporting paths) get tests.
+        'lib/migrate.js': { lines: 55, functions: 66, branches: 47, statements: 54 },
       },
     },
   },
