@@ -108,6 +108,7 @@ const SHIPPED_COMMANDS = [
   /^ux-audit\.md$/,
   /^ux-loop\.md$/,
   /^security-review\.md$/,
+  /^security-scan\.md$/,
   /^sec-loop\.md$/,
   /^design\.md$/,
   /^playwright\.md$/,
@@ -620,6 +621,7 @@ function bundleKiroAgents() {
     'ux-audit':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch'],
     'ux-loop':            ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch'],
     'security-review':    ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'security-scan':      ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'sec-loop':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'design':             ['fs_read', 'fs_write', 'grep', 'glob', 'web_search', 'web_fetch'],
     'playwright':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
@@ -772,13 +774,19 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
 
     const agent = { name, description: desc, prompt, tools };
 
-    // Team agents get read-only tools auto-approved, skill resources, and crew config
+    // Every command agent needs skill access, not just teams. adaptPromptForKiro()
+    // rewrites .agents/skills/ → .kiro/skills/ in the prompt, so a command whose
+    // whole job is "load skill X and follow it" (/dry, /debug, /ci-gates, …) ends
+    // up pointing at a path Kiro will not read without this grant. Scoping the
+    // resource to teams left 54 agents instructed to load a skill they could not
+    // open, which fails silently — the agent simply proceeds without the skill.
+    agent.resources = ['skill://.kiro/skills/**/SKILL.md'];
+
+    // Team agents additionally get read-only tools auto-approved, the master
+    // orchestrator persona, and crew config.
     if (isTeam(name)) {
       agent.allowedTools = ['fs_read', 'grep', 'glob', 'code', 'knowledge', 'web_search', 'web_fetch'];
-      agent.resources = [
-        'skill://.kiro/skills/**/SKILL.md',
-        'file://_arcwright/core/agents/arcwright-master.md',
-      ];
+      agent.resources.push('file://_arcwright/core/agents/arcwright-master.md');
       agent.toolsSettings = {
         crew: {
           availableAgents: SPECIALIST_AGENTS,
@@ -903,8 +911,52 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
 
 // ─── Step 3: bundleTrackCommands ─────────────────────────────────────────────
 
+/**
+ * Slash commands that exist in .claude/commands/ but are deliberately NOT
+ * published. Add an entry here (with the reason) rather than just leaving a
+ * command out of SHIPPED_COMMANDS — see verifyCommandCoverage().
+ */
+const UNSHIPPED_COMMANDS = {
+  // 'example.md': 'why it stays local',
+};
+
+/**
+ * SHIPPED_COMMANDS is a hand-maintained allowlist, so a new command silently
+ * fails to publish if someone forgets step 2 of the CLAUDE.md procedure. That
+ * already happened once: /security-scan shipped nowhere for its whole life
+ * because the commit that added it never touched this list, and nothing
+ * complained. Fail the build on an uncovered command instead — being
+ * deliberately unpublished now requires saying so out loud.
+ */
+function verifyCommandCoverage() {
+  const commandsSrc = path.join(PROJECT_ROOT, '.claude', 'commands');
+  if (!fs.existsSync(commandsSrc)) return;
+
+  const files = fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'));
+  const uncovered = files.filter(
+    f => !SHIPPED_COMMANDS.some(re => re.test(f)) && !(f in UNSHIPPED_COMMANDS)
+  );
+  const dead = SHIPPED_COMMANDS.filter(re => !files.some(f => re.test(f)));
+
+  if (uncovered.length || dead.length) {
+    console.error('\n  ❌  COMMAND COVERAGE FAILED\n');
+    for (const f of uncovered) {
+      console.error(`     ${f} is not published.`);
+      console.error(`       Add /^${f.replace(/\./g, '\\.')}$/ to SHIPPED_COMMANDS and a`);
+      console.error('       KIRO_TOOLS_BY_PATTERN entry, or list it in UNSHIPPED_COMMANDS.\n');
+    }
+    for (const re of dead) {
+      console.error(`     ${re} in SHIPPED_COMMANDS matches no file (stale entry).\n`);
+    }
+    process.exit(1);
+  }
+  console.log(`  ✓  All ${files.length} slash commands accounted for`);
+}
+
 function bundleTrackCommands() {
   console.log('🗂️   Bundling slash commands → src/.claude/commands/');
+
+  verifyCommandCoverage();
 
   const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
   const commandsDest = path.join(PKG_SRC, '.claude', 'commands');
