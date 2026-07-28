@@ -1747,7 +1747,29 @@ async function install(opts) {
   for (const mod of selectedModules) {
     const configPath = path.join(effectiveArwDir, mod, 'config.yaml');
     if (!isUpdate || !await fs.pathExists(configPath)) {
-      const config = buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder);
+      // Merge onto the module's own shipped config (copied just above) rather
+      // than replacing it. buildModuleConfig() only knows the six generic keys;
+      // AWM additionally ships project_name, user_skill_level,
+      // planning_artifacts, implementation_artifacts, project_knowledge and
+      // mcp_standards, which its workflows resolve directly — e.g.
+      // `outputFile: '{planning_artifacts}/product-brief-{{project_name}}.md'`.
+      // Overwriting dropped all six on every fresh install, leaving those
+      // placeholders unresolved across ~170 agent and workflow files.
+      let base = {};
+      if (await fs.pathExists(configPath)) {
+        try { base = yaml.parse(await fs.readFile(configPath, 'utf8')) || {}; }
+        catch { base = {}; }
+      }
+      // Shipped artifact paths hardcode the default output folder; retarget them
+      // when the user picked a different one so the preserved keys stay correct.
+      if (outputFolder && outputFolder !== '_arcwright-output') {
+        for (const [k, v] of Object.entries(base)) {
+          if (typeof v === 'string' && v.includes('_arcwright-output')) {
+            base[k] = v.split('_arcwright-output').join(outputFolder);
+          }
+        }
+      }
+      const config = { ...base, ...buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder) };
       await fs.ensureDir(path.dirname(configPath));
       await fs.writeFile(configPath, yaml.stringify(config), 'utf8');
       const label = isGlobal ? `~/.arcwright/${mod}/` : `_arcwright/${mod}/`;

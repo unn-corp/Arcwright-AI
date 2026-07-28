@@ -81,6 +81,43 @@ describe('install() — fresh project install', () => {
     expect(gi).toMatch(/_arcwright-output\//);
   }, 60000);
 
+  it('preserves module-specific config keys instead of overwriting them', async () => {
+    await install(baseOpts());
+    const cfg = await fs.readFile(
+      path.join(projectDir, '_arcwright', 'awm', 'config.yaml'),
+      'utf8'
+    );
+    // buildModuleConfig() only knows the generic keys. AWM ships six more that
+    // its workflows resolve directly (`{planning_artifacts}`, `{{project_name}}`
+    // and friends, used across ~170 files). Overwriting rather than merging
+    // dropped all six on every fresh install.
+    for (const key of [
+      'project_name',
+      'user_skill_level',
+      'planning_artifacts',
+      'implementation_artifacts',
+      'project_knowledge',
+      'mcp_standards',
+    ]) {
+      expect(cfg).toMatch(new RegExp(`^${key}:`, 'm'));
+    }
+    // ...and the generated keys are still applied on top.
+    expect(cfg).toMatch(/^user_name:/m);
+    expect(cfg).toMatch(/^awm_output_folder:/m);
+  }, 60000);
+
+  it('retargets shipped artifact paths at a custom --output-folder', async () => {
+    await install(baseOpts({ outputFolder: '.arcout' }));
+    const cfg = await fs.readFile(
+      path.join(projectDir, '_arcwright', 'awm', 'config.yaml'),
+      'utf8'
+    );
+    // The shipped values hardcode _arcwright-output; preserving them verbatim
+    // would point artifacts at a folder the user opted out of.
+    expect(cfg).toMatch(/planning_artifacts:.*\.arcout\/planning-artifacts/);
+    expect(cfg).not.toMatch(/_arcwright-output/);
+  }, 60000);
+
   it('isolates home-directed writes into the throwaway HOME, not the real one', async () => {
     await install(baseOpts());
     // Project install applies the global rules file under the redirected HOME.
