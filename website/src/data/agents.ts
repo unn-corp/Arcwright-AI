@@ -81,6 +81,24 @@ export const agents: Agent[] = [
     collaboratesWith: ['Developer', 'Architect', 'QA'],
   },
   {
+    name: 'Quick Flow Solo Dev',
+    role: 'Lean Implementation',
+    icon: 'Zap',
+    description:
+      'Single-agent fast path for small, well-understood changes. Takes a spec or work item and ships code straight to the parent tree, skipping the full plan-review-verify cycle. Used by the solo-dev track when a change is too small to justify a multi-agent team.',
+    primarySkills: ['typescript-best-practices', 'karpathy-discipline', 'systematic-debugging'],
+    collaboratesWith: ['PM', 'QA'],
+  },
+  {
+    name: 'Review Orchestrator',
+    role: 'Review Coordination',
+    icon: 'GitMerge',
+    description:
+      'Runs the Review Gate. Spawns and reuses reviewer sub-agents (Architect, UX Designer, Developer), collects their verdicts, and returns a single consolidated result. Never reviews code itself — it only coordinates, which keeps reviewer context isolated from each other.',
+    primarySkills: ['pr-review-panel', 'clean-code-standards', 'ux-audit'],
+    collaboratesWith: ['Architect', 'UX Designer', 'Developer'],
+  },
+  {
     name: 'Verifier',
     role: 'Goal-Backward Verification',
     icon: 'ShieldCheck',
