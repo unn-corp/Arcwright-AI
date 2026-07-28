@@ -1159,29 +1159,34 @@ async function updateGitignore(projectRoot, mode, chalk) {
   const START = '# ─── Arcwright installation ──────────────────────────────────────────';
   const END   = '# ─── end arcwright ───────────────────────────────────────────────────';
 
+  // Enumerate the slash commands Arcwright actually ships rather than
+  // hand-listing them. The previous literal named 21 files and had not been
+  // updated since; the package now installs 154 (track commands, specialist
+  // stubs and skill launchers), so `--gitignore full` — documented as ignoring
+  // "all Arcwright dirs, commands, and agent stubs" — left 133 generated
+  // command files visible to git. Reading the shipped directory keeps this
+  // exact as commands are added, and stays precise: a user's own commands in
+  // .claude/commands/ are never matched, which a blanket ignore would break.
+  let shippedCommands = [];
+  try {
+    shippedCommands = fs
+      .readdirSync(path.join(SRC_DIR, '.claude', 'commands'))
+      .filter((f) => f.endsWith('.md'))
+      .sort()
+      .map((f) => `.claude/commands/${f}`);
+  } catch { /* package not built / commands absent — fall through with none */ }
+
+  // Personal customisation overlays. CLAUDE.md tells users .user.toml files are
+  // personal, but only `full` (via the whole `_arcwright/` dir) ever ignored
+  // them, so the default install left them committable.
+  const USER_OVERLAYS = '_arcwright/custom/*.user.toml';
+
   const BLOCKS = {
     'full': [
       '_arcwright/',
       '_arcwright-output/',
       '.agents/skills/',
-      '.claude/commands/arcwright-*.md',
-      '.claude/commands/herdr.md',
-      '.claude/commands/gsudo.md',
-      '.claude/commands/team.md',
-      '.claude/commands/dry*.md',
-      '.claude/commands/ux-*.md',
-      '.claude/commands/security-review.md',
-      '.claude/commands/sec-loop.md',
-      '.claude/commands/design.md',
-      '.claude/commands/playwright.md',
-      '.claude/commands/audit-site.md',
-      '.claude/commands/diagram.md',
-      '.claude/commands/triage.md',
-      '.claude/commands/docker-check.md',
-      '.claude/commands/dotnet.md',
-      '.claude/commands/electron.md',
-      '.claude/commands/tauri.md',
-      '.claude/commands/strands.md',
+      ...shippedCommands,
       '.claude/agents/arcwright-*.md',
       '.kiro/agents/',
       '.kiro/skills/',
@@ -1191,11 +1196,13 @@ async function updateGitignore(projectRoot, mode, chalk) {
     ],
     'skills': [
       '_arcwright-output/',
+      USER_OVERLAYS,
       '.agents/skills/',
       '.kiro/skills/',
     ],
     'output-only': [
       '_arcwright-output/',
+      USER_OVERLAYS,
     ],
     'none': [],
   };

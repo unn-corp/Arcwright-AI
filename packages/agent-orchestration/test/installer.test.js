@@ -240,6 +240,30 @@ describe('updateGitignore / stripGitignoreBlock', () => {
     await updateGitignore(dir, 'none', chalk);
     expect(fs.existsSync(path.join(dir, '.gitignore'))).toBe(false);
   });
+  it('ignores personal .user.toml overlays in every writing mode', async () => {
+    // CLAUDE.md documents .user.toml as personal, but only `full` covered them
+    // (via the whole _arcwright/ dir), so the default install left them
+    // committable.
+    for (const mode of ['output-only', 'skills']) {
+      fs.rmSync(path.join(dir, '.gitignore'), { force: true });
+      await updateGitignore(dir, mode, chalk);
+      const gi = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
+      expect(gi).toMatch(/_arcwright\/custom\/\*\.user\.toml/);
+    }
+  });
+  it('full mode covers every shipped slash command', async () => {
+    // This list used to be 21 hand-written entries against 154 shipped command
+    // files, so `--gitignore full` left 133 generated commands visible to git.
+    await updateGitignore(dir, 'full', chalk);
+    const gi = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
+    const srcCommands = path.join(__dirname, '..', 'src', '.claude', 'commands');
+    const shipped = fs.existsSync(srcCommands)
+      ? fs.readdirSync(srcCommands).filter((f) => f.endsWith('.md'))
+      : [];
+    expect(shipped.length).toBeGreaterThan(50); // guard against a silent empty read
+    const missing = shipped.filter((c) => !gi.includes(`.claude/commands/${c}`));
+    expect(missing).toEqual([]);
+  });
   it('re-running replaces the block in place (idempotent, no duplication)', async () => {
     await updateGitignore(dir, 'full', chalk);
     await updateGitignore(dir, 'full', chalk);
