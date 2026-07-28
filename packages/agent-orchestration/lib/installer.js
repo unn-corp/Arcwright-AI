@@ -1286,7 +1286,6 @@ async function install(opts) {
     platform = existingManifest.platform;
   }
   const isUpdate = action === 'update' || (action === 'install' && existingManifest != null);
-  const effectiveAction = isUpdate ? 'update' : 'install';
 
   // ── bmad detection + migration (project installs only) ────────────────────
   // Detect a legacy bmad install, confirm, and migrate (before installing
@@ -2655,8 +2654,9 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
       const agentPath = path.join(agentsSrc, rel);
       const raw = await fs.readFile(agentPath, 'utf8');
 
-      // Parse YAML frontmatter name/description
-      const nameMatch = raw.match(/^name:\s*["']?(.+?)["']?\s*$/m);
+      // Parse the description from YAML frontmatter. The stub's own `name` is
+      // always derived from the filename slug below (arcwright-<slug>) so it
+      // matches the agent-type registry, so the frontmatter name is not read.
       const descMatch = raw.match(/^description:\s*["']?(.+?)["']?\s*$/m);
 
       // Fall back to <agent name="..." title="..."> XML tag
