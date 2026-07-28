@@ -447,6 +447,44 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.hooks.PreToolUse.some((g) => g.hooks.some((h) => h.command.includes('arcwright-hooks')))).toBe(true);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(true);
   });
+  it('does not delete foreign hooks that share the arcwright-hooks directory', async () => {
+    // The ci-gates skill installs its gates into the SAME .claude/arcwright-hooks/
+    // folder. Ownership must be decided by which script an entry invokes, not by
+    // the directory name, or a routine `update` wipes those gates.
+    const foreign = (name) => ({
+      matcher: 'Write|Edit',
+      hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/${name}"` }],
+    });
+    fs.writeFileSync(
+      path.join(dir, 'settings.json'),
+      JSON.stringify({
+        hooks: {
+          PostToolUse: [foreign('gate-lint.js'), foreign('gate-leak.js')],
+          PreToolUse: [foreign('gate-precommit.js')],
+        },
+      })
+    );
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const all = JSON.stringify(s.hooks);
+    expect(all).toContain('gate-lint.js');
+    expect(all).toContain('gate-leak.js');
+    expect(all).toContain('gate-precommit.js');
+    // ...and our own guards are still installed alongside them.
+    expect(all).toContain('guard-bash.js');
+    // safe mode clears only OUR PostToolUse entry, never the whole event.
+    expect(s.hooks.PostToolUse).toBeDefined();
+  });
+  it('replaces its own hook entries on re-run without duplicating', async () => {
+    await writeClaudeSettings(dir, chalk, 'full', false);
+    await writeClaudeSettings(dir, chalk, 'full', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const count = (name) => JSON.stringify(s.hooks).split(name).length - 1;
+    expect(count('guard-bash.js')).toBe(1);
+    expect(count('guard-write.js')).toBe(1);
+    expect(count('typecheck.js')).toBe(1);
+    expect(count('run the project-context scan')).toBe(1);
+  });
   it('full hooks mode adds the PostToolUse typecheck entry', async () => {
     await writeClaudeSettings(dir, chalk, 'full', false);
     const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));

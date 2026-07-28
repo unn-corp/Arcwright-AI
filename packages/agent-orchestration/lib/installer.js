@@ -2335,15 +2335,29 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
 
 /**
  * Copy Arcwright hook guard scripts into <claudeDir>/arcwright-hooks/ and merge
- * the corresponding hook entries into settings.hooks. Idempotent: Arcwright
- * entries are identified by the 'arcwright-hooks' marker in their command and
- * replaced in place, so re-runs never duplicate and user hooks are preserved.
+ * the corresponding hook entries into settings.hooks. Idempotent: this
+ * installer's own entries are replaced in place, so re-runs never duplicate and
+ * user hooks are preserved.
  *
  *   safe → PreToolUse(Bash) destructive-command guard
  *          PreToolUse(Write|Edit) secret/key-file guard
  *          SessionStart context-load reminder
  *   full → safe + PostToolUse(Write|Edit) tsc/pyright typecheck
+ *
+ * OWNERSHIP: an entry is "ours to replace" only if it invokes one of the three
+ * scripts this function installs, or is the SessionStart reminder it writes.
+ * It is NOT enough for the command to mention the `arcwright-hooks` directory.
+ * That directory is shared: the `ci-gates` skill installs gate-lint.js,
+ * gate-precommit.js and gate-ci-verify.js into the very same folder, and a repo
+ * may add its own guards there too. Treating the directory name as the
+ * ownership marker made a routine `agent-orchestration update` silently delete
+ * every one of those foreign hooks — including dropping the whole PostToolUse
+ * event, since `safe` mode clears it.
  */
+const INSTALLER_OWNED_HOOKS = ['guard-bash.js', 'guard-write.js', 'typecheck.js'];
+// Stable substring of the SessionStart reminder written below. It carries no
+// filename, so it needs its own identifier; keep this in sync with the echo.
+const SESSION_START_SENTINEL = 'run the project-context scan';
 async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal) {
   const srcDir = path.join(__dirname, 'templates', 'hooks');
   const destDir = path.join(claudeDir, 'arcwright-hooks');
@@ -2359,14 +2373,24 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal) {
       ? `node ${JSON.stringify(path.join(destDir, name))}`
       : `node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/${name}"`;
 
-  const MARKER = 'arcwright-hooks';
   settings.hooks = settings.hooks || {};
 
-  // For one event, drop existing Arcwright entries then append fresh ones.
+  // True only for an entry this installer itself wrote — see OWNERSHIP above.
+  const isOurs = (h) => {
+    if (!h || typeof h.command !== 'string') return false;
+    if (h.command.includes(SESSION_START_SENTINEL)) return true;
+    return (
+      h.command.includes('arcwright-hooks') &&
+      INSTALLER_OWNED_HOOKS.some((name) => h.command.includes(name))
+    );
+  };
+
+  // For one event, drop our own previous entries then append fresh ones.
+  // Foreign entries (ci-gates gates, project-specific guards) are left alone.
   const setEvent = (event, entries) => {
     const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
     const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some((h) => typeof h.command === 'string' && h.command.includes(MARKER)))
+      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isOurs))
     );
     settings.hooks[event] = [...kept, ...entries];
   };

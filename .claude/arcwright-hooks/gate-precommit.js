@@ -19,7 +19,7 @@
  */
 'use strict';
 
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 function effectiveCommand(cmd) {
   let out = '';
@@ -45,6 +45,20 @@ function effectiveCommand(cmd) {
   return out;
 }
 
+/**
+ * `git` accepts global options BEFORE the subcommand, so a real commit can be
+ * spelled `git -C <dir> commit`, `git -c user.email=x commit`, or
+ * `git --no-pager commit`. A naive /\bgit\s+commit\b/ matches none of those.
+ *
+ * That is not a theoretical bypass: `-C` is the ordinary way to act on a
+ * subdirectory or submodule, and `-c user.email=…` is standard when identity
+ * is not configured. Because this is a BLOCKING secret gate, a missed match
+ * means the scan never runs and the commit proceeds unchecked.
+ */
+const GIT_GLOBAL_OPT = String.raw`(?:-[cC](?:\s+|=)?\S+|--(?:git-dir|work-tree|namespace|exec-path)(?:=|\s+)\S+|--no-pager|--paginate|--bare|--literal-pathspecs|--icase-pathspecs|--no-replace-objects|--no-optional-locks|-p|-P)`;
+/** Source for `git <global opts…> <sub>`. */
+const gitSubSrc = (sub) => String.raw`\bgit(?:\s+${GIT_GLOBAL_OPT})*\s+${sub}\b`;
+
 // High-confidence secret patterns for the fallback scan (gitleaks preferred).
 const SECRET_PATTERNS = [
   [/-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----/, 'private key block'],
@@ -69,12 +83,14 @@ process.stdin.on('end', () => {
   if (!cmd) process.exit(0);
 
   const scanned = effectiveCommand(cmd);
-  if (!/\bgit\s+commit\b/.test(scanned)) process.exit(0);
+  if (!new RegExp(gitSubSrc('commit')).test(scanned)) process.exit(0);
 
   // `git commit -a/--all` stages tracked modifications at commit time, AFTER
   // this PreToolUse hook runs — so the cached diff would miss them. When -a is
   // present, also scan unstaged tracked changes.
-  const includeAll = /\bgit\s+commit\b[^\n]*\s(?:--all\b|-[a-zA-Z]*a[a-zA-Z]*\b)/.test(scanned);
+  const includeAll = new RegExp(
+    gitSubSrc('commit') + String.raw`[^\n]*\s(?:--all\b|-[a-zA-Z]*a[a-zA-Z]*\b)`
+  ).test(scanned);
 
   // ---- BLOCKING: secret scan of the (effective) diff ----
   const secret = scanStagedForSecrets(includeAll);
@@ -100,17 +116,41 @@ process.stdin.on('end', () => {
   process.exit(0);
 });
 
-function scanStagedForSecrets(includeAll) {
-  // Prefer gitleaks if present (protect mode scans staged changes). Decide by
-  // exit status, not output text: gitleaks exits 1 for leaks, 0 for clean,
-  // 126/127 (or spawn error) for not-found/config error → fall through.
-  try {
-    execSync('gitleaks protect --staged --no-banner', { stdio: 'pipe', timeout: 60000 });
-    if (!includeAll) return null; // gitleaks ran clean over staged
-  } catch (e) {
-    if (e && e.status === 1) return 'a secret (gitleaks)';
-    // not found / config error → fall back to the built-in scan below.
+/**
+ * Scan the staged diff with gitleaks. Returns 'leak' | 'clean' | 'unavailable'.
+ *
+ * Two spellings are tried in order. `gitleaks git --staged` is the supported
+ * form; `gitleaks protect --staged` is the legacy one — still functional as a
+ * hidden alias (verified against 8.30.1) but no longer listed in `--help`, so
+ * relying on it alone means this BLOCKING gate would start failing open the day
+ * the alias is dropped. Older gitleaks builds predate the `git` subcommand,
+ * hence the fallback rather than a straight swap.
+ *
+ * Decide by exit status, never output text: 1 = leaks found, 0 = clean, and
+ * anything else (unknown subcommand, usage/config error) means that spelling is
+ * unusable — try the next, then the built-in scan.
+ */
+function runGitleaksStaged() {
+  for (const args of [
+    ['git', '--staged', '--no-banner'],
+    ['protect', '--staged', '--no-banner'],
+  ]) {
+    try {
+      execFileSync('gitleaks', args, { stdio: 'pipe', timeout: 60000 });
+      return 'clean';
+    } catch (e) {
+      if (e && e.status === 1) return 'leak';
+      if (e && e.code === 'ENOENT') return 'unavailable'; // gitleaks not installed
+      // usage/config error → try the next spelling
+    }
   }
+  return 'unavailable';
+}
+
+function scanStagedForSecrets(includeAll) {
+  const verdict = runGitleaksStaged();
+  if (verdict === 'leak') return 'a secret (gitleaks)';
+  if (verdict === 'clean' && !includeAll) return null; // gitleaks ran clean over staged
   // Built-in fallback (and the unstaged sweep for `-a`).
   const ranges = ['git diff --cached --no-color'];
   if (includeAll) ranges.push('git diff --no-color'); // unstaged tracked changes

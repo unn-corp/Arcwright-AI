@@ -68,16 +68,12 @@ const TEXT_EXTS = new Set(['.md', '.yaml', '.yml', '.json', '.xml', '.csv', '.tx
  * workshop source. verifyNoLeaks() scans for these and aborts the build if any
  * are found. .html files are skipped (the workflow diagram may contain generic
  * visual references).
+ *
+ * Defined in ./leak-patterns.js so the per-edit advisory gate
+ * (.claude/arcwright-hooks/gate-leak.js) shares one definition with this
+ * build-time hard gate instead of hand-mirroring it.
  */
-const LEAK_PATTERNS = [
-  /squidhub/i,
-  /unnportal\.io/i,
-  /nautilus/i,
-  /squid-master/i,
-  /UNN-\d+/,
-  /mcp__squidhub__/i,
-  /SquidAI/,
-];
+const { LEAK_PATTERNS } = require('./leak-patterns');
 
 /** Slash command files to ship. Shared by bundleKiroAgents() and bundleTrackCommands(). */
 const SHIPPED_COMMANDS = [

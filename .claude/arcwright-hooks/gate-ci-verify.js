@@ -23,9 +23,11 @@
  * idempotent.
  *
  * Tunables via env:
- *   ARCWRIGHT_CI_VERIFY=0        → disable this gate entirely.
- *   ARCWRIGHT_CI_TIMEOUT_SECONDS → max seconds to wait for CI (default 180).
- *   ARCWRIGHT_CI_POLL_SECONDS    → seconds between polls (default 10).
+ *   ARCWRIGHT_CI_VERIFY=0         → disable this gate entirely.
+ *   ARCWRIGHT_CI_TIMEOUT_SECONDS  → max seconds to wait for CI (default 180).
+ *   ARCWRIGHT_CI_POLL_SECONDS     → max seconds between polls (default 10).
+ *   ARCWRIGHT_CI_REGISTER_SECONDS → max seconds to wait for a run to even
+ *                                   appear before giving up (default 30).
  */
 'use strict';
 
@@ -35,6 +37,21 @@ if (process.env.ARCWRIGHT_CI_VERIFY === '0') process.exit(0);
 
 const TIMEOUT_S = Number(process.env.ARCWRIGHT_CI_TIMEOUT_SECONDS || 180);
 const POLL_S = Number(process.env.ARCWRIGHT_CI_POLL_SECONDS || 10);
+// This workflow only triggers on `push` to main/dev and on pull_request. Pushing
+// any other branch registers NO run, and the old loop then polled GitHub every
+// 10s for the full TIMEOUT_S — a 3-minute blocking stall plus 18 API calls per
+// feature-branch push, all to conclude "no run registered yet". Cap the
+// wait-for-registration phase separately from the wait-for-completion phase.
+const REGISTER_S = Number(process.env.ARCWRIGHT_CI_REGISTER_SECONDS || 30);
+
+/**
+ * `git` accepts global options BEFORE the subcommand, so a real push can be
+ * spelled `git -C <dir> push` or `git --no-pager push`. A naive
+ * /\bgit\s+push\b/ misses those, and the CI verification is then skipped
+ * silently — the push looks unverified-but-fine rather than unchecked.
+ */
+const GIT_GLOBAL_OPT = String.raw`(?:-[cC](?:\s+|=)?\S+|--(?:git-dir|work-tree|namespace|exec-path)(?:=|\s+)\S+|--no-pager|--paginate|--bare|--literal-pathspecs|--icase-pathspecs|--no-replace-objects|--no-optional-locks|-p|-P)`;
+const GIT_PUSH = new RegExp(String.raw`\bgit(?:\s+${GIT_GLOBAL_OPT})*\s+push\b`);
 
 // Strip quoted strings and comments so only the *executed* command is matched.
 function effectiveCommand(cmd) {
@@ -76,11 +93,14 @@ function sh(cmd, opts = {}) {
 function gh(args) {
   return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
+// Synchronous sleep with no subprocess at all. The previous implementation
+// spawned a whole Node interpreter per sleep (`node -e setTimeout(...)`) — a
+// ~26ms boot plus a full V8 heap, up to 18 times per invocation, purely to
+// wait. Atomics.wait blocks this thread for the exact duration with zero
+// spawns. (Node permits Atomics.wait on the main thread; browsers do not.)
+const SLEEP_LOCK = new Int32Array(new SharedArrayBuffer(4));
 function sleep(seconds) {
-  // Synchronous sleep without spawning a shell loop.
-  execFileSync(process.execPath, ['-e', `setTimeout(()=>{}, ${Math.max(0, seconds) * 1000})`], {
-    stdio: 'ignore',
-  });
+  Atomics.wait(SLEEP_LOCK, 0, 0, Math.max(0, seconds) * 1000);
 }
 
 let raw = '';
@@ -97,7 +117,7 @@ process.stdin.on('end', () => {
   if (!command) process.exit(0);
 
   const eff = effectiveCommand(command);
-  if (!/\bgit\s+push\b/.test(eff)) process.exit(0); // not a push — nothing to verify
+  if (!GIT_PUSH.test(eff)) process.exit(0); // not a push — nothing to verify
 
   // If the push itself failed, don't chase a CI run that was never triggered.
   const resp = payload.tool_response;
@@ -107,15 +127,17 @@ process.stdin.on('end', () => {
   }
 
   // Preconditions: gh present + authenticated + a GitHub remote on a real repo.
-  try {
-    sh('command -v gh');
-  } catch {
-    ok('[ci-verify] gh CLI not found — skipping CI check (install gh to enable).');
-  }
+  // One probe, not two: `gh auth status` already fails when gh is missing, and
+  // a missing binary surfaces as ENOENT — so the separate `command -v gh` call
+  // (which spawned a shell just to answer the same question) is redundant.
   try {
     gh(['auth', 'status']);
-  } catch {
-    ok('[ci-verify] gh not authenticated — skipping CI check.');
+  } catch (e) {
+    ok(
+      e && e.code === 'ENOENT'
+        ? '[ci-verify] gh CLI not found — skipping CI check (install gh to enable).'
+        : '[ci-verify] gh not authenticated — skipping CI check.'
+    );
   }
 
   let sha = '';
@@ -127,8 +149,21 @@ process.stdin.on('end', () => {
     ok('[ci-verify] not a git repo — skipping CI check.');
   }
 
-  const deadline = Date.now() + TIMEOUT_S * 1000;
+  const started = Date.now();
+  const deadline = started + TIMEOUT_S * 1000;
   let lastStatus = 'none';
+  // Poll fast at first (a run usually registers within a few seconds), then back
+  // off toward POLL_S. A flat 10s interval both waited too long for the common
+  // fast case and hammered the API for the slow one.
+  let pollS = Math.min(3, POLL_S);
+  // Run IDs seen on the previous poll. GitHub registers a commit's workflow runs
+  // PROGRESSIVELY, so "every run I can currently see has completed" is not the
+  // same as "CI is done" — a second workflow may not have been created yet. A
+  // green verdict therefore requires seeing the SAME run set twice in a row.
+  // Without this the gate can report "✓ all CI gates passed" while another
+  // workflow is still queuing, which is the exact false-green this hook exists
+  // to prevent.
+  let prevIds = null;
 
   while (Date.now() < deadline) {
     let runs = [];
@@ -150,14 +185,45 @@ process.stdin.on('end', () => {
 
     if (!runs.length) {
       lastStatus = 'pending-registration';
-      sleep(POLL_S);
+      // No run has appeared. If REGISTER_S has elapsed, this push almost
+      // certainly triggered nothing (a branch outside the workflow's `on: push`
+      // list, or a paths filter that excluded the diff) — stop instead of
+      // blocking the turn for the rest of TIMEOUT_S.
+      if (Date.now() - started >= REGISTER_S * 1000) {
+        ok(
+          `[ci-verify] no GitHub Actions run registered for ${branch}@${sha.slice(0, 9)} within ${REGISTER_S}s ` +
+            `— this branch likely does not trigger a workflow. Skipping.`
+        );
+      }
+      sleep(pollS);
+      pollS = Math.min(pollS * 2, POLL_S);
       continue;
     }
+
+    const ids = runs
+      .map((r) => r.databaseId)
+      .sort()
+      .join(',');
 
     const incomplete = runs.filter((r) => r.status !== 'completed');
     if (incomplete.length) {
       lastStatus = 'in_progress';
-      sleep(POLL_S);
+      prevIds = ids;
+      sleep(pollS);
+      pollS = Math.min(pollS * 2, POLL_S);
+      continue;
+    }
+
+    // A FAILURE verdict is trustworthy immediately — a run that already
+    // concluded badly will not be un-failed by another workflow registering.
+    // A SUCCESS verdict is not: it must survive one more poll with an unchanged
+    // run set, proving nothing else was still queuing.
+    const bad0 = runs.filter((r) => r.conclusion && !['success', 'skipped', 'neutral'].includes(r.conclusion));
+    if (!bad0.length && prevIds !== ids) {
+      lastStatus = 'settling';
+      prevIds = ids;
+      sleep(pollS);
+      pollS = Math.min(pollS * 2, POLL_S);
       continue;
     }
 

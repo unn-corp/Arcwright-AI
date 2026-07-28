@@ -28,7 +28,8 @@ Matchers filter by tool name (`Write|Edit`, `Bash`, etc.) or are omitted to matc
 ### 1. Quality gates (PostToolUse) — catch errors at the source
 - **Typecheck on TS edits** → after `Write|Edit` on `*.ts|*.tsx`, run our `lsp-diagnostics`
   path (`tsc --noEmit` scoped to changed files). Turns "looks right" into "compiles".
-- **Pyright on Python edits** → same for `*.py` via `pyright --outputjson`.
+- **Pyright on Python edits** → same for `*.py`, run per-file in plain text (not
+  `--outputjson`: the JSON envelope costs the model more context than the diagnostics).
 - **DRY/format nudge** → after edits in `src/`, surface a one-line reminder to run `/dry`
   before merge (non-blocking).
 
@@ -84,6 +85,35 @@ Matchers filter by tool name (`Write|Edit`, `Bash`, etc.) or are omitted to matc
 
 Use `/hookify` to generate the exact JSON for any of the above — it handles matcher syntax
 and merges without clobbering existing hooks.
+
+## Cost rules for any hook that shells out
+
+A PostToolUse hook runs on **every single edit**, so its cost is paid hundreds of times
+per session and its output is spent from the model's context budget. Four rules, each
+learned from a gate in this repo that violated it:
+
+1. **Never invoke a linter through `npx`.** Even `npx --no-install` boots npm on every
+   call (measured here: ~930ms for eslint, ~230ms for prettier) *before* the tool starts.
+   Resolve `node_modules/.bin/<tool>` by walking up from the edited file and spawn it
+   directly.
+2. **Only run project-local binaries.** `npx --no-install` silently falls back to a
+   globally installed tool, which carries an unrelated version and no project config —
+   so it reports findings that the project's real gate would never produce.
+3. **Resolve the project from the edited file, not the process cwd.** Walk up to the
+   nearest `eslint.config.*` / `tsconfig.json` / `pyproject.toml` and run there. In a
+   monorepo with submodules and nested apps, the repo root is usually the wrong project.
+   Skip the tool entirely when no config exists — no config means the project does not
+   use that tool, and running it anyway is pure false signal.
+4. **Bound every wait, and never spawn a process to sleep.** A poll loop needs a separate,
+   short cap on "nothing has started yet" versus "still running" — otherwise a push to a
+   branch that triggers no workflow blocks the turn for the full timeout. Use
+   `Atomics.wait` on a `SharedArrayBuffer` for a synchronous sleep; spawning
+   `node -e setTimeout(...)` costs a full interpreter boot per tick.
+
+One more, specific to type-checking: a **solution-style** `tsconfig.json` (`"files": []`
+plus `"references"`, the shape Vite scaffolds emit) has no inputs of its own, so plain
+`tsc --noEmit` checks *nothing* and exits 0 in ~50ms. That reads as a passing gate while
+catching zero errors. Detect that shape and use build mode (`tsc -b --noEmit`, TS >= 5.6).
 
 ## Integration map — hooks ↔ Arcwright
 

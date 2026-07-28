@@ -28,11 +28,16 @@ process.stdin.on('end', () => {
   }
   if (!filePath) process.exit(0);
 
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   // Compare against the project root so only THIS repo's generated tree is
   // guarded. A path outside the root, or inside a submodule, produces a
   // relative path that does not start with packages/, so it is allowed.
-  const relative = path.relative(path.resolve(projectDir), path.resolve(filePath));
+  //
+  // The root is derived from __dirname (this file sits at
+  // <root>/.claude/arcwright-hooks/) rather than $CLAUDE_PROJECT_DIR or cwd:
+  // if either of those is wrong or unset, the relative path stops matching and
+  // the guard fails OPEN, silently allowing writes to generated output.
+  const projectDir = path.resolve(__dirname, '..', '..');
+  const relative = path.relative(projectDir, path.resolve(filePath));
   const norm = relative.replace(/\\/g, '/');
 
   if (/^packages\/[^/]+\/src\//.test(norm)) {
