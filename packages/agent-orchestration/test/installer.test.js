@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
 const {
@@ -254,16 +255,24 @@ describe('updateGitignore / stripGitignoreBlock', () => {
   it('full mode covers every shipped slash command', async () => {
     // This list used to be 21 hand-written entries against 154 shipped command
     // files, so `--gitignore full` left 133 generated commands visible to git.
+    //
+    // updateGitignore reads the built src/, which is gitignored and therefore
+    // absent from a fresh checkout — the same reason install.integration.test.js
+    // builds in beforeAll. Build here too rather than skipping, so the
+    // assertion is real in CI instead of vacuously passing on an empty read.
+    const repoRoot = path.join(__dirname, '..', '..', '..');
+    const srcCommands = path.join(__dirname, '..', 'src', '.claude', 'commands');
+    if (!fs.existsSync(srcCommands)) {
+      execSync('node build/build.js', { cwd: repoRoot, stdio: 'pipe' });
+    }
+
     await updateGitignore(dir, 'full', chalk);
     const gi = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
-    const srcCommands = path.join(__dirname, '..', 'src', '.claude', 'commands');
-    const shipped = fs.existsSync(srcCommands)
-      ? fs.readdirSync(srcCommands).filter((f) => f.endsWith('.md'))
-      : [];
+    const shipped = fs.readdirSync(srcCommands).filter((f) => f.endsWith('.md'));
     expect(shipped.length).toBeGreaterThan(50); // guard against a silent empty read
     const missing = shipped.filter((c) => !gi.includes(`.claude/commands/${c}`));
     expect(missing).toEqual([]);
-  });
+  }, 120000);
   it('re-running replaces the block in place (idempotent, no duplication)', async () => {
     await updateGitignore(dir, 'full', chalk);
     await updateGitignore(dir, 'full', chalk);
