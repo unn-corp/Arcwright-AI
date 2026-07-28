@@ -31,7 +31,7 @@ export const skills: Skill[] = [
   },
   {
     name: 'Next.js App Router',
-    slug: 'nextjs-app-router-patterns',
+    slug: 'next-best-practices',
     description: 'Next.js 14+ App Router conventions, server components, and streaming patterns.',
     category: 'frontend',
   },
@@ -42,9 +42,9 @@ export const skills: Skill[] = [
     category: 'frontend',
   },
   {
-    name: 'Design',
-    slug: 'design',
-    description: 'Design intelligence for UI/UX decisions, component specs, and visual hierarchy.',
+    name: 'UI/UX Pro',
+    slug: 'ui-ux-pro-custom',
+    description: 'Design intelligence for UI/UX decisions: curated styles, palettes, font pairings, chart types, and stack recommendations.',
     category: 'design',
   },
   {
@@ -151,12 +151,6 @@ export const skills: Skill[] = [
     description: 'Herdr terminal workspace reference: sessions, workspaces, tabs, panes, agent spawning, wait-on-status, and the plugin catalog. Includes one optional section on watching in-process agents in panes.',
     category: 'devops',
   },
-  {
-    name: 'tmux',
-    slug: 'tmux',
-    description: 'Pane/window/session mechanics reference for teams migrating an existing tmux setup. Superseded by the herdr skill for new opt-in visibility usage.',
-    category: 'devops',
-  },
   // Quality / Debug
   {
     name: 'Systematic Debugging',
@@ -168,12 +162,6 @@ export const skills: Skill[] = [
     name: 'Clean Code Standards',
     slug: 'clean-code-standards',
     description: '23 DRY/SOLID rules applied across the codebase for maintainability.',
-    category: 'quality',
-  },
-  {
-    name: 'DRY',
-    slug: 'dry',
-    description: 'Single-pass DRY/SOLID review and auto-fix for duplication and coupling.',
     category: 'quality',
   },
   {
@@ -253,18 +241,6 @@ export const skills: Skill[] = [
     name: 'Correct Course',
     slug: 'correct-course',
     description: 'Structured mid-task course-correction when a constraint, blocker, or verification FAIL invalidates the current plan.',
-    category: 'workflow',
-  },
-  {
-    name: 'Project Memory',
-    slug: 'project-memory',
-    description: 'Durable planning layer (STATE / ROADMAP / DECISIONS / LEARNINGS) for resumable work and decision capture across sessions.',
-    category: 'workflow',
-  },
-  {
-    name: 'Constitution',
-    slug: 'constitution',
-    description: 'Versioned project non-negotiables (test discipline, security posture, conventions) with semantic-version bump rules.',
     category: 'workflow',
   },
   {

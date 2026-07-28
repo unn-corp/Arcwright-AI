@@ -32,8 +32,9 @@ export default function SkillsPage() {
             Skill Library
           </h1>
           <p className="font-sans text-muted text-lg max-w-2xl leading-relaxed">
-            {skills.length} focused context modules — installed alongside agents and workflow tracks.
+            150+ focused context modules, installed alongside agents and workflow tracks.
             Specialists invoke them automatically when the task domain matches.
+            {' '}Showing {skills.length} highlights.
           </p>
         </div>
       </section>
