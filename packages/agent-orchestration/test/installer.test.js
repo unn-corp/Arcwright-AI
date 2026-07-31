@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
 const {
@@ -209,13 +210,23 @@ describe('getFileHeader', () => {
 });
 
 describe('getClaudeMdLocations', () => {
-  it('project install returns .claude/CLAUDE.md and root CLAUDE.md', () => {
+  // These are the files uninstall strips managed blocks from, so anything
+  // missing here stays behind and keeps instructing the user's agent.
+  it('project install covers CLAUDE.md and AGENTS.md', () => {
     const locs = getClaudeMdLocations('/proj', false, 'linux', { linux: '/h' });
-    expect(locs).toEqual([path.join('/proj', '.claude', 'CLAUDE.md'), path.join('/proj', 'CLAUDE.md')]);
+    expect(locs).toEqual([
+      path.join('/proj', '.claude', 'CLAUDE.md'),
+      path.join('/proj', 'CLAUDE.md'),
+      // Codex, OpenCode, Grok, Hermes and Cursor all write their block here.
+      path.join('/proj', 'AGENTS.md'),
+    ]);
   });
-  it('global install returns the single ~/.claude/CLAUDE.md', () => {
+  it('global install covers every per-tool global rules file', () => {
     const locs = getClaudeMdLocations('/proj', true, 'linux', { linux: '/h', windows: null });
-    expect(locs).toEqual(['/h/.claude/CLAUDE.md']);
+    expect(locs).toContain('/h/.claude/CLAUDE.md');
+    expect(locs).toContain('/h/.codex/AGENTS.md');
+    expect(locs).toContain('/h/.config/opencode/AGENTS.md');
+    expect(locs).toContain('/h/.grok/AGENTS.md');
   });
 });
 
@@ -230,6 +241,38 @@ describe('updateGitignore / stripGitignoreBlock', () => {
     await updateGitignore(dir, 'none', chalk);
     expect(fs.existsSync(path.join(dir, '.gitignore'))).toBe(false);
   });
+  it('ignores personal .user.toml overlays in every writing mode', async () => {
+    // CLAUDE.md documents .user.toml as personal, but only `full` covered them
+    // (via the whole _arcwright/ dir), so the default install left them
+    // committable.
+    for (const mode of ['output-only', 'skills']) {
+      fs.rmSync(path.join(dir, '.gitignore'), { force: true });
+      await updateGitignore(dir, mode, chalk);
+      const gi = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
+      expect(gi).toMatch(/_arcwright\/custom\/\*\.user\.toml/);
+    }
+  });
+  it('full mode covers every shipped slash command', async () => {
+    // This list used to be 21 hand-written entries against 154 shipped command
+    // files, so `--gitignore full` left 133 generated commands visible to git.
+    //
+    // updateGitignore reads the built src/, which is gitignored and therefore
+    // absent from a fresh checkout — the same reason install.integration.test.js
+    // builds in beforeAll. Build here too rather than skipping, so the
+    // assertion is real in CI instead of vacuously passing on an empty read.
+    const repoRoot = path.join(__dirname, '..', '..', '..');
+    const srcCommands = path.join(__dirname, '..', 'src', '.claude', 'commands');
+    if (!fs.existsSync(srcCommands)) {
+      execSync('node build/build.js', { cwd: repoRoot, stdio: 'pipe' });
+    }
+
+    await updateGitignore(dir, 'full', chalk);
+    const gi = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
+    const shipped = fs.readdirSync(srcCommands).filter((f) => f.endsWith('.md'));
+    expect(shipped.length).toBeGreaterThan(50); // guard against a silent empty read
+    const missing = shipped.filter((c) => !gi.includes(`.claude/commands/${c}`));
+    expect(missing).toEqual([]);
+  }, 120000);
   it('re-running replaces the block in place (idempotent, no duplication)', async () => {
     await updateGitignore(dir, 'full', chalk);
     await updateGitignore(dir, 'full', chalk);
@@ -427,7 +470,7 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
     expect(s.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS).toBe('1');
     expect(s.env.CLAUDE_CODE_NO_FLICKER).toBe('1');
-    expect(s.skillListingBudgetFraction).toBe(0.03);
+    expect(s.skillListingBudgetFraction).toBe(0.05);
     expect(s.fallbackModel).toEqual(['sonnet']);
   });
   it('never clobbers a user-customized value', async () => {
@@ -447,6 +490,44 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.hooks.PreToolUse.some((g) => g.hooks.some((h) => h.command.includes('arcwright-hooks')))).toBe(true);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(true);
   });
+  it('does not delete foreign hooks that share the arcwright-hooks directory', async () => {
+    // The ci-gates skill installs its gates into the SAME .claude/arcwright-hooks/
+    // folder. Ownership must be decided by which script an entry invokes, not by
+    // the directory name, or a routine `update` wipes those gates.
+    const foreign = (name) => ({
+      matcher: 'Write|Edit',
+      hooks: [{ type: 'command', command: `node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/${name}"` }],
+    });
+    fs.writeFileSync(
+      path.join(dir, 'settings.json'),
+      JSON.stringify({
+        hooks: {
+          PostToolUse: [foreign('gate-lint.js'), foreign('gate-leak.js')],
+          PreToolUse: [foreign('gate-precommit.js')],
+        },
+      })
+    );
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const all = JSON.stringify(s.hooks);
+    expect(all).toContain('gate-lint.js');
+    expect(all).toContain('gate-leak.js');
+    expect(all).toContain('gate-precommit.js');
+    // ...and our own guards are still installed alongside them.
+    expect(all).toContain('guard-bash.js');
+    // safe mode clears only OUR PostToolUse entry, never the whole event.
+    expect(s.hooks.PostToolUse).toBeDefined();
+  });
+  it('replaces its own hook entries on re-run without duplicating', async () => {
+    await writeClaudeSettings(dir, chalk, 'full', false);
+    await writeClaudeSettings(dir, chalk, 'full', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const count = (name) => JSON.stringify(s.hooks).split(name).length - 1;
+    expect(count('guard-bash.js')).toBe(1);
+    expect(count('guard-write.js')).toBe(1);
+    expect(count('typecheck.js')).toBe(1);
+    expect(count('run the project-context scan')).toBe(1);
+  });
   it('full hooks mode adds the PostToolUse typecheck entry', async () => {
     await writeClaudeSettings(dir, chalk, 'full', false);
     const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
@@ -460,6 +541,17 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.skillListingBudgetFraction).toBeUndefined();
     expect(s.fallbackModel).toBeUndefined();
     expect(s.env).toBeUndefined(); // both env keys removed → env dropped
+  });
+  it('stripInstallerSettingsKeys also removes a legacy budget default', async () => {
+    // Machines that installed before the budget was raised carry 0.03. If strip
+    // only recognised the current default, uninstall would strand it there.
+    fs.writeFileSync(
+      path.join(dir, 'settings.json'),
+      JSON.stringify({ skillListingBudgetFraction: 0.03 })
+    );
+    expect(await stripInstallerSettingsKeys(dir)).toBe(true);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    expect(s.skillListingBudgetFraction).toBeUndefined();
   });
   it('stripInstallerSettingsKeys preserves user-customized values', async () => {
     fs.writeFileSync(

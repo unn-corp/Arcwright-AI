@@ -71,21 +71,13 @@ function shouldDeleteCommand(filename) {
   return true;
 }
 
-/** @deprecated kept for reference only — shouldDeleteCommand() is used instead */
-const COMMANDS_TO_DELETE = [
-  /^bmad-agent-/,
-  /^bmad-bmm-/,
-  /^bmad-bmb-/,
-  /^bmad-adversarial-/,
-  /^bmad-editorial-/,
-  /^bmad-index-/,
-  /^bmad-review-/,
-  /^bmad-help\./,
-  /^bmad-brainstorming\./,
-  /^bmad-shard-doc\./,
-  /^bmad-party-/,
-  /^orchestration-master\./,
-];
+// A COMMANDS_TO_DELETE array used to sit here, marked "@deprecated kept for
+// reference only". shouldDeleteCommand() above is a strict superset of it —
+// every pattern it listed (bmad-agent-, bmad-bmm-, bmad-bmb-, bmad-adversarial-,
+// bmad-editorial-, bmad-index-, bmad-review-, bmad-help., bmad-brainstorming.,
+// bmad-shard-doc., bmad-party-, orchestration-master.) is covered by the
+// ^bmad- non-track rule or the explicit orchestration-master case. Keeping a
+// second, unused list of the same decision is how the two drift apart.
 
 /** .claude/commands/ files to RENAME (track commands) */
 const COMMANDS_TO_RENAME = [
@@ -242,11 +234,16 @@ function replaceContent(root, dryRun) {
     .map(f => path.join(root, f))
     .filter(f => fs.existsSync(f));
 
-  const allFiles = [];
-  for (const dir of dirsToScan) {
-    allFiles.push(...walkFiles(dir));
-  }
-  allFiles.push(...topLevelFiles);
+  // Deduplicate: dirsToScan lists both .claude/commands and .claude, and the
+  // latter contains the former, so every command file was visited twice. In a
+  // real run the second visit is a no-op (the first already rewrote the file,
+  // so nothing matches), but under --dry-run nothing is written, so the second
+  // visit re-matches the original content and reports the same file again.
+  // That inflated the preview users read before deciding to migrate.
+  const allFiles = [...new Set([
+    ...dirsToScan.flatMap(dir => walkFiles(dir)),
+    ...topLevelFiles,
+  ])];
 
   for (const filePath of allFiles) {
     if (!isTextFile(filePath)) continue;

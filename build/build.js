@@ -58,26 +58,43 @@ const EXCLUDE_ALWAYS = [
   '.backup',
   '.bak',
   'session-state-',  // timestamped session snapshots
+  '__pycache__',     // compiled bytecode — version-specific, useless to consumers
+  '.pyc',
 ];
 
 /** Text file extensions — binary files are copied without modification. */
 const TEXT_EXTS = new Set(['.md', '.yaml', '.yml', '.json', '.xml', '.csv', '.txt', '.js', '.sh', '.conf', '.py']);
 
 /**
+ * Extensions verifyNoLeaks() will NOT read. Everything else is scanned.
+ *
+ * This is a denylist on purpose. It used to reuse TEXT_EXTS (an allowlist), so
+ * 41 shipped files were silently exempt from the hard gate — including .ts,
+ * .ps1, .dot, .svg, .excalidraw and the extensionless LICENSE files — while the
+ * build still printed "✓ No leaks found (N files scanned)", which reads as full
+ * coverage. With a denylist, a new text format is covered by default; the worst
+ * case is a harmless read of an unlisted binary rather than a silent gap.
+ */
+const LEAK_SCAN_SKIP_EXTS = new Set([
+  '.html',  // workflow diagram may carry generic visual references
+  '.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp', '.bmp',
+  '.woff', '.woff2', '.ttf', '.otf', '.eot',
+  '.zip', '.gz', '.tgz', '.bz2', '.xz', '.7z', '.tar',
+  '.pdf', '.mp4', '.mp3', '.wav', '.mov', '.webm',
+  '.pyc', '.pyo', '.so', '.dylib', '.dll', '.exe', '.bin', '.wasm',
+]);
+
+/**
  * Content patterns that indicate Squidhub-specific material leaked into the
  * workshop source. verifyNoLeaks() scans for these and aborts the build if any
  * are found. .html files are skipped (the workflow diagram may contain generic
  * visual references).
+ *
+ * Defined in ./leak-patterns.js so the per-edit advisory gate
+ * (.claude/arcwright-hooks/gate-leak.js) shares one definition with this
+ * build-time hard gate instead of hand-mirroring it.
  */
-const LEAK_PATTERNS = [
-  /squidhub/i,
-  /unnportal\.io/i,
-  /nautilus/i,
-  /squid-master/i,
-  /UNN-\d+/,
-  /mcp__squidhub__/i,
-  /SquidAI/,
-];
+const { LEAK_PATTERNS } = require('./leak-patterns');
 
 /** Slash command files to ship. Shared by bundleKiroAgents() and bundleTrackCommands(). */
 const SHIPPED_COMMANDS = [
@@ -91,6 +108,7 @@ const SHIPPED_COMMANDS = [
   /^ux-audit\.md$/,
   /^ux-loop\.md$/,
   /^security-review\.md$/,
+  /^security-scan\.md$/,
   /^sec-loop\.md$/,
   /^design\.md$/,
   /^playwright\.md$/,
@@ -324,7 +342,7 @@ function buildKiroAssets() {
 
   // 2a. Copy .agents/skills/ → src/.kiro/skills/, rewriting paths/CLI refs for Kiro
   const kiroSkillsDest = path.join(PKG_SRC, '.kiro', 'skills');
-  const skillsCopied   = copySkillsTo(kiroSkillsDest, 'src/.kiro/skills/', adaptContentForKiro);
+  copySkillsTo(kiroSkillsDest, 'src/.kiro/skills/', adaptContentForKiro);
 
   // 2b. Generate steering docs in src/.kiro/steering/
   const steeringDir = path.join(PKG_SRC, '.kiro', 'steering');
@@ -603,6 +621,7 @@ function bundleKiroAgents() {
     'ux-audit':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch'],
     'ux-loop':            ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_search', 'web_fetch'],
     'security-review':    ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'security-scan':      ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'sec-loop':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'design':             ['fs_read', 'fs_write', 'grep', 'glob', 'web_search', 'web_fetch'],
     'playwright':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
@@ -755,13 +774,19 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
 
     const agent = { name, description: desc, prompt, tools };
 
-    // Team agents get read-only tools auto-approved, skill resources, and crew config
+    // Every command agent needs skill access, not just teams. adaptPromptForKiro()
+    // rewrites .agents/skills/ → .kiro/skills/ in the prompt, so a command whose
+    // whole job is "load skill X and follow it" (/dry, /debug, /ci-gates, …) ends
+    // up pointing at a path Kiro will not read without this grant. Scoping the
+    // resource to teams left 54 agents instructed to load a skill they could not
+    // open, which fails silently — the agent simply proceeds without the skill.
+    agent.resources = ['skill://.kiro/skills/**/SKILL.md'];
+
+    // Team agents additionally get read-only tools auto-approved, the master
+    // orchestrator persona, and crew config.
     if (isTeam(name)) {
       agent.allowedTools = ['fs_read', 'grep', 'glob', 'code', 'knowledge', 'web_search', 'web_fetch'];
-      agent.resources = [
-        'skill://.kiro/skills/**/SKILL.md',
-        'file://_arcwright/core/agents/arcwright-master.md',
-      ];
+      agent.resources.push('file://_arcwright/core/agents/arcwright-master.md');
       agent.toolsSettings = {
         crew: {
           availableAgents: SPECIALIST_AGENTS,
@@ -886,8 +911,52 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
 
 // ─── Step 3: bundleTrackCommands ─────────────────────────────────────────────
 
+/**
+ * Slash commands that exist in .claude/commands/ but are deliberately NOT
+ * published. Add an entry here (with the reason) rather than just leaving a
+ * command out of SHIPPED_COMMANDS — see verifyCommandCoverage().
+ */
+const UNSHIPPED_COMMANDS = {
+  // 'example.md': 'why it stays local',
+};
+
+/**
+ * SHIPPED_COMMANDS is a hand-maintained allowlist, so a new command silently
+ * fails to publish if someone forgets step 2 of the CLAUDE.md procedure. That
+ * already happened once: /security-scan shipped nowhere for its whole life
+ * because the commit that added it never touched this list, and nothing
+ * complained. Fail the build on an uncovered command instead — being
+ * deliberately unpublished now requires saying so out loud.
+ */
+function verifyCommandCoverage() {
+  const commandsSrc = path.join(PROJECT_ROOT, '.claude', 'commands');
+  if (!fs.existsSync(commandsSrc)) return;
+
+  const files = fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'));
+  const uncovered = files.filter(
+    f => !SHIPPED_COMMANDS.some(re => re.test(f)) && !(f in UNSHIPPED_COMMANDS)
+  );
+  const dead = SHIPPED_COMMANDS.filter(re => !files.some(f => re.test(f)));
+
+  if (uncovered.length || dead.length) {
+    console.error('\n  ❌  COMMAND COVERAGE FAILED\n');
+    for (const f of uncovered) {
+      console.error(`     ${f} is not published.`);
+      console.error(`       Add /^${f.replace(/\./g, '\\.')}$/ to SHIPPED_COMMANDS and a`);
+      console.error('       KIRO_TOOLS_BY_PATTERN entry, or list it in UNSHIPPED_COMMANDS.\n');
+    }
+    for (const re of dead) {
+      console.error(`     ${re} in SHIPPED_COMMANDS matches no file (stale entry).\n`);
+    }
+    process.exit(1);
+  }
+  console.log(`  ✓  All ${files.length} slash commands accounted for`);
+}
+
 function bundleTrackCommands() {
   console.log('🗂️   Bundling slash commands → src/.claude/commands/');
+
+  verifyCommandCoverage();
 
   const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
   const commandsDest = path.join(PKG_SRC, '.claude', 'commands');
@@ -1055,20 +1124,64 @@ function bundleLauncherTemplates() {
 
 // ─── Step 6: verifyNoLeaks ────────────────────────────────────────────────────
 
+/**
+ * Every `references/…`, `templates/…` or `scripts/…` path a SKILL.md cites must
+ * exist in that skill's directory.
+ *
+ * These are the sidecars a skill tells the agent to open mid-run, so a wrong
+ * path fails at execution time, not at build time — which is how
+ * excalidraw-diagram-generator shipped a manifest listing three
+ * `templates/*.json` files that were actually `.excalidraw`, and python-backend
+ * shipped a table pointing at four reference documents that were never written.
+ *
+ * Deliberately limited to those three directory names. `assets/` and `data/`
+ * are excluded because skills legitimately cite paths there that their own
+ * pipeline generates (scroll-world names the .webp/.mp4 files it will produce).
+ */
+function verifySkillReferences() {
+  console.log('🔗  Verifying skill sidecar references...');
+  const broken = [];
+  if (!fs.existsSync(SKILLS_SRC)) return;
+
+  for (const skill of fs.readdirSync(SKILLS_SRC)) {
+    const md = path.join(SKILLS_SRC, skill, 'SKILL.md');
+    if (!fs.existsSync(md)) continue;
+    const src = fs.readFileSync(md, 'utf8');
+    const re = /(?:^|[\s(`"'])((?:references|templates|scripts)\/[A-Za-z0-9._/-]+\.[A-Za-z0-9]+)/g;
+    for (const m of src.matchAll(re)) {
+      const rel = m[1];
+      if (rel.includes('*')) continue;
+      if (!fs.existsSync(path.join(SKILLS_SRC, skill, rel))) {
+        broken.push(`${skill}: ${rel}`);
+      }
+    }
+  }
+
+  const unique = [...new Set(broken)];
+  if (unique.length) {
+    console.error(`\n  ❌  SKILL REFERENCE CHECK FAILED — ${unique.length} broken path(s):\n`);
+    for (const b of unique) console.error(`     ${b}`);
+    console.error('\n  Fix the path in SKILL.md, or add the missing file.\n');
+    process.exit(1);
+  }
+  console.log('  ✓  All skill sidecar references resolve\n');
+}
+
 function verifyNoLeaks() {
   console.log('🔍  Verifying no Squidhub content leaks in src/...');
 
   const allFiles = walk(PKG_SRC, PKG_SRC);
   const leaks    = [];
 
+  let scanned = 0;
   for (const { full, rel } of allFiles) {
-    // Skip binary files and HTML (workflow diagram may have generic visual refs)
+    // Skip known-binary formats; scan everything else (see LEAK_SCAN_SKIP_EXTS).
     const ext = path.extname(full).toLowerCase();
-    if (ext === '.html') continue;
-    if (!TEXT_EXTS.has(ext)) continue;
+    if (LEAK_SCAN_SKIP_EXTS.has(ext)) continue;
 
     let content;
     try { content = fs.readFileSync(full, 'utf8'); } catch { continue; }
+    scanned++;
 
     for (const pattern of LEAK_PATTERNS) {
       if (pattern.test(content)) {
@@ -1093,7 +1206,9 @@ function verifyNoLeaks() {
     process.exit(1);
   }
 
-  console.log(`  ✓  No leaks found (${allFiles.length} files scanned)\n`);
+  // Report what was actually read, not the total walked — the old message
+  // counted skipped binaries as "scanned".
+  console.log(`  ✓  No leaks found (${scanned} of ${allFiles.length} files scanned; rest are binary)\n`);
 }
 
 // ─── Step 5b: bundleSkillCommands ─────────────────────────────────────────────
@@ -1162,6 +1277,7 @@ bundleTrackCommands();
 bundleSpecialistCommands();
 bundleSkillCommands();
 bundleLauncherTemplates();
+verifySkillReferences();
 verifyNoLeaks();
 
 console.log('✅  Build complete!');

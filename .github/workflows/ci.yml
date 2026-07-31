@@ -77,6 +77,10 @@ jobs:
           cache-dependency-path: website/package-lock.json
       - run: npm ci
       - run: npm run lint
+      # Catches src/data/ drifting from the repo it describes (dead skill slugs,
+      # unmapped agent icons). Not in `npm run build`: the Dockerfile builds with
+      # website/ as its context, where ../.agents/skills does not exist.
+      - run: npm run check:data
       - run: npm run build # tsc -b && vite build (type-check + bundle)
 
   # Security: secret scan, dependency/vuln, SAST — language-agnostic.

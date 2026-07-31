@@ -2,12 +2,14 @@ import { agents } from '../data/agents';
 import {
   Search, Network, Code2, ClipboardList,
   TestTube2, GitPullRequest, BookOpen, Layers, Bot, ShieldCheck,
+  Zap, GitMerge,
 } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
   Search, Network, Code2, ClipboardList,
   TestTube2, GitPullRequest, BookOpen, Layers, ShieldCheck,
+  Zap, GitMerge,
 };
 
 function AgentIcon({ name, ...props }: { name: string } & LucideProps) {

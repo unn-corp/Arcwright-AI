@@ -2,7 +2,7 @@ export const fallbackReadme = `# Arcwright
 
 > AI-native agile workflow orchestration for Claude Code, Kiro, and 5 more IDEs.
 
-Arcwright installs a structured system of specialist AI agents, in-process subagent orchestration, and a 47-skill library into any project. The orchestrator routes your task through plain in-process Agent tool calls (with SendMessage reuse across a Session Agent Registry) by default, with Herdr panes available as an opt-in viewing surface when you want to watch.
+Arcwright installs a structured system of specialist AI agents, in-process subagent orchestration, and a 150+ skill library into any project. The orchestrator routes your task through plain in-process Agent tool calls (with SendMessage reuse across a Session Agent Registry) by default, with Herdr panes available as an opt-in viewing surface when you want to watch.
 
 ---
 

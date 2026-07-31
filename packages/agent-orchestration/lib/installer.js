@@ -344,6 +344,8 @@ function detectBmad(projectRoot) {
 
 // Modules available in src/
 const AVAILABLE_MODULES = ['awm', 'awb', 'core', '_memory'];
+/** Modules installed only when their opt-in flag is passed (--aws-infra, --unnamed-pm). */
+const OPTIONAL_MODULES = ['aws-infra', 'unnamed-pm'];
 
 // Manifest file location (relative to _arcwright/)
 const MANIFEST_FILE = '_config/manifest.yaml';
@@ -1157,29 +1159,34 @@ async function updateGitignore(projectRoot, mode, chalk) {
   const START = '# ─── Arcwright installation ──────────────────────────────────────────';
   const END   = '# ─── end arcwright ───────────────────────────────────────────────────';
 
+  // Enumerate the slash commands Arcwright actually ships rather than
+  // hand-listing them. The previous literal named 21 files and had not been
+  // updated since; the package now installs 154 (track commands, specialist
+  // stubs and skill launchers), so `--gitignore full` — documented as ignoring
+  // "all Arcwright dirs, commands, and agent stubs" — left 133 generated
+  // command files visible to git. Reading the shipped directory keeps this
+  // exact as commands are added, and stays precise: a user's own commands in
+  // .claude/commands/ are never matched, which a blanket ignore would break.
+  let shippedCommands = [];
+  try {
+    shippedCommands = fs
+      .readdirSync(path.join(SRC_DIR, '.claude', 'commands'))
+      .filter((f) => f.endsWith('.md'))
+      .sort()
+      .map((f) => `.claude/commands/${f}`);
+  } catch { /* package not built / commands absent — fall through with none */ }
+
+  // Personal customisation overlays. CLAUDE.md tells users .user.toml files are
+  // personal, but only `full` (via the whole `_arcwright/` dir) ever ignored
+  // them, so the default install left them committable.
+  const USER_OVERLAYS = '_arcwright/custom/*.user.toml';
+
   const BLOCKS = {
     'full': [
       '_arcwright/',
       '_arcwright-output/',
       '.agents/skills/',
-      '.claude/commands/arcwright-*.md',
-      '.claude/commands/herdr.md',
-      '.claude/commands/gsudo.md',
-      '.claude/commands/team.md',
-      '.claude/commands/dry*.md',
-      '.claude/commands/ux-*.md',
-      '.claude/commands/security-review.md',
-      '.claude/commands/sec-loop.md',
-      '.claude/commands/design.md',
-      '.claude/commands/playwright.md',
-      '.claude/commands/audit-site.md',
-      '.claude/commands/diagram.md',
-      '.claude/commands/triage.md',
-      '.claude/commands/docker-check.md',
-      '.claude/commands/dotnet.md',
-      '.claude/commands/electron.md',
-      '.claude/commands/tauri.md',
-      '.claude/commands/strands.md',
+      ...shippedCommands,
       '.claude/agents/arcwright-*.md',
       '.kiro/agents/',
       '.kiro/skills/',
@@ -1189,11 +1196,13 @@ async function updateGitignore(projectRoot, mode, chalk) {
     ],
     'skills': [
       '_arcwright-output/',
+      USER_OVERLAYS,
       '.agents/skills/',
       '.kiro/skills/',
     ],
     'output-only': [
       '_arcwright-output/',
+      USER_OVERLAYS,
     ],
     'none': [],
   };
@@ -1284,7 +1293,6 @@ async function install(opts) {
     platform = existingManifest.platform;
   }
   const isUpdate = action === 'update' || (action === 'install' && existingManifest != null);
-  const effectiveAction = isUpdate ? 'update' : 'install';
 
   // ── bmad detection + migration (project installs only) ────────────────────
   // Detect a legacy bmad install, confirm, and migrate (before installing
@@ -1747,7 +1755,29 @@ async function install(opts) {
   for (const mod of selectedModules) {
     const configPath = path.join(effectiveArwDir, mod, 'config.yaml');
     if (!isUpdate || !await fs.pathExists(configPath)) {
-      const config = buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder);
+      // Merge onto the module's own shipped config (copied just above) rather
+      // than replacing it. buildModuleConfig() only knows the six generic keys;
+      // AWM additionally ships project_name, user_skill_level,
+      // planning_artifacts, implementation_artifacts, project_knowledge and
+      // mcp_standards, which its workflows resolve directly — e.g.
+      // `outputFile: '{planning_artifacts}/product-brief-{{project_name}}.md'`.
+      // Overwriting dropped all six on every fresh install, leaving those
+      // placeholders unresolved across ~170 agent and workflow files.
+      let base = {};
+      if (await fs.pathExists(configPath)) {
+        try { base = yaml.parse(await fs.readFile(configPath, 'utf8')) || {}; }
+        catch { base = {}; }
+      }
+      // Shipped artifact paths hardcode the default output folder; retarget them
+      // when the user picked a different one so the preserved keys stay correct.
+      if (outputFolder && outputFolder !== '_arcwright-output') {
+        for (const [k, v] of Object.entries(base)) {
+          if (typeof v === 'string' && v.includes('_arcwright-output')) {
+            base[k] = v.split('_arcwright-output').join(outputFolder);
+          }
+        }
+      }
+      const config = { ...base, ...buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder) };
       await fs.ensureDir(path.dirname(configPath));
       await fs.writeFile(configPath, yaml.stringify(config), 'utf8');
       const label = isGlobal ? `~/.arcwright/${mod}/` : `_arcwright/${mod}/`;
@@ -2063,6 +2093,10 @@ async function status(opts) {
     console.log(`  IDEs:      ${chalk.dim((manifest.tools || []).join(', ') || 'none')}\n`);
   }
 
+  // Core modules are reported whether installed or not. The opt-in modules are
+  // reported only when present — listing them unconditionally would be noise for
+  // the majority who never enable them, but omitting them entirely (as this loop
+  // did) made --aws-infra and --unnamed-pm installs invisible to `status`.
   for (const mod of AVAILABLE_MODULES) {
     const modDir = path.join(arcwrightDir, mod);
     if (await fs.pathExists(modDir)) {
@@ -2071,6 +2105,12 @@ async function status(opts) {
     } else {
       console.log(`  ${chalk.gray('○')} ${mod} (not installed)`);
     }
+  }
+  for (const mod of OPTIONAL_MODULES) {
+    const modDir = path.join(arcwrightDir, mod);
+    if (!await fs.pathExists(modDir)) continue;
+    const files = await glob('**/*', { cwd: modDir, nodir: true });
+    console.log(`  ${chalk.green('✓')} ${mod} (${files.length} files)`);
   }
 
   const filesManifest = await readFilesManifest(arcwrightDir);
@@ -2255,12 +2295,31 @@ function getFileHeader(tool) {
 }
 
 /**
+ * Skill-listing budget, as a fraction of the context window. Claude Code's own
+ * default (0.01) drops skill descriptions for anyone with many skills, which
+ * makes those skills undiscoverable.
+ *
+ * Sized from the actual catalogue rather than guessed. Arcwright ships 152
+ * skills whose names + descriptions total ~28.7k characters, roughly 7.2k
+ * tokens. The previous 0.03 was chosen when there were "50+" skills and no
+ * longer covers that: 3% of a 200k context is 6k tokens, so the listing
+ * overflowed and skills were silently truncated at session start. 5% gives 10k
+ * tokens at 200k, leaving headroom for the user's own skills on top.
+ */
+const SKILL_LISTING_BUDGET = 0.05;
+
+/**
+ * Earlier defaults this installer wrote. stripInstallerSettingsKeys() must
+ * still recognise them, or an uninstall leaves a stale value behind on every
+ * machine that installed before the bump.
+ */
+const LEGACY_SKILL_LISTING_BUDGETS = [0.03];
+
+/**
  * Write / merge .claude/settings.json with Arcwright-required env vars and
  * skill-listing budget. Enables CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS so the
- * SendMessage agent-reuse primitive works out of the box. Bumps
- * skillListingBudgetFraction to 0.03 (3%) so the 50+ Arcwright skills + user
- * skills don't get truncated at session start (default 0.01 / 1% drops
- * descriptions for users with many skills installed). Sets
+ * SendMessage agent-reuse primitive works out of the box. Sets
+ * skillListingBudgetFraction (see SKILL_LISTING_BUDGET) and
  * fallbackModel: ["sonnet"] so overload/flag-fallbacks land on a fast
  * mid-tier model without pinning a version.
  * Merges with any existing settings — never overwrites user values.
@@ -2295,10 +2354,10 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
     settings.env.CLAUDE_CODE_NO_FLICKER = '1';
   }
 
-  // Bump skill-listing budget so Arcwright's 50+ skills don't get truncated
-  // on session start. Only set if user hasn't customized it already.
+  // Bump skill-listing budget so Arcwright's skills don't get truncated on
+  // session start. Only set if the user hasn't customized it already.
   if (settings.skillListingBudgetFraction === undefined) {
-    settings.skillListingBudgetFraction = 0.03;
+    settings.skillListingBudgetFraction = SKILL_LISTING_BUDGET;
   }
 
   // Set fallbackModel: ["sonnet"] so overload/flag-fallbacks land on a fast
@@ -2327,7 +2386,7 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
   if (before !== after) {
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
     const hookNote = (hooksMode === 'safe' || hooksMode === 'full') ? `, hooks=${hooksMode}` : '';
-    console.log(chalk.green(`  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=0.03, fallbackModel=["sonnet"]${hookNote})`));
+    console.log(chalk.green(`  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=${SKILL_LISTING_BUDGET}, fallbackModel=["sonnet"]${hookNote})`));
   } else {
     console.log(chalk.gray('  ○ .claude/settings.json already up to date'));
   }
@@ -2335,15 +2394,29 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
 
 /**
  * Copy Arcwright hook guard scripts into <claudeDir>/arcwright-hooks/ and merge
- * the corresponding hook entries into settings.hooks. Idempotent: Arcwright
- * entries are identified by the 'arcwright-hooks' marker in their command and
- * replaced in place, so re-runs never duplicate and user hooks are preserved.
+ * the corresponding hook entries into settings.hooks. Idempotent: this
+ * installer's own entries are replaced in place, so re-runs never duplicate and
+ * user hooks are preserved.
  *
  *   safe → PreToolUse(Bash) destructive-command guard
  *          PreToolUse(Write|Edit) secret/key-file guard
  *          SessionStart context-load reminder
  *   full → safe + PostToolUse(Write|Edit) tsc/pyright typecheck
+ *
+ * OWNERSHIP: an entry is "ours to replace" only if it invokes one of the three
+ * scripts this function installs, or is the SessionStart reminder it writes.
+ * It is NOT enough for the command to mention the `arcwright-hooks` directory.
+ * That directory is shared: the `ci-gates` skill installs gate-lint.js,
+ * gate-precommit.js and gate-ci-verify.js into the very same folder, and a repo
+ * may add its own guards there too. Treating the directory name as the
+ * ownership marker made a routine `agent-orchestration update` silently delete
+ * every one of those foreign hooks — including dropping the whole PostToolUse
+ * event, since `safe` mode clears it.
  */
+const INSTALLER_OWNED_HOOKS = ['guard-bash.js', 'guard-write.js', 'typecheck.js'];
+// Stable substring of the SessionStart reminder written below. It carries no
+// filename, so it needs its own identifier; keep this in sync with the echo.
+const SESSION_START_SENTINEL = 'run the project-context scan';
 async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal) {
   const srcDir = path.join(__dirname, 'templates', 'hooks');
   const destDir = path.join(claudeDir, 'arcwright-hooks');
@@ -2359,14 +2432,24 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal) {
       ? `node ${JSON.stringify(path.join(destDir, name))}`
       : `node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/${name}"`;
 
-  const MARKER = 'arcwright-hooks';
   settings.hooks = settings.hooks || {};
 
-  // For one event, drop existing Arcwright entries then append fresh ones.
+  // True only for an entry this installer itself wrote — see OWNERSHIP above.
+  const isOurs = (h) => {
+    if (!h || typeof h.command !== 'string') return false;
+    if (h.command.includes(SESSION_START_SENTINEL)) return true;
+    return (
+      h.command.includes('arcwright-hooks') &&
+      INSTALLER_OWNED_HOOKS.some((name) => h.command.includes(name))
+    );
+  };
+
+  // For one event, drop our own previous entries then append fresh ones.
+  // Foreign entries (ci-gates gates, project-specific guards) are left alone.
   const setEvent = (event, entries) => {
     const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
     const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some((h) => typeof h.command === 'string' && h.command.includes(MARKER)))
+      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isOurs))
     );
     settings.hooks[event] = [...kept, ...entries];
   };
@@ -2578,8 +2661,9 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
       const agentPath = path.join(agentsSrc, rel);
       const raw = await fs.readFile(agentPath, 'utf8');
 
-      // Parse YAML frontmatter name/description
-      const nameMatch = raw.match(/^name:\s*["']?(.+?)["']?\s*$/m);
+      // Parse the description from YAML frontmatter. The stub's own `name` is
+      // always derived from the filename slug below (arcwright-<slug>) so it
+      // matches the agent-type registry, so the frontmatter name is not read.
       const descMatch = raw.match(/^description:\s*["']?(.+?)["']?\s*$/m);
 
       // Fall back to <agent name="..." title="..."> XML tag
@@ -2635,17 +2719,29 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
  * three write sites in writeIdeConfig + writeGlobalClaudeMd.
  */
 function getClaudeMdLocations(projectRoot, isGlobal, platform, homes) {
+  // Every instruction file Arcwright writes a managed block into. Used by
+  // uninstall to strip those blocks back out, so anything missing here stays
+  // behind and keeps instructing the user's agent after they uninstall.
+  //
+  // AGENTS.md is not optional: Codex, OpenCode, Grok, Hermes and Cursor all
+  // receive their block there rather than in CLAUDE.md. Omitting it left a full
+  // Arcwright block — "To update Arcwright: npx …" and all — in the user's
+  // AGENTS.md forever.
   if (isGlobal) {
     return [
-      // Global install: rules + root CLAUDE.md are both under ~/.claude/
-      resolveToolPath('claude-code', '.claude/CLAUDE.md', true, homes, platform),
-    ];
+      resolveToolPath('claude-code', GLOBAL_PATHS['claude-code'].claudeMd, true, homes, platform),
+      resolveToolPath('codex', GLOBAL_PATHS.codex.claudeMd, true, homes, platform),
+      resolveToolPath('opencode', GLOBAL_PATHS.opencode.claudeMd, true, homes, platform),
+      resolveToolPath('grok', GLOBAL_PATHS.grok.claudeMd, true, homes, platform),
+    ].filter(Boolean);
   }
   return [
     // Project install: rules file lives in .claude/CLAUDE.md, root CLAUDE.md
-    // may also exist.
+    // may also exist, and AGENTS.md carries the block for the AGENTS.md-based
+    // tools (Codex, OpenCode, Grok, Hermes, Cursor).
     path.join(projectRoot, '.claude', 'CLAUDE.md'),
     path.join(projectRoot, 'CLAUDE.md'),
+    path.join(projectRoot, 'AGENTS.md'),
   ];
 }
 
@@ -2674,7 +2770,7 @@ async function stripGitignoreBlock(projectRoot) {
  * Installer-written defaults:
  *   env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS === '1'
  *   env.CLAUDE_CODE_NO_FLICKER === '1'
- *   skillListingBudgetFraction === 0.03
+ *   skillListingBudgetFraction === SKILL_LISTING_BUDGET (or a legacy default)
  *   fallbackModel === ['sonnet']
  */
 async function stripInstallerSettingsKeys(claudeDir) {
@@ -2698,7 +2794,12 @@ async function stripInstallerSettingsKeys(claudeDir) {
       delete settings.env;
     }
   }
-  if (settings.skillListingBudgetFraction === 0.03) {
+  // Current default plus every earlier one, so an uninstall on a machine that
+  // installed before the budget was raised still cleans up after itself.
+  if (
+    settings.skillListingBudgetFraction === SKILL_LISTING_BUDGET ||
+    LEGACY_SKILL_LISTING_BUDGETS.includes(settings.skillListingBudgetFraction)
+  ) {
     delete settings.skillListingBudgetFraction;
     touched = true;
   }
@@ -2767,6 +2868,21 @@ async function uninstall(opts = {}) {
   if (settingsChanged) console.log(chalk.green('  ✓ .claude/settings.json (installer keys removed)'));
   else console.log(chalk.gray('  ○ .claude/settings.json (no installer keys to remove)'));
 
+  // 3b. Remove Arcwright-owned rule files that are whole files rather than a
+  // managed block inside a user file. .cursor/rules/arcwright.mdc is generated
+  // entirely by the installer and carries `alwaysApply: true`, so leaving it
+  // behind meant Cursor kept injecting Arcwright guidance into every session
+  // after the user uninstalled. Only files Arcwright authors in full belong
+  // here — never a user-owned file like AGENTS.md, which is handled by
+  // managed-block stripping above.
+  if (!isGlobal) {
+    const cursorRule = path.join(projectRoot, '.cursor', 'rules', 'arcwright.mdc');
+    if (await fs.pathExists(cursorRule)) {
+      await fs.remove(cursorRule);
+      console.log(chalk.green('  ✓ .cursor/rules/arcwright.mdc (removed)'));
+    }
+  }
+
   // 4. Optionally remove installed dirs per the manifest.
   // Library contract: `--yes` opts in automatically. The CLI layer
   // (`cli.js`) is responsible for the interactive prompt and is expected
@@ -2790,7 +2906,15 @@ async function uninstall(opts = {}) {
       // `.customize.yaml` overlays — leave in place so the next install can
       // detect prior state and preserve user-owned files. Callers wanting a
       // full wipe can `rm -rf _arcwright/` themselves.
-      for (const sub of ['awm', 'awb', 'core', '_memory']) {
+      // Drive this from the manifest, not a hardcoded list. The literal
+      // ['awm','awb','core','_memory'] predates the optional modules, so an
+      // install that used --aws-infra or --unnamed-pm left those directories
+      // behind. Fall back to the four for manifests written before `modules`
+      // was recorded.
+      const installedModules = Array.isArray(manifest.modules) && manifest.modules.length
+        ? manifest.modules
+        : ['awm', 'awb', 'core', '_memory'];
+      for (const sub of installedModules) {
         const d = path.join(manifestDir, sub);
         if (await fs.pathExists(d)) await fs.remove(d);
       }

@@ -32,7 +32,11 @@ authoritative merge gate. The two stay in sync (a hook can be bypassed with
   loop: the local hooks mirror CI but can be bypassed, so this confirms the
   authoritative remote gate actually went green. Tunables: `ARCWRIGHT_CI_VERIFY=0`
   to disable, `ARCWRIGHT_CI_TIMEOUT_SECONDS` (default 180), `ARCWRIGHT_CI_POLL_SECONDS`
-  (default 10).
+  (max backoff between polls, default 10), `ARCWRIGHT_CI_REGISTER_SECONDS`
+  (default 30) — how long to wait for a run to *appear* before concluding this
+  branch triggers no workflow. That second cap matters: without it, pushing a
+  branch outside the workflow's `on: push` list blocks the turn for the full
+  `ARCWRIGHT_CI_TIMEOUT_SECONDS` just to report that nothing ran.
 
 **CI** (the real merge gate):
 - `.github/workflows/ci.yml` — fast-fail jobs: static (format/lint/type-check),
