@@ -152,6 +152,32 @@ describe('Herdr standards', () => {
     expect(settings.hooks.SessionStart[0].hooks[0].command).toMatch(/herdr-agent-session\.sh/);
   });
 
+  it('session hook records the profile under herdr and fast-paths out otherwise', async () => {
+    await installHerdrAssets(dir);
+    const hook = path.join(dir, '.claude/hooks/herdr-agent-session.sh');
+    const recorded = path.join(dir, '.local/state/herdr/claude-session-profiles/sess-x');
+    const payload = JSON.stringify({ session_id: 'sess-x', source: 'startup' });
+    const runHook = (herdrEnv) =>
+      execFileSync('sh', [hook], {
+        input: payload,
+        env: {
+          ...process.env,
+          HOME: dir,
+          HERDR_ENV: herdrEnv,
+          CLAUDE_CONFIG_DIR: path.join(dir, '.claude-alt'),
+        },
+      });
+
+    // Not driven by herdr (t3code, a plain terminal, …): nothing to record, and
+    // the hook must not pay for a mktemp/cat/exec on a discarded payload.
+    runHook('');
+    expect(fs.existsSync(recorded)).toBe(false);
+
+    // Inside a herdr pane the profile is still recorded for session restore.
+    runHook('1');
+    expect(fs.readFileSync(recorded, 'utf8').trim()).toBe(path.join(dir, '.claude-alt'));
+  });
+
   it('launches restored agents with the requested flags and Claude profile', async () => {
     await installHerdrAssets(dir);
     const stubDir = path.join(dir, 'stubs');
