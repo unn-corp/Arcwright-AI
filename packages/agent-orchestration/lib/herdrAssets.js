@@ -48,6 +48,27 @@ function hasHerdrHook(group) {
   );
 }
 
+/**
+ * List every Claude Code config home under `homeDir`.
+ *
+ * Claude Code supports multiple config homes (~/.claude, ~/.claude-alt,
+ * ~/.claude-work, …) selected per session via CLAUDE_CONFIG_DIR. Each carries
+ * its OWN settings.json — env vars, permission mode, and hooks are not shared,
+ * even when the sibling profiles symlink agents/commands/skills back to the
+ * default one. Anything writing global Claude settings has to reach all of them.
+ *
+ * The default ~/.claude is always included, even if it does not exist yet.
+ */
+async function listClaudeProfileDirs(homeDir = os.homedir()) {
+  const entries = await fs.readdir(homeDir, { withFileTypes: true }).catch(() => []);
+  const profileDirs = entries
+    .filter((entry) => entry.isDirectory() && /^\.claude(?:-.+)?$/.test(entry.name))
+    .map((entry) => path.join(homeDir, entry.name));
+  const defaultProfile = path.join(homeDir, '.claude');
+  if (!profileDirs.includes(defaultProfile)) profileDirs.unshift(defaultProfile);
+  return profileDirs;
+}
+
 async function installProfileHook(profileDir, hookPath) {
   const settingsPath = path.join(profileDir, 'settings.json');
   let settings = {};
@@ -91,12 +112,7 @@ async function installHerdrAssets(homeDir = os.homedir()) {
     await upsertManagedBlock(rcFile, SHELL_START, SHELL_END, sourceLine);
   }
 
-  const entries = await fs.readdir(homeDir, { withFileTypes: true });
-  const profileDirs = entries
-    .filter((entry) => entry.isDirectory() && /^\.claude(?:-.+)?$/.test(entry.name))
-    .map((entry) => path.join(homeDir, entry.name));
-  const defaultProfile = path.join(homeDir, '.claude');
-  if (!profileDirs.includes(defaultProfile)) profileDirs.unshift(defaultProfile);
+  const profileDirs = await listClaudeProfileDirs(homeDir);
   await Promise.all(profileDirs.map((profileDir) => installProfileHook(profileDir, hookPath)));
 
   return { clipboardPath, hookPath, launcherPath, profileDirs };
@@ -104,6 +120,7 @@ async function installHerdrAssets(homeDir = os.homedir()) {
 
 module.exports = {
   installHerdrAssets,
+  listClaudeProfileDirs,
   upsertTomlSetting,
   SHELL_START,
   SHELL_END,

@@ -18,6 +18,7 @@ const SRC_DIR = path.join(__dirname, '..', 'src');
 const { detectPlatform } = require('./platform');
 const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
 const { setupHerdr } = require('./herdrSetup');
+const { listClaudeProfileDirs } = require('./herdrAssets');
 
 // ─── WSL audio setup (Claude Code /voice) ────────────────────────────────────
 
@@ -2265,12 +2266,21 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     }
   }
 
-  // Write Claude Code settings.json (env vars, permissions)
+  // Write Claude Code settings.json (env vars, permissions).
+  // Global installs fan out across every Claude config home (~/.claude,
+  // ~/.claude-alt, …) because settings.json is per-profile and is NOT covered by
+  // the symlinks users commonly point at agents/commands/skills — see
+  // listClaudeProfileDirs. Project installs write the one .claude/ in the repo.
   if (tool === 'claude-code') {
-    const settingsBase = isGlobal
-      ? resolveToolPath('claude-code', '.claude', true, homes, platform)
-      : path.join(projectRoot, '.claude');
-    await writeClaudeSettings(settingsBase, chalk, resolvedHooks, isGlobal);
+    if (isGlobal) {
+      const defaultProfile = resolveToolPath('claude-code', '.claude', true, homes, platform);
+      const profileDirs = await listClaudeProfileDirs(path.dirname(defaultProfile));
+      for (const profileDir of profileDirs) {
+        await writeClaudeSettings(profileDir, chalk, resolvedHooks, true);
+      }
+    } else {
+      await writeClaudeSettings(path.join(projectRoot, '.claude'), chalk, resolvedHooks, false);
+    }
   }
 
   // Write per-agent stubs into agent directory (claude-code only for now)
@@ -2382,13 +2392,16 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
     }
   }
 
+  // Label by profile dir, not a hardcoded ".claude" — a global install writes
+  // one line per Claude config home and they must be tellable apart.
+  const label = `${path.basename(claudeDir)}/settings.json`;
   const after = JSON.stringify(settings);
   if (before !== after) {
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
     const hookNote = (hooksMode === 'safe' || hooksMode === 'full') ? `, hooks=${hooksMode}` : '';
-    console.log(chalk.green(`  ✓ .claude/settings.json (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=${SKILL_LISTING_BUDGET}, fallbackModel=["sonnet"]${hookNote})`));
+    console.log(chalk.green(`  ✓ ${label} (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, CLAUDE_CODE_NO_FLICKER=1, skillListingBudgetFraction=${SKILL_LISTING_BUDGET}, fallbackModel=["sonnet"]${hookNote})`));
   } else {
-    console.log(chalk.gray('  ○ .claude/settings.json already up to date'));
+    console.log(chalk.gray(`  ○ ${label} already up to date`));
   }
 }
 
