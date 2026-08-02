@@ -17,6 +17,7 @@ const { execSync } = require('child_process');
 const { upsertManagedBlock } = require('./managed-md');
 const {
   installHerdrAssets,
+  listClaudeProfileDirs,
   upsertTomlSetting,
   SHELL_START,
   SHELL_END,
@@ -293,6 +294,7 @@ module.exports = {
   buildKeybindingsBlock,
   upsertTomlSetting,
   installHerdrAssets,
+  listClaudeProfileDirs,
   DEFAULT_PLUGINS,
   KEYS_START,
   KEYS_END,

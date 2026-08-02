@@ -7,7 +7,7 @@ import herdr from '../lib/herdrSetup.js';
 
 const {
   setupHerdr, detectHerdr, parsePluginIds, buildKeybindingsBlock,
-  upsertTomlSetting, installHerdrAssets,
+  upsertTomlSetting, installHerdrAssets, listClaudeProfileDirs,
   DEFAULT_PLUGINS, KEYS_START, KEYS_END, SHELL_START,
 } = herdr;
 
@@ -98,6 +98,31 @@ describe('buildKeybindingsBlock', () => {
   it('returns null when every candidate key is already user-bound', () => {
     const existingKeys = new Set(['prefix+p', 'ctrl+v']);
     expect(buildKeybindingsBlock(new Set(['jt.command-palette']), { existingKeys })).toBeNull();
+  });
+});
+
+describe('listClaudeProfileDirs', () => {
+  it('finds every Claude config home and ignores unrelated entries', async () => {
+    for (const name of ['.claude', '.claude-alt', '.claude-work', '.claudia', '.codex']) {
+      fs.mkdirSync(path.join(dir, name), { recursive: true });
+    }
+    // A file named like a profile must not be mistaken for one.
+    fs.writeFileSync(path.join(dir, '.claude.json'), '{}');
+
+    const found = (await listClaudeProfileDirs(dir)).map((p) => path.basename(p));
+    expect(found.sort()).toEqual(['.claude', '.claude-alt', '.claude-work']);
+  });
+
+  it('always includes the default ~/.claude even when it does not exist yet', async () => {
+    fs.mkdirSync(path.join(dir, '.claude-alt'), { recursive: true });
+    const found = await listClaudeProfileDirs(dir);
+    expect(found[0]).toBe(path.join(dir, '.claude'));
+    expect(found).toContain(path.join(dir, '.claude-alt'));
+  });
+
+  it('returns just the default profile for an unreadable home', async () => {
+    const missing = path.join(dir, 'nope');
+    expect(await listClaudeProfileDirs(missing)).toEqual([path.join(missing, '.claude')]);
   });
 });
 

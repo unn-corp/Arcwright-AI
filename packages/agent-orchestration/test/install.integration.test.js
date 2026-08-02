@@ -248,4 +248,33 @@ describe('install() — global install', () => {
     // directory the user happened to run from.
     expect(fs.existsSync(path.join(projectDir, '.claude', 'CLAUDE.md'))).toBe(false);
   }, 60000);
+
+  it('writes settings.json to every Claude config home, not just ~/.claude', async () => {
+    // Users run several Claude accounts from one machine via CLAUDE_CONFIG_DIR
+    // and commonly symlink agents/commands/skills back to ~/.claude — but
+    // settings.json is per-profile and cannot be symlinked that way. Pre-fix,
+    // only ~/.claude got the agent-teams env var and the guard hooks, so
+    // SendMessage agent reuse silently stayed off in the sibling profiles.
+    const profiles = ['.claude-alt', '.claude-work'];
+    for (const p of profiles) fs.mkdirSync(path.join(homeDir, p), { recursive: true });
+
+    await install(baseOpts({ global: true, directory: projectDir, hooks: 'safe' }));
+
+    for (const p of ['.claude', ...profiles]) {
+      const settingsPath = path.join(homeDir, p, 'settings.json');
+      expect(fs.existsSync(settingsPath), `${p}/settings.json missing`).toBe(true);
+      const s = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      expect(s.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS, `${p} agent teams`).toBe('1');
+      expect(s.permissions.defaultMode, `${p} permission mode`).toBe('acceptEdits');
+      // Guards are referenced by absolute path inside that profile's own dir.
+      const guards = JSON.stringify(s.hooks.PreToolUse);
+      expect(guards).toContain(path.join(homeDir, p, 'arcwright-hooks', 'guard-bash.js'));
+      expect(fs.existsSync(path.join(homeDir, p, 'arcwright-hooks', 'guard-write.js'))).toBe(true);
+    }
+  }, 60000);
+
+  it('does not invent Claude profile dirs that the user never created', async () => {
+    await install(baseOpts({ global: true, directory: projectDir }));
+    expect(fs.existsSync(path.join(homeDir, '.claude-alt'))).toBe(false);
+  }, 60000);
 });
