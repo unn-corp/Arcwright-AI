@@ -277,4 +277,23 @@ describe('install() — global install', () => {
     await install(baseOpts({ global: true, directory: projectDir }));
     expect(fs.existsSync(path.join(homeDir, '.claude-alt'))).toBe(false);
   }, 60000);
+
+  it.each([
+    ['project', false],
+    ['global', true],
+  ])('applies %s TOML customization to the module config', async (_label, global) => {
+    const customDir = global
+      ? path.join(homeDir, '.arcwright', 'custom')
+      : path.join(projectDir, '_arcwright', 'custom');
+    fs.mkdirpSync(customDir);
+    fs.writeFileSync(path.join(customDir, 'awm.toml'), 'user_name = "Configured Agent"\n');
+
+    await install(baseOpts({ global }));
+
+    const configPath = global
+      ? path.join(homeDir, '.arcwright', 'awm', 'config.yaml')
+      : path.join(projectDir, '_arcwright', 'awm', 'config.yaml');
+    const config = await fs.readFile(configPath, 'utf8');
+    expect(config).toMatch(/^user_name: Configured Agent$/m);
+  }, 60000);
 });

@@ -19,6 +19,7 @@ const { detectPlatform } = require('./platform');
 const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
 const { setupHerdr } = require('./herdrSetup');
 const { listClaudeProfileDirs } = require('./herdrAssets');
+const { loadCustomization } = require('./customization');
 
 // ─── WSL audio setup (Claude Code /voice) ────────────────────────────────────
 
@@ -1748,7 +1749,7 @@ async function install(opts) {
     }
   }
 
-  // ── config.yaml generation ────────────────────────────────────────────────
+  // ── config.yaml generation and customization ──────────────────────────────
   // Written for both project and global installs. Global installs write to
   // ~/.arcwright/{mod}/config.yaml. The output_folder uses {project-root} so
   // agents always resolve artifacts into the user's current project directory,
@@ -1778,11 +1779,27 @@ async function install(opts) {
           }
         }
       }
-      const config = { ...base, ...buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder) };
+      const generated = { ...base, ...buildModuleConfig(mod, resolvedUserName || 'Developer', outputFolder) };
+      const config = loadCustomization(mod, generated, path.join(effectiveArwDir, 'custom'));
       await fs.ensureDir(path.dirname(configPath));
       await fs.writeFile(configPath, yaml.stringify(config), 'utf8');
       const label = isGlobal ? `~/.arcwright/${mod}/` : `_arcwright/${mod}/`;
       console.log(chalk.green(`  ✓ config.yaml → ${label}`));
+    }
+
+    // Updates intentionally preserve the user's config.yaml. Re-apply TOML
+    // overlays on top so changes to team/user customization take effect while
+    // retaining unrelated edits made directly to the generated config.
+    if (isUpdate && await fs.pathExists(configPath)) {
+      let existing = {};
+      try { existing = yaml.parse(await fs.readFile(configPath, 'utf8')) || {}; }
+      catch { existing = {}; }
+      const customized = loadCustomization(mod, existing, path.join(effectiveArwDir, 'custom'));
+      if (customized !== existing) {
+        await fs.writeFile(configPath, yaml.stringify(customized), 'utf8');
+        const label = isGlobal ? `~/.arcwright/${mod}/` : `_arcwright/${mod}/`;
+        console.log(chalk.green(`  ✓ customization applied → ${label}`));
+      }
     }
   }
 
