@@ -140,6 +140,43 @@ describe('install() — fresh project install', () => {
     expect(fs.existsSync(path.join(projectDir, '_arcwright', 'aws-infra'))).toBe(false);
   }, 90000);
 
+  it('uninstall removes generated assets and owned Claude hook state', async () => {
+    await install(baseOpts({ hooks: 'safe' }));
+
+    expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'triage', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'commands', 'triage.md'))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'agents', 'arcwright-dev.md'))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'arcwright-hooks', 'guard-bash.js'))).toBe(true);
+
+    const before = await readManifest(path.join(projectDir, '_arcwright'));
+    expect(before.managedSettings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: '.claude', hooks: true, defaultMode: true }),
+    ]));
+
+    await uninstall({ directory: projectDir, yes: true });
+
+    expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'triage', 'SKILL.md'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'commands', 'triage.md'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'agents', 'arcwright-dev.md'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'arcwright-hooks', 'guard-bash.js'))).toBe(false);
+    const settings = await fs.readJson(path.join(projectDir, '.claude', 'settings.json'));
+    expect(settings.hooks).toBeUndefined();
+    expect(settings.permissions).toBeUndefined();
+  }, 90000);
+
+  it('tracks Kiro assets and removes disabled team files on update', async () => {
+    await install(baseOpts({ tools: 'kiro', teams: true }));
+    const teamSkill = path.join(projectDir, '.kiro', 'skills', 'team-arch-dev', 'SKILL.md');
+    const filesManifest = path.join(projectDir, '_arcwright', '_config', 'files-manifest.csv');
+    expect(fs.existsSync(teamSkill)).toBe(true);
+    expect((await fs.readFile(filesManifest, 'utf8'))).toContain('.kiro/skills/team-arch-dev/SKILL.md');
+
+    await install(baseOpts({ action: 'update', tools: 'kiro', teams: false }));
+
+    expect(fs.existsSync(teamSkill)).toBe(false);
+    expect((await fs.readFile(filesManifest, 'utf8'))).not.toContain('.kiro/skills/team-arch-dev/SKILL.md');
+  }, 120000);
+
   it('isolates home-directed writes into the throwaway HOME, not the real one', async () => {
     await install(baseOpts());
     // Project install applies the global rules file under the redirected HOME.

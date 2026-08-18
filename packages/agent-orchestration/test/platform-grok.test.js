@@ -112,6 +112,7 @@ describe('writeGrokConfig — project install', () => {
     const entries = await writeGrokConfig(projectDir, ['awm'], chalk, false, homes(), platform, false);
     expect(entries.some(e => e.relPath.includes('/team-'))).toBe(false);
     expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'team-arch-dev'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.grok', 'commands', 'team.md'))).toBe(false);
   });
 
   it('guards against copying .agents/skills onto itself', async () => {

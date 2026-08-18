@@ -542,6 +542,16 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.fallbackModel).toBeUndefined();
     expect(s.env).toBeUndefined(); // both env keys removed → env dropped
   });
+  it('stripInstallerSettingsKeys removes owned hooks and acceptEdits when requested', async () => {
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+    expect(await stripInstallerSettingsKeys(dir, {
+      removeHooks: true,
+      removeDefaultMode: true,
+    })).toBe(true);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    expect(s.hooks).toBeUndefined();
+    expect(s.permissions).toBeUndefined();
+  });
   it('stripInstallerSettingsKeys also removes a legacy budget default', async () => {
     // Machines that installed before the budget was raised carry 0.03. If strip
     // only recognised the current default, uninstall would strand it there.

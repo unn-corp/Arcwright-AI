@@ -608,6 +608,83 @@ async function writeFilesManifest(arcwrightDir, entries) {
   await fs.writeFile(p, lines.join('\n') + '\n', 'utf8');
 }
 
+/**
+ * Resolve a manifest path to the destination used by the selected install.
+ * Global integrations use tool-specific bookkeeping prefixes because several
+ * tools share a physical directory (for example Codex and OpenCode skills).
+ */
+function resolveInstalledPath(relPath, { isGlobal, projectRoot, effectiveArwDir, homes, platform }) {
+  const rel = relPath.replace(/\\/g, '/');
+  if (!isGlobal) {
+    if (/^(?:\.agents|\.claude|\.kiro|\.opencode|\.grok|\.cursor)\//.test(rel)) {
+      return path.join(projectRoot, rel);
+    }
+    return path.join(effectiveArwDir, rel);
+  }
+
+  const joinGlobal = (tool, base, suffix) => path.join(
+    resolveToolPath(tool, base, true, homes, platform),
+    suffix
+  );
+
+  if (rel.startsWith('.agents/skills/')) {
+    return joinGlobal('claude-code', GLOBAL_PATHS['claude-code'].skills, rel.slice('.agents/skills/'.length));
+  }
+  if (rel.startsWith('.claude/')) {
+    return resolveToolPath('claude-code', rel, true, homes, platform);
+  }
+  if (rel.startsWith('.codex/skills/')) {
+    return joinGlobal('codex', GLOBAL_PATHS.codex.skills, rel.slice('.codex/skills/'.length));
+  }
+  if (rel.startsWith('.codex/')) {
+    return resolveToolPath('codex', rel, true, homes, platform);
+  }
+  if (rel.startsWith('.hermes/skill-bundles/')) {
+    return joinGlobal('hermes', GLOBAL_PATHS.hermes.skillBundles, rel.slice('.hermes/skill-bundles/'.length));
+  }
+  if (rel.startsWith('.hermes/skills/')) {
+    return joinGlobal('hermes', GLOBAL_PATHS.hermes.skills, rel.slice('.hermes/skills/'.length));
+  }
+  if (rel.startsWith('.opencode/skills/')) {
+    return joinGlobal('opencode', GLOBAL_PATHS.opencode.skills, rel.slice('.opencode/skills/'.length));
+  }
+  if (rel.startsWith('.opencode/commands/')) {
+    return joinGlobal('opencode', GLOBAL_PATHS.opencode.commands, rel.slice('.opencode/commands/'.length));
+  }
+  if (rel.startsWith('.grok/skills/')) {
+    return joinGlobal('grok', GLOBAL_PATHS.grok.skills, rel.slice('.grok/skills/'.length));
+  }
+  if (rel.startsWith('.grok/commands/')) {
+    return joinGlobal('grok', GLOBAL_PATHS.grok.commands, rel.slice('.grok/commands/'.length));
+  }
+  if (rel.startsWith('.grok/agents/')) {
+    return joinGlobal('grok', GLOBAL_PATHS.grok.agents, rel.slice('.grok/agents/'.length));
+  }
+  if (rel.startsWith('.kiro/')) {
+    return resolveToolPath('kiro', rel, true, homes, platform);
+  }
+  if (rel.startsWith('.cursor/')) {
+    return resolveToolPath('cursor', rel, true, homes, platform);
+  }
+  return path.join(effectiveArwDir, rel);
+}
+
+/** Remove a tracked file only when its contents still match the installer hash. */
+async function removeTrackedEntry(entry, context) {
+  const fullPath = resolveInstalledPath(entry.relPath, context);
+  if (!await fs.pathExists(fullPath)) return false;
+  let contents;
+  try {
+    contents = await fs.readFile(fullPath);
+  } catch {
+    return false;
+  }
+  if (sha256(contents) !== entry.hash) return false;
+  await fs.remove(fullPath);
+  await removeEmptyDirsUpward(fullPath);
+  return true;
+}
+
 // After an orphaned file is removed, its skill/command directory is often left
 // empty (a removed skill's SKILL.md + RULES.md go, the dir stays). Walk up from
 // the removed file and rmdir empty parents, stopping at a non-empty dir or at a
@@ -638,6 +715,7 @@ async function removeEmptyDirsUpward(removedFile) {
 async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
   const kiroAgentsSrc = path.join(SRC_DIR, '.kiro', 'agents');
+  const entries = [];
 
   const skillsDest = isGlobal
     ? resolveToolPath('kiro', '.kiro/skills', isGlobal, homes, platform)
@@ -678,6 +756,10 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
       return true;
     });
     const skippedCount = allSkillFiles.length - skillFiles.length;
+    for (const rel of skillFiles) {
+      const content = await fs.readFile(path.join(kiroSkillsSrc, rel));
+      entries.push({ relPath: path.join('.kiro/skills', rel).replace(/\\/g, '/'), hash: sha256(content) });
+    }
     const skipNotes = [];
     if (!resolvedTeams) skipNotes.push('team-*');
     if (!resolvedDockerCheck) skipNotes.push('docker-type-check');
@@ -695,7 +777,11 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
   if (await fs.pathExists(kiroSteeringSrc)) {
     await fs.ensureDir(steeringDest);
     await fs.copy(kiroSteeringSrc, steeringDest, { overwrite: true });
-    const steeringFiles = await fs.readdir(kiroSteeringSrc);
+    const steeringFiles = await glob('**/*', { cwd: kiroSteeringSrc, nodir: true });
+    for (const rel of steeringFiles) {
+      const content = await fs.readFile(path.join(kiroSteeringSrc, rel));
+      entries.push({ relPath: path.join('.kiro/steering', rel).replace(/\\/g, '/'), hash: sha256(content) });
+    }
     console.log(chalk.green(`  ✓ .kiro/steering/ (${steeringFiles.length} files)`));
   }
 
@@ -716,6 +802,8 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     });
     for (const f of agentFiles) {
       await fs.copy(path.join(kiroAgentsSrc, f), path.join(agentsDest, f), { overwrite: true });
+      const content = await fs.readFile(path.join(kiroAgentsSrc, f));
+      entries.push({ relPath: path.join('.kiro/agents', f).replace(/\\/g, '/'), hash: sha256(content) });
     }
     const skipNotes = [];
     if (!resolvedTeams) skipNotes.push('/team');
@@ -729,6 +817,8 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
     console.log(chalk.green(`  ✓ .kiro/agents/ (${agentFiles.length} agents)`) + teamNote);
   }
+
+  return entries;
 }
 
 // ─── Shared skill-copy filtering (Codex / Hermes) ────────────────────────────
@@ -944,10 +1034,13 @@ async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes,
     : path.join(projectRoot, '.opencode', 'commands');
   if (await fs.pathExists(commandsSrc)) {
     await fs.ensureDir(commandsDest);
-    await fs.copy(commandsSrc, commandsDest, { overwrite: true });
-    const cmdFiles = await glob('**/*', { cwd: commandsSrc, nodir: true });
+    const cmdFiles = filterCommandNames(
+      (await fs.readdir(commandsSrc)).filter((f) => f.endsWith('.md')),
+      flags
+    );
     for (const rel of cmdFiles) {
       const content = await fs.readFile(path.join(commandsSrc, rel));
+      await fs.writeFile(path.join(commandsDest, rel), content);
       entries.push({ relPath: path.join('.opencode/commands', rel).replace(/\\/g, '/'), hash: sha256(content) });
     }
     console.log(chalk.green(`  ✓ ${isGlobal ? '~/.config/opencode/commands/' : '.opencode/commands/'} (${cmdFiles.length} files)`));
@@ -1017,10 +1110,13 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
     : path.join(projectRoot, '.grok', 'commands');
   if (await fs.pathExists(commandsSrc)) {
     await fs.ensureDir(commandsDest);
-    await fs.copy(commandsSrc, commandsDest, { overwrite: true });
-    const cmdFiles = await glob('**/*', { cwd: commandsSrc, nodir: true });
+    const cmdFiles = filterCommandNames(
+      (await fs.readdir(commandsSrc)).filter((f) => f.endsWith('.md')),
+      flags
+    );
     for (const rel of cmdFiles) {
       const content = await fs.readFile(path.join(commandsSrc, rel));
+      await fs.writeFile(path.join(commandsDest, rel), content);
       entries.push({ relPath: path.join('.grok/commands', rel).replace(/\\/g, '/'), hash: sha256(content) });
     }
     console.log(chalk.green(`  ✓ ${isGlobal ? '~/.grok/commands/' : '.grok/commands/'} (${cmdFiles.length} files)`));
@@ -1641,6 +1737,7 @@ async function install(opts) {
   if (resolvedUnnamedPm) modulesToInstall.add('unnamed-pm');
 
   const newFileEntries = [];
+  const managedSettings = [];
   let installedCount = 0;
 
   // Recalculate arcwrightDir after scope may have changed interactively
@@ -1806,15 +1903,21 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode' || tool === 'grok' || tool === 'cursor') continue; // handled separately below
-    const ideEntries = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
-    if (ideEntries && ideEntries.length > 0) {
-      newFileEntries.push(...ideEntries);
+    const ideResult = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    if (ideResult?.entries?.length > 0) {
+      newFileEntries.push(...ideResult.entries);
+    }
+    if (ideResult?.managedSettings?.length > 0) {
+      managedSettings.push(...ideResult.managedSettings);
     }
   }
 
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
-    await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    const kiroEntries = await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    if (kiroEntries?.length > 0) {
+      newFileEntries.push(...kiroEntries);
+    }
   }
 
   // ── Codex integration ─────────────────────────────────────────────────────
@@ -1888,64 +1991,7 @@ async function install(opts) {
     if (orphans.length > 0) {
       console.log(chalk.dim(`\n  Removing ${orphans.length} orphaned file(s) from previous version:`));
       for (const orphan of orphans) {
-        let fullPath;
-        if (isGlobal) {
-          // Global install: each prefix maps to its real resolved path
-          if (orphan.relPath.startsWith('.agents/skills/')) {
-            // Skills written to ~/.claude/skills/ for global installs
-            const rel = orphan.relPath.slice('.agents/skills/'.length);
-            fullPath = path.join(resolveToolPath('claude-code', '.claude/skills', true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.claude/')) {
-            // .claude/agents/, .claude/commands/, etc. — resolve from terminal home
-            fullPath = resolveToolPath('claude-code', orphan.relPath, true, homes, platform);
-          } else if (orphan.relPath.startsWith('.codex/skills/')) {
-            // Bookkeeping prefix only — Codex's global skills actually live at
-            // $HOME/.agents/skills/, not ~/.codex/skills/ (see GLOBAL_PATHS.codex).
-            const rel = orphan.relPath.slice('.codex/skills/'.length);
-            fullPath = path.join(resolveToolPath('codex', GLOBAL_PATHS.codex.skills, true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.codex/')) {
-            fullPath = resolveToolPath('codex', orphan.relPath, true, homes, platform);
-          } else if (orphan.relPath.startsWith('.hermes/skill-bundles/')) {
-            const rel = orphan.relPath.slice('.hermes/skill-bundles/'.length);
-            fullPath = path.join(resolveToolPath('hermes', GLOBAL_PATHS.hermes.skillBundles, true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.hermes/skills/')) {
-            const rel = orphan.relPath.slice('.hermes/skills/'.length);
-            fullPath = path.join(resolveToolPath('hermes', GLOBAL_PATHS.hermes.skills, true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.opencode/skills/')) {
-            // Bookkeeping prefix — OpenCode's global skills live at $HOME/.agents/skills/.
-            const rel = orphan.relPath.slice('.opencode/skills/'.length);
-            fullPath = path.join(resolveToolPath('opencode', GLOBAL_PATHS.opencode.skills, true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.opencode/commands/')) {
-            const rel = orphan.relPath.slice('.opencode/commands/'.length);
-            fullPath = path.join(resolveToolPath('opencode', GLOBAL_PATHS.opencode.commands, true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.grok/skills/')) {
-            const rel = orphan.relPath.slice('.grok/skills/'.length);
-            fullPath = path.join(resolveToolPath('grok', GLOBAL_PATHS.grok.skills, true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.grok/commands/')) {
-            const rel = orphan.relPath.slice('.grok/commands/'.length);
-            fullPath = path.join(resolveToolPath('grok', GLOBAL_PATHS.grok.commands, true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.grok/agents/')) {
-            const rel = orphan.relPath.slice('.grok/agents/'.length);
-            fullPath = path.join(resolveToolPath('grok', GLOBAL_PATHS.grok.agents, true, homes, platform), rel);
-          } else if (orphan.relPath.startsWith('.grok/')) {
-            fullPath = resolveToolPath('grok', orphan.relPath, true, homes, platform);
-          } else if (orphan.relPath.startsWith('.cursor/')) {
-            fullPath = resolveToolPath('cursor', orphan.relPath, true, homes, platform);
-          } else {
-            // _arcwright/ module files — in ~/.arcwright/
-            fullPath = path.join(effectiveArwDir, orphan.relPath);
-          }
-        } else {
-          // Project install: _arcwright/ files use effectiveArwDir; others use projectRoot
-          if (orphan.relPath.startsWith('.agents/') || orphan.relPath.startsWith('.claude/') || orphan.relPath.startsWith('.opencode/') || orphan.relPath.startsWith('.grok/') || orphan.relPath.startsWith('.cursor/')) {
-            fullPath = path.join(projectRoot, orphan.relPath);
-          } else {
-            fullPath = path.join(effectiveArwDir, orphan.relPath);
-          }
-        }
-        if (await fs.pathExists(fullPath)) {
-          await fs.remove(fullPath);
-          await removeEmptyDirsUpward(fullPath);
+        if (await removeTrackedEntry(orphan, { isGlobal, projectRoot, effectiveArwDir, homes, platform })) {
           console.log(chalk.dim(`    ✗ ${orphan.relPath}`));
         }
       }
@@ -2007,6 +2053,7 @@ async function install(opts) {
     openrouterLaunchers: resolvedOpenrouterLaunchers, // legacy alias, kept for older readers
     channel: resolvedChannelFinal || resolvedChannel,  // release channel: 'stable' | 'next'
     hooks: resolvedHooks,  // seeded Claude Code hooks: 'none' | 'safe' | 'full'
+    managedSettings,
     gitignore: isGlobal ? null : resolvedGitignore,
     global: isGlobal,
     // Preserve existing migratedAt if present; add new one if migration ran this session
@@ -2152,6 +2199,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none', resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const stubEntries = [];
+  const managedSettings = [];
   const platformCfg = PLATFORMS[tool];
   if (!platformCfg) {
     console.log(chalk.yellow(`  ⚠ Unknown IDE platform: ${tool}`));
@@ -2289,14 +2337,26 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
   // the symlinks users commonly point at agents/commands/skills — see
   // listClaudeProfileDirs. Project installs write the one .claude/ in the repo.
   if (tool === 'claude-code') {
+    const recordSettingsOwnership = (profileDir, ownership) => {
+      if (!ownership?.hooks && !ownership?.defaultMode) return;
+      const base = isGlobal ? homes.linux : projectRoot;
+      managedSettings.push({
+        path: path.relative(base, profileDir).replace(/\\/g, '/') || '.',
+        hooks: ownership.hooks === true,
+        defaultMode: ownership.defaultMode === true,
+      });
+    };
     if (isGlobal) {
       const defaultProfile = resolveToolPath('claude-code', '.claude', true, homes, platform);
       const profileDirs = await listClaudeProfileDirs(path.dirname(defaultProfile));
       for (const profileDir of profileDirs) {
-        await writeClaudeSettings(profileDir, chalk, resolvedHooks, true);
+        const ownership = await writeClaudeSettings(profileDir, chalk, resolvedHooks, true);
+        recordSettingsOwnership(profileDir, ownership);
       }
     } else {
-      await writeClaudeSettings(path.join(projectRoot, '.claude'), chalk, resolvedHooks, false);
+      const profileDir = path.join(projectRoot, '.claude');
+      const ownership = await writeClaudeSettings(profileDir, chalk, resolvedHooks, false);
+      recordSettingsOwnership(profileDir, ownership);
     }
   }
 
@@ -2312,7 +2372,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     stubEntries.push(...entries);
   }
 
-  return stubEntries;
+  return { entries: stubEntries, managedSettings };
 }
 
 function getFileHeader(tool) {
@@ -2353,6 +2413,10 @@ const LEGACY_SKILL_LISTING_BUDGETS = [0.03];
  */
 async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGlobal = false) {
   const settingsPath = path.join(claudeDir, 'settings.json');
+  const ownership = {
+    hooks: hooksMode === 'safe' || hooksMode === 'full',
+    defaultMode: false,
+  };
   await fs.ensureDir(claudeDir);
 
   let settings = {};
@@ -2406,6 +2470,7 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
     settings.permissions = settings.permissions || {};
     if (!settings.permissions.defaultMode) {
       settings.permissions.defaultMode = 'acceptEdits';
+      ownership.defaultMode = true;
     }
   }
 
@@ -2420,6 +2485,7 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
   } else {
     console.log(chalk.gray(`  ○ ${label} already up to date`));
   }
+  return ownership;
 }
 
 /**
@@ -2447,6 +2513,20 @@ const INSTALLER_OWNED_HOOKS = ['guard-bash.js', 'guard-write.js', 'typecheck.js'
 // Stable substring of the SessionStart reminder written below. It carries no
 // filename, so it needs its own identifier; keep this in sync with the echo.
 const SESSION_START_SENTINEL = 'run the project-context scan';
+
+function isArcwrightHookEntry(h) {
+  if (!h || typeof h.command !== 'string') return false;
+  if (h.command.includes(SESSION_START_SENTINEL)) return true;
+  return (
+    h.command.includes('arcwright-hooks') &&
+    INSTALLER_OWNED_HOOKS.some((name) => h.command.includes(name))
+  );
+}
+
+function isArcwrightHookGroup(group) {
+  return Boolean(group && Array.isArray(group.hooks) && group.hooks.some(isArcwrightHookEntry));
+}
+
 async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal) {
   const srcDir = path.join(__dirname, 'templates', 'hooks');
   const destDir = path.join(claudeDir, 'arcwright-hooks');
@@ -2465,14 +2545,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal) {
   settings.hooks = settings.hooks || {};
 
   // True only for an entry this installer itself wrote — see OWNERSHIP above.
-  const isOurs = (h) => {
-    if (!h || typeof h.command !== 'string') return false;
-    if (h.command.includes(SESSION_START_SENTINEL)) return true;
-    return (
-      h.command.includes('arcwright-hooks') &&
-      INSTALLER_OWNED_HOOKS.some((name) => h.command.includes(name))
-    );
-  };
+  const isOurs = isArcwrightHookEntry;
 
   // For one event, drop our own previous entries then append fresh ones.
   // Foreign entries (ci-gates gates, project-specific guards) are left alone.
@@ -2803,7 +2876,8 @@ async function stripGitignoreBlock(projectRoot) {
  *   skillListingBudgetFraction === SKILL_LISTING_BUDGET (or a legacy default)
  *   fallbackModel === ['sonnet']
  */
-async function stripInstallerSettingsKeys(claudeDir) {
+async function stripInstallerSettingsKeys(claudeDir, options = {}) {
+  const { removeHooks = false, removeDefaultMode = false } = options;
   const settingsPath = path.join(claudeDir, 'settings.json');
   if (!await fs.pathExists(settingsPath)) return false;
   let settings;
@@ -2838,9 +2912,51 @@ async function stripInstallerSettingsKeys(claudeDir) {
     touched = true;
   }
 
+  if (removeHooks && settings.hooks && typeof settings.hooks === 'object') {
+    for (const [event, groups] of Object.entries(settings.hooks)) {
+      if (!Array.isArray(groups)) continue;
+      const kept = groups.filter((group) => !isArcwrightHookGroup(group));
+      if (kept.length === groups.length) continue;
+      touched = true;
+      if (kept.length > 0) settings.hooks[event] = kept;
+      else delete settings.hooks[event];
+    }
+    if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
+  }
+
+  if (removeDefaultMode && settings.permissions?.defaultMode === 'acceptEdits') {
+    delete settings.permissions.defaultMode;
+    touched = true;
+    if (Object.keys(settings.permissions).length === 0) delete settings.permissions;
+  }
+
   if (!touched) return false;
   await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
   return true;
+}
+
+async function removeArcwrightHookFiles(claudeDir) {
+  let removed = false;
+  for (const hookName of INSTALLER_OWNED_HOOKS) {
+    const hookPath = path.join(claudeDir, 'arcwright-hooks', hookName);
+    if (!await fs.pathExists(hookPath)) continue;
+    await fs.remove(hookPath);
+    removed = true;
+  }
+  return removed;
+}
+
+async function hasArcwrightHookSettings(claudeDir) {
+  const settingsPath = path.join(claudeDir, 'settings.json');
+  if (!await fs.pathExists(settingsPath)) return false;
+  try {
+    const settings = JSON.parse(await fs.readFile(settingsPath, 'utf8'));
+    return Object.values(settings.hooks || {}).some((groups) =>
+      Array.isArray(groups) && groups.some(isArcwrightHookGroup)
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -2868,6 +2984,11 @@ async function uninstall(opts = {}) {
   const chalk = (await import('chalk')).default;
   const platform = detectPlatform();
   const homes = getHomes(platform);
+  const manifestDir = isGlobal
+    ? path.join(homes.linux, '.arcwright')
+    : path.join(projectRoot, '_arcwright');
+  const manifest = await readManifest(manifestDir);
+  const trackedEntries = await readFilesManifest(manifestDir);
 
   console.log(chalk.bold(`\nUninstalling Arcwright (${isGlobal ? 'global' : 'project'}: ${projectRoot})\n`));
 
@@ -2890,13 +3011,31 @@ async function uninstall(opts = {}) {
     else console.log(chalk.gray('  ○ .gitignore (no Arcwright block)'));
   }
 
-  // 3. Strip installer-written settings.json keys.
-  const settingsBase = isGlobal
-    ? resolveToolPath('claude-code', '.claude', true, homes, platform)
-    : path.join(projectRoot, '.claude');
-  const settingsChanged = await stripInstallerSettingsKeys(settingsBase);
-  if (settingsChanged) console.log(chalk.green('  ✓ .claude/settings.json (installer keys removed)'));
-  else console.log(chalk.gray('  ○ .claude/settings.json (no installer keys to remove)'));
+  // 3. Strip installer-written settings.json keys, hooks, and permission mode.
+  // Global installs write settings to every Claude profile, not just the
+  // default ~/.claude directory. Hook groups are removed by ownership markers,
+  // so user and third-party hooks in the same settings file remain intact.
+  const settingsDirs = isGlobal
+    ? await listClaudeProfileDirs(homes.linux)
+    : [path.join(projectRoot, '.claude')];
+  const managedSettings = Array.isArray(manifest?.managedSettings) ? manifest.managedSettings : [];
+  const settingsBase = isGlobal ? homes.linux : projectRoot;
+  let settingsChanged = false;
+  let hookFilesRemoved = false;
+  for (const settingsDir of settingsDirs) {
+    const profilePath = path.relative(settingsBase, settingsDir).replace(/\\/g, '/') || '.';
+    const ownership = managedSettings.find((entry) => entry.path === profilePath);
+    const legacyOwnedHooks = !ownership && await hasArcwrightHookSettings(settingsDir);
+    if (await stripInstallerSettingsKeys(settingsDir, {
+      removeHooks: true,
+      removeDefaultMode: ownership?.defaultMode === true || legacyOwnedHooks,
+    })) {
+      settingsChanged = true;
+    }
+    if (await removeArcwrightHookFiles(settingsDir)) hookFilesRemoved = true;
+  }
+  if (settingsChanged || hookFilesRemoved) console.log(chalk.green('  ✓ Claude settings/hooks (installer state removed)'));
+  else console.log(chalk.gray('  ○ Claude settings/hooks (no installer state to remove)'));
 
   // 3b. Remove Arcwright-owned rule files that are whole files rather than a
   // managed block inside a user file. .cursor/rules/arcwright.mdc is generated
@@ -2918,14 +3057,13 @@ async function uninstall(opts = {}) {
   // (`cli.js`) is responsible for the interactive prompt and is expected
   // to call this function with `yes: true` only after the user confirms.
   // Idempotent: if there's no manifest, there's nothing to remove.
-  const manifestDir = isGlobal
-    ? path.join(homes.linux, '.arcwright')
-    : path.join(projectRoot, '_arcwright');
-  const manifest = await readManifest(manifestDir);
   if (!manifest) {
     console.log(chalk.gray('  ○ No manifest found — nothing to remove'));
   } else if (yes) {
     if (isGlobal) {
+      for (const entry of trackedEntries) {
+        await removeTrackedEntry(entry, { isGlobal, projectRoot, effectiveArwDir: manifestDir, homes, platform });
+      }
       if (await fs.pathExists(manifestDir)) {
         await fs.remove(manifestDir);
         console.log(chalk.green(`  ✓ ${manifestDir} (removed)`));
@@ -2944,6 +3082,11 @@ async function uninstall(opts = {}) {
       const installedModules = Array.isArray(manifest.modules) && manifest.modules.length
         ? manifest.modules
         : ['awm', 'awb', 'core', '_memory'];
+      const modulePrefixes = installedModules.map((mod) => `${mod}/`);
+      for (const entry of trackedEntries) {
+        if (modulePrefixes.some((prefix) => entry.relPath === prefix.slice(0, -1) || entry.relPath.startsWith(prefix))) continue;
+        await removeTrackedEntry(entry, { isGlobal, projectRoot, effectiveArwDir: manifestDir, homes, platform });
+      }
       for (const sub of installedModules) {
         const d = path.join(manifestDir, sub);
         if (await fs.pathExists(d)) await fs.remove(d);
@@ -2973,7 +3116,7 @@ module.exports = {
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
     writeClaudeSettings, stripInstallerSettingsKeys,
     buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
-    writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig, writeCursorConfig,
+    writeKiroConfig, writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig, writeCursorConfig,
     buildCursorRule, adaptCursorCommand, filterCommandNames,
     commandExists, ensureHermesCliInstalled, setupHermesModelSurface,
     PLATFORMS, getSupportedToolIds, getToolPromptOptions, parseToolIds,
