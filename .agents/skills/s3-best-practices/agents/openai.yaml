@@ -1,0 +1,7 @@
+interface:
+  display_name: "S3 Best Practices"
+  short_description: "Review secure, fast, durable S3 designs"
+  default_prompt: "Use $s3-best-practices to plan or review this S3 design for security, correctness, performance, cost, and recovery risk."
+
+policy:
+  allow_implicit_invocation: true

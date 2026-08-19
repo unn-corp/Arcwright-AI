@@ -489,6 +489,51 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.permissions.defaultMode).toBe('acceptEdits');
     expect(s.hooks.PreToolUse.some((g) => g.hooks.some((h) => h.command.includes('arcwright-hooks')))).toBe(true);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'amplify-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'amplify-review.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'cloudfront-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'cloudfront-review.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 's3-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 's3-review.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'aurora-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'aurora-review.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'ses-sns-smtp-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'ses-sns-smtp-review.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'eventbridge-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'eventbridge-review.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'cognito-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'cognito-review.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'lambda-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'lambda-review.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'step-functions-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'step-functions-review.js'))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('amplify-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('amplify-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('amplify-review.js')))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('cloudfront-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('cloudfront-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('cloudfront-review.js')))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('s3-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('s3-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('s3-review.js')))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('aurora-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('aurora-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('aurora-review.js')))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('ses-sns-smtp-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('ses-sns-smtp-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('ses-sns-smtp-review.js')))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('eventbridge-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('eventbridge-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('eventbridge-review.js')))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('cognito-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('cognito-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('cognito-review.js')))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('lambda-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('lambda-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('lambda-review.js')))).toBe(true);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('step-functions-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('step-functions-context.js')))).toBe(true);
+    expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('step-functions-review.js')))).toBe(true);
   });
   it('unnamed MCP hooks work independently of the optional guard-hook mode', async () => {
     await writeClaudeSettings(dir, chalk, 'none', false, true);
@@ -562,8 +607,27 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(count('guard-write.js')).toBe(1);
     expect(count('typecheck.js')).toBe(1);
     expect(count('dynamodb-context.js')).toBe(1);
+    expect(count('amplify-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('amplify-review.js')).toBe(1);
+    expect(count('cloudfront-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('cloudfront-review.js')).toBe(1);
+    expect(count('s3-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('s3-review.js')).toBe(1);
+    expect(count('aurora-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('aurora-review.js')).toBe(1);
+    expect(count('ses-sns-smtp-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('ses-sns-smtp-review.js')).toBe(1);
+    expect(count('eventbridge-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('eventbridge-review.js')).toBe(1);
+    expect(count('cognito-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('cognito-review.js')).toBe(1);
+    expect(count('lambda-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('lambda-review.js')).toBe(1);
+    expect(count('step-functions-context.js')).toBe(2); // SessionStart + UserPromptSubmit
+    expect(count('step-functions-review.js')).toBe(1);
     expect(count('run the project-context scan')).toBe(1);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'dynamodb-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'amplify-review.js'))).toBe(true);
     expect(s.hooks.UserPromptSubmit.some((group) => (
       group.hooks.some((hook) => hook.command?.includes('dynamodb-context.js'))
     ))).toBe(true);
@@ -581,6 +645,24 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.hooks.UserPromptSubmit?.some((group) => (
       group.hooks.some((hook) => hook.command?.includes('dynamodb-context.js'))
     ))).not.toBe(true);
+    expect(JSON.stringify(s.hooks || {})).not.toContain('amplify-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('amplify-review.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('cloudfront-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('cloudfront-review.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('s3-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('s3-review.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('aurora-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('aurora-review.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('ses-sns-smtp-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('ses-sns-smtp-review.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('eventbridge-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('eventbridge-review.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('cognito-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('cognito-review.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('lambda-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('lambda-review.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('step-functions-context.js');
+    expect(JSON.stringify(s.hooks || {})).not.toContain('step-functions-review.js');
   });
   it('stripInstallerSettingsKeys removes only installer-default values', async () => {
     await writeClaudeSettings(dir, chalk, 'none', false);

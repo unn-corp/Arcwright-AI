@@ -125,6 +125,15 @@ catching zero errors. Detect that shape and use build mode (`tsc -b --noEmit`, T
 | SubagentStop verify | `goal-backward-verify`, `review-orchestrator` |
 | SessionStart context | `project-context` |
 | UserPromptSubmit DynamoDB/AWS data routing | `dynamodb-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse Amplify routing and advisory review | `amplify-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse CloudFront/CDN routing and advisory review | `cloudfront-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse S3/storage routing and advisory review | `s3-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse Aurora database routing and advisory review | `aurora-db-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse SES/SNS/SMTP messaging routing and advisory review | `ses-sns-smtp-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse EventBridge routing and advisory review | `eventbridge-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse Cognito/Auth routing and advisory review | `cognito-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse Lambda/runtime routing and advisory review | `lambda-best-practices` |
+| SessionStart/UserPromptSubmit/PostToolUse Step Functions/workflow routing and advisory review | `step-functions-best-practices` |
 
 ## Seeding hooks with the installer
 
@@ -138,9 +147,11 @@ npx @arcwright-ai/agent-orchestration --hooks full   # + tsc/pyright typecheck o
 npx @arcwright-ai/agent-orchestration --hooks none   # conservative: ask-first, no hooks
 ```
 
-`safe` and `full` also seed the read-only `UserPromptSubmit` DynamoDB/AWS router. It
-injects review guidance only when a prompt matches DynamoDB or AWS data-persistence
-terms; it never contacts AWS or performs database mutations.
+`safe` and `full` also seed read-only domain routers for DynamoDB, Amplify, CloudFront,
+S3, Aurora, SES/SNS/SMTP, EventBridge, Cognito/Auth, Lambda, and Step Functions. They inject review guidance only when a prompt or repository matches
+the domain; the adapters never contact AWS, read credentials, mutate resources, run
+SQL, or block an edit. The post-edit adapters add concise advisory checks for
+cache/security/data-protection/database risks after relevant `Write|Edit` operations.
 
 - **safe (default, autonomous)** — sets `permissions.defaultMode: "acceptEdits"` so agents
   apply edits without stopping to ask, with PreToolUse(Bash) destructive-command guard,

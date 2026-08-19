@@ -1,0 +1,7 @@
+interface:
+  display_name: "Aurora Database Best Practices"
+  short_description: "Review secure, fast Aurora databases"
+  default_prompt: "Use $aurora-db-best-practices to plan or review this Aurora database for performance, availability, security, cost, migration risk, and multi-tenant SaaS isolation."
+
+policy:
+  allow_implicit_invocation: true

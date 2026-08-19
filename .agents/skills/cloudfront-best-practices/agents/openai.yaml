@@ -1,0 +1,7 @@
+interface:
+  display_name: "CloudFront Best Practices"
+  short_description: "Review secure, fast CloudFront delivery"
+  default_prompt: "Use $cloudfront-best-practices to plan or review this CloudFront/CDN design for cache correctness, security, UI performance, operations, and cost."
+
+policy:
+  allow_implicit_invocation: true

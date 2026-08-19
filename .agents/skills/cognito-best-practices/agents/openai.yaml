@@ -1,0 +1,7 @@
+interface:
+  display_name: "Cognito Best Practices"
+  short_description: "Secure, fast Cognito authentication and tenancy"
+  default_prompt: "Use $cognito-best-practices to plan or review Cognito and Amplify Auth for secure token handling, MFA/federation, tenant isolation, AWS credentials, runtime performance, and R&D separation."
+
+policy:
+  allow_implicit_invocation: true

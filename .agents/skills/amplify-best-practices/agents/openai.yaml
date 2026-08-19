@@ -1,0 +1,7 @@
+interface:
+  display_name: "Amplify Best Practices"
+  short_description: "Plan and review fast Amplify deployments and UIs"
+  default_prompt: "Use $amplify-best-practices to plan or review this Amplify codebase for deployment speed, runtime latency, and UI performance."
+
+policy:
+  allow_implicit_invocation: true

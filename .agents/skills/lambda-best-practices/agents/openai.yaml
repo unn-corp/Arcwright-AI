@@ -1,0 +1,7 @@
+interface:
+  display_name: "Lambda Best Practices"
+  short_description: "Fast, reliable, secure Lambda runtimes"
+  default_prompt: "Use $lambda-best-practices to plan or review Lambda handlers and event sources for latency, concurrency, idempotency, retries, IAM, tenant isolation, deployment safety, and UI/API performance."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "SES, SNS, and SMTP Best Practices"
+  short_description: "Design reliable, secure AWS email and messaging"
+  default_prompt: "Use $ses-sns-smtp-best-practices to plan or review this SES, SNS, or SMTP integration for deliverability, reliability, security, tenant isolation, and operational performance."
+
+policy:
+  allow_implicit_invocation: true

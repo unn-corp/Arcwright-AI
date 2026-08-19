@@ -1,0 +1,7 @@
+interface:
+  display_name: "Step Functions Best Practices"
+  short_description: "Reliable, efficient workflow orchestration"
+  default_prompt: "Use $step-functions-best-practices to plan or review AWS Step Functions for workflow semantics, state data, retries, idempotency, concurrency, IAM, multi-tenancy, deployment safety, and UI performance."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "EventBridge Best Practices"
+  short_description: "Design reliable, secure event routing"
+  default_prompt: "Use $eventbridge-best-practices to plan or review this EventBridge architecture for event contracts, routing, retries, recovery, security, tenant isolation, and operational performance."
+
+policy:
+  allow_implicit_invocation: true
