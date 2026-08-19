@@ -170,4 +170,15 @@ describe('writeGrokConfig — global install', () => {
     const agentEntries = entries.filter(e => e.relPath.startsWith('.grok/agents/'));
     expect(agentEntries.length).toBeGreaterThan(0);
   });
+
+  it('seeds native Grok lifecycle hooks for the Unnamed MCP', async () => {
+    const entries = await writeGrokConfig(projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true);
+    const hooksPath = path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-mcp.json');
+    const hooks = await fs.readJson(hooksPath);
+
+    expect(fs.existsSync(path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
+    expect(Object.keys(hooks.hooks)).toEqual(expect.arrayContaining(['SessionStart', 'UserPromptSubmit', 'Stop']));
+    expect(JSON.stringify(hooks)).toContain('--harness=grok');
+    expect(entries.some((entry) => entry.relPath === '.grok/hooks/unnamed-dev-mcp.json')).toBe(true);
+  });
 });

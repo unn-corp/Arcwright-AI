@@ -74,6 +74,50 @@ describe('install() — fresh project install', () => {
     expect(settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS).toBe('1');
   }, 60000);
 
+  it('gates the Unnamed MCP skill and hooks behind --unnamed-pm', async () => {
+    await install(baseOpts());
+    expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'unnamed-dev-mcp', 'SKILL.md'))).toBe(false);
+
+    execSync('git init -q && git remote add origin https://github.com/example/project.git', { cwd: projectDir, stdio: 'pipe' });
+    await install(baseOpts({ action: 'update', tools: 'claude-code,cursor,kiro,codex,opencode,grok', unnamedPm: true }));
+    const manifest = await readManifest(path.join(projectDir, '_arcwright'));
+    const settings = await fs.readJson(path.join(projectDir, '.claude', 'settings.json'));
+    const cursorHooks = await fs.readJson(path.join(projectDir, '.cursor', 'hooks.json'));
+    const codexHooks = await fs.readJson(path.join(projectDir, '.codex', 'hooks.json'));
+    const kiroHooks = await fs.readJson(path.join(projectDir, '.kiro', 'hooks', 'unnamed-dev-mcp.json'));
+    const grokHooks = await fs.readJson(path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-mcp.json'));
+
+    expect(manifest.unnamedPm).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'unnamed-dev-mcp', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'commands', 'unnamed-dev-mcp.md'))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.cursor', 'commands', 'unnamed-dev-mcp.md'))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.codex', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.kiro', 'agents', 'unnamed-dev-mcp.json'))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
+    expect(settings.hooks.UserPromptSubmit).toBeDefined();
+    expect(settings.hooks.UserPromptSubmit.some((group) => group.hooks.some((hook) => hook.type === 'mcp_tool' && hook.tool === 'get_project_context'))).toBe(true);
+    expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('Unnamed Development MCP trigger');
+    expect(fs.readFileSync(path.join(projectDir, '.cursor', 'rules', 'arcwright.mdc'), 'utf8')).toContain('Perform the MCP calls; do not merely acknowledge this rule.');
+    expect(cursorHooks.hooks.sessionStart).toHaveLength(1);
+    expect(codexHooks.hooks.UserPromptSubmit).toHaveLength(1);
+    expect(kiroHooks.hooks.some((hook) => hook.trigger === 'UserPromptSubmit')).toBe(true);
+    expect(grokHooks.hooks.UserPromptSubmit).toHaveLength(1);
+    expect(fs.existsSync(path.join(projectDir, '.cursor', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
+
+    await uninstall({ directory: projectDir, yes: true });
+    const uninstalledSettings = await fs.readJson(path.join(projectDir, '.claude', 'settings.json'));
+    const uninstalledCursorHooks = await fs.readJson(path.join(projectDir, '.cursor', 'hooks.json'));
+    expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'unnamed-dev-mcp', 'SKILL.md'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.codex', 'hooks', 'unnamed-dev-context.js'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.codex', 'hooks.json'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.kiro', 'hooks', 'unnamed-dev-mcp.json'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-context.js'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-mcp.json'))).toBe(false);
+    expect(JSON.stringify(uninstalledSettings.hooks || {})).not.toContain('unnamed-dev-context.js');
+    expect(JSON.stringify(uninstalledCursorHooks.hooks || {})).not.toContain('unnamed-dev-context.js');
+    expect(fs.existsSync(path.join(projectDir, '.cursor', 'hooks', 'unnamed-dev-context.js'))).toBe(false);
+  }, 90000);
+
   it('writes a managed Arcwright block into .gitignore (output-only default)', async () => {
     await install(baseOpts());
     const gi = await fs.readFile(path.join(projectDir, '.gitignore'), 'utf8');

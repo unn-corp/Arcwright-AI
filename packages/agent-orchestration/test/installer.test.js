@@ -490,6 +490,41 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.hooks.PreToolUse.some((g) => g.hooks.some((h) => h.command.includes('arcwright-hooks')))).toBe(true);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(true);
   });
+  it('unnamed MCP hooks work independently of the optional guard-hook mode', async () => {
+    await writeClaudeSettings(dir, chalk, 'none', false, true);
+    await writeClaudeSettings(dir, chalk, 'none', false, true);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const count = (name) => JSON.stringify(s.hooks).split(name).length - 1;
+
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'unnamed-dev-context.js'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(false);
+    expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('unnamed-dev-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('unnamed-dev-context.js')))).toBe(true);
+    expect(s.hooks.Stop.some((g) => g.hooks.some((h) => h.command.includes('unnamed-dev-context.js')))).toBe(true);
+    expect(count('unnamed-dev-context.js')).toBe(3);
+  });
+  it('adds a native project-context MCP trigger for project-scoped Claude installs', async () => {
+    execSync('git init -q && git remote add origin https://github.com/example/project.git', { cwd: dir, stdio: 'pipe' });
+    await writeClaudeSettings(dir, chalk, 'none', false, true, dir);
+    await writeClaudeSettings(dir, chalk, 'none', false, true, dir);
+
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const mcpHooks = Object.values(s.hooks)
+      .flatMap((groups) => groups)
+      .flatMap((group) => group.hooks)
+      .filter((hook) => hook.type === 'mcp_tool');
+
+    expect(mcpHooks).toHaveLength(2);
+    expect(mcpHooks.every((hook) => hook.server === 'unnamed-development')).toBe(true);
+    expect(mcpHooks.every((hook) => hook.tool === 'get_project_context')).toBe(true);
+    expect(mcpHooks.every((hook) => hook.input.repoUrl === 'https://github.com/example/project.git')).toBe(true);
+
+    execSync('git remote set-url origin https://user:secret@example.com/project.git', { cwd: dir, stdio: 'pipe' });
+    await writeClaudeSettings(dir, chalk, 'none', false, true, dir);
+    const sanitized = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    expect(JSON.stringify(sanitized)).not.toContain('secret');
+    expect(JSON.stringify(sanitized)).toContain('https://example.com/project.git');
+  });
   it('does not delete foreign hooks that share the arcwright-hooks directory', async () => {
     // The ci-gates skill installs its gates into the SAME .claude/arcwright-hooks/
     // folder. Ownership must be decided by which script an entry invokes, not by

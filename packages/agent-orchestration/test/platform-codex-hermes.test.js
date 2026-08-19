@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
+import yaml from 'yaml';
 import installer from '../lib/installer.js';
 
 const { writeCodexConfig, writeHermesConfig, sha256 } = installer._internal;
@@ -125,6 +126,32 @@ describe('writeCodexConfig — global install', () => {
   });
 });
 
+describe('writeCodexConfig — native Unnamed MCP hooks', () => {
+  it('seeds idempotent lifecycle hooks and preserves unrelated handlers', async () => {
+    const hooksPath = path.join(projectDir, '.codex', 'hooks.json');
+    fs.ensureDirSync(path.dirname(hooksPath));
+    fs.writeJsonSync(hooksPath, {
+      hooks: {
+        UserPromptSubmit: [{ hooks: [{ type: 'command', command: 'echo user-hook' }] }],
+      },
+    }, { spaces: 2 });
+
+    const args = [projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true];
+    const first = await writeCodexConfig(...args);
+    const second = await writeCodexConfig(...args);
+    const hooks = await fs.readJson(hooksPath);
+    const userPromptGroups = hooks.hooks.UserPromptSubmit;
+
+    expect(fs.existsSync(path.join(projectDir, '.codex', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
+    expect(userPromptGroups.filter((group) => group.hooks.some((h) => h.command === 'echo user-hook'))).toHaveLength(1);
+    expect(userPromptGroups.filter((group) => group.hooks.some((h) => h.command?.includes('unnamed-dev-context.js')))).toHaveLength(1);
+    expect(hooks.hooks.SessionStart).toHaveLength(1);
+    expect(hooks.hooks.Stop).toHaveLength(1);
+    expect(first.some((entry) => entry.relPath === '.codex/hooks.json')).toBe(true);
+    expect(second.some((entry) => entry.relPath === '.codex/hooks.json')).toBe(true);
+  });
+});
+
 describe('writeHermesConfig — project install', () => {
   it('writes AGENTS.md and returns no manifest entries (no project skills dir)', async () => {
     const entries = await writeHermesConfig(projectDir, ['awm'], chalk, false, homes(), platform);
@@ -142,6 +169,11 @@ describe('writeHermesConfig — project install', () => {
     const second = fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8');
     expect(second).toBe(first);
   });
+
+  it('adds the MCP action trigger to the portable project instructions', async () => {
+    await writeHermesConfig(projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true);
+    expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('Perform the MCP calls; do not merely acknowledge this rule.');
+  });
 });
 
 describe('writeHermesConfig — global install', () => {
@@ -155,6 +187,15 @@ describe('writeHermesConfig — global install', () => {
     await writeHermesConfig(projectDir, ['awm'], chalk, true, homes(), platform);
     expect(fs.existsSync(path.join(homeDir, 'AGENTS.md'))).toBe(false);
     expect(fs.existsSync(path.join(homeDir, '.hermes', 'AGENTS.md'))).toBe(false);
+  });
+
+  it('installs the native pre_llm_call MCP context hook when enabled', async () => {
+    const entries = await writeHermesConfig(projectDir, ['awm'], chalk, true, homes(), platform, true, false, false, true);
+    const config = yaml.parse(await fs.readFile(path.join(homeDir, '.hermes', 'config.yaml'), 'utf8'));
+    expect(config.hooks.pre_llm_call).toHaveLength(1);
+    expect(config.hooks.pre_llm_call[0].command).toContain('--harness=hermes');
+    expect(fs.existsSync(path.join(homeDir, '.hermes', 'agent-hooks', 'unnamed-dev-context.js'))).toBe(true);
+    expect(entries.some((entry) => entry.relPath === '.hermes/agent-hooks/unnamed-dev-context.js')).toBe(true);
   });
 
   it('copies skills to ~/.hermes/skills/ and returns matching manifest entries', async () => {

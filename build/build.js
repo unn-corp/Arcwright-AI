@@ -125,6 +125,7 @@ const SHIPPED_COMMANDS = [
   /^strands\.md$/,
   /^aws-infra\.md$/,
   /^unnamed-pm\.md$/,
+  /^unnamed-dev-mcp\.md$/,
   /^react\.md$/,
   /^typescript\.md$/,
   /^nextjs\.md$/,
@@ -638,6 +639,7 @@ function bundleKiroAgents() {
     'strands':            ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'aws-infra':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_fetch'],
     'unnamed-pm':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
+    'unnamed-dev-mcp':    ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'herdr':              ['fs_read', 'fs_write', 'execute_bash'],
     'edge-case-hunter':   ['fs_read', 'execute_bash', 'grep', 'glob'],
     'gsudo':              ['execute_bash'],
@@ -792,6 +794,13 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
           availableAgents: SPECIALIST_AGENTS,
         },
       };
+    }
+
+    // Kiro agent actions can call MCP tools only when the generated agent opts
+    // into the project's mcp.json. The two Unnamed agents are the only agents
+    // that require this capability; keep every other generated agent scoped.
+    if (name === 'unnamed-dev-mcp' || name === 'unnamed-pm') {
+      agent.includeMcpJson = true;
     }
 
     writeFile(path.join(agentsDest, `${name}.json`), JSON.stringify(agent, null, 2) + '\n');
@@ -1221,7 +1230,7 @@ function verifyNoLeaks() {
 // whose skill is absent — those stay reachable via their module command (/dotnet
 // etc.) and Hermes/Codex native invocation.
 // team-* included: they drop out under --no-teams, so their launchers cannot ship unconditionally.
-const MODULE_GATED_SKILL = /^(team-|docker-type-check$|dotnet-|electron-|tauri-|strands-|aws-serverless-cdk$|unnamed-pm-sync$)/;
+const MODULE_GATED_SKILL = /^(team-|docker-type-check$|dotnet-|electron-|tauri-|strands-|aws-serverless-cdk$|unnamed-pm-sync$|unnamed-dev-mcp$)/;
 
 function bundleSkillCommands() {
   console.log('🎯  Generating per-skill slash-command launchers → src/.claude/commands/ + src/.kiro/agents/');

@@ -54,6 +54,23 @@ describe('writeCursorConfig — project install', () => {
     expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('# User instructions');
     expect(fs.existsSync(path.join(projectDir, '.cursor', 'commands', 'team.md'))).toBe(false);
   });
+
+  it('installs idempotent Unnamed MCP lifecycle hooks when the module is enabled', async () => {
+    const args = [projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true];
+    const first = await writeCursorConfig(...args);
+    const second = await writeCursorConfig(...args);
+    const hooks = await fs.readJson(path.join(projectDir, '.cursor', 'hooks.json'));
+    const script = path.join(projectDir, '.cursor', 'hooks', 'unnamed-dev-context.js');
+
+    expect(fs.existsSync(script)).toBe(true);
+    expect(hooks.version).toBe(1);
+    expect(hooks.hooks.sessionStart).toHaveLength(1);
+    expect(hooks.hooks.beforeSubmitPrompt).toHaveLength(1);
+    expect(hooks.hooks.afterFileEdit).toHaveLength(1);
+    expect(hooks.hooks.stop).toHaveLength(1);
+    expect(first.filter((entry) => entry.relPath === '.cursor/hooks.json')).toHaveLength(1);
+    expect(second.filter((entry) => entry.relPath === '.cursor/hooks.json')).toHaveLength(1);
+  });
 });
 
 describe('writeCursorConfig — global install', () => {

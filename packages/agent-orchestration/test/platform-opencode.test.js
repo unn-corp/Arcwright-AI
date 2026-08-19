@@ -62,6 +62,13 @@ describe('writeOpenCodeConfig — project install', () => {
     expect((second.match(/<!-- arcwright-agent-start -->/g) || []).length).toBe(1);
   });
 
+  it('adds the MCP action trigger to the portable project instructions', async () => {
+    await writeOpenCodeConfig(projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true);
+    expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('Perform the MCP calls; do not merely acknowledge this rule.');
+    expect(fs.existsSync(path.join(projectDir, '.opencode', 'plugins', 'unnamed-dev-mcp.js'))).toBe(true);
+    expect(fs.readFileSync(path.join(projectDir, '.opencode', 'plugins', 'unnamed-dev-mcp.js'), 'utf8')).toContain('experimental.chat.system.transform');
+  });
+
   it('preserves user content outside the managed block', async () => {
     fs.writeFileSync(path.join(projectDir, 'AGENTS.md'), '# My custom instructions\n\nDo the thing.\n');
     await writeOpenCodeConfig(projectDir, ['awm'], chalk, false, homes(), platform);
