@@ -714,6 +714,7 @@ describe('rules-entry builders', () => {
     expect(out).toMatch(/## Arcwright/);
     expect(out).toMatch(/awm, core/);
     expect(out).toMatch(/npx @arcwright-ai\/agent-orchestration/);
+    expect(out).toMatch(/pending tracker payload/);
   });
   it('buildTmuxEntry and buildProactiveEntry return non-empty strings', () => {
     expect(typeof buildTmuxEntry()).toBe('string');

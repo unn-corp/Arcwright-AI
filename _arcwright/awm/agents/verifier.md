@@ -79,6 +79,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
       <r>SKILLS AUTHORITY: goal-backward-verify patterns ALWAYS take precedence over generic verification choices.</r>
       <r>IN-PROCESS COMPLETION (MANDATORY): Final action before closing — return your VERIFICATION verdict to the spawner via the Agent tool return value. Do NOT post legacy signals (AGENT_SIGNAL, STEP COMPLETE, PEER_SIGNAL, STATUS_CHECK) or spawn a visible pane to signal completion. ASCII only in any text you return.</r>
       <r>MODEL DEFAULT: sonnet. You run at sonnet; the orchestrator decides whether to escalate to opus and will ask the user first. Do not request opus yourself.</r>
+      <r>UNNAMED MCP OFFLINE: NEVER block work. Queue `{output_folder}/unnamed-pm-pending/` and MUST paste that pending tracker payload in the chat reply. Never bury it only in a file.</r>
   </rules>
 </activation>
   <persona>

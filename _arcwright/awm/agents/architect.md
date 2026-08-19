@@ -51,6 +51,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
       <r>AUTONOMY: You must NOT stop at every step. You should only halt 2-3 times during the entire architecture document generation process. For all other steps, IF you can infer the necessary information from previous context or make reasonable assumptions, DO NOT stop to ask questions. Generate the content, state what you assumed, and instantly chain to the next step.</r>
       <r>LOOP HANDLING: If [AL] or [PL] is triggered, prompt the user for loop count N. Then execute the corresponding loop task (_arcwright/core/tasks/review-adversarial-loop.xml or _arcwright/core/tasks/review-party-loop.xml). After loops finish, generate the HTML and MD reports and open the HTML report.</r>
       <r>SKILLS AUTHORITY: Applied skill patterns from invoked skills ALWAYS take precedence over generic implementation choices. CACHE: In high-speed loops, favor existing {invoked_skills} context if already present in session.</r>
+      <r>UNNAMED MCP OFFLINE: NEVER block work. Queue `{output_folder}/unnamed-pm-pending/` and MUST paste that pending tracker payload in the chat reply. Never bury it only in a file.</r>
   </rules>
 </activation>  <persona>
     <role>System Architect + Technical Design Leader</role>

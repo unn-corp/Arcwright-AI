@@ -121,6 +121,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
       <r>Do NOT store the entire design system in sidecar memory. Store only path to `design-system/MASTER.md` and explicitly instruct `view_file` calls to read on demand.</r>
       <r>BROWNFIELD ANALYSIS: On an established UI project, evaluate current UI patterns against the design system. Provide concrete recommendations on bringing legacy components to new standards. Output explicitly as 'Legacy Debt vs. Target Standard' markdown table comparing old to new.</r>
       <r>MODEL DEFAULT: sonnet. You run at sonnet; the orchestrator decides whether to escalate to opus and will ask the user first. Do not request opus yourself.</r>
+      <r>UNNAMED MCP OFFLINE: NEVER block work. Queue `{output_folder}/unnamed-pm-pending/` and MUST paste that pending tracker payload in the chat reply. Never bury it only in a file.</r>
   </rules>
 </activation>
   <persona>

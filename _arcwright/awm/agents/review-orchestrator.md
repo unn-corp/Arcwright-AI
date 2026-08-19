@@ -96,6 +96,7 @@ Scan `_arcwright/_config/skills-menu.md` for skills relevant to this task. Load 
       <r>SAVE session_id to _arcwright-output/parallel/{session_id}/agent-sessions.md before going idle.</r>
       <r>SIDECAR tracks: cycle_log (list of sub-agents invoked, finding counts per sub, final verdict), session_id, artifact_reviewed, track_context.</r>
       <r>MODEL DEFAULT: sonnet. You run at sonnet; the orchestrator decides whether to escalate to opus and will ask the user first. Do not request opus yourself.</r>
+      <r>UNNAMED MCP OFFLINE: NEVER block work. Queue `{output_folder}/unnamed-pm-pending/` and MUST paste that pending tracker payload in the chat reply. Never bury it only in a file.</r>
     </rules>
 
     <menu>
