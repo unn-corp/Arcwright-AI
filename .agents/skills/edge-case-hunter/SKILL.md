@@ -39,26 +39,33 @@ Revisit every edge class from Step 2 (missing else/default, null/empty inputs, o
 Ignore pure renames and whitespace. For each removed/replaced chunk, ask: did it carry behavior or a contract that the change neither re-established nor intentionally retired? Add a finding for any resulting regression, orphaned reference, or newly-dead code. Skip anything already covered above. Deletion findings add `kind: "deletion"` and a `confidence` of high/medium/low (these are inferences, rate them). For a deletion finding, the four fields read as: `location` = the removed item, `trigger_condition` = the behavior/contract it enforced, `guard_snippet` = where/how to re-establish it, `potential_consequence` = the regression or orphan.
 
 ### Step 5 — Present findings
-Emit all findings as a single JSON array, exactly the Output Format below. No extra text, no markdown wrapping.
+Emit a concise, human-readable Markdown report using the Output Format below. Do not
+emit XML, JSON envelopes, tool-call payloads, or agent-internal markup. Do not wrap
+the report in a code fence or add an introduction/conclusion.
 
 ## Output format
 
-```json
-[{
-  "location": "file:start-end (or file:line, or file:hunk when exact line unavailable)",
-  "trigger_condition": "one-line description (max 15 words)",
-  "guard_snippet": "minimal code sketch that closes the gap (single-line, escaped, no raw newlines)",
-  "potential_consequence": "what could actually go wrong (max 15 words)"
-}]
-```
+### Unhandled edge cases
 
-An empty array `[]` is valid when nothing is unhandled. Deletion findings go in the same array with the two extra fields.
+1. **Location:** `file:start-end` (or `file:line` / `file:hunk` when exact lines are unavailable)
+   **Trigger:** One-line description, maximum 15 words.
+   **Guard:** `minimal code sketch that closes the gap`
+   **Consequence:** What could actually go wrong, maximum 15 words.
+
+For deletion findings, add these two lines after **Location**:
+
+   **Kind:** deletion
+   **Confidence:** high | medium | low
+
+If nothing is unhandled, output exactly:
+
+No unhandled edge cases found.
 
 ## Halt conditions
 
 - Empty or undecodable content: return
-  `[{"location":"N/A","trigger_condition":"Input empty or undecodable","guard_snippet":"Provide valid content to review","potential_consequence":"Review skipped — no analysis performed"}]`
-  and stop.
+  `Input empty or undecodable — provide valid content to review. Review skipped.`
+  as a single readable line and stop.
 
 ## See also
 
