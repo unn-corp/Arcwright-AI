@@ -124,6 +124,7 @@ catching zero errors. Detect that shape and use build mode (`tsc -b --noEmit`, T
 | Stop handoff | `session-handoff` |
 | SubagentStop verify | `goal-backward-verify`, `review-orchestrator` |
 | SessionStart context | `project-context` |
+| UserPromptSubmit DynamoDB/AWS data routing | `dynamodb-best-practices` |
 
 ## Seeding hooks with the installer
 
@@ -136,6 +137,10 @@ npx @arcwright-ai/agent-orchestration --hooks safe   # autonomous + guards (defa
 npx @arcwright-ai/agent-orchestration --hooks full   # + tsc/pyright typecheck on edits
 npx @arcwright-ai/agent-orchestration --hooks none   # conservative: ask-first, no hooks
 ```
+
+`safe` and `full` also seed the read-only `UserPromptSubmit` DynamoDB/AWS router. It
+injects review guidance only when a prompt matches DynamoDB or AWS data-persistence
+terms; it never contacts AWS or performs database mutations.
 
 - **safe (default, autonomous)** — sets `permissions.defaultMode: "acceptEdits"` so agents
   apply edits without stopping to ask, with PreToolUse(Bash) destructive-command guard,

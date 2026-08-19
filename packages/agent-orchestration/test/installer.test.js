@@ -561,13 +561,26 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(count('guard-bash.js')).toBe(1);
     expect(count('guard-write.js')).toBe(1);
     expect(count('typecheck.js')).toBe(1);
+    expect(count('dynamodb-context.js')).toBe(1);
     expect(count('run the project-context scan')).toBe(1);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'dynamodb-context.js'))).toBe(true);
+    expect(s.hooks.UserPromptSubmit.some((group) => (
+      group.hooks.some((hook) => hook.command?.includes('dynamodb-context.js'))
+    ))).toBe(true);
   });
   it('full hooks mode adds the PostToolUse typecheck entry', async () => {
     await writeClaudeSettings(dir, chalk, 'full', false);
     const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
     expect(s.hooks.PostToolUse.some((g) => g.hooks.some((h) => h.command.includes('typecheck.js')))).toBe(true);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'typecheck.js'))).toBe(true);
+  });
+  it('removes the DynamoDB router when hooks are disabled', async () => {
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+    await writeClaudeSettings(dir, chalk, 'none', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    expect(s.hooks.UserPromptSubmit?.some((group) => (
+      group.hooks.some((hook) => hook.command?.includes('dynamodb-context.js'))
+    ))).not.toBe(true);
   });
   it('stripInstallerSettingsKeys removes only installer-default values', async () => {
     await writeClaudeSettings(dir, chalk, 'none', false);
