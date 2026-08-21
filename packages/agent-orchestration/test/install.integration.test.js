@@ -162,6 +162,23 @@ describe('install() — fresh project install', () => {
     expect(cfg).not.toMatch(/_arcwright-output/);
   }, 60000);
 
+  it('personalizes optional module configs with the selected user and output folder', async () => {
+    await install(baseOpts({
+      awsInfra: true,
+      unnamedPm: true,
+      userName: 'Configured Agent',
+      outputFolder: '.arcout',
+    }));
+
+    for (const mod of ['aws-infra', 'unnamed-pm']) {
+      const cfg = await fs.readFile(path.join(projectDir, '_arcwright', mod, 'config.yaml'), 'utf8');
+      expect(cfg).toMatch(/^user_name: Configured Agent$/m);
+      expect(cfg).toMatch(/^output_folder:.*\.arcout/m);
+      expect(cfg).not.toMatch(/Unnamed Developer/);
+      expect(cfg).not.toMatch(/_arcwright-output/);
+    }
+  }, 60000);
+
   it('uninstall leaves no Arcwright content behind', async () => {
     await install(baseOpts({ tools: 'cursor,codex', awsInfra: true }));
 
@@ -278,6 +295,21 @@ describe('install() — update / idempotency', () => {
     expect(fs.existsSync(path.join(projectDir, '_arcwright', 'awb'))).toBe(true);
   }, 90000);
 
+  it('update --yes preserves the custom output folder for new configs and uninstall', async () => {
+    await install(baseOpts({ outputFolder: '.arcout' }));
+    expect(fs.existsSync(path.join(projectDir, '.arcout'))).toBe(true);
+    expect(await fs.readFile(path.join(projectDir, '.gitignore'), 'utf8')).toContain('.arcout/');
+    await install(baseOpts({ action: 'update', modules: 'awm,awb,core' }));
+
+    const manifest = await readManifest(path.join(projectDir, '_arcwright'));
+    expect(manifest.outputFolder).toBe('.arcout');
+    const awbConfig = await fs.readFile(path.join(projectDir, '_arcwright', 'awb', 'config.yaml'), 'utf8');
+    expect(awbConfig).toMatch(/^output_folder:.*\.arcout/m);
+
+    await uninstall({ directory: projectDir, yes: true });
+    expect(fs.existsSync(path.join(projectDir, '.arcout'))).toBe(false);
+  }, 120000);
+
   it('repeated updates leave CLAUDE.md managed blocks intact (no marker loss or duplication)', async () => {
     await install(baseOpts());
     const claudeMd = path.join(projectDir, 'CLAUDE.md');
@@ -358,6 +390,16 @@ describe('install() — global install', () => {
     await install(baseOpts({ global: true, directory: projectDir }));
     expect(fs.existsSync(path.join(homeDir, '.claude-alt'))).toBe(false);
   }, 60000);
+
+  it.each(['codex', 'opencode'])('preserves shared global skills when updating to %s only', async (remainingTool) => {
+    await install(baseOpts({ global: true, tools: 'codex,opencode' }));
+    const sharedSkill = path.join(homeDir, '.agents', 'skills', 'triage', 'SKILL.md');
+    expect(fs.existsSync(sharedSkill)).toBe(true);
+
+    await install(baseOpts({ global: true, action: 'update', tools: remainingTool }));
+
+    expect(fs.existsSync(sharedSkill)).toBe(true);
+  }, 120000);
 
   it.each([
     ['project', false],
