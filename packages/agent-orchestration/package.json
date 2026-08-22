@@ -28,7 +28,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "ARCWRIGHT_COVERAGE_SUITE=integration vitest run --coverage && ARCWRIGHT_COVERAGE_SUITE=focused vitest run --coverage"
   },
   "files": [
     "bin/",
