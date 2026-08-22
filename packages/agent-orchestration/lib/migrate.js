@@ -156,6 +156,81 @@ function walkFiles(dir) {
   return results;
 }
 
+function isWithinRoot(realRoot, candidate) {
+  const relative = path.relative(realRoot, fs.realpathSync(candidate));
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+function resolveVirtualPath(relPath, plannedRenames) {
+  let resolved = relPath;
+  for (let i = plannedRenames.length - 1; i >= 0; i--) {
+    const { from, to } = plannedRenames[i];
+    if (resolved === to || resolved.startsWith(`${to}/`)) {
+      resolved = from + resolved.slice(to.length);
+    } else if (resolved === from || resolved.startsWith(`${from}/`)) {
+      return null;
+    }
+  }
+  return resolved;
+}
+
+/**
+ * Validate every destructive migration decision before the first write.
+ * This prevents partial migrations and refuses managed symlinks that escape
+ * the selected project root.
+ */
+function preflightMigration(root) {
+  const errors = [];
+  const realRoot = fs.realpathSync(root);
+  const managedRoots = [
+    '_bmad', '_bmad-output', '_bmad_output', '_arcwright', '_arcwright-output',
+    '.claude', '.cursor/rules', '.gemini/commands',
+    'CLAUDE.md', 'GEMINI.md', '.windsurfrules', '.clinerules',
+  ];
+
+  function inspectManagedPath(fullPath, relPath) {
+    let stat;
+    try { stat = fs.lstatSync(fullPath); } catch { return; }
+
+    if (stat.isSymbolicLink()) {
+      try {
+        if (!isWithinRoot(realRoot, fullPath)) {
+          errors.push(`${relPath} resolves outside the project root`);
+        }
+      } catch {
+        errors.push(`${relPath} is an unresolvable managed symlink`);
+      }
+      return;
+    }
+
+    if (!stat.isDirectory() || SKIP_DIRS.has(path.basename(fullPath))) return;
+    for (const entry of fs.readdirSync(fullPath)) {
+      inspectManagedPath(path.join(fullPath, entry), path.posix.join(relPath, entry));
+    }
+  }
+
+  for (const relPath of managedRoots) {
+    inspectManagedPath(path.join(root, ...relPath.split('/')), relPath);
+  }
+
+  const plannedRenames = [];
+  for (const rename of DIR_RENAMES) {
+    const sourceRel = resolveVirtualPath(rename.from, plannedRenames);
+    if (sourceRel === null || !fs.existsSync(path.join(root, ...sourceRel.split('/')))) continue;
+
+    const targetRel = resolveVirtualPath(rename.to, plannedRenames);
+    if (targetRel !== null && fs.existsSync(path.join(root, ...targetRel.split('/')))) {
+      errors.push(`${rename.from} -> ${rename.to}: target already exists`);
+      continue;
+    }
+    plannedRenames.push(rename);
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Migration preflight failed:\n  - ${errors.join('\n  - ')}`);
+  }
+}
+
 // ─── Migration Steps ─────────────────────────────────────────────────────────
 
 function renameDirectories(root, dryRun) {
@@ -360,6 +435,8 @@ function migrate(projectRoot, dryRun) {
     return { actions: [], root };
   }
 
+  preflightMigration(root);
+
   // Step 1: Rename directories
   console.log('── Step 1: Rename directories ──');
   const dirActions = renameDirectories(root, dryRun);
@@ -437,7 +514,12 @@ if (require.main === module) {
   const rootIdx = args.indexOf('--project-root');
   const projectRoot = rootIdx >= 0 ? args[rootIdx + 1] : process.cwd();
 
-  migrate(projectRoot, dryRun);
+  try {
+    migrate(projectRoot, dryRun);
+  } catch (error) {
+    console.error(`Migration aborted: ${error.message}`);
+    process.exitCode = 1;
+  }
 }
 
 module.exports = { migrate };

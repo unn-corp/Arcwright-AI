@@ -162,7 +162,13 @@ describe('install() — fresh project install', () => {
     expect(cfg).not.toMatch(/_arcwright-output/);
   }, 60000);
 
-  it('personalizes optional module configs with the selected user and output folder', async () => {
+  it('personalizes, customizes, and updates optional module configs', async () => {
+    const customDir = path.join(projectDir, '_arcwright', 'custom');
+    await fs.mkdirp(customDir);
+    await Promise.all(['aws-infra', 'unnamed-pm'].map((mod) => (
+      fs.writeFile(path.join(customDir, `${mod}.toml`), 'project_name = "Configured Project"\n')
+    )));
+
     await install(baseOpts({
       awsInfra: true,
       unnamedPm: true,
@@ -172,11 +178,26 @@ describe('install() — fresh project install', () => {
 
     for (const mod of ['aws-infra', 'unnamed-pm']) {
       const cfg = await fs.readFile(path.join(projectDir, '_arcwright', mod, 'config.yaml'), 'utf8');
+      expect(cfg).toMatch(/^project_name: Configured Project$/m);
       expect(cfg).toMatch(/^user_name: Configured Agent$/m);
       expect(cfg).toMatch(/^output_folder:.*\.arcout/m);
       expect(cfg).not.toMatch(/Unnamed Developer/);
       expect(cfg).not.toMatch(/_arcwright-output/);
     }
+
+    const awsConfig = path.join(projectDir, '_arcwright', 'aws-infra', 'config.yaml');
+    await fs.appendFile(awsConfig, 'manual_setting: keep-me\n');
+    await Promise.all(['aws-infra', 'unnamed-pm'].map((mod) => (
+      fs.writeFile(path.join(customDir, `${mod}.toml`), 'project_name = "Updated Project"\n')
+    )));
+
+    await install(baseOpts({ action: 'update', awsInfra: true, unnamedPm: true }));
+
+    for (const mod of ['aws-infra', 'unnamed-pm']) {
+      const cfg = await fs.readFile(path.join(projectDir, '_arcwright', mod, 'config.yaml'), 'utf8');
+      expect(cfg).toMatch(/^project_name: Updated Project$/m);
+    }
+    expect(await fs.readFile(awsConfig, 'utf8')).toMatch(/^manual_setting: keep-me$/m);
   }, 60000);
 
   it('uninstall leaves no Arcwright content behind', async () => {

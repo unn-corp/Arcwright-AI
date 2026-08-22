@@ -8,6 +8,7 @@ const { migrate } = migrateModule;
 
 let dir;
 let logSpy;
+const extraDirs = [];
 
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-migrate-'));
@@ -17,6 +18,9 @@ beforeEach(() => {
 afterEach(() => {
   logSpy.mockRestore();
   fs.rmSync(dir, { recursive: true, force: true });
+  for (const extraDir of extraDirs.splice(0)) {
+    fs.rmSync(extraDir, { recursive: true, force: true });
+  }
 });
 
 /** Minimal bmad install: the _bmad marker plus a couple of referencing files. */
@@ -70,6 +74,43 @@ describe('migrate — dry run', () => {
 });
 
 describe('migrate — apply', () => {
+  it('aborts before mutation when a rename target already exists', () => {
+    seedBmadProject();
+    fs.mkdirSync(path.join(dir, '_arcwright'));
+
+    expect(() => migrate(dir, false)).toThrow(/_bmad.*_arcwright/);
+    expect(fs.existsSync(path.join(dir, '_bmad'))).toBe(true);
+    expect(fs.existsSync(path.join(dir, '_arcwright'))).toBe(true);
+    expect(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8')).toContain('_bmad-output/');
+  });
+
+  it.each([
+    ['a chained module rename', ['_bmad/bmm', '_bmad/awm']],
+    ['legacy output directories sharing a target', ['_bmad-output', '_bmad_output']],
+  ])('preflights %s before any rename', (_case, directories) => {
+    for (const directory of directories) {
+      fs.mkdirSync(path.join(dir, ...directory.split('/')), { recursive: true });
+    }
+
+    expect(() => migrate(dir, false)).toThrow(/target already exists/);
+    for (const directory of directories) {
+      expect(fs.existsSync(path.join(dir, ...directory.split('/')))).toBe(true);
+    }
+  });
+
+  it('aborts before following a managed symlink outside the project', () => {
+    fs.mkdirSync(path.join(dir, '_bmad'));
+    const externalDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-external-'));
+    extraDirs.push(externalDir);
+    const externalFile = path.join(externalDir, 'outside.md');
+    fs.writeFileSync(externalFile, 'See _bmad-output/ here.\n');
+    fs.symlinkSync(externalDir, path.join(dir, '.claude'), process.platform === 'win32' ? 'junction' : 'dir');
+
+    expect(() => migrate(dir, false)).toThrow(/outside the project root/);
+    expect(fs.existsSync(path.join(dir, '_bmad'))).toBe(true);
+    expect(fs.readFileSync(externalFile, 'utf8')).toBe('See _bmad-output/ here.\n');
+  });
+
   it('renames the module dir and rewrites references', () => {
     seedBmadProject();
     migrate(dir, false);

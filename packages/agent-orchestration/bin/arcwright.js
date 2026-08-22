@@ -11,11 +11,12 @@ const { execSync } = require('child_process');
 const cliPath = path.join(__dirname, '..', 'lib', 'cli.js');
 const isNpx = __dirname.includes('_npx') || __dirname.includes('.npm') || __dirname.includes('npx');
 
-// Inject 'install' as default subcommand when none is provided
-const SUBCOMMANDS = ['install', 'update', 'uninstall', 'status', 'platforms', 'herdr', 'tmux'];
+// Inject 'install' when invocation starts with options (or has no arguments).
+// Any bare first argument is a command for Commander to validate, which keeps
+// this wrapper from duplicating the command registry in lib/cli.js.
 const userArgs = process.argv.slice(2);
-const hasSubcommand = userArgs.length > 0 && SUBCOMMANDS.includes(userArgs[0]);
-const effectiveArgs = hasSubcommand ? userArgs : ['install', ...userArgs];
+const hasExplicitCommand = userArgs.length > 0 && !userArgs[0].startsWith('-');
+const effectiveArgs = hasExplicitCommand ? userArgs : ['install', ...userArgs];
 
 if (isNpx) {
   // When running via npx, CWD is the user's project — spawn with correct CWD
