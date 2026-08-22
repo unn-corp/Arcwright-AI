@@ -243,7 +243,12 @@ Examples:
 `)
   .action(async (opts) => {
     const { migrate } = require('./migrate');
-    migrate(path.resolve(opts.directory), opts.dryRun);
+    try {
+      migrate(path.resolve(opts.directory), opts.dryRun);
+    } catch (error) {
+      console.error(`Migration aborted: ${error.message}`);
+      process.exitCode = 1;
+    }
   });
 
 program.parse();

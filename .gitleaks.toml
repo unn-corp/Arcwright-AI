@@ -5,10 +5,11 @@
 useDefault = true
 
 [allowlist]
-description = "RFC 6455 'Sec-WebSocket-Key/Accept' values are example handshake headers in the websocket-engineer skill docs (and their historical copies), not real secrets."
+description = "Known documentation examples and prose that match generic secret patterns, including historical copies, are not real secrets."
 paths = [
   '''websocket-engineer/references/protocol\.md''',
 ]
 regexes = [
+  '''^destructive/replacement$''',
   '''Sec-WebSocket-(Key|Accept):\s*\S+''',
 ]
