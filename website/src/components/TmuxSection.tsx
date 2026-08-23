@@ -1,4 +1,4 @@
-import { Terminal, Layers, Eye, Smartphone } from 'lucide-react';
+import { Terminal, Layers, Eye, Smartphone, ExternalLink } from 'lucide-react';
 
 const FEATURES = [
   { icon: Layers, label: 'Sessions, workspaces, tabs, panes', detail: 'One more level than tmux, with stable short IDs (w1, w1:t1, w1:p1)' },
@@ -33,24 +33,24 @@ export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {
                 <div className="w-3 h-3 bg-yellow-500/70" />
                 <div className="w-3 h-3 bg-cta/70" />
               </div>
-              <span className="font-mono text-xs text-muted ml-2">arcwright — herdr</span>
+              <span className="font-mono text-xs text-muted ml-2">arcwright / herdr</span>
             </div>
             <div className="p-5 font-mono text-xs leading-loose">
               <div className="text-muted">$ <span className="text-foreground">herdr agent start architect --split right -- claude</span></div>
               <div className="text-cta mt-2">✓ Session attached</div>
               <div className="text-cta">✓ Pane split, agent spawned</div>
               <div className="text-cta">✓ Watching for blocked / done status</div>
-              <div className="mt-4 text-muted/60">
+              <div className="mt-4 text-muted">
                 ─── Arcwright · 2 panes ────────────────────
               </div>
               <div className="mt-2 flex gap-2">
                 <div className="flex-1 border border-cta/40 p-2">
                   <div className="text-accent-blue">▸ architect-agent</div>
-                  <div className="text-muted/60 mt-1">Designing system…</div>
+                  <div className="text-muted mt-1">Designing system…</div>
                 </div>
                 <div className="flex-1 border border-surface-light p-2">
                   <div className="text-accent-green">▸ dev-agent</div>
-                  <div className="text-muted/60 mt-1">Waiting for spec…</div>
+                  <div className="text-muted mt-1">Waiting for spec…</div>
                 </div>
               </div>
             </div>
@@ -80,15 +80,21 @@ export default function TmuxSection({ hideHeader }: { hideHeader?: boolean } = {
                 mechanism. The in-process <code className="font-mono text-foreground">Agent</code> tool +{' '}
                 <code className="font-mono text-foreground">SendMessage</code> flow is the canonical
                 orchestration substrate. Herdr panes are an opt-in viewing surface. See the{' '}
-                <code className="font-mono text-cta/80">herdr</code> skill.
+                <code className="font-mono text-cta">herdr</code> skill.
               </p>
             </div>
 
             <div className="mt-2 bg-bg border border-surface-light p-4">
               <div className="text-xs font-mono text-muted mb-2">Get Herdr</div>
-              <code className="font-mono text-sm text-foreground">
+              <a
+                href="https://herdr.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center gap-1.5 font-mono text-sm text-foreground hover:text-cta transition-colors"
+              >
                 herdr.dev
-              </code>
+                <ExternalLink size={13} aria-hidden="true" />
+              </a>
             </div>
           </div>
         </div>

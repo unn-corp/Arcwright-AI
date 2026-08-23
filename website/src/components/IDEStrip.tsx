@@ -45,7 +45,7 @@ export default function IDEStrip() {
             Supports:{' '}
             {ides.map((ide, i) => (
               <span key={ide.id}>
-                <code className="font-mono text-xs text-cta/80">{ide.flag}</code>
+                <code className="font-mono text-xs text-cta">{ide.flag}</code>
                 {i < ides.length - 1 ? ', ' : ''}
               </span>
             ))}

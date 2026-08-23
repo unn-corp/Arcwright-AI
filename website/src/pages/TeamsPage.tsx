@@ -2,13 +2,13 @@ import TeamsGrid from '../components/TeamsGrid';
 
 export default function TeamsPage() {
   return (
-    <div className="pt-16">
+    <div className="pt-28 lg:pt-16">
       {/* Page header */}
       <section className="px-4 sm:px-6 pt-12 pb-8 border-b border-surface-light bg-surface/20">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-baseline gap-3 mb-3">
             <span className="font-mono text-cta text-sm">/team</span>
-            <span className="font-mono text-muted/40 text-sm">→</span>
+            <span className="font-mono text-muted text-sm" aria-hidden="true">→</span>
             <span className="font-mono text-muted text-sm">interactive selector</span>
           </div>
           <h1 className="font-mono text-4xl sm:text-5xl font-bold text-foreground mb-4">
@@ -16,7 +16,7 @@ export default function TeamsPage() {
           </h1>
           <p className="font-sans text-muted text-lg max-w-2xl leading-relaxed">
             17 pre-built team compositions for every phase of development. Each team is an
-            in-process orchestration — specialist agents that stay alive across tasks and
+            in-process orchestration. Specialist agents stay alive across tasks and
             reuse context via SendMessage and the Session Agent Registry. Herdr pane
             visibility is an optional add-on.
           </p>

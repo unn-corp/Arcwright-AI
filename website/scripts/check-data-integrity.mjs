@@ -61,6 +61,18 @@ for (const icon of matchAll(agentsSrc, /icon: '([^']+)'/g)) {
   }
 }
 
+// 4. Every skill named on an agent card must resolve to an installed skill.
+//    Without this, a stale primarySkills slug becomes public misinformation.
+for (const [, agent, skills] of agentsSrc.matchAll(
+  /name: '([^']+)',[\s\S]*?primarySkills: \[([\s\S]*?)\]/g,
+)) {
+  for (const slug of matchAll(skills, /'([^']+)'/g)) {
+    if (!skillExists(slug)) {
+      errors.push(`agents.ts: ${agent} references missing primary skill '${slug}'`);
+    }
+  }
+}
+
 if (errors.length) {
   console.error('\n✗ website data integrity check failed:\n');
   for (const e of errors) console.error(`   ${e}`);

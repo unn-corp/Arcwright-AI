@@ -11,14 +11,14 @@ export interface Workflow {
   category: WorkflowCategory;
   trigger: string;          // command or trigger phrase
   description: string;      // 1-2 sentence summary
-  bestFor: string;          // heuristic — when to reach for it
+  bestFor: string;          // heuristic for when to reach for it
   icon?: string;            // lucide icon hint
 }
 
 export const workflows: Workflow[] = [
   {
     slug: 'triage',
-    name: '/triage — Workflow Router',
+    name: '/triage: Workflow Router',
     category: 'router',
     trigger: '/triage "<task>"',
     description:
@@ -66,7 +66,7 @@ export const workflows: Workflow[] = [
     category: 'visibility',
     trigger: 'herdr agent start (when $HERDR_ENV is set)',
     description:
-      'Watch agents work in split panes via Herdr (herdr.dev). PURELY a viewing surface — the in-process Agent tool + SendMessage flow inside the pane is still governed by claude-subagent-protocol. Add to whichever runtime above was chosen, not as a primary mode.',
+      'Watch agents work in split panes via Herdr (herdr.dev). It is purely a viewing surface. The in-process Agent tool + SendMessage flow inside the pane is still governed by claude-subagent-protocol. Add it to whichever runtime above was chosen, not as a primary mode.',
     bestFor:
       'When you want to see what agents are doing, or want a long-running task visible while you do other work.',
     icon: 'eye',

@@ -52,21 +52,21 @@ const RUNTIMES: Workflow[] = workflows;
 
 export default function WorkflowsPage() {
   return (
-    <div className="pt-16">
+    <div className="pt-28 lg:pt-16">
       {/* Page header */}
       <section className="px-4 sm:px-6 pt-12 pb-10 border-b border-surface-light bg-surface/20">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-baseline gap-3 mb-3">
             <span className="font-mono text-cta text-sm">/triage</span>
-            <span className="font-mono text-muted/40 text-sm">→</span>
+            <span className="font-mono text-muted text-sm" aria-hidden="true">→</span>
             <span className="font-mono text-muted text-sm">workflow router</span>
           </div>
           <h1 className="font-mono text-4xl sm:text-5xl font-bold text-foreground mb-4">
             How Arcwright Orchestrates
           </h1>
           <p className="font-sans text-muted text-lg max-w-3xl leading-relaxed">
-            There are no tracks to pick. <code className="font-mono text-sm text-cta/80 bg-surface px-1.5 py-0.5">/triage</code>{' '}
-            is a <span className="text-foreground">workflow router</span> — given a task, it recommends one of the
+            There are no tracks to pick. <code className="font-mono text-sm text-cta bg-surface px-1.5 py-0.5">/triage</code>{' '}
+            is a <span className="text-foreground">workflow router</span>. Given a task, it recommends one of the
             runtimes below based on the task's shape, then the chosen workflow dispatches it.
             For clear, well-scoped work, just call the specialist directly and skip the router.
           </p>
@@ -80,11 +80,11 @@ export default function WorkflowsPage() {
             <span className="font-mono text-xs uppercase tracking-widest text-muted">
               1. Router
             </span>
-            <ArrowRight size={14} className="text-muted/60" />
+            <ArrowRight size={14} className="text-muted" aria-hidden="true" />
             <span className="font-mono text-xs uppercase tracking-widest text-muted">
               2. Runtime
             </span>
-            <ArrowRight size={14} className="text-muted/60" />
+            <ArrowRight size={14} className="text-muted" aria-hidden="true" />
             <span className="font-mono text-xs uppercase tracking-widest text-muted">
               3. Result
             </span>
@@ -118,7 +118,7 @@ export default function WorkflowsPage() {
                           <div className="font-mono font-semibold text-sm text-foreground leading-tight">
                             {runtime.name}
                           </div>
-                          <div className="font-mono text-[10px] text-muted/60 mt-1">
+                          <div className="font-mono text-[10px] text-muted mt-1">
                             {runtime.trigger}
                           </div>
                         </div>
@@ -129,10 +129,10 @@ export default function WorkflowsPage() {
                       </p>
 
                       <div className="pt-2 border-t border-surface-light">
-                        <span className="font-mono text-[10px] text-muted/60 uppercase tracking-wider">
+                        <span className="font-mono text-[10px] text-muted uppercase tracking-wider">
                           Best for:{' '}
                         </span>
-                        <span className="font-sans text-xs text-muted/80">
+                        <span className="font-sans text-xs text-muted">
                           {runtime.bestFor}
                         </span>
                       </div>
@@ -162,10 +162,10 @@ export default function WorkflowsPage() {
             <table className="w-full text-left min-w-[640px]">
               <thead>
                 <tr className="border-b border-surface-light bg-surface/40">
-                  <th className="font-mono text-xs uppercase tracking-wider text-muted/80 px-4 py-3 font-semibold">
+                  <th className="font-mono text-xs uppercase tracking-wider text-muted px-4 py-3 font-semibold">
                     Task shape
                   </th>
-                  <th className="font-mono text-xs uppercase tracking-wider text-muted/80 px-4 py-3 font-semibold">
+                  <th className="font-mono text-xs uppercase tracking-wider text-muted px-4 py-3 font-semibold">
                     Recommended runtime
                   </th>
                 </tr>
@@ -197,7 +197,7 @@ export default function WorkflowsPage() {
                     runtime: 'Add Herdr opt-in visibility to whichever runtime above was chosen',
                   },
                   {
-                    shape: 'Genuinely ambiguous — could be a single change or a sweep',
+                    shape: 'Genuinely ambiguous, possibly a single change or a sweep',
                     runtime: 'Ask one clarifying question before routing',
                   },
                 ].map((row, i) => (
@@ -205,8 +205,8 @@ export default function WorkflowsPage() {
                     key={i}
                     className="border-b border-surface-light/60 last:border-b-0 hover:bg-surface/30 transition-colors"
                   >
-                    <td className="px-4 py-3 text-foreground/90">{row.shape}</td>
-                    <td className="px-4 py-3 text-cta/90 font-mono text-xs">{row.runtime}</td>
+                    <td className="px-4 py-3 text-foreground">{row.shape}</td>
+                    <td className="px-4 py-3 text-cta font-mono text-xs">{row.runtime}</td>
                   </tr>
                 ))}
               </tbody>
@@ -228,14 +228,14 @@ export default function WorkflowsPage() {
                   When to call /triage
                 </h3>
                 <p className="font-sans text-sm text-muted leading-relaxed mb-2">
-                  Use <code className="font-mono text-xs text-cta/80 bg-surface px-1.5 py-0.5">/triage</code> for
-                  ambiguous tasks — anything you can't size at a glance, multi-stage work,
-                  or anything that might benefit from <code className="font-mono text-xs text-cta/80 bg-surface px-1.5 py-0.5">ultracode</code> or{' '}
-                  <code className="font-mono text-xs text-cta/80 bg-surface px-1.5 py-0.5">/goal</code>.
+                  Use <code className="font-mono text-xs text-cta bg-surface px-1.5 py-0.5">/triage</code> for
+                  ambiguous tasks: anything you can't size at a glance, multi-stage work,
+                  or anything that might benefit from <code className="font-mono text-xs text-cta bg-surface px-1.5 py-0.5">ultracode</code> or{' '}
+                  <code className="font-mono text-xs text-cta bg-surface px-1.5 py-0.5">/goal</code>.
                 </p>
                 <p className="font-sans text-sm text-muted leading-relaxed">
-                  For clear, small work — "fix this typo", "add a button", "review this
-                  diff" — call the specialist directly. No router needed.
+                  For clear, small work such as "fix this typo", "add a button", or "review this
+                  diff", call the specialist directly. No router needed.
                 </p>
               </div>
             </div>

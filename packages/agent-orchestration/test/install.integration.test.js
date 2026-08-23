@@ -6,7 +6,7 @@ import { execSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
 const { install, uninstall } = installer;
-const { readManifest } = installer._internal;
+const { readManifest, writeManifest } = installer._internal;
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(PKG_ROOT, '..', '..');
@@ -259,11 +259,40 @@ describe('install() — fresh project install', () => {
     expect((await fs.readFile(filesManifest, 'utf8'))).not.toContain('.kiro/skills/team-arch-dev/SKILL.md');
   }, 120000);
 
-  it('isolates home-directed writes into the throwaway HOME, not the real one', async () => {
+  it('keeps a project install from mutating the global Claude rules file', async () => {
     await install(baseOpts());
-    // Project install applies the global rules file under the redirected HOME.
-    expect(fs.existsSync(path.join(homeDir, '.claude', 'CLAUDE.md'))).toBe(true);
+    expect(fs.existsSync(path.join(homeDir, '.claude', 'CLAUDE.md'))).toBe(false);
   }, 60000);
+});
+
+describe('install() — project manifest trust boundaries', () => {
+  it('does not restore global-side-effect options from a project manifest', async () => {
+    await install(baseOpts());
+    const manifestPath = path.join(projectDir, '_arcwright');
+    const manifest = await readManifest(manifestPath);
+    await writeManifest(manifestPath, {
+      ...manifest,
+      tools: ['hermes'],
+      modelLaunchers: true,
+      modelSurface: true,
+      unnamedPm: true,
+    });
+
+    await install(baseOpts({
+      action: 'update',
+      modelLaunchers: null,
+      modelSurface: null,
+      unnamedPm: false,
+    }));
+
+    const updated = await readManifest(manifestPath);
+    expect(updated.tools).toEqual(['claude-code']);
+    expect(updated.modelLaunchers).toBe(false);
+    expect(updated.modelSurface).toBe(false);
+    expect(updated.unnamedPm).toBe(false);
+    expect(fs.existsSync(path.join(homeDir, '.config', 'zai'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '_arcwright', 'unnamed-pm'))).toBe(false);
+  }, 90000);
 });
 
 describe('install() — flag handling', () => {

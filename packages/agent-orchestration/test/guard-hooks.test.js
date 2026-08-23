@@ -41,6 +41,8 @@ describe('guard-bash: destructive command guard', () => {
   // defeated the `(\s|$)` anchor, and reordered/separated flags defeated `-rf?`.
   it.each([
     ['rm -rf /'],
+    ['rm -rf "/"'],
+    ["rm -rf '$HOME'"],
     ['rm -rf /*'],
     ['rm -fr /'],
     ['rm -rf ~'],

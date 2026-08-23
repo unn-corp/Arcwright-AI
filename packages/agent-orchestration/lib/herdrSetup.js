@@ -4,8 +4,8 @@
  *
  * Arcwright does NOT install the herdr binary (herdr owns its own update and
  * channel machinery). This module: detects herdr, installs the Claude Code
- * integration, installs the default plugin set (best-effort, per-plugin), and
- * writes a managed keybindings block into ~/.config/herdr/config.toml.
+ * integration and writes a managed keybindings block into
+ * ~/.config/herdr/config.toml. Third-party plugins require explicit opt-in.
  *
  * It runs during Claude/Codex installation and through `arcwright herdr`.
  */
@@ -174,6 +174,7 @@ async function setupHerdr(deps = {}) {
   const configPath =
     deps.configPath || path.join(os.homedir(), '.config', 'herdr', 'config.toml');
   const homeDir = deps.homeDir || os.homedir();
+  const installPlugins = deps.installPlugins === true;
 
   const { installed, version } = detectHerdr(run);
   if (!installed) {
@@ -209,7 +210,8 @@ async function setupHerdr(deps = {}) {
     log(chalk.yellow('     could not install Herdr standard assets (continuing)'));
   }
 
-  // Default plugins — install any not already present.
+  // Third-party plugins are never installed during a normal setup. Their source
+  // code runs with the user's environment, so callers must opt in explicitly.
   let present = new Set();
   try {
     present = parsePluginIds(run('herdr plugin list --json'));
@@ -219,7 +221,10 @@ async function setupHerdr(deps = {}) {
 
   const installedNow = [];
   const skipped = [];
-  for (const plugin of DEFAULT_PLUGINS) {
+  if (!installPlugins) {
+    log(chalk.dim('     third-party plugins not installed (run `arcwright herdr --install-plugins` to opt in)'));
+  }
+  for (const plugin of installPlugins ? DEFAULT_PLUGINS : []) {
     if (present.has(plugin.id)) {
       skipped.push(plugin.id);
       continue;

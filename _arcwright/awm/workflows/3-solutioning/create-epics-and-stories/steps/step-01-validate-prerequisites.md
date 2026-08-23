@@ -16,8 +16,6 @@ epicsTemplate: '{workflow_path}/templates/epics-template.md'
 advancedElicitationTask: '{project-root}/_arcwright/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_arcwright/core/workflows/party-mode/workflow.md'
 
-# Template References
-epicsTemplate: '{workflow_path}/templates/epics-template.md'
 ---
 
 ## Step 0: Load caveman (concise-output)

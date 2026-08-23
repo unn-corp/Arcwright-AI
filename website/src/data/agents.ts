@@ -77,7 +77,7 @@ export const agents: Agent[] = [
     icon: 'Layers',
     description:
       'Creates UX design documents, component specs, and visual hierarchy notes. Also acts as a reviewer (UV = UX Validation) in Review Gates. On the ux-qa team, implements UI code and validates with playwright-cli.',
-    primarySkills: ['frontend-responsive-design-standards', 'react-expert', 'design', 'ux-audit'],
+    primarySkills: ['frontend-responsive-design-standards', 'react-expert', 'ui-ux-pro-custom', 'ux-audit'],
     collaboratesWith: ['Developer', 'Architect', 'QA'],
   },
   {
@@ -94,7 +94,7 @@ export const agents: Agent[] = [
     role: 'Review Coordination',
     icon: 'GitMerge',
     description:
-      'Runs the Review Gate. Spawns and reuses reviewer sub-agents (Architect, UX Designer, Developer), collects their verdicts, and returns a single consolidated result. Never reviews code itself — it only coordinates, which keeps reviewer context isolated from each other.',
+      'Runs the Review Gate. Spawns and reuses reviewer sub-agents (Architect, UX Designer, Developer), collects their verdicts, and returns a single consolidated result. Never reviews code itself. It only coordinates, which keeps reviewer context isolated from each other.',
     primarySkills: ['pr-review-panel', 'clean-code-standards', 'ux-audit'],
     collaboratesWith: ['Architect', 'UX Designer', 'Developer'],
   },
@@ -103,7 +103,7 @@ export const agents: Agent[] = [
     role: 'Goal-Backward Verification',
     icon: 'ShieldCheck',
     description:
-      'Proves a completed implementation meets its stated goals via 4-level verification: artifact exists → substantive code → wired into the system → real data flows through it. Distinct from QA — runs as a pre-sign-off gate in review cycles and routes failures back to Developer or to course-correction.',
+      'Proves a completed implementation meets its stated goals via 4-level verification: artifact exists → substantive code → wired into the system → real data flows through it. Distinct from QA, it runs as a pre-sign-off gate in review cycles and routes failures back to Developer or to course-correction.',
     primarySkills: ['goal-backward-verify', 'systematic-debugging', 'project-context'],
     collaboratesWith: ['Developer', 'QA', 'Architect'],
   },

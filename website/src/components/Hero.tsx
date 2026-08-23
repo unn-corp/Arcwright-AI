@@ -59,8 +59,8 @@ export default function Hero() {
 
         {/* Subheading */}
         <p className="font-sans text-lg sm:text-xl text-muted max-w-2xl mx-auto mb-4 leading-relaxed">
-          From <code className="font-mono text-sm text-cta/80">/triage</code> to runtime — plain
-          in-process agents, ultracode dynamic workflows, or <code className="font-mono text-sm text-cta/80">/goal</code> loops.
+          From <code className="font-mono text-sm text-cta">/triage</code> to runtime: plain
+          in-process agents, ultracode dynamic workflows, or <code className="font-mono text-sm text-cta">/goal</code> loops.
           Specialists stay alive across tasks via SendMessage reuse; Herdr is opt-in visibility.
         </p>
 
@@ -72,7 +72,7 @@ export default function Hero() {
           </div>
           <button
             onClick={handleCopy}
-            className={`flex items-center gap-1.5 px-4 py-3 text-xs font-mono border-l border-surface-light transition-all duration-200 cursor-pointer flex-shrink-0 ${
+            className={`flex min-h-11 items-center gap-1.5 border-l border-surface-light px-4 py-3 text-xs font-mono transition-all duration-200 cursor-pointer flex-shrink-0 ${
               copied
                 ? 'bg-cta/10 text-cta copy-pulse'
                 : 'text-muted hover:text-foreground hover:bg-surface-light'
@@ -90,7 +90,7 @@ export default function Hero() {
             href="https://github.com/unn-corp/Arcwright-AI"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-cta text-bg font-sans font-semibold text-sm px-5 py-2.5 hover:bg-cta/90 transition-colors duration-200 cursor-pointer"
+            className="inline-flex min-h-11 items-center gap-2 bg-cta px-5 py-2.5 font-sans text-sm font-semibold text-bg transition-colors duration-200 hover:bg-cta/90 cursor-pointer"
           >
             <GithubIcon size={16} />
             View on GitHub
@@ -99,7 +99,7 @@ export default function Hero() {
             href="https://www.npmjs.com/package/@arcwright-ai/agent-orchestration"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-surface border border-surface-light text-foreground font-sans font-medium text-sm px-5 py-2.5 hover:bg-surface-light transition-colors duration-200 cursor-pointer"
+            className="inline-flex min-h-11 items-center gap-2 border border-surface-light bg-surface px-5 py-2.5 font-sans text-sm font-medium text-foreground transition-colors duration-200 hover:bg-surface-light cursor-pointer"
           >
             npm package
             <ArrowRight size={14} />
@@ -108,7 +108,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-muted/40" aria-hidden="true">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-muted" aria-hidden="true">
         <div className="w-px h-8 bg-gradient-to-b from-transparent to-muted/40" />
         <span className="text-xs font-mono">scroll</span>
       </div>

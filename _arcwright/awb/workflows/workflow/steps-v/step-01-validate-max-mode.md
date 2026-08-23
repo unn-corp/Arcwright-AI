@@ -2,7 +2,7 @@
 name: 'step-01-validate'
 description: 'Initialize validation: create report and check file structure & size'
 
-parallel-steps: ['./step-01b-structure.md', './step-02-frontmatter-validation.md', './step-02b-path-violations.md', './step-03-menu-validation.md' './step-04-step-type-validation.md', './step-05-output-format-validation.md', './step-06-validation-design-check.md', './step-07-instruction-style-check.md', './step-08-collaborative-experience-check.md', './step-08b-subprocess-optimization.md', './step-09-cohesive-review.md']
+parallel-steps: ['./step-01b-structure.md', './step-02-frontmatter-validation.md', './step-02b-path-violations.md', './step-03-menu-validation.md', './step-04-step-type-validation.md', './step-05-output-format-validation.md', './step-06-validation-design-check.md', './step-07-instruction-style-check.md', './step-08-collaborative-experience-check.md', './step-08b-subprocess-optimization.md', './step-09-cohesive-review.md']
 nextStep: './step-10-report-complete.md'
 targetWorkflowPath: '{workflow_folder_path}'
 workflowPlanFile: '{workflow_folder_path}/workflow-plan.md'

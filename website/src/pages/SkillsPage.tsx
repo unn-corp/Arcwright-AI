@@ -19,13 +19,13 @@ export default function SkillsPage() {
   }
 
   return (
-    <div className="pt-16">
+    <div className="pt-28 lg:pt-16">
       {/* Page header */}
       <section className="px-4 sm:px-6 pt-12 pb-8 border-b border-surface-light bg-surface/20">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-baseline gap-3 mb-3">
             <span className="font-mono text-cta text-sm">_arcwright</span>
-            <span className="font-mono text-muted/40 text-sm">→</span>
+            <span className="font-mono text-muted text-sm" aria-hidden="true">→</span>
             <span className="font-mono text-muted text-sm">skills library</span>
           </div>
           <h1 className="font-mono text-4xl sm:text-5xl font-bold text-foreground mb-4">
@@ -45,7 +45,7 @@ export default function SkillsPage() {
           <div className="flex flex-wrap gap-2 mb-8">
             <button
               onClick={() => setActiveCategory('all')}
-              className={`font-mono text-xs px-3 py-1.5 border transition-all duration-200 cursor-pointer ${
+              className={`min-h-11 font-mono text-xs px-3 py-1.5 border transition-all duration-200 cursor-pointer ${
                 activeCategory === 'all'
                   ? 'bg-cta/15 border-cta/40 text-cta'
                   : 'border-surface-light text-muted hover:text-foreground hover:border-muted/40'
@@ -58,7 +58,7 @@ export default function SkillsPage() {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`font-mono text-xs px-3 py-1.5 border transition-all duration-200 cursor-pointer ${
+                className={`min-h-11 font-mono text-xs px-3 py-1.5 border transition-all duration-200 cursor-pointer ${
                   activeCategory === cat
                     ? 'border-opacity-60'
                     : 'border-surface-light text-muted hover:text-foreground hover:border-muted/40'
@@ -114,7 +114,7 @@ export default function SkillsPage() {
                       {CATEGORY_LABELS[skill.category]}
                     </span>
                   </div>
-                  <div className="font-sans text-sm font-medium text-foreground/80 mb-1.5">
+                  <div className="font-sans text-sm font-medium text-foreground mb-1.5">
                     {skill.name}
                   </div>
                   <p className="font-sans text-xs text-muted leading-relaxed">

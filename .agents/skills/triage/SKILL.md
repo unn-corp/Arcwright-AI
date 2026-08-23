@@ -1,6 +1,6 @@
 ---
 name: triage
-description: Workflow router — given a task, recommend an execution approach: plain in-process agent(s), an ultracode dynamic workflow, or a /goal loop. Optional herdr opt-in visibility for users who want to watch.
+description: "Workflow router — given a task, recommend an execution approach: plain in-process agent(s), an ultracode dynamic workflow, or a /goal loop. Optional herdr opt-in visibility for users who want to watch."
 allowed-tools: Read, Grep, Glob, Bash
 ---
 

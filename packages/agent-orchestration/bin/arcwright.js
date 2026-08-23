@@ -6,7 +6,7 @@
 'use strict';
 
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const cliPath = path.join(__dirname, '..', 'lib', 'cli.js');
 const isNpx = __dirname.includes('_npx') || __dirname.includes('.npm') || __dirname.includes('npx');
@@ -19,10 +19,11 @@ const hasExplicitCommand = userArgs.length > 0 && !userArgs[0].startsWith('-');
 const effectiveArgs = hasExplicitCommand ? userArgs : ['install', ...userArgs];
 
 if (isNpx) {
-  // When running via npx, CWD is the user's project — spawn with correct CWD
-  const args = effectiveArgs.map(a => JSON.stringify(a)).join(' ');
+  // When running via npx, CWD is the user's project. Pass argv directly rather
+  // than interpolating it into a shell command: JSON quotes do not stop shell
+  // command substitution in a second evaluation.
   try {
-    execSync(`node ${JSON.stringify(cliPath)} ${args}`, {
+    execFileSync(process.execPath, [cliPath, ...effectiveArgs], {
       cwd: process.cwd(),
       stdio: 'inherit',
       env: process.env,

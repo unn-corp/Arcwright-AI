@@ -7,19 +7,10 @@ _arcwright_agent_binary() {
   fi
 }
 
-codex() {
-  local arg
-  for arg in "$@"; do
-    [[ "$arg" == --yolo ]] && { command codex "$@"; return; }
-  done
-  command codex --yolo "$@"
-}
-
 claude() {
-  local session_id="" arg profile_file profile claude_bin bypass_flag="--dangerously-skip-permissions"
+  local session_id="" arg profile_file profile claude_bin
   claude_bin="$(_arcwright_agent_binary claude)"
   for arg in "$@"; do
-    [[ "$arg" == --dangerously-skip-permissions ]] && bypass_flag=""
     if [[ "$arg" == --resume=* ]]; then
       session_id="${arg#--resume=}"
     elif [[ "$arg" == --resume ]]; then
@@ -33,22 +24,11 @@ claude() {
   if [[ -n "$session_id" && -f "$profile_file" ]]; then
     IFS= read -r profile <"$profile_file"
     if [[ "$profile" == "$HOME/.claude" ]]; then
-      env -u CLAUDE_CONFIG_DIR "$claude_bin" ${bypass_flag:+"$bypass_flag"} "$@"
+      env -u CLAUDE_CONFIG_DIR "$claude_bin" "$@"
     else
-      CLAUDE_CONFIG_DIR="$profile" "$claude_bin" ${bypass_flag:+"$bypass_flag"} "$@"
+      CLAUDE_CONFIG_DIR="$profile" "$claude_bin" "$@"
     fi
   else
-    "$claude_bin" ${bypass_flag:+"$bypass_flag"} "$@"
+    "$claude_bin" "$@"
   fi
-}
-
-# Grok (xAI CLI / Grok Build). Herdr resume launches `grok --resume <id>`.
-# Mirror the always-approve posture used for Claude/Codex so restored panes
-# don't immediately block on permission prompts.
-grok() {
-  local arg
-  for arg in "$@"; do
-    [[ "$arg" == --always-approve ]] && { command grok "$@"; return; }
-  done
-  command grok --always-approve "$@"
 }

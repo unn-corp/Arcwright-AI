@@ -8,6 +8,10 @@ const { upsertManagedBlock } = require('./managed-md');
 const SHELL_START = '# >>> arcwright-herdr-launchers >>>';
 const SHELL_END = '# <<< arcwright-herdr-launchers <<<';
 
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 /** Set one scalar in a TOML section without duplicating the section. */
 async function upsertTomlSetting(filePath, section, key, value) {
   await fs.ensureDir(path.dirname(filePath));
@@ -78,7 +82,9 @@ async function installProfileHook(profileDir, hookPath) {
     // Do not replace an invalid user-owned settings file.
     if (await fs.pathExists(settingsPath)) return;
   }
-  settings.hooks = settings.hooks || {};
+  if (!isPlainObject(settings)) return;
+  if (settings.hooks === undefined) settings.hooks = {};
+  if (!isPlainObject(settings.hooks)) return;
   const existing = Array.isArray(settings.hooks.SessionStart) ? settings.hooks.SessionStart : [];
   const command = `bash '${hookPath}'`;
   settings.hooks.SessionStart = [
@@ -120,7 +126,9 @@ async function installHerdrAssets(homeDir = os.homedir()) {
 
 module.exports = {
   installHerdrAssets,
+  installProfileHook,
   listClaudeProfileDirs,
+  isPlainObject,
   upsertTomlSetting,
   SHELL_START,
   SHELL_END,

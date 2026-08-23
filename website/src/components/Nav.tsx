@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { label: 'Agents', to: '/agents' },
   { label: 'Workflows', to: '/workflows' },
   { label: 'Skills', to: '/skills' },
+  { label: 'IDEs', to: '/ides' },
   { label: 'Herdr', to: '/herdr' },
 ];
 
@@ -54,7 +55,7 @@ export default function Nav() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to="/" className="flex min-h-11 items-center gap-2 group">
             <span className="font-mono font-bold text-xl text-cta group-hover:glow-green transition-all duration-200">
               arcwright
             </span>
@@ -62,12 +63,13 @@ export default function Nav() {
           </Link>
 
           {/* Nav links */}
-          <div className="hidden md:flex items-center gap-1 text-sm font-sans text-muted">
+          <div className="hidden lg:flex items-center gap-1 text-sm font-sans text-muted">
             {NAV_LINKS.map(link => (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`px-3 py-1.5 transition-all duration-200 relative ${
+                aria-current={isActive(link.to) ? 'page' : undefined}
+                className={`relative inline-flex min-h-11 items-center px-3 py-1.5 transition-all duration-200 ${
                   isActive(link.to)
                     ? 'text-cta'
                     : 'text-muted hover:text-foreground'
@@ -90,7 +92,7 @@ export default function Nav() {
               href="https://github.com/unn-corp/Arcwright-AI"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors duration-200 cursor-pointer"
+              className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors duration-200 cursor-pointer"
               aria-label="View on GitHub"
             >
               <GithubIcon size={16} />
@@ -104,7 +106,7 @@ export default function Nav() {
               href="https://www.npmjs.com/package/@arcwright-ai/agent-orchestration"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-muted hover:text-foreground bg-surface hover:bg-surface-light border border-surface-light px-2.5 py-1.5 transition-all duration-200 cursor-pointer"
+              className="hidden min-h-11 items-center gap-1.5 border border-surface-light bg-surface px-2.5 py-1.5 text-xs font-mono text-muted transition-all duration-200 hover:bg-surface-light hover:text-foreground sm:flex cursor-pointer"
               aria-label="View on npm"
             >
               <Package size={12} />
@@ -115,12 +117,13 @@ export default function Nav() {
         </div>
 
         {/* Mobile nav */}
-        <div className="md:hidden flex overflow-x-auto gap-1 pb-2 -mt-1">
+        <div className="lg:hidden flex overflow-x-auto gap-1 pb-2 -mt-1">
           {NAV_LINKS.map(link => (
             <Link
               key={link.to}
               to={link.to}
-              className={`flex-shrink-0 font-mono text-xs px-2.5 py-1 transition-all duration-200 ${
+              aria-current={isActive(link.to) ? 'page' : undefined}
+              className={`inline-flex min-h-11 flex-shrink-0 items-center px-2.5 py-1 font-mono text-xs transition-all duration-200 ${
                 isActive(link.to)
                   ? 'text-cta border-b-2 border-cta'
                   : 'text-muted hover:text-foreground'

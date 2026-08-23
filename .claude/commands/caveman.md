@@ -1,5 +1,5 @@
 ---
-description: Concise-output mode — write terse, cut ~65% of tokens, keep all technical substance. Levels: lite, full, ultra.
+description: "Concise-output mode — write terse, cut ~65% of tokens, keep all technical substance. Levels: lite, full, ultra."
 ---
 
 # /caveman — Concise Output Mode

@@ -5,12 +5,9 @@
  * non-zero PreToolUse exit as "deny" and shows stderr to the model).
  * Conservative by design — only high-confidence destructive patterns.
  *
- * Patterns are matched against the *effective* command, with quoted strings
- * and comments removed first — so a command that merely mentions a dangerous
- * pattern (e.g. `echo "git push --force main"`, a `# rm -rf /` comment, or a
- * heredoc/doc fixture) is not blocked. Only an actual unquoted destructive
- * command trips the guard. Trade-off: a quoted dangerous path like
- * `rm -rf "/"` is not caught — acceptable for a high-confidence guard.
+ * Most patterns are matched against an effective command with quoted strings
+ * and comments removed. Recursive rm is handled separately against the raw
+ * command so quoted filesystem operands such as `rm -rf "/"` remain blocked.
  */
 'use strict';
 
@@ -77,7 +74,10 @@ function hasDestructiveRm(cmd) {
     // `--no-preserve-root` has essentially one purpose; treat it as sufficient.
     if (rest.some((t) => t === '--no-preserve-root')) return true;
     const recursive = rest.some((t) => RECURSIVE_FLAG.test(t));
-    const rootish = rest.some((t) => !t.startsWith('-') && ROOTISH_TARGET.test(t));
+    const rootish = rest.some((token) => {
+      const target = token.replace(/^(?:'([^']*)'|"([^"]*)")$/, '$1$2');
+      return !target.startsWith('-') && ROOTISH_TARGET.test(target);
+    });
     if (recursive && rootish) return true;
   }
   return false;
@@ -106,7 +106,7 @@ process.stdin.on('end', () => {
     process.exit(2);
   };
 
-  if (hasDestructiveRm(scanned)) deny('rm -rf on / or home');
+  if (hasDestructiveRm(cmd)) deny('rm -rf on / or home');
 
   // `--force-with-lease` is the SAFE variant of a force-push (it refuses when
   // the remote moved under you), so it must not match `--force` here.

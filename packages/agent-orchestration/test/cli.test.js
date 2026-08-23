@@ -58,6 +58,26 @@ describe('public CLI wrapper', () => {
     expect(fs.existsSync(path.join(dir, '_arcwright'))).toBe(false);
   });
 
+  it('passes literal npx arguments without re-evaluating shell syntax', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-cli-'));
+    tempDirs.push(dir);
+    const fixtureRoot = path.join(dir, '_npx', 'package');
+    const fixtureBin = path.join(fixtureRoot, 'bin', 'arcwright.js');
+    const sentinel = path.join(dir, 'npx-shell-evaluation');
+    fs.mkdirSync(path.dirname(fixtureBin), { recursive: true });
+    fs.copyFileSync(binPath, fixtureBin);
+    fs.symlinkSync(libPath, path.join(fixtureRoot, 'lib'), process.platform === 'win32' ? 'junction' : 'dir');
+
+    const result = spawnSync(process.execPath, [fixtureBin, 'migrate', '--dry-run', `$(touch ${sentinel})`], {
+      cwd: dir,
+      encoding: 'utf8',
+      timeout: 10_000,
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(fs.existsSync(sentinel)).toBe(false);
+  });
+
   it('returns a failure without mutation when migration preflight fails', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-cli-'));
     tempDirs.push(dir);

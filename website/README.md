@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+# Arcwright website
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The public [arcwright.space](https://arcwright.space) site is a Vite, React, and TypeScript single-page application. It documents the Arcwright agent ecosystem, supported coding environments, workflow runtimes, teams, and a curated skill catalog.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Use Node.js 20 or newer.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd website
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Vite prints the local development URL. Build the production bundle with:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+## Validation
+
+Run these checks before deploying:
+
+```bash
+npm run check:data
+npm run lint
+npm run build
+```
+
+`check:data` runs from a full repository checkout. It verifies that the skills, team codes, agent icons, and agent primary-skill references shown by the site exist in `.agents/skills/`. It intentionally skips when the parent repository is unavailable, which keeps the standalone Docker build portable.
+
+## Content maintenance
+
+The files in `src/data/` are the curated public catalog. Keep them aligned with the root `README.md`, especially for supported environments, workflow behavior, team composition, and public counts. The Skills page intentionally shows highlights rather than every installed skill.
+
+## Deployment
+
+The `Dockerfile` creates a static production bundle and serves it with nginx. Its SPA fallback supports direct navigation to client-side routes, while `/health` is available for container health checks.
+
+```bash
+docker build -t arcwright-website .
+docker run --rm -p 8080:80 arcwright-website
+```
+
+`docker-compose.yml` is set up for the external `dokploy-network` used by the hosted deployment.

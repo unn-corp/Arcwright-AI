@@ -14,7 +14,7 @@ export default function MigrationBanner() {
             </h3>
             <p className="font-sans text-sm text-muted mb-4 leading-relaxed">
               One command renames all bmad directories, modules, and commands to the arcwright
-              namespace — with a 7-step verification pass included.
+              namespace, with a 7-step verification pass included.
             </p>
             <div className="flex items-center gap-2 bg-bg border border-surface-light px-4 py-2.5 w-fit">
               <code className="font-mono text-sm text-cta">/arcwright-migrate</code>

@@ -2,13 +2,13 @@ import TmuxSection from '../components/TmuxSection';
 
 export default function TmuxPage() {
   return (
-    <div className="pt-16">
+    <div className="pt-28 lg:pt-16">
       {/* Page header */}
       <section className="px-4 sm:px-6 pt-12 pb-8 border-b border-surface-light bg-surface/20">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-baseline gap-3 mb-3">
             <span className="font-mono text-cta text-sm">herdr.dev</span>
-            <span className="font-mono text-muted/40 text-sm">→</span>
+            <span className="font-mono text-muted text-sm" aria-hidden="true">→</span>
             <span className="font-mono text-muted text-sm">terminal workspace manager</span>
           </div>
           <h1 className="font-mono text-4xl sm:text-5xl font-bold text-foreground mb-4">

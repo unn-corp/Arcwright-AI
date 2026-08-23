@@ -24,8 +24,8 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="font-mono font-bold text-xl text-cta mb-3">arcwright</div>
-            <p className="font-sans text-sm text-muted/80 leading-relaxed max-w-xs">
-              AI-native agile workflow orchestration for Claude Code and Kiro.
+            <p className="font-sans text-sm text-muted leading-relaxed max-w-xs">
+              AI-native agile workflow orchestration for AI coding environments.
             </p>
           </div>
 
@@ -39,7 +39,7 @@ export default function Footer() {
                   href={pkg.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-2 group cursor-pointer"
+                  className="flex min-h-11 items-center gap-2 group cursor-pointer"
                 >
                   <Package size={14} className="text-muted mt-0.5 flex-shrink-0 group-hover:text-cta transition-colors duration-200" aria-hidden="true" />
                   <div>
@@ -61,7 +61,7 @@ export default function Footer() {
                 href="https://github.com/unn-corp/Arcwright-AI"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
+                className="flex min-h-11 items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
               >
                 <GithubIcon size={14} />
                 GitHub Repository
@@ -71,7 +71,7 @@ export default function Footer() {
                 href="https://github.com/unn-corp/Arcwright-AI/blob/main/README.md"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
+                className="flex min-h-11 items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
               >
                 <ExternalLink size={14} aria-hidden="true" />
                 Documentation
@@ -80,7 +80,7 @@ export default function Footer() {
                 href="https://herdr.dev"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
+                className="flex min-h-11 items-center gap-2 text-sm text-muted hover:text-foreground transition-colors duration-200 group cursor-pointer"
               >
                 <ExternalLink size={14} aria-hidden="true" />
                 Herdr (herdr.dev)
@@ -91,9 +91,9 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-surface-light flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-sans text-xs text-muted">
-            MIT License — open source, free forever
+            MIT License, open source and free forever
           </p>
-          <p className="font-mono text-xs text-muted/50">
+          <p className="font-mono text-xs text-muted">
             arcwright.space
           </p>
         </div>

@@ -27,7 +27,7 @@ export default function AgentsGrid({ hideHeader }: { hideHeader?: boolean } = {}
               Specialist Agents
             </h2>
             <p className="font-sans text-muted max-w-xl mx-auto">
-              9 named specialists coordinate across workflows and teams.
+              {agents.length} named roles coordinate across workflows and teams.
             </p>
           </div>
         )}
@@ -59,14 +59,14 @@ export default function AgentsGrid({ hideHeader }: { hideHeader?: boolean } = {}
               {/* Primary skills */}
               {agent.primarySkills.length > 0 && (
                 <div>
-                  <div className="font-mono text-[10px] text-muted/60 uppercase tracking-wider mb-1.5">
+                  <div className="font-mono text-[10px] text-muted uppercase tracking-wider mb-1.5">
                     Key skills
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {agent.primarySkills.map(skill => (
                       <span
                         key={skill}
-                        className="font-mono text-[10px] px-1.5 py-0.5 bg-cta/10 text-cta/80 border border-cta/20"
+                        className="font-mono text-[10px] px-1.5 py-0.5 bg-cta/10 text-cta border border-cta/20"
                       >
                         {skill}
                       </span>
@@ -78,10 +78,10 @@ export default function AgentsGrid({ hideHeader }: { hideHeader?: boolean } = {}
               {/* Collaborates with */}
               {agent.collaboratesWith.length > 0 && (
                 <div className="pt-2 border-t border-surface-light">
-                  <span className="font-mono text-[10px] text-muted/60 uppercase tracking-wider">
+                  <span className="font-mono text-[10px] text-muted uppercase tracking-wider">
                     Pairs with:{' '}
                   </span>
-                  <span className="font-sans text-xs text-muted/80">
+                  <span className="font-sans text-xs text-muted">
                     {agent.collaboratesWith.join(', ')}
                   </span>
                 </div>

@@ -58,7 +58,7 @@ describe('writeKiroConfig — native Unnamed MCP hooks', () => {
     expect(hooks.version).toBe('v1');
     expect(hooks.hooks.map((hook) => hook.trigger)).toEqual(['SessionStart', 'UserPromptSubmit', 'Stop']);
     expect(agent.includeMcpJson).toBe(true);
-    expect(generalAgent.includeMcpJson).toBe(true);
+    expect(generalAgent.includeMcpJson).toBeUndefined();
   });
 
   it('adapts generic skills while preserving their manifest entries', async () => {

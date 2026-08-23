@@ -6,7 +6,7 @@ editPlan: '{awb_creations_output_folder}/edit-plan-{agent-name}.md'
 
 advancedElicitationTask: '{project-root}/_arcwright/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_arcwright/core/workflows/party-mode/workflow.md'
-validationWorkflow: '{project-root}/src/modules/awb/workflows/agent/steps-v/v-01-load-review.md'
+validationWorkflow: '{project-root}/_arcwright/awb/workflows/agent/steps-v/v-01-load-review.md'
 ---
 
 # Edit Step 9: Celebration

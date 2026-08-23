@@ -9,8 +9,8 @@
   --color-cta: #d97757;
   --color-cta-muted: #b85f3f;
   --color-foreground: #e0e0e0;
-  --color-muted: #666666;
-  --color-muted-2: #888888;
+  /* #a0a0a0 meets WCAG AA on the darkest surface-light background (#333333). */
+  --color-muted: #a0a0a0;
   --color-border: #333333;
 
   /* Category accents */
@@ -162,18 +162,6 @@ body {
   }
 }
 
-/* Scroll reveal */
-.reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
-}
-
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -182,10 +170,5 @@ body {
   }
   html {
     scroll-behavior: auto;
-  }
-  .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
   }
 }

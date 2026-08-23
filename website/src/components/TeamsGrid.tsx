@@ -74,7 +74,7 @@ export default function TeamsGrid({ hideHeader }: { hideHeader?: boolean } = {})
                     <p className="font-sans text-xs text-muted leading-relaxed mb-3">
                       {team.description || team.whenToUse}
                     </p>
-                    <div className="font-mono text-xs text-muted/60 pt-2 border-t border-surface-light">
+                    <div className="font-mono text-xs text-muted pt-2 border-t border-surface-light">
                       {team.composition}
                     </div>
                   </div>

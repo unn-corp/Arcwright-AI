@@ -8,6 +8,9 @@ import installer from '../lib/installer.js';
 const {
   sha256, escapeRe, detectBmad, getHomes, resolveToolPath,
   readManifest, writeManifest, readFilesManifest, writeFilesManifest, removeEmptyDirsUpward,
+  isSafeManifestPath, resolveWithin, hasOnlyInstallableModules, projectOrigin,
+  hasOnlySupportedToolIds,
+  preflightProjectManagedPaths,
   buildModuleConfig, getFileHeader, getClaudeMdLocations,
   updateGitignore, stripGitignoreBlock,
   cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
@@ -47,6 +50,17 @@ describe('supported tools (installer options)', () => {
     expect(parseToolIds('claude-code,grok')).toEqual(['claude-code', 'grok']);
     expect(parseToolIds('cursor')).toEqual(['cursor']);
     expect(() => parseToolIds('grok,not-a-tool')).toThrow(/Unknown --tools id/);
+  });
+  it('does not trust unknown tool IDs from an installation manifest', () => {
+    expect(hasOnlySupportedToolIds(['claude-code', 'kiro'])).toBe(true);
+    expect(hasOnlySupportedToolIds(['claude-code', 'not-a-tool'])).toBe(false);
+  });
+});
+
+describe('provider launcher template', () => {
+  it('does not force Claude permission bypasses', () => {
+    const template = fs.readFileSync(path.join(process.cwd(), 'lib', 'templates', 'launchers', 'claude-or.sh'), 'utf8');
+    expect(template).not.toContain('--dangerously-skip-permissions');
   });
 });
 
@@ -142,6 +156,66 @@ describe('manifest read/write round-trips', () => {
   it('readFilesManifest returns [] when absent', async () => {
     expect(await readFilesManifest(dir)).toEqual([]);
   });
+  it('ignores unsafe paths in the project-controlled files manifest', async () => {
+    const manifestPath = path.join(dir, '_config', 'files-manifest.csv');
+    fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+    fs.writeFileSync(manifestPath, [
+      'path,hash',
+      'safe/file.md,valid',
+      '../outside.md,evil',
+      '/absolute.md,evil',
+      'nested/../../outside.md,evil',
+      'C:\\outside.md,evil',
+      'node_modules/outside.md,evil',
+    ].join('\n'));
+
+    expect(await readFilesManifest(dir)).toEqual([{ relPath: 'safe/file.md', hash: 'valid' }]);
+  });
+  it('keeps managed paths contained and module IDs allowlisted', () => {
+    expect(isSafeManifestPath('nested/file.md')).toBe(true);
+    expect(isSafeManifestPath('../outside.md')).toBe(false);
+    expect(isSafeManifestPath('C:\\outside.md')).toBe(false);
+    expect(isSafeManifestPath('node_modules/outside.md')).toBe(false);
+    expect(isSafeManifestPath('safe\n.gitignore-rule')).toBe(false);
+    expect(resolveWithin(dir, 'nested/file.md')).toBe(path.join(dir, 'nested/file.md'));
+    expect(() => resolveWithin(dir, '../outside.md')).toThrow(/outside its managed root/);
+    expect(hasOnlyInstallableModules(['awm', 'core', 'unnamed-pm'])).toBe(true);
+    expect(hasOnlyInstallableModules(['awm', '..'])).toBe(false);
+  });
+  it('rejects an unsafe CLI module ID before it can reach filesystem paths', async () => {
+    await expect(installer.install({ directory: dir, modules: '..', tools: 'claude-code', yes: true }))
+      .rejects.toThrow(/Unknown module id/);
+    expect(fs.existsSync(path.join(dir, 'package.json'))).toBe(false);
+  });
+  it('rejects an explicit output folder that escapes the project', async () => {
+    const outsideName = `${path.basename(dir)}-outside`;
+    await expect(installer.install({ directory: dir, outputFolder: `../${outsideName}`, tools: 'claude-code', yes: true }))
+      .rejects.toThrow(/Invalid --output-folder path/);
+    expect(fs.existsSync(path.join(path.dirname(dir), outsideName))).toBe(false);
+  });
+  it('rejects an existing managed symlink that resolves outside the project', async () => {
+    const external = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-external-'));
+    try {
+      fs.mkdirSync(path.join(dir, '_arcwright'), { recursive: true });
+      fs.symlinkSync(external, path.join(dir, '_arcwright', 'core'), process.platform === 'win32' ? 'junction' : 'dir');
+      await expect(preflightProjectManagedPaths(dir)).rejects.toThrow(/_arcwright\/core resolves outside/);
+      await expect(installer.install({ directory: dir, tools: 'claude-code', yes: true }))
+        .rejects.toThrow(/Install preflight failed/);
+      expect(fs.readdirSync(external)).toEqual([]);
+    } finally {
+      fs.rmSync(external, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('project origin normalization', () => {
+  it('converts SSH Git remotes to canonical HTTPS URLs', () => {
+    execSync('git init -q', { cwd: dir });
+    execSync('git remote add origin git@github.com:unn-corp/Arcwright-AI.git', { cwd: dir });
+    expect(projectOrigin(dir)).toBe('https://github.com/unn-corp/Arcwright-AI.git');
+    execSync('git remote set-url origin ssh://git@github.com/unn-corp/Arcwright-AI.git', { cwd: dir });
+    expect(projectOrigin(dir)).toBe('https://github.com/unn-corp/Arcwright-AI.git');
+  });
 });
 
 describe('buildModuleConfig', () => {
@@ -161,8 +235,20 @@ describe('Hermes model surface helpers', () => {
       if (cmd.startsWith('command -v hermes')) throw new Error('missing');
       return '';
     };
-    await ensureHermesCliInstalled({ linux: dir, windows: null }, chalk, run);
+    await ensureHermesCliInstalled({ linux: dir, windows: null }, chalk, run, true);
     expect(calls.some((cmd) => cmd.includes('https://hermes-agent.nousresearch.com/install.sh'))).toBe(true);
+  });
+
+  it('does not execute the upstream installer without explicit opt-in', async () => {
+    const calls = [];
+    const run = (cmd) => {
+      calls.push(cmd);
+      if (cmd.startsWith('command -v hermes')) throw new Error('missing');
+      return '';
+    };
+    const result = await ensureHermesCliInstalled({ linux: dir, windows: null }, chalk, run);
+    expect(result).toMatchObject({ available: false, skipped: true });
+    expect(calls.some((cmd) => cmd.includes('install.sh'))).toBe(false);
   });
 
   it('does not run the installer when ~/.local/bin/hermes already exists', async () => {

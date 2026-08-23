@@ -5,13 +5,13 @@ description: 'Celebrate completion and guide next steps for using the agent'
 # File References
 thisStepFile: ./step-08-celebrate.md
 workflowFile: ../workflow.md
-outputFile: {awb_creations_output_folder}/agent-completion-{agent_name}.md
+outputFile: '{awb_creations_output_folder}/agent-completion-{agent_name}.md'
 
 # Task References
 advancedElicitationTask: '{project-root}/_arcwright/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_arcwright/core/workflows/party-mode/workflow.md'
 installationDocs: 'https://github.com/arcwright-code-org/Arcwright-METHOD/blob/main/docs/modules/awb-arcwright-builder/custom-content-installation.md#standalone-content-agents-workflows-tasks-tools-templates-prompts'
-validationWorkflow: '{project-root}/src/modules/awb/workflows/agent/steps-v/v-01-load-review.md'
+validationWorkflow: '{project-root}/_arcwright/awb/workflows/agent/steps-v/v-01-load-review.md'
 ---
 
 # Step 8: Celebration and Installation Guidance

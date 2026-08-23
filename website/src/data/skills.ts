@@ -38,7 +38,7 @@ export const skills: Skill[] = [
   {
     name: 'Motion',
     slug: 'motion',
-    description: 'Prioritized React animation library (Motion / Framer Motion) — gestures, drag, scroll, layout transitions, springs, and reduced-motion accessibility.',
+    description: 'Prioritized React animation library (Motion / Framer Motion): gestures, drag, scroll, layout transitions, springs, and reduced-motion accessibility.',
     category: 'frontend',
   },
   {
@@ -136,13 +136,13 @@ export const skills: Skill[] = [
   {
     name: 'browser-use',
     slug: 'browser-use',
-    description: 'Agentic browser exploration — give a natural-language goal, an LLM agent self-navigates (no selectors). For exploratory testing, documenting unknown UIs, and scaffolding Playwright tests. The agentic counterpart to playwright-cli.',
+    description: 'Agentic browser exploration: give a natural-language goal and an LLM agent self-navigates without selectors. For exploratory testing, documenting unknown UIs, and scaffolding Playwright tests. The agentic counterpart to playwright-cli.',
     category: 'devops',
   },
   {
     name: 'gsudo',
     slug: 'gsudo',
-    description: 'Windows privilege escalation for WSL2 — run commands with elevated permissions.',
+    description: 'Windows privilege escalation for WSL2: run commands with elevated permissions.',
     category: 'devops',
   },
   {
@@ -198,7 +198,7 @@ export const skills: Skill[] = [
   {
     name: 'Triage',
     slug: 'triage',
-    description: 'Workflow router — recommends a runtime for a task: plain in-process agent(s), an ultracode workflow, or a /goal loop.',
+    description: 'Workflow router that recommends a runtime for a task: plain in-process agent(s), an ultracode workflow, or a /goal loop.',
     category: 'workflow',
   },
   {
@@ -216,13 +216,13 @@ export const skills: Skill[] = [
   {
     name: 'Caveman',
     slug: 'caveman',
-    description: 'Concise-output discipline — write artifacts terse, cut ~65% of tokens, keep all technical substance. Required pre-output for every doc-writing agent.',
+    description: 'Concise-output discipline: write artifacts tersely, cut about 65% of tokens, and keep all technical substance. Required pre-output for every doc-writing agent.',
     category: 'workflow',
   },
   {
     name: 'Spec Kernel',
     slug: 'spec-kernel',
-    description: 'Tight SPEC.md contract: Why, Capabilities (CAP-NNN), Constraints, Non-goals, Success signal — with a pre-planning quality checklist.',
+    description: 'Tight SPEC.md contract: Why, Capabilities (CAP-NNN), Constraints, Non-goals, and Success signal, with a pre-planning quality checklist.',
     category: 'workflow',
   },
   {
@@ -264,13 +264,13 @@ export const skills: Skill[] = [
   {
     name: 'Commit Commands',
     slug: 'commit-commands',
-    description: 'Lightweight daily git trio: /commit, /commit-push-pr, /clean-gone — shows the message before committing.',
+    description: 'Lightweight daily git trio: /commit, /commit-push-pr, and /clean-gone. Shows the message before committing.',
     category: 'workflow',
   },
   {
     name: 'Grill Me',
     slug: 'grill-me',
-    description: 'Adversarial pre-implementation design interrogation — refuses to start coding until the design is locked.',
+    description: 'Adversarial pre-implementation design interrogation that refuses to start coding until the design is locked.',
     category: 'workflow',
   },
   {
@@ -325,7 +325,7 @@ export const skills: Skill[] = [
   {
     name: 'Team: blueprint',
     slug: 'team-blueprint',
-    description: 'Strategic planning before any build — PRDs, research, architecture.',
+    description: 'Strategic planning before any build: PRDs, research, architecture.',
     category: 'teams',
   },
   {
@@ -349,7 +349,7 @@ export const skills: Skill[] = [
   {
     name: 'Team: hotfix',
     slug: 'team-hotfix',
-    description: 'Emergency fix — max 4 files, isolated subsystem, Security reviews before merge.',
+    description: 'Emergency fix: max 4 files, isolated subsystem, Security reviews before merge.',
     category: 'teams',
   },
   {
@@ -403,7 +403,7 @@ export const skills: Skill[] = [
   {
     name: 'Team: ux-arch',
     slug: 'team-ux-arch',
-    description: 'Design artifacts only — UX and Architect with no implementation loop.',
+    description: 'Design artifacts only, with UX and Architect and no implementation loop.',
     category: 'teams',
   },
   {

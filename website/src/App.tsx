@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router';
 import Nav from './components/Nav';
 import Footer from './components/Footer';
@@ -8,31 +7,8 @@ import AgentsPage from './pages/AgentsPage';
 import SkillsPage from './pages/SkillsPage';
 import WorkflowsPage from './pages/WorkflowsPage';
 import TmuxPage from './pages/TmuxPage';
-
-function useScrollReveal() {
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
-
-    observerRef.current = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    document.querySelectorAll('.reveal').forEach(el => {
-      observerRef.current?.observe(el);
-    });
-
-    return () => observerRef.current?.disconnect();
-  }, []);
-}
+import IDEsPage from './pages/IDEsPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -44,14 +20,15 @@ function AnimatedRoutes() {
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/workflows" element={<WorkflowsPage />} />
+        <Route path="/ides" element={<IDEsPage />} />
         <Route path="/herdr" element={<TmuxPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </div>
   );
 }
 
 function Layout() {
-  useScrollReveal();
   return (
     <div className="min-h-screen bg-bg text-foreground">
       {/* Skip link for accessibility */}
@@ -64,7 +41,7 @@ function Layout() {
 
       <Nav />
 
-      <main id="main">
+      <main id="main" className="scroll-mt-28 lg:scroll-mt-16">
         <AnimatedRoutes />
       </main>
 

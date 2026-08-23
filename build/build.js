@@ -1211,6 +1211,26 @@ function verifyNoLeaks() {
 // team-* included: they drop out under --no-teams, so their launchers cannot ship unconditionally.
 const MODULE_GATED_SKILL = /^(team-|docker-type-check$|dotnet-|electron-|tauri-|strands-|aws-serverless-cdk$|unnamed-pm-sync$|unnamed-dev-mcp$)/;
 
+function extractSkillDescription(skillMd, skill) {
+  const fallback = `Load and run the ${skill} skill.`;
+  const frontmatter = skillMd.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!frontmatter) return fallback;
+
+  const lines = frontmatter[1].split(/\r?\n/);
+  const descriptionIndex = lines.findIndex((line) => /^description:\s*/.test(line));
+  if (descriptionIndex === -1) return fallback;
+  const value = lines[descriptionIndex].replace(/^description:\s*/, '').trim();
+  if (['>', '|', '>-', '|-'].includes(value)) {
+    const folded = [];
+    for (const line of lines.slice(descriptionIndex + 1)) {
+      if (!/^\s+/.test(line)) break;
+      folded.push(line.trim());
+    }
+    return folded.join(' ').trim() || fallback;
+  }
+  return value.replace(/^(?:"|')|(?:"|')$/g, '').trim() || fallback;
+}
+
 function bundleSkillCommands() {
   console.log('🎯  Generating per-skill slash-command launchers → src/.claude/commands/ + src/.kiro/agents/');
   const commandsDest   = path.join(PKG_SRC, '.claude', 'commands');
@@ -1231,12 +1251,11 @@ function bundleSkillCommands() {
     if (existingCmd.has(skill) && existingKiro.has(skill)) continue;
 
     const skillMd = readText(path.join(SKILLS_SRC, skill, 'SKILL.md')) || '';
-    const descMatch = skillMd.match(/^description:\s*["']?(.+?)["']?\s*$/m);
-    let desc = descMatch ? descMatch[1].trim() : `Load and run the ${skill} skill.`;
+    let desc = extractSkillDescription(skillMd, skill);
     if (desc.length > 220) desc = desc.slice(0, 217) + '...';
 
     if (!existingCmd.has(skill)) {
-      const cmd = `---\ndescription: ${desc}\n---\n\nLoad and run the \`${skill}\` skill (\`.agents/skills/${skill}/SKILL.md\`) against $ARGUMENTS. Follow the skill exactly.\n`;
+      const cmd = `---\ndescription: ${JSON.stringify(desc)}\n---\n\nLoad and run the \`${skill}\` skill (\`.agents/skills/${skill}/SKILL.md\`) against $ARGUMENTS. Follow the skill exactly.\n`;
       writeFile(path.join(commandsDest, `${skill}.md`), cmd);
     }
     if (!existingKiro.has(skill)) {

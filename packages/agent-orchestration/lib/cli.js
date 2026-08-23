@@ -45,6 +45,8 @@ program
   .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before installing (default when bmad is detected)')
   .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
   .option('--model-surface', 'Install/configure Hermes CLI as the primary model surface through OmniRoute agent-fallback (Claude/Codex subscription groups + free fallback)')
+  .option('--install-hermes', 'Allow the upstream Hermes installer to run when Hermes is selected but absent')
+  .option('--wsl-audio', 'Configure the WSLg PulseAudio shell setting for Claude /voice')
   .option('--omniroute-base-url <url>', 'OmniRoute OpenAI-compatible base URL for --model-surface (default: env ARCWRIGHT_OMNIROUTE_BASE_URL / OMNIROUTE_BASE_URL / http://omniroute:20128/v1)')
   .option('--omniroute-api-key <key>', 'OmniRoute gateway API key for --model-surface (prefer env ARCWRIGHT_OMNIROUTE_API_KEY or OMNIROUTE_API_KEY)')
   .option('--omniroute-model <id>', 'Hermes model id for --model-surface (default: agent-fallback)', 'agent-fallback')
@@ -114,6 +116,8 @@ program
   .option('--migrate-bmad',    'Auto-migrate bmad installation to arcwright before updating (default when bmad is detected)')
   .option('--no-migrate-bmad', 'Skip auto-migration of existing bmad artifacts')
   .option('--model-surface', 'Install/configure Hermes CLI as the primary model surface through OmniRoute agent-fallback (Claude/Codex subscription groups + free fallback)')
+  .option('--install-hermes', 'Allow the upstream Hermes installer to run when Hermes is selected but absent')
+  .option('--wsl-audio', 'Configure the WSLg PulseAudio shell setting for Claude /voice')
   .option('--omniroute-base-url <url>', 'OmniRoute OpenAI-compatible base URL for --model-surface (default: env ARCWRIGHT_OMNIROUTE_BASE_URL / OMNIROUTE_BASE_URL / http://omniroute:20128/v1)')
   .option('--omniroute-api-key <key>', 'OmniRoute gateway API key for --model-surface (prefer env ARCWRIGHT_OMNIROUTE_API_KEY or OMNIROUTE_API_KEY)')
   .option('--omniroute-model <id>', 'Hermes model id for --model-surface (default: agent-fallback)', 'agent-fallback')
@@ -205,9 +209,10 @@ program
 program
   .command('herdr')
   .description('Configure an existing Herdr install with Arcwright defaults')
-  .action(async () => {
+  .option('--install-plugins', 'Install Arcwright\'s reviewed third-party Herdr plugins')
+  .action(async (opts) => {
     const { setupHerdr } = require('./herdrSetup');
-    await setupHerdr();
+    await setupHerdr({ installPlugins: opts.installPlugins === true });
   });
 
 // ─── tmux (deprecated, removed in favor of Herdr) ────────────────────────────

@@ -1,6 +1,6 @@
 # Claude Code multi-provider launchers
 # Source this from ~/.bashrc. Provides provider-aware launchers + Herdr session variants.
-# Every launcher runs `claude --dangerously-skip-permissions`.
+# Launchers preserve Claude's normal permission prompts.
 #
 # Installed by @arcwright-ai/agent-orchestration
 # Docs: https://arcwright.space/docs/model-launchers
@@ -48,7 +48,7 @@ _arc_launch() {
   ANTHROPIC_DEFAULT_HAIKU_MODEL="$small" \
   CLAUDE_CODE_SUBAGENT_MODEL="$model" \
   API_TIMEOUT_MS="3000000" \
-  claude --dangerously-skip-permissions "$@"
+  claude "$@"
 }
 
 # --- Direct-provider presets (reliable agentic use) ---
@@ -62,7 +62,7 @@ claude-or()   { local m="$1"; shift; _arc_launch "$OPENROUTER_BASE" "$HOME/.conf
 claude-qwen() { claude-or "qwen/qwen3-coder" "$@"; }
 
 # --- Plain Anthropic subscription (no third-party routing) ---
-claude-sub() { claude --dangerously-skip-permissions "$@"; }
+claude-sub() { claude "$@"; }
 
 # --- Herdr variants: open (or attach) a named Herdr session per provider ---
 _arc_herdr() {

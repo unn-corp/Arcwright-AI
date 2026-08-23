@@ -4,12 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import herdr from '../lib/herdrSetup.js';
+import herdrAssets from '../lib/herdrAssets.js';
 
 const {
   setupHerdr, detectHerdr, parsePluginIds, buildKeybindingsBlock,
   upsertTomlSetting, installHerdrAssets, listClaudeProfileDirs,
   DEFAULT_PLUGINS, KEYS_START, KEYS_END, SHELL_START,
 } = herdr;
+const { installProfileHook } = herdrAssets;
 
 let dir;
 beforeEach(() => {
@@ -126,6 +128,20 @@ describe('listClaudeProfileDirs', () => {
   });
 });
 
+describe('profile hook settings validation', () => {
+  it('preserves valid JSON that is not a usable Claude settings object', async () => {
+    const profileDir = path.join(dir, '.claude-invalid');
+    const settingsPath = path.join(profileDir, 'settings.json');
+    fs.mkdirSync(profileDir, { recursive: true });
+
+    for (const contents of ['[]', '{"hooks":[]}']) {
+      fs.writeFileSync(settingsPath, contents);
+      await installProfileHook(profileDir, '/tmp/herdr-agent-session.sh');
+      expect(fs.readFileSync(settingsPath, 'utf8')).toBe(contents);
+    }
+  });
+});
+
 describe('Herdr standards', () => {
   it('upserts TOML settings without duplicating existing sections', async () => {
     const configPath = path.join(dir, 'config.toml');
@@ -194,9 +210,9 @@ describe('Herdr standards', () => {
       encoding: 'utf8',
       env: { ...process.env, HOME: dir, PATH: `${stubDir}:${process.env.PATH}` },
     });
-    expect(output).toContain(`claude:${path.join(dir, '.claude-work')}:--dangerously-skip-permissions --resume session-1`);
-    expect(output).toContain('codex:--yolo resume session-2');
-    expect(output).toContain('grok:--always-approve --resume session-3');
+    expect(output).toContain(`claude:${path.join(dir, '.claude-work')}:--resume session-1`);
+    expect(output).toContain('codex:resume session-2');
+    expect(output).toContain('grok:--resume session-3');
   });
 });
 
@@ -204,7 +220,7 @@ describe('setupHerdr', () => {
   it('returns not-installed and touches nothing when herdr is absent', async () => {
     const run = fakeRun({ notInstalled: true });
     const configPath = path.join(dir, 'config.toml');
-    const res = await setupHerdr({ run, quiet: true, configPath, homeDir: dir });
+    const res = await setupHerdr({ run, quiet: true, configPath, homeDir: dir, installPlugins: true });
     expect(res.status).toBe('not-installed');
     expect(fs.existsSync(configPath)).toBe(false);
     // Only the version probe should have run — no install attempts.
@@ -214,7 +230,7 @@ describe('setupHerdr', () => {
   it('installs all default plugins and writes a managed keybindings block', async () => {
     const run = fakeRun();
     const configPath = path.join(dir, 'config.toml');
-    const res = await setupHerdr({ run, quiet: true, configPath, homeDir: dir });
+    const res = await setupHerdr({ run, quiet: true, configPath, homeDir: dir, installPlugins: true });
     expect(res.status).toBe('configured');
     expect(res.installed.sort()).toEqual(DEFAULT_PLUGINS.map((p) => p.id).sort());
     const toml = fs.readFileSync(configPath, 'utf8');
@@ -234,14 +250,14 @@ describe('setupHerdr', () => {
 
   it('skips already-installed plugins', async () => {
     const run = fakeRun({ alreadyInstalled: [{ plugin_id: 'persiyanov.reviewr' }] });
-    const res = await setupHerdr({ run, quiet: true, configPath: path.join(dir, 'config.toml'), homeDir: dir });
+    const res = await setupHerdr({ run, quiet: true, configPath: path.join(dir, 'config.toml'), homeDir: dir, installPlugins: true });
     expect(res.skipped).toContain('persiyanov.reviewr');
     expect(run.calls).not.toContain('herdr plugin install persiyanov/herdr-reviewr --yes');
   });
 
   it('tolerates a plugin whose build fails and still configures the rest', async () => {
     const run = fakeRun({ failInstalls: ['x0d7x/herdr-fzf-url'] });
-    const res = await setupHerdr({ run, quiet: true, configPath: path.join(dir, 'config.toml'), homeDir: dir });
+    const res = await setupHerdr({ run, quiet: true, configPath: path.join(dir, 'config.toml'), homeDir: dir, installPlugins: true });
     expect(res.status).toBe('configured');
     expect(res.skipped).toContain('url.fzf-picker');
     expect(res.installed).toContain('persiyanov.reviewr');
