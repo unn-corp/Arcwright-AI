@@ -388,9 +388,10 @@ cd packages/agent-orchestration && npm publish --access public
 The build pipeline:
 
 1. **buildGenericPackage** — copies `_arcwright/{awb,awm,core,_memory}/` and `.agents/skills/` → `src/`
-2. **buildKiroAssets** — copies skills to `.kiro/skills/`, generates steering docs
-3. **bundleSlashCommands** — copies the 11 slash commands → `src/.claude/commands/`
-4. **verifyNoLeaks** — scans for Squidhub content patterns; build fails if any found
+2. **buildKiroAssets** — generates Kiro steering docs; the installer adapts generic skills when it installs them
+3. **bundleKiroAgents** and **bundleTrackCommands** — generate Kiro agents and package the curated Claude command set
+4. **bundleSpecialistCommands** and **bundleSkillCommands** — generate specialist and per-skill command launchers
+5. **verifySkillReferences** and **verifyNoLeaks** — validate skill links and scan for Squidhub content; the build fails on either problem
 
 Source of truth lives in `_arcwright/` (modules). `packages/agent-orchestration/src/` is wiped and regenerated on every build — never edit it directly.
 

@@ -14,8 +14,9 @@
  *     model-launcher templates.
  *
  *   Kiro assets → packages/agent-orchestration/src/.kiro/
- *     Skills copied 1:1 → .kiro/skills/
  *     Steering docs generated from agent/workflow manifests.
+ *     Agent configuration is generated from the generic source. Skills are
+ *     adapted from the generic skill tree when Kiro is installed.
  *
  * Run: node build/build.js
  */
@@ -25,6 +26,7 @@
 const fs   = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { adaptKiroContent } = require('../packages/agent-orchestration/lib/kiro-adapter');
 
 // Robustly remove a directory tree. Recursive rmSync can race to ENOTEMPTY on
 // reused CI workspaces (self-hosted runners, overlay filesystems); retry with a
@@ -211,32 +213,12 @@ function copyFile(src, dest) {
 }
 
 
-// ─── Kiro adaptation helpers (module-scope, shared by buildKiroAssets + bundleKiroAgents) ──
-
 /**
- * Adapt text content for Kiro CLI:
- * - Rewrite .agents/skills/ → .kiro/skills/
- * - Rewrite .claude/commands/ → .kiro/agents/
- * - Replace `claude --dangerously-skip-permissions` with `kiro-cli chat --trust-all-tools --agent`
- * - Strip bare --dangerously-skip-permissions
- */
-function adaptContentForKiro(text) {
-  let p = text;
-  p = p.replace(/\.agents\/skills\//g, '.kiro/skills/');
-  p = p.replace(/\.claude\/commands\//g, '.kiro/agents/');
-  p = p.replace(
-    /claude\s+--dangerously-skip-permissions/g,
-    'kiro-cli chat --trust-all-tools --agent'
-  );
-  p = p.replace(/,?\s*--dangerously-skip-permissions/g, '');
-  return p;
-}
-
-/**
- * Full adaptation for agent prompts (extends adaptContentForKiro with $ARGUMENTS handling).
+ * Full adaptation for agent prompts (extends the shared Kiro rewrite with
+ * $ARGUMENTS handling).
  */
 function adaptPromptForKiro(body) {
-  let p = adaptContentForKiro(body);
+  let p = adaptKiroContent(body);
   p = p.replace(
     /`?\$ARGUMENTS`?/g,
     '(the user\'s request — provided in their message)'
@@ -301,10 +283,9 @@ function buildGenericPackage() {
 
 /**
  * Walk SKILLS_SRC and copy all skill directories to destBase.
- * Optional transform function applied to text content (used for Kiro path adaptation).
  * Returns count of files copied.
  */
-function copySkillsTo(destBase, logLabel, transform) {
+function copySkillsTo(destBase, logLabel) {
   if (!fs.existsSync(SKILLS_SRC)) {
     console.log(`  ⚠  .agents/skills/ not found — skipping`);
     return 0;
@@ -324,7 +305,7 @@ function copySkillsTo(destBase, logLabel, transform) {
       const dest    = path.join(destBase, skill, rel);
       const content = readText(full);
       if (content !== null) {
-        writeFile(dest, transform ? transform(content) : content);
+        writeFile(dest, content);
       } else {
         copyFile(full, dest);
       }
@@ -341,11 +322,9 @@ function copySkillsTo(destBase, logLabel, transform) {
 function buildKiroAssets() {
   console.log('🟣  Building Kiro assets → .kiro/');
 
-  // 2a. Copy .agents/skills/ → src/.kiro/skills/, rewriting paths/CLI refs for Kiro
-  const kiroSkillsDest = path.join(PKG_SRC, '.kiro', 'skills');
-  copySkillsTo(kiroSkillsDest, 'src/.kiro/skills/', adaptContentForKiro);
-
-  // 2b. Generate steering docs in src/.kiro/steering/
+  // Generate steering docs in src/.kiro/steering/. Kiro skill files are
+  // adapted from src/.agents/skills/ at installation time to avoid shipping a
+  // second 10 MB skill tree in every package.
   const steeringDir = path.join(PKG_SRC, '.kiro', 'steering');
   fs.mkdirSync(steeringDir, { recursive: true });
 

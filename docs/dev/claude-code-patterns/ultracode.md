@@ -184,10 +184,10 @@ several in sequence and read each result before deciding the next phase.
 
 ## Related in Arcwright
 
-The Arcwright workflow-router ([`triage`](../../.agents/skills/triage/SKILL.md))
+The Arcwright workflow-router ([`triage`](../../../.agents/skills/triage/SKILL.md))
 recommends `ultracode` for multi-stage / large / unknown-size discovery work —
 see its §3 decision tree. For plain in-process work, use
-[`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md)
+[`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md)
 (sonnet-first, permission-before-opus). For "keep working until X is true" tasks,
 prefer `/goal`.
 

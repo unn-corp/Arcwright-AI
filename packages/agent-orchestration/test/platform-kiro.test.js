@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import installer from '../lib/installer.js';
+import { adaptKiroContent } from '../lib/kiro-adapter.js';
 
 const { writeKiroConfig } = installer._internal;
 const PKG_ROOT = path.resolve(__dirname, '..');
@@ -31,6 +32,20 @@ afterEach(() => {
 const homes = () => ({ linux: homeDir, windows: null });
 
 describe('writeKiroConfig — native Unnamed MCP hooks', () => {
+  it('rewrites generic skill and launcher references for Kiro', () => {
+    const content = [
+      '.agents/skills/clarification-gate/SKILL.md',
+      '.claude/commands/triage.md',
+      'claude --dangerously-skip-permissions --resume session',
+    ].join('\n');
+
+    expect(adaptKiroContent(content)).toBe([
+      '.kiro/skills/clarification-gate/SKILL.md',
+      '.kiro/agents/triage.md',
+      'kiro-cli chat --trust-all-tools --agent --resume session',
+    ].join('\n'));
+  });
+
   it('installs Kiro agent hooks and grants MCP access to the Unnamed agent', async () => {
     await writeKiroConfig(projectDir, chalk, false, homes(), platform, true, false, false, true);
 
@@ -44,5 +59,16 @@ describe('writeKiroConfig — native Unnamed MCP hooks', () => {
     expect(hooks.hooks.map((hook) => hook.trigger)).toEqual(['SessionStart', 'UserPromptSubmit', 'Stop']);
     expect(agent.includeMcpJson).toBe(true);
     expect(generalAgent.includeMcpJson).toBe(true);
+  });
+
+  it('adapts generic skills while preserving their manifest entries', async () => {
+    const entries = await writeKiroConfig(projectDir, chalk, false, homes(), platform, true, false, false, true);
+    const skillPath = path.join(projectDir, '.kiro', 'skills', 'clarification-gate', 'SKILL.md');
+    const content = await fs.readFile(skillPath, 'utf8');
+    const entry = entries.find(({ relPath }) => relPath === '.kiro/skills/clarification-gate/SKILL.md');
+
+    expect(content).toContain('.kiro/skills/');
+    expect(content).not.toContain('.agents/skills/');
+    expect(entry.hash).toBe(installer._internal.sha256(content));
   });
 });

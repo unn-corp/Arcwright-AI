@@ -53,7 +53,7 @@ function parseToml(src) {
 
   for (let i = 0; i < lines.length; i++) {
     const raw  = lines[i];
-    const line = raw.replace(/#(?=([^"]*"[^"]*")*[^"]*$).*$/, '').trim(); // strip comment
+    const line = stripTomlComment(raw).trim();
 
     if (!line) continue;
 
@@ -93,22 +93,66 @@ function parseToml(src) {
     const rawKey = line.slice(0, eqIdx).trim();
     const rawVal = line.slice(eqIdx + 1).trim();
 
-    ctx[rawKey] = parseTomlValue(rawVal, lines, i);
+    const parsed = readTomlValue(rawVal, lines, i);
+    ctx[rawKey] = parsed.value;
+    i = parsed.lastLine;
   }
 
   return root;
 }
 
+/** Remove a TOML comment while preserving hashes inside quoted strings. */
+function stripTomlComment(line) {
+  let quote = null;
+  let escaped = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quote === '"' && escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quote === '"' && ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if ((ch === '"' || ch === "'") && (!quote || quote === ch)) {
+      quote = quote ? null : ch;
+      continue;
+    }
+    if (ch === '#' && !quote) return line.slice(0, i);
+  }
+
+  return line;
+}
+
+/**
+ * Collect a TOML value that may span multiple lines. Only arrays may span
+ * lines in the supported subset, so a missing closing bracket is an error.
+ */
+function readTomlValue(token, lines, lineIdx) {
+  if (!token.startsWith('[')) return { value: parseTomlValue(token), lastLine: lineIdx };
+
+  let collected = token;
+  let lastLine = lineIdx;
+  while (!isBalanced(collected)) {
+    if (lastLine + 1 >= lines.length) {
+      throw new Error('Unterminated array');
+    }
+    lastLine++;
+    collected += ' ' + stripTomlComment(lines[lastLine]).trim();
+  }
+
+  return { value: parseTomlValue(collected), lastLine };
+}
+
 /**
  * Parse a single TOML value token (string, number, boolean, array, inline table).
- * Multi-line arrays are consumed from `lines` starting at `lineIdx`.
  *
  * @param {string} token
- * @param {string[]} lines
- * @param {number}  lineIdx
  * @returns {*}
  */
-function parseTomlValue(token, lines, lineIdx) {
+function parseTomlValue(token) {
   if (token === 'true')  return true;
   if (token === 'false') return false;
   if (token === 'null')  return null;
@@ -119,15 +163,10 @@ function parseTomlValue(token, lines, lineIdx) {
     return token.slice(1, -1);
   }
 
-  // Inline array (possibly multi-line — consume up to closing ']')
+  // Inline array. Multi-line accumulation is handled by readTomlValue().
   if (token.startsWith('[')) {
-    let collected = token;
-    // If unclosed, gather continuation lines
-    while (!isBalanced(collected) && lineIdx + 1 < lines.length) {
-      lineIdx++;
-      collected += ' ' + lines[lineIdx].replace(/#(?=([^"]*"[^"]*")*[^"]*$).*$/, '').trim();
-    }
-    return parseTomlArray(collected);
+    if (!isBalanced(token)) throw new Error('Unterminated array');
+    return parseTomlArray(token);
   }
 
   // Inline table
@@ -143,14 +182,19 @@ function parseTomlValue(token, lines, lineIdx) {
   return token;
 }
 
-/** Returns true when brackets are balanced (for array accumulation). */
+/** Returns true when brackets are balanced outside either TOML string form. */
 function isBalanced(s) {
   let depth = 0;
-  let inStr = false;
+  let quote = null;
+  let escaped = false;
   for (const ch of s) {
-    if (ch === '"' && !inStr)  { inStr = true; continue; }
-    if (ch === '"' && inStr)   { inStr = false; continue; }
-    if (inStr) continue;
+    if (quote === '"' && escaped) { escaped = false; continue; }
+    if (quote === '"' && ch === '\\') { escaped = true; continue; }
+    if ((ch === '"' || ch === "'") && (!quote || quote === ch)) {
+      quote = quote ? null : ch;
+      continue;
+    }
+    if (quote) continue;
     if (ch === '[') depth++;
     if (ch === ']') depth--;
   }
@@ -165,7 +209,7 @@ function parseTomlArray(token) {
   const inner = token.slice(1, -1).trim();
   if (!inner) return [];
   const items = splitTopLevel(inner, ',');
-  return items.map(item => parseTomlValue(item.trim(), [], 0));
+  return items.map(item => parseTomlValue(item.trim()));
 }
 
 /** Parse an inline table `{key = val, ...}`. */
@@ -179,7 +223,7 @@ function parseInlineTable(token) {
     if (eqIdx === -1) continue;
     const k = pair.slice(0, eqIdx).trim();
     const v = pair.slice(eqIdx + 1).trim();
-    obj[k] = parseTomlValue(v, [], 0);
+    obj[k] = parseTomlValue(v);
   }
   return obj;
 }
@@ -191,13 +235,19 @@ function parseInlineTable(token) {
 function splitTopLevel(s, sep) {
   const parts = [];
   let depth = 0;
-  let inStr = false;
+  let quote = null;
+  let escaped = false;
   let cur = '';
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
-    if (ch === '"' && !inStr) { inStr = true; cur += ch; continue; }
-    if (ch === '"' && inStr)  { inStr = false; cur += ch; continue; }
-    if (inStr) { cur += ch; continue; }
+    if (quote === '"' && escaped) { escaped = false; cur += ch; continue; }
+    if (quote === '"' && ch === '\\') { escaped = true; cur += ch; continue; }
+    if ((ch === '"' || ch === "'") && (!quote || quote === ch)) {
+      quote = quote ? null : ch;
+      cur += ch;
+      continue;
+    }
+    if (quote) { cur += ch; continue; }
     if (ch === '[' || ch === '{') { depth++; cur += ch; continue; }
     if (ch === ']' || ch === '}') { depth--; cur += ch; continue; }
     if (ch === sep && depth === 0) { parts.push(cur); cur = ''; continue; }

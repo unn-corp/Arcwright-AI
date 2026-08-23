@@ -185,7 +185,7 @@ CLAUDE_CODE_SUBAGENT_MODEL=sonnet claude --model opus
 ## Related in Arcwright
 
 The Arcwright protocol is **sonnet-first + permission-before-opus**:
-[`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md) §6
+[`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md) §6
 mandates that every spawned subagent default to `sonnet`, and that any upgrade to
 `opus` or any raise of effort above the session default must ask the user first.
 Architect and security sign-off roles are kept on `opus` *as a recommended default*,

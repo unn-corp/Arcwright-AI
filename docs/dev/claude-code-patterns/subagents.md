@@ -305,15 +305,15 @@ The in-process **Agent tool + SendMessage** is the spawn mechanism Arcwright use
 Arcwright captures each spawned agent's ID into a Session Agent Registry (role →
 agentId table) and re-engages the same agent via `SendMessage` for follow-up tasks
 instead of re-spawning — the kept-alive/reuse model. The full spec is in
-[`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md).
+[`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md).
 
 **tmux subagent spawning (split-pane `claude --dangerously-skip-permissions '<task>'`
-launches) is retired** in favor of in-process dispatch. tmux remains available as
-opt-in visibility only — see [`tmux`](../../.agents/skills/tmux/SKILL.md), section
+launches) is retired** in favor of in-process dispatch. Herdr remains available as
+opt-in visibility only — see [`herdr`](../../../.agents/skills/herdr/SKILL.md), section
 "Watching agents in panes".
 
 For task-level routing (which subagent / workflow / `/goal` to use), use the
-workflow-router [`triage`](../../.agents/skills/triage/SKILL.md).
+workflow-router [`triage`](../../../.agents/skills/triage/SKILL.md).
 
 ---
 

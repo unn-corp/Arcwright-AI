@@ -60,6 +60,36 @@ describe('parseToml — arrays and tables', () => {
     expect(out).toEqual({ items: ['a', 'b'] });
   });
 
+  it('consumes every line of a multi-line array of inline tables', () => {
+    const out = parseToml([
+      'agents = [',
+      '  { id = "dev", model = "sonnet" },',
+      '  { id = "qa", model = "haiku" },',
+      ']',
+    ].join('\n'));
+    expect(out).toEqual({
+      agents: [
+        { id: 'dev', model: 'sonnet' },
+        { id: 'qa', model: 'haiku' },
+      ],
+    });
+  });
+
+  it('preserves commas, brackets, and hashes inside single-quoted strings', () => {
+    const out = parseToml([
+      "items = ['a]', 'b,c'] # trailing comment",
+      "point = { label = 'a,b#c', count = 2 }",
+    ].join('\n'));
+    expect(out).toEqual({
+      items: ['a]', 'b,c'],
+      point: { label: 'a,b#c', count: 2 },
+    });
+  });
+
+  it('rejects an unterminated array', () => {
+    expect(() => parseToml('items = [\n  "a",')).toThrow('Unterminated array');
+  });
+
   it('parses an inline table', () => {
     expect(parseToml('point = { x = 1, y = 2 }')).toEqual({ point: { x: 1, y: 2 } });
   });
@@ -212,13 +242,10 @@ describe('loadCustomization', () => {
 
   it('is non-fatal on malformed TOML and continues with the lower layer', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    // An unterminated multi-line array would loop to EOF; use an inline table
-    // that throws inside parsing instead. A bare malformed line is skipped, so
-    // force a real throw via an inline array referencing an undefined parse path:
-    fs.writeFileSync(path.join(dir, 'awm.toml'), 'arr = [\n'); // never balanced → consumed to EOF, returns []
+    fs.writeFileSync(path.join(dir, 'awm.toml'), 'arr = [\n');
     const out = loadCustomization('awm', base, dir);
-    // Parser degrades gracefully rather than throwing for this input.
     expect(out).toMatchObject({ model: 'haiku' });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unterminated array'));
     warn.mockRestore();
   });
 });

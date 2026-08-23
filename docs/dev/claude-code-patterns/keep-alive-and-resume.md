@@ -200,7 +200,7 @@ Map Arcwright orchestration needs to the right native mechanism:
 Arcwright layers two complementary reuse mechanisms on top of these primitives:
 
 - **Within-session reuse** — `SendMessage` to a kept-alive agent by ID. Spec:
-  [`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md)
+  [`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md)
   (Session Agent Registry section). Powered by
   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, which the installer writes to
   `settings.json` automatically.
@@ -212,7 +212,7 @@ Arcwright layers two complementary reuse mechanisms on top of these primitives:
   exception (it runs as the session itself).
 
 tmux-based session files (`.agents/orchestration/session-*.md`) are retired; see
-[`herdr`](../../.agents/skills/herdr/SKILL.md) for the current opt-in visibility model.
+[`herdr`](../../../.agents/skills/herdr/SKILL.md) for the current opt-in visibility model.
 
 ---
 

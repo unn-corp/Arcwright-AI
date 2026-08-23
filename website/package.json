@@ -11,16 +11,12 @@
     "check:data": "node scripts/check-data-integrity.mjs"
   },
   "dependencies": {
-    "@radix-ui/react-slot": "^1.2.4",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",
     "react-router": "^8.3.0",
-    "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^3.5.0"
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

@@ -150,6 +150,20 @@ describe('writeCodexConfig — native Unnamed MCP hooks', () => {
     expect(first.some((entry) => entry.relPath === '.codex/hooks.json')).toBe(true);
     expect(second.some((entry) => entry.relPath === '.codex/hooks.json')).toBe(true);
   });
+
+  it('preserves a hook configuration whose root is not an object', async () => {
+    const hooksPath = path.join(projectDir, '.codex', 'hooks.json');
+    fs.ensureDirSync(path.dirname(hooksPath));
+    fs.writeFileSync(hooksPath, '[]');
+
+    const entries = await writeCodexConfig(
+      projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true
+    );
+
+    expect(fs.readFileSync(hooksPath, 'utf8')).toBe('[]');
+    expect(fs.existsSync(path.join(projectDir, '.codex', 'hooks', 'unnamed-dev-context.js'))).toBe(false);
+    expect(entries.some((entry) => entry.relPath === '.codex/hooks.json')).toBe(false);
+  });
 });
 
 describe('writeHermesConfig — project install', () => {
@@ -196,6 +210,18 @@ describe('writeHermesConfig — global install', () => {
     expect(config.hooks.pre_llm_call[0].command).toContain('--harness=hermes');
     expect(fs.existsSync(path.join(homeDir, '.hermes', 'agent-hooks', 'unnamed-dev-context.js'))).toBe(true);
     expect(entries.some((entry) => entry.relPath === '.hermes/agent-hooks/unnamed-dev-context.js')).toBe(true);
+  });
+
+  it('preserves a config with an invalid hooks object', async () => {
+    const configPath = path.join(homeDir, '.hermes', 'config.yaml');
+    const config = 'hooks: not-an-object\n';
+    fs.ensureDirSync(path.dirname(configPath));
+    fs.writeFileSync(configPath, config);
+
+    await writeHermesConfig(projectDir, ['awm'], chalk, true, homes(), platform, true, false, false, true);
+
+    expect(fs.readFileSync(configPath, 'utf8')).toBe(config);
+    expect(fs.existsSync(path.join(homeDir, '.hermes', 'agent-hooks', 'unnamed-dev-context.js'))).toBe(false);
   });
 
   it('copies skills to ~/.hermes/skills/ and returns matching manifest entries', async () => {

@@ -79,7 +79,7 @@ within a session, but memory carries across sessions.
       <r> Display Menu items as the item dictates and in the order given.</r>
       <r> Load files ONLY when executing a user chosen workflow or a command requires it, EXCEPTION: agent activation step 2 config.yaml and {mcp_standards}</r>
       <r>AUTONOMY: You must operate as autonomously as possible when stepping through workflows, avoiding unnecessary stops.</r>
-      <r>CONCISE OUTPUT: When writing artifacts or documentation, ALWAYS load `caveman` from {project-root}/_arcwright/_memory/skills/caveman/SKILL.md first — write terse, keep all technical substance. Combine caveman concision with your tech-writer-sidecar documentation standards.</r>
+      <r>CONCISE OUTPUT: When writing artifacts or documentation, ALWAYS load `caveman` from {project-root}/.agents/skills/caveman/SKILL.md first — write terse, keep all technical substance. Combine caveman concision with your tech-writer-sidecar documentation standards.</r>
       <r>MODEL DEFAULT: sonnet. You run at sonnet; the orchestrator decides whether to escalate to opus and will ask the user first. Do not request opus yourself.</r>
       <r>UNNAMED MCP OFFLINE: NEVER block work. Queue `{output_folder}/unnamed-pm-pending/` and MUST paste that pending tracker payload in the chat reply. Never bury it only in a file.</r>
   </rules>

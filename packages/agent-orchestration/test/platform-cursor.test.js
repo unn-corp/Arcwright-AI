@@ -71,6 +71,21 @@ describe('writeCursorConfig — project install', () => {
     expect(first.filter((entry) => entry.relPath === '.cursor/hooks.json')).toHaveLength(1);
     expect(second.filter((entry) => entry.relPath === '.cursor/hooks.json')).toHaveLength(1);
   });
+
+  it('preserves a malformed user hook configuration', async () => {
+    const hooksPath = path.join(projectDir, '.cursor', 'hooks.json');
+    const malformed = '{ "preserve": true,';
+    fs.ensureDirSync(path.dirname(hooksPath));
+    fs.writeFileSync(hooksPath, malformed);
+
+    const entries = await writeCursorConfig(
+      projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true
+    );
+
+    expect(fs.readFileSync(hooksPath, 'utf8')).toBe(malformed);
+    expect(fs.existsSync(path.join(projectDir, '.cursor', 'hooks', 'unnamed-dev-context.js'))).toBe(false);
+    expect(entries.some((entry) => entry.relPath === '.cursor/hooks.json')).toBe(false);
+  });
 });
 
 describe('writeCursorConfig — global install', () => {

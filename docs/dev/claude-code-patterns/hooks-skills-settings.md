@@ -480,7 +480,7 @@ keys are set automatically (each only if the user hasn't customised it already):
 
 The `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var is the most load-bearing — without
 it, kept-alive agents can't be re-engaged across turns via `SendMessage`. See
-[`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md).
+[`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md).
 
 **Settings still recommended as user opt-in (not written by the installer):**
 
@@ -512,13 +512,14 @@ The settings in this doc are managed by the Arcwright installer
 (`packages/agent-orchestration/lib/installer.js` → `writeClaudeSettings`) and read by the
 in-process orchestration at runtime:
 
-- [`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md) —
+- [`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md) —
   defines which env vars and settings the protocol depends on, including
   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and `fallbackModel`.
-- [`triage`](../../.agents/skills/triage/SKILL.md) — workflow-router. Picks the right
+- [`triage`](../../../.agents/skills/triage/SKILL.md) — workflow-router. Picks the right
   primitive per task; consults effort + model settings before recommending one.
-- [`tmux`](../../.agents/skills/tmux/SKILL.md) — opt-in pane visibility only; reads
-  the same `settings.json` for the `SessionStart` `sessionTitle` hook.
+- [`herdr`](../../../.agents/skills/herdr/SKILL.md) — opt-in pane visibility only;
+  its session and profile hooks observe the same workflow without becoming its
+  spawn mechanism.
 
 ---
 

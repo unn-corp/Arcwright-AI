@@ -313,11 +313,11 @@ The Arcwright master orchestrator (`arcwright-master`) uses the **in-process spa
 Session Agent Registry** pattern described here: it dispatches the Agent tool, captures
 each spawned agent's ID into a role→agentId table, and re-engages the same agent via
 `SendMessage` for follow-up tasks instead of re-spawning. The full spec is in
-[`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md).
+[`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md).
 
 For task-level routing (decide "is this an in-process task, a workflow, or a `/goal`?"),
-use the workflow-router [`triage`](../../.agents/skills/triage/SKILL.md). tmux is
-opt-in visibility only — see [`tmux`](../../.agents/skills/tmux/SKILL.md).
+use the workflow-router [`triage`](../../../.agents/skills/triage/SKILL.md). Herdr is
+opt-in visibility only — see [`herdr`](../../../.agents/skills/herdr/SKILL.md).
 
 ---
 

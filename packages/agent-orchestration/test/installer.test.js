@@ -483,6 +483,35 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.skillListingBudgetFraction).toBe(0.5);
     expect(s.env.CLAUDE_CODE_NO_FLICKER).toBe('0');
   });
+  it('preserves malformed user settings instead of overwriting them', async () => {
+    const settingsPath = path.join(dir, 'settings.json');
+    const malformed = '{ "preserve": true,';
+    fs.writeFileSync(settingsPath, malformed);
+
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+
+    expect(fs.readFileSync(settingsPath, 'utf8')).toBe(malformed);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(false);
+  });
+  it('preserves JSON settings whose root is not an object', async () => {
+    const settingsPath = path.join(dir, 'settings.json');
+    fs.writeFileSync(settingsPath, '[]');
+
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+
+    expect(fs.readFileSync(settingsPath, 'utf8')).toBe('[]');
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(false);
+  });
+  it('preserves settings with an invalid hooks field', async () => {
+    const settingsPath = path.join(dir, 'settings.json');
+    const settings = { hooks: [] };
+    fs.writeFileSync(settingsPath, JSON.stringify(settings));
+
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+
+    expect(JSON.parse(fs.readFileSync(settingsPath, 'utf8'))).toEqual(settings);
+    expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(false);
+  });
   it('safe hooks mode seeds guard hooks and the acceptEdits posture', async () => {
     await writeClaudeSettings(dir, chalk, 'safe', false);
     const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));

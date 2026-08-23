@@ -15,12 +15,12 @@ and orchestration protocols can track the platform.
 ## Arcwright migration status
 
 > The patterns documented below are now integrated into Arcwright's native-orchestration
-> skills. See [`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md)
+> skills. See [`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md)
 > for the unified in-process + SendMessage-reuse method. The bespoke `tracks` and the old
 > `tmux-protocol` skill have been retired (native-orchestration migration, shipped
-> 2026-06-11); tmux is now **opt-in visibility only** — see
-> [`tmux`](../../.agents/skills/tmux/SKILL.md).
-> The [`triage`](../../.agents/skills/triage/SKILL.md) skill is repurposed as the
+> 2026-06-11); Herdr now provides **opt-in visibility only** — see
+> [`herdr`](../../../.agents/skills/herdr/SKILL.md).
+> The [`triage`](../../../.agents/skills/triage/SKILL.md) skill is repurposed as the
 > workflow-router that picks the right primitive (in-process agent / ultracode workflow /
 > `/goal` loop) for each task.
 
@@ -77,14 +77,14 @@ implements with tmux panes and session files (`claude-subagent-protocol`,
 
 The patterns on this page are the substrate Arcwright's skills are built on top of:
 
-- [`claude-subagent-protocol`](../../.agents/skills/claude-subagent-protocol/SKILL.md) —
+- [`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md) —
   the in-process Agent tool + SendMessage-reuse protocol. Defines the Session Agent
   Registry (role → agentId) that replaces the old tmux `session-state.md` pane table,
   and enforces sonnet-first / permission-before-opus.
-- [`triage`](../../.agents/skills/triage/SKILL.md) — the workflow-router. Given a task,
+- [`triage`](../../../.agents/skills/triage/SKILL.md) — the workflow-router. Given a task,
   it picks plain in-process agents / an ultracode dynamic workflow / a `/goal` loop.
-- [`tmux`](../../.agents/skills/tmux/SKILL.md) — pane / window / session reference with
-  one opt-in "Watching agents in panes" section. The old `tmux-protocol` skill
+- [`herdr`](../../../.agents/skills/herdr/SKILL.md) — pane / workspace / session reference
+  with one opt-in "Watching agents in panes" section. The old `tmux-protocol` skill
   (AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling) is retired.
 
 > Sources are cited at the bottom of each document. A few items that could not be confirmed
