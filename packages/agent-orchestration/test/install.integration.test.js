@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vite
 import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
 const { install, uninstall } = installer;
@@ -314,6 +314,42 @@ describe('install() — flag handling', () => {
 });
 
 describe('install() — update / idempotency', () => {
+  it.each([
+    ['project', false],
+    ['global', true],
+  ])('CLI update --yes preserves omitted tools and honors explicit tools for %s installs', async (_label, global) => {
+    const runCli = (args) => {
+      const result = spawnSync(process.execPath, [path.join(PKG_ROOT, 'bin', 'arcwright.js'), ...args], {
+        cwd: projectDir,
+        env: { ...process.env, HOME: homeDir },
+        encoding: 'utf8',
+        timeout: 120000,
+      });
+      if (result.status !== 0) {
+        throw new Error(`CLI failed (${result.status}):\n${result.stderr}\n${result.stdout}`);
+      }
+    };
+    const scopeArgs = global ? ['--global'] : [];
+    const root = global ? homeDir : projectDir;
+    const manifestDir = global ? path.join(homeDir, '.arcwright') : path.join(projectDir, '_arcwright');
+    const retainedPaths = [
+      path.join(root, global ? '.cursor/arcwright-user-rules.md' : '.cursor/rules/arcwright.mdc'),
+      path.join(root, '.kiro/skills/triage/SKILL.md'),
+    ];
+
+    runCli(['install', '--yes', '--tools', 'claude-code,cursor,kiro', '--hooks', 'none', '--gitignore', 'none', ...scopeArgs]);
+    expect((await readManifest(manifestDir)).tools).toEqual(['claude-code', 'cursor', 'kiro']);
+    expect(retainedPaths.every((file) => fs.existsSync(file))).toBe(true);
+
+    runCli(['update', '--yes', '--hooks', 'none', '--gitignore', 'none', ...scopeArgs]);
+    expect((await readManifest(manifestDir)).tools).toEqual(['claude-code', 'cursor', 'kiro']);
+    expect(retainedPaths.every((file) => fs.existsSync(file))).toBe(true);
+
+    runCli(['update', '--yes', '--tools', 'claude-code', '--hooks', 'none', '--gitignore', 'none', ...scopeArgs]);
+    expect((await readManifest(manifestDir)).tools).toEqual(['claude-code']);
+    expect(retainedPaths.every((file) => fs.existsSync(file))).toBe(false);
+  }, 300000);
+
   it('a second install preserves installDate and is an update', async () => {
     await install(baseOpts());
     const first = await readManifest(path.join(projectDir, '_arcwright'));
