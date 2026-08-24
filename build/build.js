@@ -170,10 +170,13 @@ const SHIPPED_COMMANDS = [
 function walk(dir, baseDir) {
   if (!baseDir) baseDir = dir;
   const results = [];
-  if (!fs.existsSync(dir)) return results;
+  if (!fs.existsSync(dir) || fs.lstatSync(dir).isSymbolicLink()) return results;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     const rel  = path.relative(baseDir, full);
+    // Source roots are repository-controlled, but a symlink can point outside
+    // the checkout. Skip it before readText() or copyFile() can follow it.
+    if (entry.isSymbolicLink()) continue;
     if (entry.isDirectory()) {
       results.push(...walk(full, baseDir));
     } else {
