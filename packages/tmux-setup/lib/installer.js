@@ -226,6 +226,8 @@ async function setupTmux(projectRoot, chalk, opts = {}) {
     ['float_term.sh',          path.join(tmuxBin, 'float_term.sh')],
     ['float_init.sh',          path.join(tmuxBin, 'float_init.sh')],
     ['open_clip.sh',           path.join(tmuxBin, 'open_clip.sh')],
+    ['open_path.sh',           path.join(tmuxBin, 'open_path.sh')],
+    ['recenter.sh',            path.join(tmuxBin, 'recenter.sh')],
     ['paste_image_wrapper.sh', path.join(tmuxBin, 'paste_image_wrapper.sh')],
     ['paste_clipboard.sh',     path.join(tmuxBin, 'paste_clipboard.sh')],
     ['cpu_usage.sh',           path.join(tmuxBin, 'cpu_usage.sh')],
