@@ -42,6 +42,7 @@ describe('guard-bash: destructive command guard', () => {
   it.each([
     ['rm -rf /'],
     ['rm -rf "/"'],
+    ['rm -rf "$HOME"'],
     ["rm -rf '$HOME'"],
     ['rm -rf /*'],
     ['rm -fr /'],
@@ -66,9 +67,13 @@ describe('guard-bash: destructive command guard', () => {
     ['rm file.txt'],
     ['rm -rf "$BUILD_DIR"'],
     ['git push origin dev'],
-    // Quoted text is stripped before matching, so merely naming a dangerous
-    // command (docs, echo, a test fixture) must not trip the guard.
+    // Merely naming a dangerous command in quoted text, a comment, or a
+    // here-document fixture must not trip the guard.
     ['echo "rm -rf /"'],
+    ['# rm -rf /'],
+    ['echo ok # rm -rf /'],
+    ["cat <<'EOF'\nrm -rf /\nEOF"],
+    ["cat <<'EOF'\ngit push --force origin main\nEOF"],
   ])('allows %j', (cmd) => {
     expect(bash(cmd)).toBe(ALLOW);
   });
