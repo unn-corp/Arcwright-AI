@@ -149,6 +149,26 @@ describe('migrate — apply', () => {
     expect(fs.readFileSync(externalFile, 'utf8')).toBe('See _bmad-output/ here.\n');
   });
 
+  it('preserves an existing Arcwright track command during migration', () => {
+    seedBmadProject();
+    const commandsDir = path.join(dir, '.claude', 'commands');
+    const sourcePath = path.join(commandsDir, 'bmad-track-compact.md');
+    const destinationPath = path.join(commandsDir, 'arcwright-track-compact.md');
+    const legacyContent = 'legacy track content\n';
+    const userContent = 'user Arcwright content\n';
+    fs.writeFileSync(sourcePath, legacyContent);
+    fs.writeFileSync(destinationPath, userContent);
+
+    const result = migrate(dir, false);
+
+    expect(result.actions).toContainEqual(expect.objectContaining({
+      type: 'skip',
+      reason: 'Target already exists: arcwright-track-compact.md',
+    }));
+    expect(fs.readFileSync(sourcePath, 'utf8')).toBe(legacyContent);
+    expect(fs.readFileSync(destinationPath, 'utf8')).toBe(userContent);
+  });
+
   it('renames the module dir and rewrites references', () => {
     seedBmadProject();
     migrate(dir, false);
