@@ -1,11 +1,12 @@
 # Arcwright workshop — CI gates (scaffolded by the ci-gates skill, trimmed to this repo).
 # Monorepo: root build pipeline + website (Vite/React/TS) + npm packages.
 #
-# Runners: self-hosted only (no GitHub-hosted fallback). All jobs target the
-# unn-corp org runners on the mothership VPS via labels [self-hosted, linux, x64,
-# unn] (myoung34/github-runner, ubuntu-jammy, RUNNER_SCOPE=org, RUNNER_GROUP=
-# default). If a job queues forever: confirm the org runner group `default`
-# grants this repo access and that ci-runner-runner-{1,2,3} are online on the VPS.
+# Runner trust boundary:
+# - pull_request events run on isolated GitHub-hosted ubuntu-latest runners.
+# - push events for main/dev run on the trusted org runner labeled `unn`
+#   ([self-hosted, linux, x64, unn]) for the existing Docker-based checks.
+# Keeping the selection event-aware prevents untrusted PR code from reaching
+# the Docker-backed self-hosted hosts.
 name: ci
 
 on:
@@ -23,7 +24,7 @@ permissions:
   # to read the pull request; without it the job 403s "Resource not accessible".
   pull-requests: read
 
-# All deps are public npm. The self-hosted runners carry a user-level ~/.npmrc
+# All deps are public npm. Trusted org runners carry a user-level ~/.npmrc
 # pointed at a private AWS CodeArtifact mirror with a frequently-expired token,
 # which 401s every npm install. Force the public registry and ignore that
 # userconfig on every npm step via these env vars.
@@ -35,7 +36,7 @@ jobs:
   # Build verification — runs the workshop packager (includes the no-leak check).
   build-package:
     name: build (package)
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ${{ github.event_name == 'push' && 'unn' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,7 +47,7 @@ jobs:
   # Unit tests + coverage gate (agent-orchestration package, Vitest 80/80/70).
   test-package:
     name: test (package)
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ${{ github.event_name == 'push' && 'unn' || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: packages/agent-orchestration
@@ -63,7 +64,7 @@ jobs:
   # Website static gates: lint + type-check + production build.
   website:
     name: static (website)
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ${{ github.event_name == 'push' && 'unn' || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: website
@@ -82,16 +83,13 @@ jobs:
       - run: npm run check:data
       - run: npm run build # tsc -b && vite build (type-check + bundle)
 
-  # Security: secret scan, dependency/vuln, SAST — language-agnostic.
-  # NOTE: scanners run as NATIVE binaries on the runner, not `docker run -v`.
-  # These self-hosted runners are containerized with the host docker socket
-  # mounted (DinD-sibling), so a `-v "${{ github.workspace }}:/x"` bind mounts an
-  # empty host path (the workspace exists inside the runner container, not on the
-  # host daemon) — the scanner would see nothing and pass vacuously. Running the
-  # binaries directly against $GITHUB_WORKSPACE avoids that trap.
+  # Security: secret scan, dependency/vuln, SAST - language-agnostic.
+  # Pull requests run this job on an isolated GitHub-hosted runner, so no
+  # self-hosted Docker socket or persistent runner host is exposed to PR code.
+  # Scanners run as native binaries against $GITHUB_WORKSPACE.
   security:
     name: security
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ${{ github.event_name == 'push' && 'unn' || 'ubuntu-latest' }}
     permissions:
       contents: read
       security-events: write # allow SARIF upload to the Security tab
@@ -110,9 +108,8 @@ jobs:
             --config="$GITHUB_WORKSPACE/.gitleaks.toml" \
             --redact --no-banner --exit-code=1 -v
       - name: Dependency + vuln scan (trivy)
-        # trivy CLI (Apache-2.0). trivy-action runs trivy inside a container with
-        # the workspace mounted, which hits the same DinD-mount trap; run the
-        # binary natively instead.
+        # trivy CLI (Apache-2.0). Run the binary natively so the scanner always
+        # reads the checked-out workspace directly on either runner type.
         run: |
           curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz \
             | tar -xz -C /tmp trivy
@@ -125,16 +122,13 @@ jobs:
             -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
           /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
 
-  # SAST (semgrep) — HARD gate. The semgrep image ships `semgrep-core` (which
-  # won't pip-install reliably on the bare runner). A `container:` job can't be
-  # used here: this self-hosted DinD runner doesn't provision the externals
-  # (node) or the `_temp` script mount that container jobs require. And a plain
-  # `docker run -v "$GITHUB_WORKSPACE:/src"` mounts an empty host path (the
-  # DinD-sibling bind-mount trap). So: checkout on the bare runner, then push the
-  # tree INTO the container with `docker cp` (daemon API, no path mismatch).
+  # SAST (semgrep) - HARD gate. The semgrep image ships `semgrep-core`, which
+  # is more reliable here than installing the native binary. Copy the checked
+  # out tree into the container so this works consistently on both the isolated
+  # PR runner and the trusted push runner without relying on host-path mounts.
   sast:
     name: sast (semgrep)
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ${{ github.event_name == 'push' && 'unn' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - name: SAST (semgrep)
@@ -162,7 +156,7 @@ jobs:
   pr-title:
     name: pr title
     if: github.event_name == 'pull_request'
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ubuntu-latest
     steps:
       - uses: amannn/action-semantic-pull-request@v5
         env:
