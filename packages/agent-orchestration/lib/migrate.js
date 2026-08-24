@@ -318,6 +318,11 @@ function migrateCommands(root, dryRun) {
 
     if (!fs.existsSync(srcPath)) continue;
 
+    if (fs.existsSync(destPath)) {
+      actions.push({ type: 'skip', reason: `Target already exists: ${to}`, path: `.claude/commands/${from}` });
+      continue;
+    }
+
     actions.push({ type: 'rename-file', from: `.claude/commands/${from}`, to: `.claude/commands/${to}` });
     if (!dryRun) {
       fs.renameSync(srcPath, destPath);
@@ -485,6 +490,7 @@ function migrate(projectRoot, dryRun) {
   for (const a of cmdActions) {
     if (a.type === 'delete') console.log(`   🗑  ${a.path}`);
     else if (a.type === 'rename-file') console.log(`   📄 ${a.from} → ${a.to}`);
+    else if (a.type === 'skip') console.log(`   ⏭  ${a.reason}`);
   }
   if (!cmdActions.length) console.log('   (no command changes needed)');
   allActions.push(...cmdActions);
