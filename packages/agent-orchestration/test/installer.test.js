@@ -713,6 +713,64 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     // safe mode clears only OUR PostToolUse entry, never the whole event.
     expect(s.hooks.PostToolUse).toBeDefined();
   });
+  it('preserves foreign entries in a mixed hook group during update', async () => {
+    fs.writeFileSync(
+      path.join(dir, 'settings.json'),
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [{
+            matcher: 'Bash',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/guard-bash.js"',
+              },
+              {
+                type: 'command',
+                command: 'node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/user-security.js"',
+              },
+            ],
+          }],
+        },
+      })
+    );
+
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const hooks = s.hooks.PreToolUse.flatMap((group) => group.hooks);
+
+    expect(hooks.filter((hook) => hook.command.includes('user-security.js'))).toHaveLength(1);
+    expect(hooks.filter((hook) => hook.command.includes('guard-bash.js'))).toHaveLength(1);
+  });
+  it('preserves foreign entries in a mixed hook group during uninstall', async () => {
+    fs.writeFileSync(
+      path.join(dir, 'settings.json'),
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [{
+            matcher: 'Bash',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/guard-bash.js"',
+              },
+              {
+                type: 'command',
+                command: 'node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/user-security.js"',
+              },
+            ],
+          }],
+        },
+      })
+    );
+
+    await stripInstallerSettingsKeys(dir, { removeHooks: true });
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const hooks = s.hooks?.PreToolUse?.flatMap((group) => group.hooks) ?? [];
+
+    expect(hooks.filter((hook) => hook.command.includes('user-security.js'))).toHaveLength(1);
+    expect(hooks.filter((hook) => hook.command.includes('guard-bash.js'))).toHaveLength(0);
+  });
   it('replaces its own hook entries on re-run without duplicating', async () => {
     await writeClaudeSettings(dir, chalk, 'full', false);
     await writeClaudeSettings(dir, chalk, 'full', false);
