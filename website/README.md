@@ -24,11 +24,13 @@ Run these checks before deploying:
 
 ```bash
 npm run check:data
+npm run check:copy
 npm run lint
 npm run build
 ```
 
 `check:data` runs from a full repository checkout. It verifies that the skills, team codes, agent icons, and agent primary-skill references shown by the site exist in `.agents/skills/`. It intentionally skips when the parent repository is unavailable, which keeps the standalone Docker build portable.
+`check:copy` verifies that page headers lead with their main heading instead of rendering a pre-heading eyebrow row.
 
 ## Content maintenance
 
