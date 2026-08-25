@@ -170,10 +170,23 @@ const SHIPPED_COMMANDS = [
 function walk(dir, baseDir) {
   if (!baseDir) baseDir = dir;
   const results = [];
-  if (!fs.existsSync(dir)) return results;
+  let dirStat;
+  try {
+    dirStat = fs.lstatSync(dir);
+  } catch (error) {
+    if (error.code === 'ENOENT') return results;
+    throw error;
+  }
+  if (dirStat.isSymbolicLink()) {
+    throw new Error(`Refusing to follow symlinked package source: ${dir}`);
+  }
+  if (!dirStat.isDirectory()) return results;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     const rel  = path.relative(baseDir, full);
+    if (entry.isSymbolicLink()) {
+      throw new Error(`Refusing to follow symlinked package source: ${full}`);
+    }
     if (entry.isDirectory()) {
       results.push(...walk(full, baseDir));
     } else {
