@@ -81,6 +81,7 @@ jobs:
       # unmapped agent icons). Not in `npm run build`: the Dockerfile builds with
       # website/ as its context, where ../.agents/skills does not exist.
       - run: npm run check:data
+      - run: npm run check:copy
       - run: npm run build # tsc -b && vite build (type-check + bundle)
 
   # Security: secret scan, dependency/vuln, SAST — language-agnostic.

@@ -23,11 +23,6 @@ export default function SkillsPage() {
       {/* Page header */}
       <section className="px-4 sm:px-6 pt-12 pb-8 border-b border-surface-light bg-surface/20">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-baseline gap-3 mb-3">
-            <span className="font-mono text-cta text-sm">_arcwright</span>
-            <span className="font-mono text-muted text-sm" aria-hidden="true">→</span>
-            <span className="font-mono text-muted text-sm">skills library</span>
-          </div>
           <h1 className="font-mono text-4xl sm:text-5xl font-bold text-foreground mb-4">
             Skill Library
           </h1>
