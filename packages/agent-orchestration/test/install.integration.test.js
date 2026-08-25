@@ -392,6 +392,19 @@ describe('install() — bmad migration', () => {
     const manifest = await readManifest(path.join(projectDir, '_arcwright'));
     expect(typeof manifest.migratedAt).toBe('string');
   }, 60000);
+
+  it('migrates a command-only BMAD install before recording migratedAt', async () => {
+    const commands = path.join(projectDir, '.claude', 'commands');
+    fs.mkdirpSync(commands);
+    fs.writeFileSync(path.join(commands, 'bmad-track-compact.md'), 'legacy\n');
+
+    await install(baseOpts({ migrateBmad: true }));
+
+    const manifest = await readManifest(path.join(projectDir, '_arcwright'));
+    expect(typeof manifest.migratedAt).toBe('string');
+    expect(fs.existsSync(path.join(commands, 'bmad-track-compact.md'))).toBe(false);
+    expect(fs.existsSync(path.join(commands, 'arcwright-track-compact.md'))).toBe(true);
+  }, 60000);
 });
 
 describe('install() — global install', () => {

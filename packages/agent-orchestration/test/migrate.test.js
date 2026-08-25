@@ -74,6 +74,32 @@ describe('migrate — dry run', () => {
 });
 
 describe('migrate — apply', () => {
+  it('migrates command-only BMAD artifacts', () => {
+    const commands = path.join(dir, '.claude', 'commands');
+    fs.mkdirSync(commands, { recursive: true });
+    fs.writeFileSync(path.join(commands, 'bmad-track-compact.md'), 'legacy\n');
+
+    const result = migrate(dir, false);
+
+    expect(fs.existsSync(path.join(commands, 'bmad-track-compact.md'))).toBe(false);
+    expect(fs.readFileSync(path.join(commands, 'arcwright-track-compact.md'), 'utf8')).toBe('legacy\n');
+    expect(result.actions).toContainEqual({
+      type: 'rename-file',
+      from: '.claude/commands/bmad-track-compact.md',
+      to: '.claude/commands/arcwright-track-compact.md',
+    });
+  });
+
+  it('migrates a partial module tree without a legacy root directory', () => {
+    fs.mkdirSync(path.join(dir, '_arcwright', 'bmm'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '_arcwright', 'bmm', 'marker.md'), 'legacy\n');
+
+    migrate(dir, false);
+
+    expect(fs.existsSync(path.join(dir, '_arcwright', 'bmm'))).toBe(false);
+    expect(fs.readFileSync(path.join(dir, '_arcwright', 'awm', 'marker.md'), 'utf8')).toBe('legacy\n');
+  });
+
   it('aborts before mutation when a rename target already exists', () => {
     seedBmadProject();
     fs.mkdirSync(path.join(dir, '_arcwright'));
@@ -82,6 +108,18 @@ describe('migrate — apply', () => {
     expect(fs.existsSync(path.join(dir, '_bmad'))).toBe(true);
     expect(fs.existsSync(path.join(dir, '_arcwright'))).toBe(true);
     expect(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8')).toContain('_bmad-output/');
+  });
+
+  it('aborts before mutation when a command rename target already exists', () => {
+    seedBmadProject();
+    const commands = path.join(dir, '.claude', 'commands');
+    fs.writeFileSync(path.join(commands, 'bmad-track-compact.md'), 'legacy\n');
+    fs.writeFileSync(path.join(commands, 'arcwright-track-compact.md'), 'current\n');
+
+    expect(() => migrate(dir, false)).toThrow(/bmad-track-compact.*arcwright-track-compact.*target already exists/);
+    expect(fs.existsSync(path.join(dir, '_bmad'))).toBe(true);
+    expect(fs.readFileSync(path.join(commands, 'bmad-track-compact.md'), 'utf8')).toBe('legacy\n');
+    expect(fs.readFileSync(path.join(commands, 'arcwright-track-compact.md'), 'utf8')).toBe('current\n');
   });
 
   it.each([

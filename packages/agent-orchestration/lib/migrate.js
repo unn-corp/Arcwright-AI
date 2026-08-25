@@ -175,6 +175,33 @@ function resolveVirtualPath(relPath, plannedRenames) {
 }
 
 /**
+ * Detect BMAD artifacts that this migrator can handle.
+ * Returns {present: boolean, signals: string[]} for installer prompts and
+ * migration eligibility. Keep this as the single source of truth so the
+ * installer cannot record a migration that migrate() would skip.
+ */
+function detectBmad(projectRoot) {
+  const signals = [];
+  const check = (rel) => fs.existsSync(path.join(projectRoot, rel));
+
+  if (check('_bmad'))             signals.push('_bmad/');
+  if (check('_bmad-output'))      signals.push('_bmad-output/');
+  if (check('_bmad_output'))      signals.push('_bmad_output/');
+  if (check('_arcwright/bmm'))    signals.push('_arcwright/bmm/ (partial migration)');
+  if (check('_arcwright/bmb'))    signals.push('_arcwright/bmb/ (partial migration)');
+
+  const commandsDir = path.join(projectRoot, '.claude', 'commands');
+  if (fs.existsSync(commandsDir)) {
+    const bmadCommands = fs.readdirSync(commandsDir).filter((file) => /^bmad-/.test(file));
+    if (bmadCommands.length > 0) {
+      signals.push(`${bmadCommands.length} bmad-*.md command file${bmadCommands.length !== 1 ? 's' : ''} in .claude/commands/`);
+    }
+  }
+
+  return { present: signals.length > 0, signals };
+}
+
+/**
  * Validate every destructive migration decision before the first write.
  * This prevents partial migrations and refuses managed symlinks that escape
  * the selected project root.
@@ -224,6 +251,15 @@ function preflightMigration(root) {
       continue;
     }
     plannedRenames.push(rename);
+  }
+
+  const commandsDir = path.join(root, '.claude', 'commands');
+  for (const { from, to } of COMMANDS_TO_RENAME) {
+    const sourcePath = path.join(commandsDir, from);
+    const targetPath = path.join(commandsDir, to);
+    if (fs.existsSync(sourcePath) && fs.existsSync(targetPath)) {
+      errors.push(`.claude/commands/${from} -> .claude/commands/${to}: target already exists`);
+    }
   }
 
   if (errors.length > 0) {
@@ -425,13 +461,9 @@ function migrate(projectRoot, dryRun) {
   console.log(`\n${ dryRun ? '🔍 DRY RUN' : '🔄 MIGRATING'} — bmad → arcwright`);
   console.log(`   Project: ${root}\n`);
 
-  // Check if there's anything to migrate
-  const hasBmad = fs.existsSync(path.join(root, '_bmad'))
-    || fs.existsSync(path.join(root, '_bmad-output'))
-    || fs.existsSync(path.join(root, '_bmad_output'));
-
-  if (!hasBmad) {
-    console.log('   No _bmad/ or _bmad-output/ directory found. Nothing to migrate.\n');
+  const bmadDetected = detectBmad(root);
+  if (!bmadDetected.present) {
+    console.log('   No migratable BMAD artifacts found. Nothing to migrate.\n');
     return { actions: [], root };
   }
 
@@ -522,4 +554,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { migrate };
+module.exports = { migrate, detectBmad };
