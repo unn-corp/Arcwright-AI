@@ -6,8 +6,8 @@
  * Conservative by design — only high-confidence destructive patterns.
  *
  * Most patterns are matched against an effective command with quoted strings
- * and comments removed. Recursive rm is handled separately against the raw
- * command so quoted filesystem operands such as `rm -rf "/"` remain blocked.
+ * and comments removed. Force-push matching uses the same command with quoted
+ * values retained so quoted branch names remain visible to the guard.
  */
 'use strict';
 
@@ -17,18 +17,19 @@
  * comments. `#` starts a comment only at a word boundary (start or after
  * whitespace), matching shell behavior.
  */
-function effectiveCommand(cmd) {
+function effectiveCommand(cmd, { preserveQuotedValues = false } = {}) {
   let out = '';
   let quote = null;
   for (let i = 0; i < cmd.length; i++) {
     const ch = cmd[i];
     if (quote) {
       if (ch === quote) quote = null;
-      continue; // drop everything inside quotes
+      else if (preserveQuotedValues && !/[;&|\n]/.test(ch)) out += ch;
+      continue; // quote delimiters are never emitted
     }
     if (ch === "'" || ch === '"') {
       quote = ch;
-      out += ' '; // collapse the quoted span to a separator
+      if (!preserveQuotedValues) out += ' '; // collapse the quoted span to a separator
       continue;
     }
     if (ch === '#' && (i === 0 || /\s/.test(cmd[i - 1]))) {
@@ -96,6 +97,7 @@ process.stdin.on('end', () => {
   if (!cmd) process.exit(0);
 
   const scanned = effectiveCommand(cmd);
+  const forcePushScanned = effectiveCommand(cmd, { preserveQuotedValues: true });
 
   const deny = (why) => {
     process.stderr.write(
@@ -115,10 +117,14 @@ process.stdin.on('end', () => {
   // --force main` and `git -c k=v push --force main` are real force-pushes that
   // a bare /\bgit\s+push\b/ does not match.
   const GIT_GLOBAL_OPT = String.raw`(?:-[cC](?:\s+|=)?\S+|--(?:git-dir|work-tree|namespace|exec-path)(?:=|\s+)\S+|--no-pager|--paginate|--bare|--literal-pathspecs|--icase-pathspecs|--no-replace-objects|--no-optional-locks|-p|-P)`;
-  const GIT_PUSH = String.raw`\bgit(?:\s+${GIT_GLOBAL_OPT})*\s+push\s+`;
-  const blocks = [
+  // Anchor git at a shell command boundary so retaining quoted values does not
+  // turn `echo "git push --force origin main"` into a false positive.
+  const GIT_PUSH = String.raw`(?:^|(?:&&|\|\||[;&|\n])\s*)(?:(?:sudo|doas|env|command|nohup|time)\s+)*git(?:\s+${GIT_GLOBAL_OPT})*\s+push\s+`;
+  const forcePushBlocks = [
     [new RegExp(String.raw`${GIT_PUSH}${FORCE}\b.*\b(main|master)\b`), 'force-push to main/master'],
     [new RegExp(String.raw`${GIT_PUSH}.*\b(main|master)\b.*\s${FORCE}\b`), 'force-push to main/master'],
+  ];
+  const blocks = [
     [/\bgit\s+reset\s+--hard\s+origin\//, 'hard reset to remote (discards local work)'],
     [/\bgit\s+clean\s+-[a-z]*f[a-z]*d/, 'git clean -fd (deletes untracked files)'],
     [/\bchmod\s+-R\s+777\b/, 'recursive chmod 777'],
@@ -127,6 +133,9 @@ process.stdin.on('end', () => {
     [/>\s*\/dev\/sd[a-z]/, 'write to raw block device'],
   ];
 
+  for (const [re, why] of forcePushBlocks) {
+    if (re.test(forcePushScanned)) deny(why);
+  }
   for (const [re, why] of blocks) {
     if (re.test(scanned)) deny(why);
   }

@@ -69,6 +69,7 @@ describe('guard-bash: destructive command guard', () => {
     // Quoted text is stripped before matching, so merely naming a dangerous
     // command (docs, echo, a test fixture) must not trip the guard.
     ['echo "rm -rf /"'],
+    ['echo "git push --force origin main"'],
   ])('allows %j', (cmd) => {
     expect(bash(cmd)).toBe(ALLOW);
   });
@@ -77,6 +78,8 @@ describe('guard-bash: destructive command guard', () => {
     expect(bash('git push --force origin main')).toBe(DENY);
     expect(bash('git push -f origin master')).toBe(DENY);
     expect(bash('git push origin main --force')).toBe(DENY);
+    expect(bash('git push --force origin "main"')).toBe(DENY);
+    expect(bash("git push origin 'master' --force")).toBe(DENY);
   });
 
   // git accepts global options BEFORE the subcommand, so `\bgit\s+push\b` does
@@ -85,6 +88,7 @@ describe('guard-bash: destructive command guard', () => {
   // adversarially.
   it('sees the push through git global options', () => {
     expect(bash('git -C /repo push --force origin main')).toBe(DENY);
+    expect(bash('git -C /repo push --force origin "main"')).toBe(DENY);
     expect(bash('git -c protocol.version=2 push --force origin main')).toBe(DENY);
     expect(bash('git --no-pager push --force origin master')).toBe(DENY);
     expect(bash('git -C /r push origin main --force')).toBe(DENY);
