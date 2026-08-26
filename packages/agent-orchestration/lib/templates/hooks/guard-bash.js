@@ -63,6 +63,13 @@ const ROOTISH_TARGET =
   /^(?:\/|~|\$HOME|\$\{HOME\})(?:\/)?(?:\*)?$|^(?:\$HOME|\$\{HOME\}|~)\/\*$/;
 const RECURSIVE_FLAG = /^-(?:-recursive$|[a-zA-Z]*[rR][a-zA-Z]*$)/;
 
+function normalizeRmOperand(token) {
+  // Quote delimiters can surround only part of a shell word, as in
+  // `"$HOME"/*`. Remove them throughout the token before matching the
+  // resulting operand against the root/home patterns.
+  return token.replace(/["']/g, '');
+}
+
 function hasDestructiveRm(cmd) {
   for (const segment of cmd.split(/(?:&&|\|\||[;&|\n])+/)) {
     const tokens = segment.trim().split(/\s+/).filter(Boolean);
@@ -75,7 +82,7 @@ function hasDestructiveRm(cmd) {
     if (rest.some((t) => t === '--no-preserve-root')) return true;
     const recursive = rest.some((t) => RECURSIVE_FLAG.test(t));
     const rootish = rest.some((token) => {
-      const target = token.replace(/^(?:'([^']*)'|"([^"]*)")$/, '$1$2');
+      const target = normalizeRmOperand(token);
       return !target.startsWith('-') && ROOTISH_TARGET.test(target);
     });
     if (recursive && rootish) return true;
