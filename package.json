@@ -4,6 +4,7 @@
   "private": true,
   "description": "Arcwright — AI agent workflow workshop",
   "scripts": {
-    "build": "node build/build.js"
+    "build": "node build/build.js",
+    "test": "node --test build/build.test.js"
   }
 }

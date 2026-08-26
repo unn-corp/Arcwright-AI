@@ -163,6 +163,95 @@ const SHIPPED_COMMANDS = [
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function isPathWithin(rootPath, targetPath) {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === '' || (
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
+}
+
+function assertNoSymlinkPath(targetPath, rootPath, kind) {
+  const target = path.resolve(targetPath);
+  const root = path.resolve(rootPath);
+  if (!isPathWithin(root, target)) {
+    throw new Error(`[build] ${kind} escapes its root: ${targetPath} (root: ${rootPath})`);
+  }
+
+  let current = target;
+  while (true) {
+    const stat = fs.lstatSync(current, { throwIfNoEntry: false });
+    if (stat?.isSymbolicLink()) {
+      throw new Error(`[build] Refusing symbolic link in ${kind}: ${current}`);
+    }
+    if (current === root) break;
+    const parent = path.dirname(current);
+    if (parent === current) {
+      throw new Error(`[build] Could not validate ${kind}: ${targetPath}`);
+    }
+    current = parent;
+  }
+}
+
+function assertRealpathContained(targetPath, rootPath, kind) {
+  const rootReal = fs.realpathSync(rootPath);
+  const targetReal = fs.realpathSync(targetPath);
+  if (!isPathWithin(rootReal, targetReal)) {
+    throw new Error(
+      `[build] ${kind} resolves outside its root: ${targetPath} → ${targetReal} (root: ${rootReal})`
+    );
+  }
+  return targetReal;
+}
+
+function validateBuildRoot(rootPath, kind) {
+  const stat = fs.lstatSync(rootPath, { throwIfNoEntry: false });
+  if (!stat) return false;
+  if (stat.isSymbolicLink()) {
+    throw new Error(`[build] Refusing symbolic link ${kind} root: ${rootPath}`);
+  }
+  if (!stat.isDirectory()) {
+    throw new Error(`[build] ${kind} root is not a directory: ${rootPath}`);
+  }
+  assertNoSymlinkPath(rootPath, PROJECT_ROOT, kind);
+  assertRealpathContained(rootPath, PROJECT_ROOT, `${kind} root`);
+  return true;
+}
+
+function assertSourcePath(sourcePath, sourceRoot) {
+  assertNoSymlinkPath(sourcePath, sourceRoot, 'build input');
+  assertRealpathContained(sourcePath, sourceRoot, 'build input');
+}
+
+function assertDestinationPath(destinationPath) {
+  assertNoSymlinkPath(destinationPath, PKG_SRC, 'build destination');
+  assertRealpathContained(PKG_SRC, PROJECT_ROOT, 'build destination root');
+
+  const destination = path.resolve(destinationPath);
+  const stat = fs.lstatSync(destination, { throwIfNoEntry: false });
+  if (stat) {
+    assertRealpathContained(destination, PKG_SRC, 'build destination');
+    return;
+  }
+
+  let parent = path.dirname(destination);
+  while (!fs.lstatSync(parent, { throwIfNoEntry: false })) {
+    const next = path.dirname(parent);
+    if (next === parent) {
+      throw new Error(`[build] Could not validate build destination: ${destinationPath}`);
+    }
+    parent = next;
+  }
+  assertRealpathContained(parent, PKG_SRC, 'build destination');
+}
+
+function ensureDestinationDirectory(directory) {
+  assertDestinationPath(directory);
+  fs.mkdirSync(directory, { recursive: true });
+  assertDestinationPath(directory);
+}
+
 /**
  * Recursively walk a directory, returning [{full, rel}] pairs.
  * rel is relative to baseDir (defaults to dir itself).
@@ -170,10 +259,27 @@ const SHIPPED_COMMANDS = [
 function walk(dir, baseDir) {
   if (!baseDir) baseDir = dir;
   const results = [];
-  if (!fs.existsSync(dir)) return results;
+  if (!validateBuildRoot(baseDir, 'build walk')) return results;
+
+  const dirStat = fs.lstatSync(dir, { throwIfNoEntry: false });
+  if (!dirStat) return results;
+  if (dirStat.isSymbolicLink()) {
+    throw new Error(`[build] Refusing symbolic link in build walk: ${dir}`);
+  }
+  if (!dirStat.isDirectory()) {
+    throw new Error(`[build] Build walk root is not a directory: ${dir}`);
+  }
+  assertNoSymlinkPath(dir, baseDir, 'build walk');
+  assertRealpathContained(dir, baseDir, 'build walk');
+
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     const rel  = path.relative(baseDir, full);
+    if (entry.isSymbolicLink()) {
+      throw new Error(`[build] Refusing symbolic link in build walk: ${full}`);
+    }
+    assertNoSymlinkPath(full, baseDir, 'build walk');
+    assertRealpathContained(full, baseDir, 'build walk');
     if (entry.isDirectory()) {
       results.push(...walk(full, baseDir));
     } else {
@@ -196,19 +302,23 @@ function isExcluded(rel) {
  * Read a file as UTF-8 text if it has a recognised text extension,
  * otherwise return null (binary — will be copyFile'd instead).
  */
-function readText(filePath) {
+function readText(filePath, sourceRoot) {
+  assertSourcePath(filePath, sourceRoot);
   const ext = path.extname(filePath).toLowerCase();
   if (!TEXT_EXTS.has(ext)) return null;
   try { return fs.readFileSync(filePath, 'utf8'); } catch { return null; }
 }
 
 function writeFile(dest, content) {
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  ensureDestinationDirectory(path.dirname(dest));
+  assertDestinationPath(dest);
   fs.writeFileSync(dest, content, 'utf8');
 }
 
-function copyFile(src, dest) {
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
+function copyFile(src, dest, sourceRoot) {
+  assertSourcePath(src, sourceRoot);
+  ensureDestinationDirectory(path.dirname(dest));
+  assertDestinationPath(dest);
   fs.copyFileSync(src, dest);
 }
 
@@ -237,6 +347,7 @@ function buildGenericPackage() {
   // to `rm -rf` which tolerates the race, before giving up.
   wipeSrc(PKG_SRC);
   fs.mkdirSync(PKG_SRC, { recursive: true });
+  assertDestinationPath(PKG_SRC);
 
   let totalCopied  = 0;
   let totalSkipped = 0;
@@ -244,7 +355,7 @@ function buildGenericPackage() {
   // ── Copy _arcwright/{awb,awm,core,_memory} ──────────────────────────────────────
   for (const mod of GENERIC_MODULES) {
     const modSrc = path.join(ARCWRIGHT_SRC, mod);
-    if (!fs.existsSync(modSrc)) {
+    if (!validateBuildRoot(modSrc, `_arcwright/${mod}`)) {
       console.log(`  ⚠  Module not found: _arcwright/${mod} — skipping`);
       continue;
     }
@@ -261,11 +372,11 @@ function buildGenericPackage() {
       }
 
       const dest    = path.join(PKG_SRC, globalRel);
-      const content = readText(full);
+      const content = readText(full, modSrc);
       if (content !== null) {
         writeFile(dest, content);
       } else {
-        copyFile(full, dest);
+        copyFile(full, dest, modSrc);
       }
       modCopied++;
       totalCopied++;
@@ -286,12 +397,18 @@ function buildGenericPackage() {
  * Returns count of files copied.
  */
 function copySkillsTo(destBase, logLabel) {
-  if (!fs.existsSync(SKILLS_SRC)) {
+  if (!validateBuildRoot(SKILLS_SRC, '.agents/skills')) {
     console.log(`  ⚠  .agents/skills/ not found — skipping`);
     return 0;
   }
 
   const skills = fs.readdirSync(SKILLS_SRC, { withFileTypes: true })
+    .map((entry) => {
+      if (entry.isSymbolicLink()) {
+        throw new Error(`[build] Refusing symbolic link in .agents/skills: ${path.join(SKILLS_SRC, entry.name)}`);
+      }
+      return entry;
+    })
     .filter(e => e.isDirectory())
     .map(e => e.name);
 
@@ -303,11 +420,11 @@ function copySkillsTo(destBase, logLabel) {
     for (const { full, rel } of files) {
       if (isExcluded(rel)) continue;
       const dest    = path.join(destBase, skill, rel);
-      const content = readText(full);
+      const content = readText(full, SKILLS_SRC);
       if (content !== null) {
         writeFile(dest, content);
       } else {
-        copyFile(full, dest);
+        copyFile(full, dest, SKILLS_SRC);
       }
       copied++;
     }
@@ -326,7 +443,7 @@ function buildKiroAssets() {
   // adapted from src/.agents/skills/ at installation time to avoid shipping a
   // second 10 MB skill tree in every package.
   const steeringDir = path.join(PKG_SRC, '.kiro', 'steering');
-  fs.mkdirSync(steeringDir, { recursive: true });
+  ensureDestinationDirectory(steeringDir);
 
   generateAgentsSteering(steeringDir);
   generateWorkflowsSteering(steeringDir);
@@ -340,13 +457,20 @@ function buildKiroAssets() {
  */
 function generateAgentsSteering(steeringDir) {
   const agentsDir = path.join(ARCWRIGHT_SRC, 'core', 'agents');
-  if (!fs.existsSync(agentsDir)) {
+  if (!validateBuildRoot(agentsDir, '_arcwright/core/agents')) {
     console.log('  ⚠  core/agents/ not found — skipping agents steering doc');
     return;
   }
 
-  const agentFiles = fs.readdirSync(agentsDir)
-    .filter(f => f.endsWith('.md'))
+  const agentFiles = fs.readdirSync(agentsDir, { withFileTypes: true })
+    .map((entry) => {
+      if (entry.isSymbolicLink()) {
+        throw new Error(`[build] Refusing symbolic link in _arcwright/core/agents: ${path.join(agentsDir, entry.name)}`);
+      }
+      return entry;
+    })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.md'))
+    .map(entry => entry.name)
     .sort();
 
   /** Parse `name` from YAML frontmatter or <agent ... name="..."> XML attribute. */
@@ -380,7 +504,7 @@ function generateAgentsSteering(steeringDir) {
 
   const agents = [];
   for (const fname of agentFiles) {
-    const content = fs.readFileSync(path.join(agentsDir, fname), 'utf8');
+    const content = readText(path.join(agentsDir, fname), agentsDir);
     const name    = extractName(content);
     const title   = extractTitle(content);
     const desc    = extractDescription(content);
@@ -423,8 +547,14 @@ function generateAgentsSteering(steeringDir) {
   // Include skill names + descriptions so the AI knows what's available and
   // can auto-load the right skill when the user's request matches.
   const skillsDir = path.join(PROJECT_ROOT, '.agents', 'skills');
-  if (fs.existsSync(skillsDir)) {
+  if (validateBuildRoot(skillsDir, '.agents/skills')) {
     const skillDirs = fs.readdirSync(skillsDir, { withFileTypes: true })
+      .map((entry) => {
+        if (entry.isSymbolicLink()) {
+          throw new Error(`[build] Refusing symbolic link in .agents/skills: ${path.join(skillsDir, entry.name)}`);
+        }
+        return entry;
+      })
       .filter(e => e.isDirectory())
       .map(e => e.name)
       .sort();
@@ -433,7 +563,7 @@ function generateAgentsSteering(steeringDir) {
     for (const dir of skillDirs) {
       const skillMd = path.join(skillsDir, dir, 'SKILL.md');
       if (!fs.existsSync(skillMd)) continue;
-      const content = fs.readFileSync(skillMd, 'utf8');
+      const content = readText(skillMd, skillsDir);
       // Extract description — handle single-line and multi-line YAML
       let desc = null;
       const singleLine = content.match(/^---[\s\S]*?description:\s*["']([^"'\n]+)["']/m);
@@ -565,12 +695,12 @@ function bundleKiroAgents() {
   const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
   const agentsDest   = path.join(PKG_SRC, '.kiro', 'agents');
 
-  if (!fs.existsSync(commandsSrc)) {
+  if (!validateBuildRoot(commandsSrc, '.claude/commands')) {
     console.log('  ⚠  .claude/commands/ not found — skipping Kiro agents');
     return;
   }
 
-  fs.mkdirSync(agentsDest, { recursive: true });
+  ensureDestinationDirectory(agentsDest);
 
   const cmdFiles = fs.readdirSync(commandsSrc)
     .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
@@ -736,7 +866,7 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
   for (const fname of cmdFiles) {
     const srcPath  = path.join(commandsSrc, fname);
     const name     = fname.replace(/\.md$/, '');
-    const raw      = fs.readFileSync(srcPath, 'utf8');
+    const raw      = readText(srcPath, commandsSrc);
     const { description, body } = parseFrontmatter(raw);
 
     let desc = description;
@@ -794,17 +924,14 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
     path.join(ARCWRIGHT_SRC, 'awm', 'agents'),
     path.join(ARCWRIGHT_SRC, 'aws-infra', 'agents'),
     path.join(ARCWRIGHT_SRC, 'unnamed-pm', 'agents'),
-  ].filter(d => fs.existsSync(d));
+  ].filter(d => validateBuildRoot(d, `specialist agent ${path.relative(PROJECT_ROOT, d)}`));
   let specialists = 0;
   if (specialistAgentDirs.length) {
     const agentFiles = [];
     for (const d of specialistAgentDirs) {
-      (function collectMd(dir) {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-          if (entry.isDirectory()) collectMd(path.join(dir, entry.name));
-          else if (entry.name.endsWith('.md')) agentFiles.push(path.join(dir, entry.name));
-        }
-      })(d);
+      agentFiles.push(...walk(d, d)
+        .filter(({ full }) => full.endsWith('.md'))
+        .map(({ full }) => ({ full, sourceRoot: d })));
     }
 
     /**
@@ -864,8 +991,8 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
     /** Default allowedTools when a specialist has no 'tools:' frontmatter. */
     const DEFAULT_SPECIALIST_ALLOWED = ['fs_read', 'grep', 'glob', 'code', 'knowledge'];
 
-    for (const agentPath of agentFiles) {
-      const raw = fs.readFileSync(agentPath, 'utf8');
+    for (const { full: agentPath, sourceRoot } of agentFiles) {
+      const raw = readText(agentPath, sourceRoot);
       const slug = path.basename(agentPath, '.md');
       const kiroName = `arcwright-${slug}`;
 
@@ -918,7 +1045,7 @@ const UNSHIPPED_COMMANDS = {
  */
 function verifyCommandCoverage() {
   const commandsSrc = path.join(PROJECT_ROOT, '.claude', 'commands');
-  if (!fs.existsSync(commandsSrc)) return;
+  if (!validateBuildRoot(commandsSrc, '.claude/commands')) return;
 
   const files = fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'));
   const uncovered = files.filter(
@@ -949,7 +1076,7 @@ function bundleTrackCommands() {
   const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
   const commandsDest = path.join(PKG_SRC, '.claude', 'commands');
 
-  if (!fs.existsSync(commandsSrc)) {
+  if (!validateBuildRoot(commandsSrc, '.claude/commands')) {
     console.log('  ⚠  .claude/commands/ not found — skipping');
     return;
   }
@@ -965,10 +1092,10 @@ function bundleTrackCommands() {
     return;
   }
 
-  fs.mkdirSync(commandsDest, { recursive: true });
+  ensureDestinationDirectory(commandsDest);
 
   for (const fname of cmdFiles) {
-    copyFile(path.join(commandsSrc, fname), path.join(commandsDest, fname));
+    copyFile(path.join(commandsSrc, fname), path.join(commandsDest, fname), commandsSrc);
   }
 
   console.log(`  ✓  ${cmdFiles.length} slash commands copied`);
@@ -989,7 +1116,7 @@ function bundleSpecialistCommands() {
   console.log('👤  Generating specialist slash commands → src/.claude/commands/');
 
   const commandsDest = path.join(PKG_SRC, '.claude', 'commands');
-  fs.mkdirSync(commandsDest, { recursive: true });
+  ensureDestinationDirectory(commandsDest);
 
   const SPECIALIST_MODULES = ['awm', 'awb'];
 
@@ -1017,19 +1144,14 @@ function bundleSpecialistCommands() {
 
   for (const mod of SPECIALIST_MODULES) {
     const agentsDir = path.join(ARCWRIGHT_SRC, mod, 'agents');
-    if (!fs.existsSync(agentsDir)) continue;
+    if (!validateBuildRoot(agentsDir, `specialist agent ${path.relative(PROJECT_ROOT, agentsDir)}`)) continue;
 
-    const agentFiles = [];
-    (function collectMd(dir) {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) collectMd(full);
-        else if (entry.name.endsWith('.md')) agentFiles.push(full);
-      }
-    })(agentsDir);
+    const agentFiles = walk(agentsDir, agentsDir)
+      .filter(({ full }) => full.endsWith('.md'))
+      .map(({ full }) => full);
 
     for (const agentPath of agentFiles) {
-      const raw  = fs.readFileSync(agentPath, 'utf8');
+      const raw  = readText(agentPath, agentsDir);
       const slug = path.basename(agentPath, '.md');
       const cmdName = COMMAND_NAME_MAP[slug] || slug;
 
@@ -1087,7 +1209,7 @@ function bundleLauncherTemplates() {
   const templatesSrc = path.join(PKG_DIR, 'lib', 'templates', 'launchers');
   const destDir = path.join(PKG_SRC, 'launchers');
 
-  if (!fs.existsSync(templatesSrc)) {
+  if (!validateBuildRoot(templatesSrc, 'launcher template')) {
     console.log('  ⚠  lib/templates/launchers/ not found — skipping');
     return;
   }
@@ -1097,11 +1219,11 @@ function bundleLauncherTemplates() {
   for (const { full, rel } of files) {
     if (isExcluded(rel)) continue;
     const dest = path.join(destDir, rel);
-    const content = readText(full);
+    const content = readText(full, templatesSrc);
     if (content !== null) {
       writeFile(dest, content);
     } else {
-      copyFile(full, dest);
+      copyFile(full, dest, templatesSrc);
     }
     copied++;
   }
@@ -1129,12 +1251,17 @@ function bundleLauncherTemplates() {
 function verifySkillReferences() {
   console.log('🔗  Verifying skill sidecar references...');
   const broken = [];
-  if (!fs.existsSync(SKILLS_SRC)) return;
+  if (!validateBuildRoot(SKILLS_SRC, '.agents/skills')) return;
 
-  for (const skill of fs.readdirSync(SKILLS_SRC)) {
+  for (const entry of fs.readdirSync(SKILLS_SRC, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) {
+      throw new Error(`[build] Refusing symbolic link in .agents/skills: ${path.join(SKILLS_SRC, entry.name)}`);
+    }
+    if (!entry.isDirectory()) continue;
+    const skill = entry.name;
     const md = path.join(SKILLS_SRC, skill, 'SKILL.md');
     if (!fs.existsSync(md)) continue;
-    const src = fs.readFileSync(md, 'utf8');
+    const src = readText(md, SKILLS_SRC);
     const re = /(?:^|[\s(`"'])((?:references|templates|scripts)\/[A-Za-z0-9._/-]+\.[A-Za-z0-9]+)/g;
     for (const m of src.matchAll(re)) {
       const rel = m[1];
@@ -1167,6 +1294,7 @@ function verifyNoLeaks() {
     const ext = path.extname(full).toLowerCase();
     if (LEAK_SCAN_SKIP_EXTS.has(ext)) continue;
 
+    assertSourcePath(full, PKG_SRC);
     let content;
     try { content = fs.readFileSync(full, 'utf8'); } catch { continue; }
     scanned++;
@@ -1235,13 +1363,20 @@ function bundleSkillCommands() {
   console.log('🎯  Generating per-skill slash-command launchers → src/.claude/commands/ + src/.kiro/agents/');
   const commandsDest   = path.join(PKG_SRC, '.claude', 'commands');
   const kiroAgentsDest = path.join(PKG_SRC, '.kiro', 'agents');
-  fs.mkdirSync(commandsDest, { recursive: true });
-  fs.mkdirSync(kiroAgentsDest, { recursive: true });
+  ensureDestinationDirectory(commandsDest);
+  ensureDestinationDirectory(kiroAgentsDest);
 
   const existingCmd  = new Set(fs.readdirSync(commandsDest).map(f => f.replace(/\.md$/, '')));
   const existingKiro = new Set(fs.readdirSync(kiroAgentsDest).map(f => f.replace(/\.json$/, '')));
 
+  validateBuildRoot(SKILLS_SRC, '.agents/skills');
   const skillDirs = fs.readdirSync(SKILLS_SRC, { withFileTypes: true })
+    .map((entry) => {
+      if (entry.isSymbolicLink()) {
+        throw new Error(`[build] Refusing symbolic link in .agents/skills: ${path.join(SKILLS_SRC, entry.name)}`);
+      }
+      return entry;
+    })
     .filter(e => e.isDirectory() && fs.existsSync(path.join(SKILLS_SRC, e.name, 'SKILL.md')))
     .map(e => e.name);
 
@@ -1250,7 +1385,7 @@ function bundleSkillCommands() {
     if (MODULE_GATED_SKILL.test(skill)) continue;
     if (existingCmd.has(skill) && existingKiro.has(skill)) continue;
 
-    const skillMd = readText(path.join(SKILLS_SRC, skill, 'SKILL.md')) || '';
+    const skillMd = readText(path.join(SKILLS_SRC, skill, 'SKILL.md'), SKILLS_SRC) || '';
     let desc = extractSkillDescription(skillMd, skill);
     if (desc.length > 220) desc = desc.slice(0, 217) + '...';
 
