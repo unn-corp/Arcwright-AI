@@ -50,6 +50,13 @@ describe('guard-bash: destructive command guard', () => {
     ['rm -rf ~/'],
     ['rm -rf $HOME/'],
     ['rm -rf ${HOME}'],
+    ['rm -rf "$HOME"/*'],
+    ['rm -rf "${HOME}"/*'],
+    ['rm -rf "$HOME"/'],
+    ['rm -rf "/"/*'],
+    ['rm -rf "/"/'],
+    ["rm -rf '$HOME'/*"],
+    ["rm -rf '/'/*"],
     ['rm -r -f /'],
     ['rm --recursive --force /'],
     ['sudo rm -rf /'],
@@ -70,12 +77,18 @@ describe('guard-bash: destructive command guard', () => {
     ['rm -rf dist/'],
     ['rm -rf /tmp/scratch'],
     ['rm file.txt'],
+    ['rm -rf "$BUILD_DIR"'],
+    ['rm -rf "$BUILD_DIR"/*'],
+    ['rm -rf "$BUILD_DIR"/'],
     ['git push origin dev'],
     // Merely naming a dangerous command in quoted text, a comment, or a
     // here-document fixture must not trip the guard.
     ['echo "rm -rf /"'],
+    ['echo "git push --force origin main"'],
     ['# rm -rf /'],
     ['echo ok # rm -rf /'],
+    ['# git push --force origin main'],
+    ['echo ok # git push --force origin main'],
     ["cat <<'EOF'\nrm -rf /\nEOF"],
     ["cat <<'EOF'\ngit push --force origin main\nEOF"],
   ])('allows %j', (cmd) => {
@@ -86,6 +99,8 @@ describe('guard-bash: destructive command guard', () => {
     expect(bash('git push --force origin main')).toBe(DENY);
     expect(bash('git push -f origin master')).toBe(DENY);
     expect(bash('git push origin main --force')).toBe(DENY);
+    expect(bash('git push --force origin "main"')).toBe(DENY);
+    expect(bash("git push origin 'master' --force")).toBe(DENY);
   });
 
   // git accepts global options BEFORE the subcommand, so `\bgit\s+push\b` does
@@ -94,6 +109,7 @@ describe('guard-bash: destructive command guard', () => {
   // adversarially.
   it('sees the push through git global options', () => {
     expect(bash('git -C /repo push --force origin main')).toBe(DENY);
+    expect(bash('git -C /repo push --force origin "main"')).toBe(DENY);
     expect(bash('git -c protocol.version=2 push --force origin main')).toBe(DENY);
     expect(bash('git --no-pager push --force origin master')).toBe(DENY);
     expect(bash('git -C /r push origin main --force')).toBe(DENY);
