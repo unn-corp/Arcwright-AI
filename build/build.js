@@ -50,6 +50,7 @@ const ARCWRIGHT_SRC     = path.join(PROJECT_ROOT, '_arcwright');
 const SKILLS_SRC   = path.join(PROJECT_ROOT, '.agents', 'skills');
 const PKG_DIR      = path.join(PROJECT_ROOT, 'packages', 'agent-orchestration');
 const PKG_SRC      = path.join(PKG_DIR, 'src');
+const PROJECT_ROOT_REAL = fs.realpathSync(PROJECT_ROOT);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,62 @@ const SHIPPED_COMMANDS = [
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function isWithinProjectRoot(filePath) {
+  const relative = path.relative(PROJECT_ROOT_REAL, filePath);
+  return relative === '' || (
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
+}
+
+/**
+ * Validate a build input before any filesystem operation can dereference it.
+ * Source links are rejected even when they resolve back into the checkout;
+ * canonicalization also catches a symlinked parent directory.
+ */
+function assertSafeBuildInput(filePath) {
+  let stat;
+  try {
+    stat = fs.lstatSync(filePath);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return filePath;
+    throw error;
+  }
+
+  if (stat.isSymbolicLink()) {
+    throw new Error(`Refusing symlinked build input: ${filePath}`);
+  }
+
+  const realPath = fs.realpathSync(filePath);
+  if (!isWithinProjectRoot(realPath)) {
+    throw new Error(`Build input resolves outside PROJECT_ROOT: ${filePath} -> ${realPath}`);
+  }
+  return realPath;
+}
+
+function sourceExists(filePath) {
+  let safePath;
+  try {
+    safePath = assertSafeBuildInput(filePath);
+  } catch (error) {
+    if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return false;
+    throw error;
+  }
+  return fs.existsSync(safePath);
+}
+
+function readSourceDirectory(dir, options) {
+  const safeDir = assertSafeBuildInput(dir);
+  if (!fs.existsSync(safeDir)) return [];
+  const entries = fs.readdirSync(safeDir, options);
+  for (const entry of entries) {
+    const name = typeof entry === 'string' ? entry : entry.name;
+    assertSafeBuildInput(path.join(safeDir, name));
+  }
+  return entries;
+}
+
 /**
  * Recursively walk a directory, returning [{full, rel}] pairs.
  * rel is relative to baseDir (defaults to dir itself).
@@ -170,9 +227,10 @@ const SHIPPED_COMMANDS = [
 function walk(dir, baseDir) {
   if (!baseDir) baseDir = dir;
   const results = [];
-  if (!fs.existsSync(dir)) return results;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
+  const safeDir = assertSafeBuildInput(dir);
+  if (!fs.existsSync(safeDir)) return results;
+  for (const entry of readSourceDirectory(safeDir, { withFileTypes: true })) {
+    const full = path.join(safeDir, entry.name);
     const rel  = path.relative(baseDir, full);
     if (entry.isDirectory()) {
       results.push(...walk(full, baseDir));
@@ -197,9 +255,14 @@ function isExcluded(rel) {
  * otherwise return null (binary — will be copyFile'd instead).
  */
 function readText(filePath) {
+  const safePath = assertSafeBuildInput(filePath);
   const ext = path.extname(filePath).toLowerCase();
   if (!TEXT_EXTS.has(ext)) return null;
-  try { return fs.readFileSync(filePath, 'utf8'); } catch { return null; }
+  try { return fs.readFileSync(safePath, 'utf8'); } catch { return null; }
+}
+
+function readSourceText(filePath) {
+  return fs.readFileSync(assertSafeBuildInput(filePath), 'utf8');
 }
 
 function writeFile(dest, content) {
@@ -208,8 +271,9 @@ function writeFile(dest, content) {
 }
 
 function copyFile(src, dest) {
+  const safeSrc = assertSafeBuildInput(src);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(src, dest);
+  fs.copyFileSync(safeSrc, dest);
 }
 
 
@@ -244,7 +308,7 @@ function buildGenericPackage() {
   // ── Copy _arcwright/{awb,awm,core,_memory} ──────────────────────────────────────
   for (const mod of GENERIC_MODULES) {
     const modSrc = path.join(ARCWRIGHT_SRC, mod);
-    if (!fs.existsSync(modSrc)) {
+    if (!sourceExists(modSrc)) {
       console.log(`  ⚠  Module not found: _arcwright/${mod} — skipping`);
       continue;
     }
@@ -286,12 +350,12 @@ function buildGenericPackage() {
  * Returns count of files copied.
  */
 function copySkillsTo(destBase, logLabel) {
-  if (!fs.existsSync(SKILLS_SRC)) {
+  if (!sourceExists(SKILLS_SRC)) {
     console.log(`  ⚠  .agents/skills/ not found — skipping`);
     return 0;
   }
 
-  const skills = fs.readdirSync(SKILLS_SRC, { withFileTypes: true })
+  const skills = readSourceDirectory(SKILLS_SRC, { withFileTypes: true })
     .filter(e => e.isDirectory())
     .map(e => e.name);
 
@@ -340,12 +404,12 @@ function buildKiroAssets() {
  */
 function generateAgentsSteering(steeringDir) {
   const agentsDir = path.join(ARCWRIGHT_SRC, 'core', 'agents');
-  if (!fs.existsSync(agentsDir)) {
+  if (!sourceExists(agentsDir)) {
     console.log('  ⚠  core/agents/ not found — skipping agents steering doc');
     return;
   }
 
-  const agentFiles = fs.readdirSync(agentsDir)
+  const agentFiles = readSourceDirectory(agentsDir)
     .filter(f => f.endsWith('.md'))
     .sort();
 
@@ -380,7 +444,7 @@ function generateAgentsSteering(steeringDir) {
 
   const agents = [];
   for (const fname of agentFiles) {
-    const content = fs.readFileSync(path.join(agentsDir, fname), 'utf8');
+    const content = readSourceText(path.join(agentsDir, fname));
     const name    = extractName(content);
     const title   = extractTitle(content);
     const desc    = extractDescription(content);
@@ -423,8 +487,8 @@ function generateAgentsSteering(steeringDir) {
   // Include skill names + descriptions so the AI knows what's available and
   // can auto-load the right skill when the user's request matches.
   const skillsDir = path.join(PROJECT_ROOT, '.agents', 'skills');
-  if (fs.existsSync(skillsDir)) {
-    const skillDirs = fs.readdirSync(skillsDir, { withFileTypes: true })
+  if (sourceExists(skillsDir)) {
+    const skillDirs = readSourceDirectory(skillsDir, { withFileTypes: true })
       .filter(e => e.isDirectory())
       .map(e => e.name)
       .sort();
@@ -432,8 +496,8 @@ function generateAgentsSteering(steeringDir) {
     const skills = [];
     for (const dir of skillDirs) {
       const skillMd = path.join(skillsDir, dir, 'SKILL.md');
-      if (!fs.existsSync(skillMd)) continue;
-      const content = fs.readFileSync(skillMd, 'utf8');
+      if (!sourceExists(skillMd)) continue;
+      const content = readSourceText(skillMd);
       // Extract description — handle single-line and multi-line YAML
       let desc = null;
       const singleLine = content.match(/^---[\s\S]*?description:\s*["']([^"'\n]+)["']/m);
@@ -565,14 +629,14 @@ function bundleKiroAgents() {
   const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
   const agentsDest   = path.join(PKG_SRC, '.kiro', 'agents');
 
-  if (!fs.existsSync(commandsSrc)) {
+  if (!sourceExists(commandsSrc)) {
     console.log('  ⚠  .claude/commands/ not found — skipping Kiro agents');
     return;
   }
 
   fs.mkdirSync(agentsDest, { recursive: true });
 
-  const cmdFiles = fs.readdirSync(commandsSrc)
+  const cmdFiles = readSourceDirectory(commandsSrc)
     .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
     .sort();
 
@@ -736,7 +800,7 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
   for (const fname of cmdFiles) {
     const srcPath  = path.join(commandsSrc, fname);
     const name     = fname.replace(/\.md$/, '');
-    const raw      = fs.readFileSync(srcPath, 'utf8');
+    const raw      = readSourceText(srcPath);
     const { description, body } = parseFrontmatter(raw);
 
     let desc = description;
@@ -794,13 +858,13 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
     path.join(ARCWRIGHT_SRC, 'awm', 'agents'),
     path.join(ARCWRIGHT_SRC, 'aws-infra', 'agents'),
     path.join(ARCWRIGHT_SRC, 'unnamed-pm', 'agents'),
-  ].filter(d => fs.existsSync(d));
+  ].filter(d => sourceExists(d));
   let specialists = 0;
   if (specialistAgentDirs.length) {
     const agentFiles = [];
     for (const d of specialistAgentDirs) {
       (function collectMd(dir) {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        for (const entry of readSourceDirectory(dir, { withFileTypes: true })) {
           if (entry.isDirectory()) collectMd(path.join(dir, entry.name));
           else if (entry.name.endsWith('.md')) agentFiles.push(path.join(dir, entry.name));
         }
@@ -865,7 +929,7 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
     const DEFAULT_SPECIALIST_ALLOWED = ['fs_read', 'grep', 'glob', 'code', 'knowledge'];
 
     for (const agentPath of agentFiles) {
-      const raw = fs.readFileSync(agentPath, 'utf8');
+      const raw = readSourceText(agentPath);
       const slug = path.basename(agentPath, '.md');
       const kiroName = `arcwright-${slug}`;
 
@@ -918,9 +982,9 @@ const UNSHIPPED_COMMANDS = {
  */
 function verifyCommandCoverage() {
   const commandsSrc = path.join(PROJECT_ROOT, '.claude', 'commands');
-  if (!fs.existsSync(commandsSrc)) return;
+  if (!sourceExists(commandsSrc)) return;
 
-  const files = fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'));
+  const files = readSourceDirectory(commandsSrc).filter(f => f.endsWith('.md'));
   const uncovered = files.filter(
     f => !SHIPPED_COMMANDS.some(re => re.test(f)) && !(f in UNSHIPPED_COMMANDS)
   );
@@ -949,14 +1013,14 @@ function bundleTrackCommands() {
   const commandsSrc  = path.join(PROJECT_ROOT, '.claude', 'commands');
   const commandsDest = path.join(PKG_SRC, '.claude', 'commands');
 
-  if (!fs.existsSync(commandsSrc)) {
+  if (!sourceExists(commandsSrc)) {
     console.log('  ⚠  .claude/commands/ not found — skipping');
     return;
   }
 
   // Bundle all slash commands: arcwright-migrate, herdr, gsudo, and utility commands
   // (track commands removed in stage 1; the function name is kept for continuity)
-  const cmdFiles = fs.readdirSync(commandsSrc)
+  const cmdFiles = readSourceDirectory(commandsSrc)
     .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
     .sort();
 
@@ -1017,11 +1081,11 @@ function bundleSpecialistCommands() {
 
   for (const mod of SPECIALIST_MODULES) {
     const agentsDir = path.join(ARCWRIGHT_SRC, mod, 'agents');
-    if (!fs.existsSync(agentsDir)) continue;
+    if (!sourceExists(agentsDir)) continue;
 
     const agentFiles = [];
     (function collectMd(dir) {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      for (const entry of readSourceDirectory(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) collectMd(full);
         else if (entry.name.endsWith('.md')) agentFiles.push(full);
@@ -1029,7 +1093,7 @@ function bundleSpecialistCommands() {
     })(agentsDir);
 
     for (const agentPath of agentFiles) {
-      const raw  = fs.readFileSync(agentPath, 'utf8');
+      const raw  = readSourceText(agentPath);
       const slug = path.basename(agentPath, '.md');
       const cmdName = COMMAND_NAME_MAP[slug] || slug;
 
@@ -1087,7 +1151,7 @@ function bundleLauncherTemplates() {
   const templatesSrc = path.join(PKG_DIR, 'lib', 'templates', 'launchers');
   const destDir = path.join(PKG_SRC, 'launchers');
 
-  if (!fs.existsSync(templatesSrc)) {
+  if (!sourceExists(templatesSrc)) {
     console.log('  ⚠  lib/templates/launchers/ not found — skipping');
     return;
   }
@@ -1129,17 +1193,17 @@ function bundleLauncherTemplates() {
 function verifySkillReferences() {
   console.log('🔗  Verifying skill sidecar references...');
   const broken = [];
-  if (!fs.existsSync(SKILLS_SRC)) return;
+  if (!sourceExists(SKILLS_SRC)) return;
 
-  for (const skill of fs.readdirSync(SKILLS_SRC)) {
+  for (const skill of readSourceDirectory(SKILLS_SRC)) {
     const md = path.join(SKILLS_SRC, skill, 'SKILL.md');
-    if (!fs.existsSync(md)) continue;
-    const src = fs.readFileSync(md, 'utf8');
+    if (!sourceExists(md)) continue;
+    const src = readSourceText(md);
     const re = /(?:^|[\s(`"'])((?:references|templates|scripts)\/[A-Za-z0-9._/-]+\.[A-Za-z0-9]+)/g;
     for (const m of src.matchAll(re)) {
       const rel = m[1];
       if (rel.includes('*')) continue;
-      if (!fs.existsSync(path.join(SKILLS_SRC, skill, rel))) {
+      if (!sourceExists(path.join(SKILLS_SRC, skill, rel))) {
         broken.push(`${skill}: ${rel}`);
       }
     }
@@ -1167,8 +1231,9 @@ function verifyNoLeaks() {
     const ext = path.extname(full).toLowerCase();
     if (LEAK_SCAN_SKIP_EXTS.has(ext)) continue;
 
+    const safeFull = assertSafeBuildInput(full);
     let content;
-    try { content = fs.readFileSync(full, 'utf8'); } catch { continue; }
+    try { content = fs.readFileSync(safeFull, 'utf8'); } catch { continue; }
     scanned++;
 
     for (const pattern of LEAK_PATTERNS) {
@@ -1241,8 +1306,8 @@ function bundleSkillCommands() {
   const existingCmd  = new Set(fs.readdirSync(commandsDest).map(f => f.replace(/\.md$/, '')));
   const existingKiro = new Set(fs.readdirSync(kiroAgentsDest).map(f => f.replace(/\.json$/, '')));
 
-  const skillDirs = fs.readdirSync(SKILLS_SRC, { withFileTypes: true })
-    .filter(e => e.isDirectory() && fs.existsSync(path.join(SKILLS_SRC, e.name, 'SKILL.md')))
+  const skillDirs = readSourceDirectory(SKILLS_SRC, { withFileTypes: true })
+    .filter(e => e.isDirectory() && sourceExists(path.join(SKILLS_SRC, e.name, 'SKILL.md')))
     .map(e => e.name);
 
   let generated = 0;
