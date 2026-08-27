@@ -6,10 +6,10 @@
  * Conservative by design — only high-confidence destructive patterns.
  *
  * Most patterns are matched against an effective command with quoted strings
- * and comments removed. Recursive rm is handled separately with a shell-aware
- * tokenizer so quoted filesystem operands such as `rm -rf "/"` remain blocked.
- * rm commands with unresolved shell syntax are denied rather than evaluated by
- * this lightweight parser.
+ * and comments removed. Recursive rm and force-push checks use shell words so
+ * quoted executable arguments remain visible without treating quoted prose as
+ * an executed command. rm commands with unresolved shell syntax are denied
+ * rather than evaluated by this lightweight parser.
  */
 'use strict';
 
@@ -132,66 +132,11 @@ function maskHereDocBodies(cmd) {
 }
 
 /**
- * Strip single/double-quoted spans and shell comments so pattern matching sees
- * only the executable structure of the command, not text it merely quotes,
- * comments, or here-document bodies. `#` starts a comment only at a word
- * boundary (start or after whitespace), matching shell behavior.
+ * Tokenize shell command lists into unquoted word values. This is deliberately
+ * a small tokenizer, not a shell interpreter: it tracks quoting, escaping,
+ * comments, and command separators, which are the parts relevant to these
+ * conservative checks.
  */
-function effectiveCommand(cmd) {
-  let out = '';
-  let quote = null;
-  for (let i = 0; i < cmd.length; i++) {
-    const ch = cmd[i];
-    if (quote) {
-      if (ch === quote) quote = null;
-      continue; // drop everything inside quotes
-    }
-    if (ch === "'" || ch === '"') {
-      quote = ch;
-      out += ' '; // collapse the quoted span to a separator
-      continue;
-    }
-    if (ch === '#' && (i === 0 || /[\s;&|]/.test(cmd[i - 1]))) {
-      while (i < cmd.length && cmd[i] !== '\n') i++; // skip to end of line
-      out += '\n';
-      continue;
-    }
-    out += ch;
-  }
-  return out;
-}
-
-/**
- * True when the command contains an `rm` that recursively targets a filesystem
- * root or the home directory.
- *
- * This is a function rather than one regex because a single pattern could not
- * cover the real spelling space, and the previous one-liner
- * (`/\brm\s+-rf?\s+(\/|~|\$HOME)(\s|$)/`) let five destructive forms through:
- *
- *   rm -rf /*        target had a trailing glob, so `(\s|$)` never matched
- *   rm -rf ~/        same, trailing slash
- *   rm -rf $HOME/    same
- *   rm -fr /         flags in the other order
- *   rm -r -f /       flags as separate tokens
- *
- * Approach: split on shell separators, then for each `rm` segment check the
- * flag tokens and the operand tokens independently, so order and spelling of
- * the flags no longer matter.
- */
-const ROOTISH_TARGET =
-  /^(?:\/|~|\$HOME|\$\{HOME\})(?:\/)?(?:\*)?$|^(?:\$HOME|\$\{HOME\}|~)\/\*$/;
-const RECURSIVE_FLAG = /^-(?:-recursive$|[a-zA-Z]*[rR][a-zA-Z]*$)/;
-const SHELL_EXPANSION_CHARS = new Set(['$', '`', '<', '>', '*', '?', '[', ']', '{', '}', '~']);
-
-/** Return true when a token cannot be safely evaluated without a shell. */
-function hasShellExpansion(tokens) {
-  return tokens.some((token) =>
-    [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
-  );
-}
-
-/** Tokenize executable shell commands without treating quoted text as syntax. */
 function shellCommands(cmd) {
   const commands = [];
   let tokens = [];
@@ -237,7 +182,7 @@ function shellCommands(cmd) {
     }
     if (ch === '#' && !tokenStarted && (i === 0 || /[\s;&|]/.test(cmd[i - 1]))) {
       while (i < cmd.length && cmd[i] !== '\n') i++;
-      if (i < cmd.length) pushCommand();
+      pushCommand();
       continue;
     }
     if (ch === '\n' || /[;&|]/.test(ch)) {
@@ -252,16 +197,81 @@ function shellCommands(cmd) {
     token += ch;
     tokenStarted = true;
   }
-  if (escaped) token += '\\';
+
+  if (escaped) {
+    token += '\\';
+    tokenStarted = true;
+  }
   pushCommand();
   return commands;
+}
+
+/**
+ * Strip single/double-quoted spans and shell comments so pattern matching sees
+ * only the executable structure of the command, not text it merely quotes,
+ * comments, or here-document bodies. `#` starts a comment only at a word
+ * boundary (start or after whitespace), matching shell behavior.
+ */
+function effectiveCommand(cmd) {
+  let out = '';
+  let quote = null;
+  for (let i = 0; i < cmd.length; i++) {
+    const ch = cmd[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+      continue; // drop everything inside quotes
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      out += ' '; // collapse the quoted span to a separator
+      continue;
+    }
+    if (ch === '#' && (i === 0 || /[\s;&|]/.test(cmd[i - 1]))) {
+      while (i < cmd.length && cmd[i] !== '\n') i++; // skip to end of line
+      out += '\n';
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
+/**
+ * True when the command contains an `rm` that recursively targets a filesystem
+ * root or the home directory.
+ *
+ * This is a function rather than one regex because a single pattern could not
+ * cover the real spelling space, and the previous one-liner
+ * (`/\brm\s+-rf?\s+(\/|~|\$HOME)(\s|$)/`) let five destructive forms through:
+ *
+ *   rm -rf /*        target had a trailing glob, so `(\s|$)` never matched
+ *   rm -rf ~/        same, trailing slash
+ *   rm -rf $HOME/    same
+ *   rm -fr /         flags in the other order
+ *   rm -r -f /       flags as separate tokens
+ *
+ * Approach: tokenize shell words, then for each `rm` command check the flag
+ * tokens and operand tokens independently, so order, quoting, and spelling of
+ * the flags no longer matter.
+ */
+const ROOTISH_TARGET =
+  /^(?:\/|~|\$HOME|\$\{HOME\})(?:\/)?(?:\*)?$|^(?:\$HOME|\$\{HOME\}|~)\/\*$/;
+const RECURSIVE_FLAG = /^-(?:-recursive$|[a-zA-Z]*[rR][a-zA-Z]*$)/;
+const SHELL_EXPANSION_CHARS = new Set(['$', '`', '<', '>', '*', '?', '[', ']', '{', '}', '~']);
+const SHELL_WRAPPERS = new Set(['sudo', 'doas', 'env', 'command', 'nohup', 'time']);
+
+/** Return true when a token cannot be safely evaluated without a shell. */
+function hasShellExpansion(tokens) {
+  return tokens.some((token) =>
+    [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
+  );
 }
 
 function hasDestructiveRm(cmd) {
   for (const tokens of shellCommands(cmd)) {
     // Skip leading privilege wrappers so `sudo rm …` is still inspected.
     let i = 0;
-    while (i < tokens.length && /^(sudo|doas|env|command|nohup|time)$/.test(tokens[i])) i++;
+    while (i < tokens.length && SHELL_WRAPPERS.has(tokens[i])) i++;
     if (tokens[i] !== 'rm') continue;
     const rest = tokens.slice(i + 1);
     const recursive = rest.some((t) => RECURSIVE_FLAG.test(t));
@@ -273,6 +283,61 @@ function hasDestructiveRm(cmd) {
     if (noPreserveRoot) return true;
     const rootish = rest.some((target) => !target.startsWith('-') && ROOTISH_TARGET.test(target));
     if (recursive && rootish) return true;
+  }
+  return false;
+}
+
+const GIT_GLOBAL_FLAGS = new Set([
+  '--no-pager',
+  '--paginate',
+  '--bare',
+  '--literal-pathspecs',
+  '--icase-pathspecs',
+  '--no-replace-objects',
+  '--no-optional-locks',
+  '-p',
+  '-P',
+]);
+const GIT_GLOBAL_OPTIONS_WITH_VALUE = new Set([
+  '--git-dir',
+  '--work-tree',
+  '--namespace',
+  '--exec-path',
+]);
+
+/** Return the next token after a git global option, or null if it is unknown. */
+function skipGitGlobalOption(tokens, index) {
+  const token = tokens[index];
+  if (!token) return null;
+  if (/^-[cC](?:=|.+)$/.test(token)) return index + 1;
+  if (token === '-c' || token === '-C') return index + 2;
+  if (/^--(?:git-dir|work-tree|namespace|exec-path)=/.test(token)) return index + 1;
+  if (GIT_GLOBAL_OPTIONS_WITH_VALUE.has(token)) return index + 2;
+  if (GIT_GLOBAL_FLAGS.has(token)) return index + 1;
+  return null;
+}
+
+/** True when a shell command is a force-push involving main or master. */
+function hasProtectedForcePush(cmd) {
+  for (const tokens of shellCommands(cmd)) {
+    let i = 0;
+    while (i < tokens.length && SHELL_WRAPPERS.has(tokens[i])) i++;
+    while (i < tokens.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[i])) i++;
+    if (!/(?:^|\/)git$/.test(tokens[i])) continue;
+    i++;
+
+    while (i < tokens.length && tokens[i] !== 'push') {
+      const next = skipGitGlobalOption(tokens, i);
+      if (next === null) break;
+      i = next;
+    }
+    if (tokens[i] !== 'push') continue;
+
+    const args = tokens.slice(i + 1);
+    // `--force-with-lease` is the safe force-push variant and must not match.
+    const force = args.some((arg) => arg === '-f' || /^--force(?:=|$)/.test(arg));
+    const protectedBranch = args.some((arg) => /\b(?:main|master)\b/.test(arg));
+    if (force && protectedBranch) return true;
   }
   return false;
 }
@@ -302,18 +367,9 @@ process.stdin.on('end', () => {
   };
 
   if (hasDestructiveRm(executableCommand)) deny('rm -rf on / or home');
+  if (hasProtectedForcePush(executableCommand)) deny('force-push to main/master');
 
-  // `--force-with-lease` is the SAFE variant of a force-push (it refuses when
-  // the remote moved under you), so it must not match `--force` here.
-  const FORCE = String.raw`(?:--force(?!-with-lease)|-f)`;
-  // `git` takes global options before the subcommand, so `git -C <dir> push
-  // --force main` and `git -c k=v push --force main` are real force-pushes that
-  // a bare /\bgit\s+push\b/ does not match.
-  const GIT_GLOBAL_OPT = String.raw`(?:-[cC](?:\s+|=)?\S+|--(?:git-dir|work-tree|namespace|exec-path)(?:=|\s+)\S+|--no-pager|--paginate|--bare|--literal-pathspecs|--icase-pathspecs|--no-replace-objects|--no-optional-locks|-p|-P)`;
-  const GIT_PUSH = String.raw`\bgit(?:\s+${GIT_GLOBAL_OPT})*\s+push\s+`;
   const blocks = [
-    [new RegExp(String.raw`${GIT_PUSH}${FORCE}\b.*\b(main|master)\b`), 'force-push to main/master'],
-    [new RegExp(String.raw`${GIT_PUSH}.*\b(main|master)\b.*\s${FORCE}\b`), 'force-push to main/master'],
     [/\bgit\s+reset\s+--hard\s+origin\//, 'hard reset to remote (discards local work)'],
     [/\bgit\s+clean\s+-[a-z]*f[a-z]*d/, 'git clean -fd (deletes untracked files)'],
     [/\bchmod\s+-R\s+777\b/, 'recursive chmod 777'],
