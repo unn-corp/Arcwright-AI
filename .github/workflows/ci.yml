@@ -82,6 +82,37 @@ jobs:
       # website/ as its context, where ../.agents/skills does not exist.
       - run: npm run check:data
       - run: npm run build # tsc -b && vite build (type-check + bundle)
+      - name: Docker production smoke check
+        run: |
+          set -euo pipefail
+          grep -Fx 'RUN npm ci' Dockerfile
+          image="arcwright-website:ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          container_id=""
+          cleanup() {
+            if [ -n "$container_id" ]; then
+              docker rm -f "$container_id" >/dev/null 2>&1 || true
+            fi
+            docker image rm "$image" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker build --no-cache --tag "$image" .
+          container_id="$(docker run --detach --publish 127.0.0.1::80 "$image")"
+          port="$(docker port "$container_id" 80/tcp | sed -E 's/.*:([0-9]+)$/\1/')"
+          test -n "$port"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent "http://127.0.0.1:${port}/health" | grep -qx 'ok' \
+              && curl --fail --silent "http://127.0.0.1:${port}/" | grep -Fq '<title>Arcwright:'; then
+              echo "Docker production smoke check passed"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Docker production smoke check failed"
+          docker logs "$container_id"
+          exit 1
 
   # Security: secret scan, dependency/vuln, SAST — language-agnostic.
   # NOTE: scanners run as NATIVE binaries on the runner, not `docker run -v`.
