@@ -558,6 +558,8 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(s.env.CLAUDE_CODE_NO_FLICKER).toBe('1');
     expect(s.skillListingBudgetFraction).toBe(0.05);
     expect(s.fallbackModel).toEqual(['sonnet']);
+    expect(s.hooks).toBeUndefined();
+    expect(s.permissions).toBeUndefined();
   });
   it('never clobbers a user-customized value', async () => {
     fs.writeFileSync(
@@ -757,7 +759,7 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     await writeClaudeSettings(dir, chalk, 'safe', false);
     await writeClaudeSettings(dir, chalk, 'none', false);
     const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
-    expect(s.hooks.UserPromptSubmit?.some((group) => (
+    expect(s.hooks?.UserPromptSubmit?.some((group) => (
       group.hooks.some((hook) => hook.command?.includes('dynamodb-context.js'))
     ))).not.toBe(true);
     expect(JSON.stringify(s.hooks || {})).not.toContain('amplify-context.js');
@@ -778,6 +780,70 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(JSON.stringify(s.hooks || {})).not.toContain('lambda-review.js');
     expect(JSON.stringify(s.hooks || {})).not.toContain('step-functions-context.js');
     expect(JSON.stringify(s.hooks || {})).not.toContain('step-functions-review.js');
+  });
+  it.each(['safe', 'full'])('removes installer-owned hooks and acceptEdits when switching from %s to none', async (mode) => {
+    const foreignHooks = {
+      PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'echo user-pre' }] }],
+      SessionStart: [{ hooks: [{ type: 'command', command: 'echo user-session' }] }],
+      PostToolUse: [{ matcher: 'Write|Edit', hooks: [{ type: 'command', command: 'echo user-post' }] }],
+    };
+    fs.writeFileSync(
+      path.join(dir, 'settings.json'),
+      JSON.stringify({ customSetting: 'keep-me', hooks: foreignHooks })
+    );
+
+    await writeClaudeSettings(dir, chalk, mode, false);
+    expect(JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8')).permissions.defaultMode)
+      .toBe('acceptEdits');
+
+    await writeClaudeSettings(dir, chalk, 'none', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+
+    expect(s.customSetting).toBe('keep-me');
+    expect(s.permissions?.defaultMode).toBeUndefined();
+    expect(s.hooks.PreToolUse).toEqual(foreignHooks.PreToolUse);
+    expect(s.hooks.SessionStart).toEqual(foreignHooks.SessionStart);
+    expect(s.hooks.PostToolUse).toEqual(foreignHooks.PostToolUse);
+    expect(JSON.stringify(s.hooks)).not.toContain('guard-bash.js');
+    expect(JSON.stringify(s.hooks)).not.toContain('run the project-context scan');
+  });
+  it('preserves a user hook mixed into an installer-owned group when switching to none', async () => {
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+    const safeSettings = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const bashGroup = safeSettings.hooks.PreToolUse.find((group) => (
+      group.hooks.some((hook) => hook.command?.includes('guard-bash.js'))
+    ));
+    bashGroup.hooks.push({ type: 'command', command: 'echo user-in-same-group' });
+    fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify(safeSettings));
+
+    await writeClaudeSettings(dir, chalk, 'none', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const preToolHooks = s.hooks.PreToolUse.flatMap((group) => group.hooks);
+
+    expect(preToolHooks).toContainEqual({ type: 'command', command: 'echo user-in-same-group' });
+    expect(preToolHooks.some((hook) => hook.command?.includes('guard-bash.js'))).toBe(false);
+  });
+  it('preserves a user-selected permission mode while clearing installer hooks', async () => {
+    const foreignHooks = {
+      PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'echo user-pre' }] }],
+      SessionStart: [{ hooks: [{ type: 'command', command: 'echo user-session' }] }],
+    };
+    fs.writeFileSync(
+      path.join(dir, 'settings.json'),
+      JSON.stringify({
+        permissions: { defaultMode: 'plan', customPermission: true },
+        hooks: foreignHooks,
+      })
+    );
+
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+    await writeClaudeSettings(dir, chalk, 'none', false);
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+
+    expect(s.permissions).toEqual({ defaultMode: 'plan', customPermission: true });
+    expect(s.hooks.PreToolUse).toEqual(foreignHooks.PreToolUse);
+    expect(s.hooks.SessionStart).toEqual(foreignHooks.SessionStart);
+    expect(JSON.stringify(s.hooks)).not.toContain('guard-write.js');
   });
   it('stripInstallerSettingsKeys removes only installer-default values', async () => {
     await writeClaudeSettings(dir, chalk, 'none', false);
