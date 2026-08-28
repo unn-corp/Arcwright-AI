@@ -2491,7 +2491,7 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode' || tool === 'grok' || tool === 'cursor') continue; // handled separately below
-    const ideResult = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedOutputFolder);
+    const ideResult = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedOutputFolder, existingManifest?.managedSettings);
     if (ideResult?.entries?.length > 0) {
       newFileEntries.push(...ideResult.entries);
     }
@@ -2797,7 +2797,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
-async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none', resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedOutputFolder = '_arcwright-output') {
+async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none', resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedOutputFolder = '_arcwright-output', previousManagedSettings = []) {
   const stubEntries = [];
   const managedSettings = [];
   const platformCfg = PLATFORMS[tool];
@@ -2947,12 +2947,19 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
       const defaultProfile = resolveToolPath('claude-code', '.claude', true, homes, platform);
       const profileDirs = await listClaudeProfileDirs(path.dirname(defaultProfile));
       for (const profileDir of profileDirs) {
-        const ownership = await writeClaudeSettings(profileDir, chalk, resolvedHooks, true, resolvedUnnamedPm, null);
+        const profilePath = path.relative(homes.linux, profileDir).replace(/\\/g, '/') || '.';
+        const previousOwnership = Array.isArray(previousManagedSettings)
+          ? previousManagedSettings.find((entry) => entry.path === profilePath)
+          : undefined;
+        const ownership = await writeClaudeSettings(profileDir, chalk, resolvedHooks, true, resolvedUnnamedPm, null, previousOwnership);
         recordSettingsOwnership(profileDir, ownership);
       }
     } else {
       const profileDir = path.join(projectRoot, '.claude');
-      const ownership = await writeClaudeSettings(profileDir, chalk, resolvedHooks, false, resolvedUnnamedPm, projectRoot);
+      const previousOwnership = Array.isArray(previousManagedSettings)
+        ? previousManagedSettings.find((entry) => entry.path === '.claude')
+        : undefined;
+      const ownership = await writeClaudeSettings(profileDir, chalk, resolvedHooks, false, resolvedUnnamedPm, projectRoot, previousOwnership);
       recordSettingsOwnership(profileDir, ownership);
     }
   }
@@ -3018,7 +3025,7 @@ function getInvalidObjectField(config, fields) {
   ));
 }
 
-async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGlobal = false, unnamedPm = false, projectRoot = null) {
+async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGlobal = false, unnamedPm = false, projectRoot = null, previousOwnership = null) {
   const settingsPath = path.join(claudeDir, 'settings.json');
   const label = `${path.basename(claudeDir)}/settings.json`;
   const ownership = {
@@ -3075,6 +3082,7 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
 
   const hasUnnamedContextHook = hasMatchingHook(settings, isUnnamedDevContextHook);
   const hasPreviousManagedSkillHook = hasManagedSkillHook(settings);
+  const hasPreviousArcwrightHook = hasMatchingHook(settings, isArcwrightHookEntry);
 
   // Seed Arcwright hooks (safe|full) or reconcile a previously installed
   // Unnamed/DynamoDB/Amplify/CloudFront/S3/Aurora/Cognito/Lambda/Step Functions context adapters. Copies managed scripts and idempotently
@@ -3082,7 +3090,7 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
   // the autonomous permission posture below safe to run.
   const shouldReconcileHooks = (
     hooksMode === 'safe' || hooksMode === 'full' || unnamedPm ||
-    hasUnnamedContextHook || hasPreviousManagedSkillHook
+    hasUnnamedContextHook || hasPreviousManagedSkillHook || hasPreviousArcwrightHook
   );
   if (shouldReconcileHooks) {
     await seedArcwrightHooks(settings, claudeDir, hooksMode, isGlobal, unnamedPm, projectRoot);
@@ -3096,6 +3104,12 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
         settings.permissions.defaultMode = 'acceptEdits';
         ownership.defaultMode = true;
       }
+    } else if (
+      hooksMode === 'none' && settings.permissions?.defaultMode === 'acceptEdits'
+      && (previousOwnership?.defaultMode === true || (previousOwnership === null && hasPreviousArcwrightHook))
+    ) {
+      delete settings.permissions.defaultMode;
+      if (Object.keys(settings.permissions).length === 0) delete settings.permissions;
     }
   }
 
@@ -3170,6 +3184,18 @@ function isUnnamedMcpContextHook(h) {
 
 function isArcwrightHookGroup(group) {
   return Boolean(group && Array.isArray(group.hooks) && group.hooks.some(isArcwrightHookEntry));
+}
+
+// Remove only owned entries from each group. A mixed group survives with its
+// foreign entries and metadata intact; a group disappears only when no hooks
+// remain after filtering.
+function stripOwnedHookEntries(groups, isOwned) {
+  return groups.flatMap((group) => {
+    if (!group || !Array.isArray(group.hooks)) return [group];
+    const keptHooks = group.hooks.filter((hook) => !isOwned(hook));
+    if (keptHooks.length === group.hooks.length) return [group];
+    return keptHooks.length > 0 ? [{ ...group, hooks: keptHooks }] : [];
+  });
 }
 
 function projectOrigin(projectRoot) {
@@ -3506,198 +3532,39 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
 
   // For one event, drop our own previous entries then append fresh ones.
   // Foreign entries (ci-gates gates, project-specific guards) are left alone.
-  const setEvent = (event, entries) => {
+  const setOwnedEvent = (event, entries, isOwned) => {
     const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isOurs))
-    );
+    const kept = stripOwnedHookEntries(existing, isOwned);
     settings.hooks[event] = [...kept, ...entries];
+    if (settings.hooks[event].length === 0) delete settings.hooks[event];
   };
+  const setEvent = (event, entries) => setOwnedEvent(event, entries, isOurs);
 
   // Context-module hooks are a narrower ownership class than the shared
   // Arcwright guard/reminder hooks. Keep the generic SessionStart reminder
   // when this optional module is disabled.
-  const setUnnamedEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some((h) => (
-        isUnnamedDevContextHook(h) || isUnnamedMcpContextHook(h)
-      )))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setDynamodbEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isDynamodbContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setAmplifyContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isAmplifyContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setAmplifyReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isAmplifyReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setCloudfrontContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isCloudfrontContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setCloudfrontReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isCloudfrontReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setS3ContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isS3ContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setS3ReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isS3ReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setAuroraContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isAuroraContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setAuroraReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isAuroraReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setSesSnsSmtpContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isSesSnsSmtpContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setSesSnsSmtpReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isSesSnsSmtpReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setEventBridgeContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isEventBridgeContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setEventBridgeReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isEventBridgeReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setCognitoContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isCognitoContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setCognitoReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isCognitoReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setLambdaContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isLambdaContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setLambdaReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isLambdaReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setStepFunctionsContextEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isStepFunctionsContextHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
-
-  const setStepFunctionsReviewEvent = (event, entries) => {
-    const existing = Array.isArray(settings.hooks[event]) ? settings.hooks[event] : [];
-    const kept = existing.filter(
-      (g) => !(g && Array.isArray(g.hooks) && g.hooks.some(isStepFunctionsReviewHook))
-    );
-    settings.hooks[event] = [...kept, ...entries];
-    if (settings.hooks[event].length === 0) delete settings.hooks[event];
-  };
+  const setUnnamedEvent = (event, entries) => setOwnedEvent(event, entries, (h) => (
+    isUnnamedDevContextHook(h) || isUnnamedMcpContextHook(h)
+  ));
+  const setDynamodbEvent = (event, entries) => setOwnedEvent(event, entries, isDynamodbContextHook);
+  const setAmplifyContextEvent = (event, entries) => setOwnedEvent(event, entries, isAmplifyContextHook);
+  const setAmplifyReviewEvent = (event, entries) => setOwnedEvent(event, entries, isAmplifyReviewHook);
+  const setCloudfrontContextEvent = (event, entries) => setOwnedEvent(event, entries, isCloudfrontContextHook);
+  const setCloudfrontReviewEvent = (event, entries) => setOwnedEvent(event, entries, isCloudfrontReviewHook);
+  const setS3ContextEvent = (event, entries) => setOwnedEvent(event, entries, isS3ContextHook);
+  const setS3ReviewEvent = (event, entries) => setOwnedEvent(event, entries, isS3ReviewHook);
+  const setAuroraContextEvent = (event, entries) => setOwnedEvent(event, entries, isAuroraContextHook);
+  const setAuroraReviewEvent = (event, entries) => setOwnedEvent(event, entries, isAuroraReviewHook);
+  const setSesSnsSmtpContextEvent = (event, entries) => setOwnedEvent(event, entries, isSesSnsSmtpContextHook);
+  const setSesSnsSmtpReviewEvent = (event, entries) => setOwnedEvent(event, entries, isSesSnsSmtpReviewHook);
+  const setEventBridgeContextEvent = (event, entries) => setOwnedEvent(event, entries, isEventBridgeContextHook);
+  const setEventBridgeReviewEvent = (event, entries) => setOwnedEvent(event, entries, isEventBridgeReviewHook);
+  const setCognitoContextEvent = (event, entries) => setOwnedEvent(event, entries, isCognitoContextHook);
+  const setCognitoReviewEvent = (event, entries) => setOwnedEvent(event, entries, isCognitoReviewHook);
+  const setLambdaContextEvent = (event, entries) => setOwnedEvent(event, entries, isLambdaContextHook);
+  const setLambdaReviewEvent = (event, entries) => setOwnedEvent(event, entries, isLambdaReviewHook);
+  const setStepFunctionsContextEvent = (event, entries) => setOwnedEvent(event, entries, isStepFunctionsContextHook);
+  const setStepFunctionsReviewEvent = (event, entries) => setOwnedEvent(event, entries, isStepFunctionsReviewHook);
 
   const cmd = (command, timeout) => ({
     type: 'command',
@@ -3775,6 +3642,9 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     setStepFunctionsContextEvent('UserPromptSubmit', []);
     setStepFunctionsContextEvent('SessionStart', []);
     setStepFunctionsReviewEvent('PostToolUse', []);
+    setEvent('PreToolUse', []);
+    setEvent('SessionStart', []);
+    setEvent('PostToolUse', []);
   }
 
   if (unnamedPm && mode !== 'safe' && mode !== 'full') {
@@ -3786,6 +3656,8 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
   setUnnamedEvent('UserPromptSubmit', []);
   setUnnamedEvent('Stop', []);
   if (!unnamedPm) setUnnamedEvent('SessionStart', []);
+
+  if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
 }
 
 function buildArcwrightRulesEntry(modules, unnamedPm = false) {
