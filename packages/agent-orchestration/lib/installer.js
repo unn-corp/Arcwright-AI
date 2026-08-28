@@ -1895,7 +1895,7 @@ async function install(opts) {
   const {
     directory = process.cwd(),
     modules = 'awm,awb,core,_memory',
-    tools = 'claude-code',
+    tools = null,
     userName = '',
     outputFolder = null,
     action = 'install',
@@ -1969,8 +1969,7 @@ async function install(opts) {
   let resolvedUserName = userName;
 
   // Resolve tools/teams/dockerCheck — for --yes updates, fall back to manifest values
-  // when CLI flags were not explicitly provided (Commander sets defaults that are
-  // indistinguishable from explicit flags, so we use manifest when value == default).
+  // when CLI flags were not explicitly provided.
   const manifestFallback = yes && isUpdate && existingManifest;
 
   // Commander leaves this null when --output-folder was omitted. Preserve the
@@ -2012,8 +2011,8 @@ async function install(opts) {
       console.error(chalk.red(`\n  ✗ ${err.message}\n`));
       process.exit(1);
     }
-    if (isGlobal && manifestFallback && parsed.join(',') === 'claude-code' && hasOnlySupportedToolIds(existingManifest.tools)) {
-      // CLI default — prefer manifest value
+    if (manifestFallback && tools === null && hasOnlySupportedToolIds(existingManifest.tools)) {
+      // No --tools flag — prefer the manifest value in either install scope.
       return existingManifest.tools;
     }
     return parsed.length ? parsed : ['claude-code'];
