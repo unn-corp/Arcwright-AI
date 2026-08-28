@@ -311,6 +311,24 @@ describe('install() — flag handling', () => {
     expect(settings.hooks.PreToolUse.some((g) => g.hooks.some((h) => h.command.includes('arcwright-hooks')))).toBe(true);
     expect(fs.existsSync(path.join(projectDir, '.claude', 'arcwright-hooks', 'guard-bash.js'))).toBe(true);
   }, 60000);
+
+  it('preserves a user-selected acceptEdits mode when switching hooks to none', async () => {
+    fs.mkdirSync(path.join(projectDir, '.claude'), { recursive: true });
+    await fs.writeJson(path.join(projectDir, '.claude', 'settings.json'), {
+      permissions: { defaultMode: 'acceptEdits', userPermission: true },
+    });
+
+    await install(baseOpts({ hooks: 'safe' }));
+    const safeManifest = await readManifest(path.join(projectDir, '_arcwright'));
+    expect(safeManifest.managedSettings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: '.claude', hooks: true, defaultMode: false }),
+    ]));
+
+    await install(baseOpts({ action: 'update', hooks: 'none' }));
+    const settings = await fs.readJson(path.join(projectDir, '.claude', 'settings.json'));
+    expect(settings.permissions).toEqual({ defaultMode: 'acceptEdits', userPermission: true });
+    expect(settings.hooks).toBeUndefined();
+  }, 60000);
 });
 
 describe('install() — update / idempotency', () => {
