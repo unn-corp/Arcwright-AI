@@ -50,6 +50,7 @@ const ARCWRIGHT_SRC     = path.join(PROJECT_ROOT, '_arcwright');
 const SKILLS_SRC   = path.join(PROJECT_ROOT, '.agents', 'skills');
 const PKG_DIR      = path.join(PROJECT_ROOT, 'packages', 'agent-orchestration');
 const PKG_SRC      = path.join(PKG_DIR, 'src');
+const PROJECT_ROOT_REAL = fs.realpathSync(PROJECT_ROOT);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,39 @@ const SHIPPED_COMMANDS = [
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function isWithinProjectRoot(filePath) {
+  const relative = path.relative(PROJECT_ROOT_REAL, filePath);
+  return relative === '' || (
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
+}
+
+/**
+ * Validate a source path before any filesystem operation can dereference it.
+ * Missing paths remain optional inputs; broken links are still rejected by
+ * lstatSync before the missing target can hide them.
+ */
+function assertSafeBuildInput(filePath) {
+  let stat;
+  try {
+    stat = fs.lstatSync(filePath);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return;
+    throw error;
+  }
+
+  if (stat.isSymbolicLink()) {
+    throw new Error(`Refusing symlinked build input: ${filePath}`);
+  }
+
+  const realPath = fs.realpathSync(filePath);
+  if (!isWithinProjectRoot(realPath)) {
+    throw new Error(`Build input resolves outside project root: ${filePath} -> ${realPath}`);
+  }
+}
+
 /**
  * Recursively walk a directory, returning [{full, rel}] pairs.
  * rel is relative to baseDir (defaults to dir itself).
@@ -170,10 +204,12 @@ const SHIPPED_COMMANDS = [
 function walk(dir, baseDir) {
   if (!baseDir) baseDir = dir;
   const results = [];
+  assertSafeBuildInput(dir);
   if (!fs.existsSync(dir)) return results;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     const rel  = path.relative(baseDir, full);
+    assertSafeBuildInput(full);
     if (entry.isDirectory()) {
       results.push(...walk(full, baseDir));
     } else {
@@ -197,6 +233,7 @@ function isExcluded(rel) {
  * otherwise return null (binary — will be copyFile'd instead).
  */
 function readText(filePath) {
+  assertSafeBuildInput(filePath);
   const ext = path.extname(filePath).toLowerCase();
   if (!TEXT_EXTS.has(ext)) return null;
   try { return fs.readFileSync(filePath, 'utf8'); } catch { return null; }
@@ -208,6 +245,7 @@ function writeFile(dest, content) {
 }
 
 function copyFile(src, dest) {
+  assertSafeBuildInput(src);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
 }
@@ -231,6 +269,9 @@ function adaptPromptForKiro(body) {
 
 function buildGenericPackage() {
   console.log('📦  Building generic package → packages/agent-orchestration/src/');
+
+  assertSafeBuildInput(ARCWRIGHT_SRC);
+  assertSafeBuildInput(SKILLS_SRC);
 
   // Wipe and recreate src/. On reused CI workspaces (self-hosted runners) a
   // recursive rmSync can race to ENOTEMPTY on nested dirs. Retry, and fall back
@@ -291,7 +332,12 @@ function copySkillsTo(destBase, logLabel) {
     return 0;
   }
 
-  const skills = fs.readdirSync(SKILLS_SRC, { withFileTypes: true })
+  const skillEntries = fs.readdirSync(SKILLS_SRC, { withFileTypes: true });
+  for (const entry of skillEntries) {
+    assertSafeBuildInput(path.join(SKILLS_SRC, entry.name));
+  }
+
+  const skills = skillEntries
     .filter(e => e.isDirectory())
     .map(e => e.name);
 
