@@ -98,7 +98,7 @@ program
   .description('Update an existing Arcwright installation — adds/removes files to match new version, preserves config.yaml')
   .option('-d, --directory <path>', 'Target project root', process.cwd())
   .option('-m, --modules <ids>', 'Modules to update (defaults to all installed modules)', 'awm,awb,core,_memory')
-  .option('--tools <ids>', `IDE integrations to re-configure (comma-separated). Supported: ${SUPPORTED_TOOLS}`, 'claude-code')
+  .option('--tools <ids>', `IDE integrations to re-configure (comma-separated). Supported: ${SUPPORTED_TOOLS}`, null)
   .option('--output-folder <path>', 'Output folder for Arcwright artifacts (preserves the installed value when omitted)', null)
   .option('-y, --yes', 'Skip interactive prompts', false)
   .option('-g, --global', 'Update global config dirs (~/.claude/, ~/.kiro/, etc.)')
