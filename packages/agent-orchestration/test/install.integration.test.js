@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vite
 import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { execSync, spawnSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
@@ -466,6 +467,76 @@ describe('install() — global install', () => {
     expect(manifest.global).toBe(true);
     expect(fs.existsSync(path.join(homeDir, '.claude'))).toBe(true);
   }, 60000);
+
+  it('renders global activation roots for rules, stubs, commands, and Kiro agents', async () => {
+    await install(baseOpts({
+      global: true,
+      directory: projectDir,
+      tools: 'claude-code,kiro,codex,opencode,grok,cursor',
+      awsInfra: true,
+      unnamedPm: true,
+    }));
+
+    const globalTextRoot = '~/.arcwright';
+    const globalFileRoot = pathToFileURL(path.join(homeDir, '.arcwright')).href;
+    const ruleFiles = [
+      '.claude/CLAUDE.md',
+      '.codex/AGENTS.md',
+      '.config/opencode/AGENTS.md',
+      '.grok/AGENTS.md',
+      '.cursor/arcwright-user-rules.md',
+    ];
+    for (const relative of ruleFiles) {
+      const content = await fs.readFile(path.join(homeDir, relative), 'utf8');
+      expect(content, relative).toContain(`${globalTextRoot}/`);
+      expect(content, relative).not.toContain('`_arcwright/`');
+    }
+
+    const kiroSteering = await fs.readFile(path.join(homeDir, '.kiro/steering/arcwright-core.md'), 'utf8');
+    expect(kiroSteering).toContain(`${globalTextRoot}/core/agents/`);
+    expect(kiroSteering).not.toContain('_arcwright/core/agents/');
+
+    for (const relative of ['.claude/agents/arcwright-dev.md', '.grok/agents/arcwright-dev.md']) {
+      const content = await fs.readFile(path.join(homeDir, relative), 'utf8');
+      expect(content, relative).toContain(`LOAD ${globalTextRoot}/awm/agents/dev.md`);
+      expect(content, relative).not.toContain('{project-root}/_arcwright/');
+    }
+
+    const commandAssertions = [
+      ['.claude/commands/developer.md', `${globalTextRoot}/awm/agents/dev.md`, '{project-root}/_arcwright/'],
+      ['.config/opencode/commands/developer.md', `${globalTextRoot}/awm/agents/dev.md`, '{project-root}/_arcwright/'],
+      ['.grok/commands/developer.md', `${globalTextRoot}/awm/agents/dev.md`, '{project-root}/_arcwright/'],
+      ['.claude/commands/aws-infra.md', `${globalTextRoot}/aws-infra/agents/aws-infra.md`, '`_arcwright/aws-infra/'],
+      ['.config/opencode/commands/aws-infra.md', `${globalTextRoot}/aws-infra/agents/aws-infra.md`, '`_arcwright/aws-infra/'],
+      ['.grok/commands/aws-infra.md', `${globalTextRoot}/aws-infra/agents/aws-infra.md`, '`_arcwright/aws-infra/'],
+      ['.claude/commands/unnamed-pm.md', `${globalTextRoot}/unnamed-pm/agents/unnamed-pm.md`, '`_arcwright/unnamed-pm/'],
+      ['.config/opencode/commands/unnamed-pm.md', `${globalTextRoot}/unnamed-pm/agents/unnamed-pm.md`, '`_arcwright/unnamed-pm/'],
+      ['.grok/commands/unnamed-pm.md', `${globalTextRoot}/unnamed-pm/agents/unnamed-pm.md`, '`_arcwright/unnamed-pm/'],
+    ];
+    for (const [relative, expected, forbidden] of commandAssertions) {
+      const content = await fs.readFile(path.join(homeDir, relative), 'utf8');
+      expect(content, relative).toContain(expected);
+      expect(content, relative).not.toContain(forbidden);
+    }
+
+    const kiroSpecialist = await fs.readJson(path.join(homeDir, '.kiro/agents/arcwright-dev.json'));
+    expect(kiroSpecialist.prompt).toBe(`${globalFileRoot}/awm/agents/dev.md`);
+    expect(kiroSpecialist.prompt).not.toContain('file://_arcwright/');
+
+    const kiroTeam = await fs.readJson(path.join(homeDir, '.kiro/agents/team.json'));
+    expect(kiroTeam.resources).toContain(`${globalFileRoot}/core/agents/arcwright-master.md`);
+    expect(JSON.stringify(kiroTeam)).not.toContain('file://_arcwright/');
+
+    const kiroUnnamedPm = await fs.readJson(path.join(homeDir, '.kiro/agents/unnamed-pm.json'));
+    expect(kiroUnnamedPm.prompt).toContain(`${globalTextRoot}/unnamed-pm/agents/unnamed-pm.md`);
+    expect(kiroUnnamedPm.prompt).not.toContain('_arcwright/unnamed-pm/');
+
+    const kiroAwsInfra = await fs.readJson(path.join(homeDir, '.kiro/agents/aws-infra.json'));
+    expect(kiroAwsInfra.prompt).toContain(`${globalTextRoot}/aws-infra/agents/aws-infra.md`);
+    expect(kiroAwsInfra.prompt).not.toContain('_arcwright/aws-infra/');
+
+    expect(fs.existsSync(path.join(projectDir, '_arcwright'))).toBe(false);
+  }, 90000);
 
   it('writes the Claude rules file to the global ~/.claude dir, not the cwd project', async () => {
     await install(baseOpts({ global: true, directory: projectDir }));
