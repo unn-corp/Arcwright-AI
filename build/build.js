@@ -27,6 +27,7 @@ const fs   = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { adaptKiroContent } = require('../packages/agent-orchestration/lib/kiro-adapter');
+const { renderActivationPath } = require('../packages/agent-orchestration/lib/activation-root');
 
 // Robustly remove a directory tree. Recursive rmSync can race to ENOTEMPTY on
 // reused CI workspaces (self-hosted runners, overlay filesystems); retry with a
@@ -831,7 +832,7 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
     // orchestrator persona, and crew config.
     if (isTeam(name)) {
       agent.allowedTools = ['fs_read', 'grep', 'glob', 'code', 'knowledge', 'web_search', 'web_fetch'];
-      agent.resources.push('file://_arcwright/core/agents/arcwright-master.md');
+      agent.resources.push(renderActivationPath('core/agents/arcwright-master.md', { format: 'file-uri' }));
       agent.toolsSettings = {
         crew: {
           availableAgents: SPECIALIST_AGENTS,
@@ -946,7 +947,7 @@ See the \`herdr\` skill for the full mapping and the send/run Enter trap.
       const agent = {
         name: kiroName,
         description: desc,
-        prompt: `file://_arcwright/${relFromArcwright}`,
+        prompt: renderActivationPath(relFromArcwright, { format: 'file-uri' }),
         tools: allowedTools,
         allowedTools,
         resources: ['skill://.kiro/skills/**/SKILL.md'],
@@ -1139,7 +1140,7 @@ function bundleSpecialistCommands() {
         `You must fully embody the ${slug} specialist persona and follow all activation instructions exactly. NEVER break character until given an exit command.`,
         '',
         '<agent-activation CRITICAL="TRUE">',
-        `1. LOAD the FULL agent file from {project-root}/_arcwright/${relFromArcwright}`,
+        `1. LOAD the FULL agent file from ${renderActivationPath(relFromArcwright)}`,
         '2. READ its entire contents',
         '3. EXECUTE every critical_action in order (load all sidecar files)',
         '4. PRESENT the agent menu',

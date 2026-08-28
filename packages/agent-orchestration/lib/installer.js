@@ -21,6 +21,7 @@ const { listClaudeProfileDirs } = require('./herdrAssets');
 const { loadCustomization } = require('./customization');
 const { adaptKiroContent } = require('./kiro-adapter');
 const { detectBmad: detectBmadArtifacts } = require('./migrate');
+const { renderActivationRoot, rewriteActivationReferences } = require('./activation-root');
 
 // ─── WSL audio setup (Claude Code /voice) ────────────────────────────────────
 
@@ -865,7 +866,13 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     await fs.copy(kiroSteeringSrc, steeringDest, { overwrite: true });
     const steeringFiles = await glob('**/*', { cwd: kiroSteeringSrc, nodir: true });
     for (const rel of steeringFiles) {
-      const content = await fs.readFile(path.join(kiroSteeringSrc, rel));
+      const sourceContent = await fs.readFile(path.join(kiroSteeringSrc, rel), 'utf8');
+      const content = rewriteActivationReferences(sourceContent, {
+        isGlobal,
+        homes,
+        format: 'rules',
+      });
+      await fs.writeFile(path.join(steeringDest, rel), content, 'utf8');
       entries.push({ relPath: path.join('.kiro/steering', rel).replace(/\\/g, '/'), hash: sha256(content) });
     }
     console.log(chalk.green(`  ✓ .kiro/steering/ (${steeringFiles.length} files)`));
@@ -889,15 +896,29 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     });
     for (const f of agentFiles) {
       const sourceContent = await fs.readFile(path.join(kiroAgentsSrc, f), 'utf8');
-      let content = sourceContent;
+      let content = rewriteActivationReferences(sourceContent, {
+        isGlobal,
+        homes,
+        format: 'file-uri',
+      });
+      content = rewriteActivationReferences(content, {
+        isGlobal,
+        homes,
+        format: 'text',
+      });
+      if (['aws-infra.json', 'unnamed-pm.json'].includes(f)) {
+        content = rewriteActivationReferences(content, {
+          isGlobal,
+          homes,
+          format: 'rules',
+        });
+      }
       if (resolvedUnnamedPm && ['unnamed-pm.json', 'unnamed-dev-mcp.json'].includes(f)) {
-        const agent = JSON.parse(sourceContent);
+        const agent = JSON.parse(content);
         agent.includeMcpJson = true;
         content = JSON.stringify(agent, null, 2) + '\n';
-        await fs.writeFile(path.join(agentsDest, f), content, 'utf8');
-      } else {
-        await fs.copy(path.join(kiroAgentsSrc, f), path.join(agentsDest, f), { overwrite: true });
       }
+      await fs.writeFile(path.join(agentsDest, f), content, 'utf8');
       entries.push({ relPath: path.join('.kiro/agents', f).replace(/\\/g, '/'), hash: sha256(content) });
     }
     const skipNotes = [];
@@ -1038,7 +1059,7 @@ async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, pl
     : path.join(projectRoot, 'AGENTS.md');
   const label = isGlobal ? '~/.codex/AGENTS.md' : 'AGENTS.md';
   await migrateOldClaudeMd(rulesPath);
-  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
+  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm, { isGlobal, homes }));
   if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
   else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
   else console.log(chalk.gray(`  ○ ${label} already up to date`));
@@ -1165,7 +1186,7 @@ async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes,
     : path.join(projectRoot, 'AGENTS.md');
   const label = isGlobal ? '~/.config/opencode/AGENTS.md' : 'AGENTS.md';
   await migrateOldClaudeMd(rulesPath);
-  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
+  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm, { isGlobal, homes }));
   if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
   else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
   else console.log(chalk.gray(`  ○ ${label} already up to date`));
@@ -1200,7 +1221,12 @@ async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes,
       flags
     );
     for (const rel of cmdFiles) {
-      const content = await fs.readFile(path.join(commandsSrc, rel));
+      const sourceContent = await fs.readFile(path.join(commandsSrc, rel), 'utf8');
+      const content = rewriteActivationReferences(sourceContent, {
+        isGlobal,
+        homes,
+        format: isGlobal && ['aws-infra.md', 'unnamed-pm.md'].includes(rel) ? 'rules' : 'text',
+      });
       await fs.writeFile(path.join(commandsDest, rel), content);
       entries.push({ relPath: path.join('.opencode/commands', rel).replace(/\\/g, '/'), hash: sha256(content) });
     }
@@ -1253,7 +1279,7 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
     : path.join(projectRoot, 'AGENTS.md');
   const label = isGlobal ? '~/.grok/AGENTS.md' : 'AGENTS.md';
   await migrateOldClaudeMd(rulesPath);
-  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
+  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm, { isGlobal, homes }));
   if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
   else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
   else console.log(chalk.gray(`  ○ ${label} already up to date`));
@@ -1288,7 +1314,12 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
       flags
     );
     for (const rel of cmdFiles) {
-      const content = await fs.readFile(path.join(commandsSrc, rel));
+      const sourceContent = await fs.readFile(path.join(commandsSrc, rel), 'utf8');
+      const content = rewriteActivationReferences(sourceContent, {
+        isGlobal,
+        homes,
+        format: isGlobal && ['aws-infra.md', 'unnamed-pm.md'].includes(rel) ? 'rules' : 'text',
+      });
       await fs.writeFile(path.join(commandsDest, rel), content);
       entries.push({ relPath: path.join('.grok/commands', rel).replace(/\\/g, '/'), hash: sha256(content) });
     }
@@ -1308,6 +1339,8 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
   const stubEntries = await writeClaudeAgentStubs(SRC_DIR, agentDest, chalk, stubModules, {
     relPrefix: '.grok/agents',
     logLabel: isGlobal ? '~/.grok/agents/' : '.grok/agents/',
+    isGlobal,
+    homes,
   });
   entries.push(...stubEntries);
 
@@ -1338,7 +1371,8 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
 // global install stages a paste-ready file instead of writing an undocumented
 // config location.
 
-function buildCursorRule(modules, unnamedPm = false) {
+function buildCursorRule(modules, unnamedPm = false, options = {}) {
+  const activationRoot = renderActivationRoot({ ...options, format: 'rules' });
   return [
     '---',
     'description: Arcwright workflow and skill guidance',
@@ -1353,7 +1387,7 @@ function buildCursorRule(modules, unnamedPm = false) {
     '- Start by reading the root `AGENTS.md`, then load the relevant `SKILL.md` from `.agents/skills/` before applying a matching workflow.',
     '- Arcwright custom commands are available in `.cursor/commands/`; use them when the user invokes an Arcwright slash command.',
     '- Treat commands written for other agents as workflow instructions, not as a requirement to call unavailable tool names. Use Cursor\'s available tools and keep the same verification and handoff intent.',
-    '- Keep user-owned instructions and files intact. Do not edit `_arcwright/` workflow assets unless the user explicitly asks to customize Arcwright.',
+    `- Keep user-owned instructions and files intact. Do not edit \`${activationRoot}/\` workflow assets unless the user explicitly asks to customize Arcwright.`,
     ...(unnamedPm ? [
       '',
       '## Unnamed Development MCP trigger',
@@ -1750,7 +1784,7 @@ async function removeCursorUnnamedDevHooks(projectRoot, isGlobal, homes, platfor
 async function writeCursorConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const entries = [];
   const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
-  const rule = buildCursorRule(modules, resolvedUnnamedPm);
+  const rule = buildCursorRule(modules, resolvedUnnamedPm, { isGlobal, homes });
 
   if (isGlobal) {
     const userRulesPath = resolveToolPath('cursor', GLOBAL_PATHS.cursor.userRules, true, homes, platform);
@@ -2806,7 +2840,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     return;
   }
 
-  const arcwrightEntry = buildArcwrightRulesEntry(modules, resolvedUnnamedPm);
+  const arcwrightEntry = buildArcwrightRulesEntry(modules, resolvedUnnamedPm, { isGlobal, homes });
   const tmuxEntry = buildTmuxEntry();
   const proactiveEntry = buildProactiveEntry();
 
@@ -2906,9 +2940,14 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
       let installed = 0;
       for (const f of files) {
         const srcFile = path.join(cmdSrc, f);
-        await fs.copy(srcFile, path.join(cmdDest, f), { overwrite: true });
+        const sourceContent = await fs.readFile(srcFile, 'utf8');
+        const content = rewriteActivationReferences(sourceContent, {
+          isGlobal,
+          homes,
+          format: isGlobal && ['aws-infra.md', 'unnamed-pm.md'].includes(f) ? 'rules' : 'text',
+        });
+        await fs.writeFile(path.join(cmdDest, f), content, 'utf8');
         // Track in manifest for orphan removal on future updates
-        const content = await fs.readFile(srcFile);
         stubEntries.push({ relPath: `.claude/commands/${f}`, hash: sha256(content) });
         installed++;
       }
@@ -2972,7 +3011,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     const stubModules = [...modules];
     if (resolvedAwsInfra) stubModules.push('aws-infra');
     if (resolvedUnnamedPm) stubModules.push('unnamed-pm');
-    const entries = await writeClaudeAgentStubs(SRC_DIR, agentDir, chalk, stubModules);
+    const entries = await writeClaudeAgentStubs(SRC_DIR, agentDir, chalk, stubModules, { isGlobal, homes });
     stubEntries.push(...entries);
   }
 
@@ -3660,7 +3699,8 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
   if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
 }
 
-function buildArcwrightRulesEntry(modules, unnamedPm = false) {
+function buildArcwrightRulesEntry(modules, unnamedPm = false, options = {}) {
+  const activationRoot = renderActivationRoot({ ...options, format: 'rules' });
   const unnamedMcpEntry = (unnamedPm || modules.includes('unnamed-pm'))
     ? [
       '',
@@ -3673,12 +3713,12 @@ function buildArcwrightRulesEntry(modules, unnamedPm = false) {
     '',
     '## Arcwright',
     '',
-    'Arcwright agents, skills, and workflows are installed in `_arcwright/`.',
+    `Arcwright agents, skills, and workflows are installed in \`${activationRoot}/\`.`,
     'Key modules: ' + modules.join(', '),
     '',
     'To use an agent, load its `.md` file and follow its activation instructions.',
-    'Agent configs are in `_arcwright/{module}/config.yaml`.',
-    'Skills are in `.agents/skills/` and `_arcwright/_memory/skills/`.',
+    `Agent configs are in \`${activationRoot}/{module}/config.yaml\`.`,
+    `Skills are in \`.agents/skills/\` and \`${activationRoot}/_memory/skills/\`.`,
     'When this project uses the Unnamed Development MCP, load `.agents/skills/unnamed-dev-mcp/SKILL.md` before MCP work and keep tracker state synchronized.',
     'If Unnamed Development MCP is unavailable, paste the pending tracker payload in chat (project, work, intended status). Do not bury it only in `_arcwright-output/unnamed-pm-pending/`.',
     ...unnamedMcpEntry,
@@ -3846,6 +3886,11 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
   const selectedStubModules = (modules || STUB_MODULES).filter(m => STUB_MODULES.includes(m));
   const relPrefix = options.relPrefix || '.claude/agents';
   const logLabel = options.logLabel || '.claude/agents/';
+  const activationRoot = options.activationRoot || renderActivationRoot({
+    isGlobal: options.isGlobal === true,
+    homes: options.homes,
+    format: 'text',
+  });
 
   const manifestEntries = [];
   let written = 0;
@@ -3890,7 +3935,7 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
         '---',
         '',
         `<agent-activation CRITICAL="TRUE">`,
-        `1. LOAD {project-root}/_arcwright/${mod}/agents/${subdir}${originalFilename}`,
+        `1. LOAD ${activationRoot}/${mod}/agents/${subdir}${originalFilename}`,
         '2. READ its entire contents',
         '3. EXECUTE every critical_action in order',
         '4. PRESENT the menu',
@@ -4284,6 +4329,7 @@ module.exports = {
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
     writeClaudeSettings, stripInstallerSettingsKeys, removeArcwrightHookFiles,
     buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
+    renderActivationRoot, rewriteActivationReferences,
     writeKiroConfig, writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig, writeCursorConfig,
     removeCursorUnnamedDevHooks,
     buildCursorRule, adaptCursorCommand, filterCommandNames,
