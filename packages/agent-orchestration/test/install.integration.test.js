@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vite
 import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
 const { install, uninstall } = installer;
@@ -314,6 +314,38 @@ describe('install() — flag handling', () => {
 });
 
 describe('install() — update / idempotency', () => {
+  it('CLI update --yes preserves omitted project tools and honors explicit tools', async () => {
+    const runCli = (args) => {
+      const result = spawnSync(process.execPath, [path.join(PKG_ROOT, 'bin', 'arcwright.js'), ...args], {
+        cwd: projectDir,
+        env: { ...process.env, HOME: homeDir },
+        encoding: 'utf8',
+        timeout: 120000,
+      });
+      if (result.status !== 0) {
+        throw new Error(`CLI failed (${result.status}):\n${result.stderr}\n${result.stdout}`);
+      }
+    };
+    const manifestDir = path.join(projectDir, '_arcwright');
+    const cursorRule = path.join(projectDir, '.cursor', 'rules', 'arcwright.mdc');
+    const kiroSkill = path.join(projectDir, '.kiro', 'skills', 'triage', 'SKILL.md');
+
+    runCli(['install', '--yes', '--tools', 'cursor,kiro', '--hooks', 'none', '--gitignore', 'none']);
+    expect((await readManifest(manifestDir)).tools).toEqual(['cursor', 'kiro']);
+    expect(fs.existsSync(cursorRule)).toBe(true);
+    expect(fs.existsSync(kiroSkill)).toBe(true);
+
+    runCli(['update', '--yes', '--hooks', 'none', '--gitignore', 'none']);
+    expect((await readManifest(manifestDir)).tools).toEqual(['cursor', 'kiro']);
+    expect(fs.existsSync(cursorRule)).toBe(true);
+    expect(fs.existsSync(kiroSkill)).toBe(true);
+
+    runCli(['update', '--yes', '--tools', 'claude-code', '--hooks', 'none', '--gitignore', 'none']);
+    expect((await readManifest(manifestDir)).tools).toEqual(['claude-code']);
+    expect(fs.existsSync(cursorRule)).toBe(false);
+    expect(fs.existsSync(kiroSkill)).toBe(false);
+  }, 180000);
+
   it('a second install preserves installDate and is an update', async () => {
     await install(baseOpts());
     const first = await readManifest(path.join(projectDir, '_arcwright'));
