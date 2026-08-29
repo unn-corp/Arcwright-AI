@@ -7,7 +7,7 @@
  * integration and writes a managed keybindings block into
  * ~/.config/herdr/config.toml. Third-party plugins require explicit opt-in.
  *
- * It runs during Claude/Codex installation and through `arcwright herdr`.
+ * It runs through the explicit `arcwright herdr` action.
  */
 
 const fs = require('fs');
@@ -27,14 +27,15 @@ const {
 const KEYS_START = '# >>> arcwright-herdr-keys >>>';
 const KEYS_END = '# <<< arcwright-herdr-keys <<<';
 
-// Default plugins installed when herdr is detected. Best-effort: a plugin whose
-// build tool is missing (e.g. Go for fzf-url) is skipped with a note, not fatal.
+// Default plugins installed only after explicit opt-in. Each plugin is pinned
+// to a reviewed full Git commit; Herdr verifies the commit while checking it
+// out before it runs the plugin's build commands.
 const DEFAULT_PLUGINS = [
-  { repo: 'persiyanov/herdr-reviewr', id: 'persiyanov.reviewr' },
-  { repo: 'smarzban/herdr-file-viewer', id: 'herdr-file-viewer' },
-  { repo: 'JanTvrdik/herdr-command-palette', id: 'jt.command-palette' },
-  { repo: 'lmilojevicc/herdr-tab-rename', id: 'herdr-tab-rename' },
-  { repo: 'x0d7x/herdr-fzf-url', id: 'url.fzf-picker', needsBuild: 'go' },
+  { repo: 'persiyanov/herdr-reviewr', id: 'persiyanov.reviewr', commit: '4fc80835699e293f0608c243028f8513557d7c77' },
+  { repo: 'smarzban/herdr-file-viewer', id: 'herdr-file-viewer', commit: '647f03236d9aa20de0b07c9de0a951e13a1e59bf' },
+  { repo: 'JanTvrdik/herdr-command-palette', id: 'jt.command-palette', commit: 'eab940018c2135ac23718efa11e23e9dddcd2a75' },
+  { repo: 'lmilojevicc/herdr-tab-rename', id: 'herdr-tab-rename', commit: '8a2ad73847ec7e9f3137b7502557ffed58415f31' },
+  { repo: 'x0d7x/herdr-fzf-url', id: 'url.fzf-picker', commit: '7f5fc52a4367c537cae11b636bb27bc26e2279ad', needsBuild: 'go' },
 ];
 
 // Keybindings, keyed by the plugin id they depend on. Only bindings whose plugin
@@ -230,7 +231,10 @@ async function setupHerdr(deps = {}) {
       continue;
     }
     try {
-      run(`herdr plugin install ${plugin.repo} --yes`);
+      if (!/^[0-9a-f]{40}$/.test(plugin.commit)) {
+        throw new Error(`invalid pinned commit for ${plugin.repo}`);
+      }
+      run(`herdr plugin install ${plugin.repo} --ref ${plugin.commit} --yes`);
       installedNow.push(plugin.id);
       present.add(plugin.id);
       log(chalk.dim(`     installed ${plugin.repo}`));
