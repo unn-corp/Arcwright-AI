@@ -25,8 +25,11 @@ Hermes is the user-facing coding agent and OmniRoute is the model gateway behind
 Arcwright installer behavior:
 
 - `--model-surface` selects the Hermes integration automatically.
-- If `hermes` is not on `PATH`, Arcwright runs the official Nous Research CLI installer:
-  `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash`.
+- If `hermes` is not on `PATH`, Arcwright does not bootstrap it unless
+  `--install-hermes` is explicitly supplied. With that opt-in, Arcwright downloads the
+  official Nous Research installer to a temporary file, verifies SHA-256
+  `e6c7f2b516b2888ab740fd36cbceb5fd4e1db68d2ebc29f7306c6313c835b7d9`, then runs it with
+  the reviewed Hermes source commit `5fc308a70719a83cccdbba4c0e39c23f5a8239d5`.
 - Arcwright installs Hermes skills into `~/.hermes/skills/` and team bundles into
   `~/.hermes/skill-bundles/` for global installs.
 - When an OmniRoute API key is available, Arcwright configures Hermes with
@@ -36,6 +39,30 @@ Arcwright installer behavior:
   `OMNIROUTE_API_KEY`.
 - Base URL source order: `--omniroute-base-url`, `ARCWRIGHT_OMNIROUTE_BASE_URL`,
   `OMNIROUTE_BASE_URL`, then `http://omniroute:20128/v1`.
+
+### Bootstrap trust decision
+
+Hermes bootstrap is an explicit trust decision because the upstream installer and its
+dependency setup execute with the current user's privileges. The installer is fetched only
+over HTTPS with redirects constrained to HTTPS, checked against the reviewed SHA-256 above,
+and then invoked with a full Git commit pin. A changed upstream installer fails closed until
+the maintainer reviews and updates both pins and this documentation.
+
+Herdr configuration is also explicit. `arcwright herdr` configures an existing Herdr install
+but does not install third-party plugins unless `--install-plugins` is supplied. The default
+plugin set is pinned to reviewed full Git commits and passed to Herdr as `--ref`; Herdr checks
+out that exact commit before running plugin build commands.
+
+| Plugin | Reviewed commit |
+| --- | --- |
+| `persiyanov/herdr-reviewr` | `4fc80835699e293f0608c243028f8513557d7c77` |
+| `smarzban/herdr-file-viewer` | `647f03236d9aa20de0b07c9de0a951e13a1e59bf` |
+| `JanTvrdik/herdr-command-palette` | `eab940018c2135ac23718efa11e23e9dddcd2a75` |
+| `lmilojevicc/herdr-tab-rename` | `8a2ad73847ec7e9f3137b7502557ffed58415f31` |
+| `x0d7x/herdr-fzf-url` | `7f5fc52a4367c537cae11b636bb27bc26e2279ad` |
+
+These are reviewed immutable source pins, not publisher signatures. Updating one requires a
+source review and a corresponding code and documentation change.
 
 **Server state, 2026-07-07:** the Global Agent container's Hermes config at
 `/home/agent/.hermes/config.yaml` on the persistent `global-agent-hermes` volume is set to

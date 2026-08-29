@@ -17,6 +17,7 @@ const {
   writeClaudeSettings, stripInstallerSettingsKeys,
   buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
   ensureHermesCliInstalled, setupHermesModelSurface,
+  HERMES_INSTALL_SHA256, HERMES_SOURCE_COMMIT,
   getSupportedToolIds, getToolPromptOptions, parseToolIds,
 } = installer._internal;
 
@@ -228,15 +229,50 @@ describe('buildModuleConfig', () => {
 });
 
 describe('Hermes model surface helpers', () => {
-  it('installs Hermes through the official installer when hermes is absent', async () => {
+  it('downloads, verifies, and runs the pinned Hermes installer when opted in', async () => {
+    const calls = [];
+    const script = '#!/bin/bash\necho verified\n';
+    let downloadedUrl;
+    const run = (cmd) => {
+      calls.push(cmd);
+      if (cmd.startsWith('command -v hermes')) throw new Error('missing');
+      return '';
+    };
+    const download = async (url, destination) => {
+      downloadedUrl = url;
+      fs.writeFileSync(destination, script);
+    };
+    const result = await ensureHermesCliInstalled(
+      { linux: dir, windows: null },
+      chalk,
+      run,
+      true,
+      { download, expectedHash: sha256(script) },
+    );
+    expect(result).toMatchObject({ installed: true, available: true });
+    expect(downloadedUrl).toBe('https://hermes-agent.nousresearch.com/install.sh');
+    expect(calls.some((cmd) => cmd.includes('| bash'))).toBe(false);
+    expect(calls.some((cmd) => cmd.includes(`--commit ${HERMES_SOURCE_COMMIT}`))).toBe(true);
+  });
+
+  it('fails closed when the downloaded Hermes installer hash is wrong', async () => {
     const calls = [];
     const run = (cmd) => {
       calls.push(cmd);
       if (cmd.startsWith('command -v hermes')) throw new Error('missing');
       return '';
     };
-    await ensureHermesCliInstalled({ linux: dir, windows: null }, chalk, run, true);
-    expect(calls.some((cmd) => cmd.includes('https://hermes-agent.nousresearch.com/install.sh'))).toBe(true);
+    const download = async (_url, destination) => {
+      fs.writeFileSync(destination, '#!/bin/bash\necho tampered\n');
+    };
+    await expect(ensureHermesCliInstalled(
+      { linux: dir, windows: null },
+      chalk,
+      run,
+      true,
+      { download },
+    )).rejects.toThrow(new RegExp(`expected SHA-256 ${HERMES_INSTALL_SHA256}`));
+    expect(calls.some((cmd) => cmd.startsWith('bash --'))).toBe(false);
   });
 
   it('does not execute the upstream installer without explicit opt-in', async () => {

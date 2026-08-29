@@ -82,6 +82,10 @@ async function setupWslAudio(platform, chalk) {
 
 const TEMPLATES_DIR = path.join(__dirname, 'templates', 'launchers');
 const HERMES_INSTALL_URL = 'https://hermes-agent.nousresearch.com/install.sh';
+// These pins are reviewed source-of-truth values. Update them only with a
+// source review and a corresponding documentation update.
+const HERMES_INSTALL_SHA256 = 'e6c7f2b516b2888ab740fd36cbceb5fd4e1db68d2ebc29f7306c6313c835b7d9';
+const HERMES_SOURCE_COMMIT = '5fc308a70719a83cccdbba4c0e39c23f5a8239d5';
 const DEFAULT_OMNIROUTE_MODEL = 'agent-fallback';
 const DEFAULT_OMNIROUTE_BASE_URL = 'http://omniroute:20128/v1';
 
@@ -103,11 +107,16 @@ function hermesCommandPath(home, run = execSync) {
   }
 }
 
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
 /**
  * Install Hermes CLI if it is not already present. The official installer is
- * intentionally used rather than reimplementing Hermes' dependency bootstrap.
+ * downloaded into a private temporary directory, SHA-256 verified, and only
+ * then executed at a pinned Hermes source commit.
  */
-async function ensureHermesCliInstalled(homes, chalk, run = execSync, allowRemoteBootstrap = false) {
+async function ensureHermesCliInstalled(homes, chalk, run = execSync, allowRemoteBootstrap = false, deps = {}) {
   if (commandExists('hermes', run) || await fs.pathExists(path.join(homes.linux, '.local', 'bin', 'hermes'))) {
     if (chalk) console.log(chalk.dim('  · hermes CLI already installed'));
     return { installed: false, skipped: false, available: true };
@@ -121,15 +130,37 @@ async function ensureHermesCliInstalled(homes, chalk, run = execSync, allowRemot
     return { installed: false, skipped: true, available: false };
   }
 
-  if (chalk) console.log(chalk.dim('  · Installing Hermes CLI via official Nous Research installer...'));
-  run(`curl -fsSL ${HERMES_INSTALL_URL} | bash`, {
-    stdio: 'inherit',
-    shell: '/bin/bash',
-    env: { ...process.env, HOME: homes.linux },
-    timeout: 1200000,
-  });
-  if (chalk) console.log(chalk.green('  ✓ hermes CLI installed'));
-  return { installed: true, skipped: false, available: true };
+  // `deps` is used only by hermetic unit tests. The normal installer never
+  // supplies it, so production installs always use the constants above.
+  const download = deps.download || ((url, destination) => run(
+    `curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --tlsv1.2 --output ${shellQuote(destination)} ${shellQuote(url)}`,
+    { stdio: 'pipe', shell: '/bin/bash', timeout: 120000 }
+  ));
+  const expectedHash = deps.expectedHash || HERMES_INSTALL_SHA256;
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'arcwright-hermes-'));
+  const installerPath = path.join(tempDir, 'install.sh');
+
+  try {
+    if (chalk) console.log(chalk.dim('  · Downloading the pinned Hermes bootstrap script...'));
+    await download(HERMES_INSTALL_URL, installerPath);
+    const actualHash = sha256(await fs.readFile(installerPath));
+    if (actualHash !== expectedHash) {
+      throw new Error(`Hermes installer integrity check failed: expected SHA-256 ${expectedHash}, got ${actualHash}`);
+    }
+    if (chalk) console.log(chalk.dim(`  · Verified Hermes installer SHA-256 ${actualHash}`));
+
+    if (chalk) console.log(chalk.dim(`  · Installing Hermes CLI from pinned commit ${HERMES_SOURCE_COMMIT}...`));
+    run(`bash -- ${shellQuote(installerPath)} --commit ${HERMES_SOURCE_COMMIT}`, {
+      stdio: 'inherit',
+      shell: '/bin/bash',
+      env: { ...process.env, HOME: homes.linux },
+      timeout: 1200000,
+    });
+    if (chalk) console.log(chalk.green('  ✓ hermes CLI installed'));
+    return { installed: true, skipped: false, available: true };
+  } finally {
+    try { await fs.remove(tempDir); } catch { /* best-effort cleanup */ }
+  }
 }
 
 /**
@@ -142,7 +173,7 @@ async function setupHermesModelSurface({ homes, chalk, baseUrl, apiKey, model = 
   const resolvedBaseUrl = baseUrl || process.env.ARCWRIGHT_OMNIROUTE_BASE_URL || process.env.OMNIROUTE_BASE_URL || DEFAULT_OMNIROUTE_BASE_URL;
   const resolvedApiKey = apiKey || process.env.ARCWRIGHT_OMNIROUTE_API_KEY || process.env.OMNIROUTE_API_KEY || '';
 
-  const quote = (value) => `'${String(value).replace(/'/g, `'\\''`)}'`;
+  const quote = shellQuote;
   run(`${quote(hermesBin)} config set model.provider custom`, { stdio: 'pipe', shell: '/bin/bash', env: { ...process.env, HOME: homes.linux } });
   run(`${quote(hermesBin)} config set model.base_url ${quote(resolvedBaseUrl)}`, { stdio: 'pipe', shell: '/bin/bash', env: { ...process.env, HOME: homes.linux } });
   run(`${quote(hermesBin)} config set model.default ${quote(model)}`, { stdio: 'pipe', shell: '/bin/bash', env: { ...process.env, HOME: homes.linux } });
@@ -4334,6 +4365,7 @@ module.exports = {
     removeCursorUnnamedDevHooks,
     buildCursorRule, adaptCursorCommand, filterCommandNames,
     commandExists, ensureHermesCliInstalled, setupHermesModelSurface,
+    HERMES_INSTALL_SHA256, HERMES_SOURCE_COMMIT,
     PLATFORMS, getSupportedToolIds, getToolPromptOptions, parseToolIds, hasOnlySupportedToolIds,
   },
 };
