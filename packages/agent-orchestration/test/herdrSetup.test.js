@@ -227,6 +227,13 @@ describe('setupHerdr', () => {
     expect(run.calls.every((c) => c.startsWith('herdr --version'))).toBe(true);
   });
 
+  it('does not install third-party plugins without explicit opt-in', async () => {
+    const run = fakeRun();
+    const res = await setupHerdr({ run, quiet: true, configPath: path.join(dir, 'config.toml'), homeDir: dir });
+    expect(res.installed).toEqual([]);
+    expect(run.calls.some((call) => call.startsWith('herdr plugin install'))).toBe(false);
+  });
+
   it('installs all default plugins and writes a managed keybindings block', async () => {
     const run = fakeRun();
     const configPath = path.join(dir, 'config.toml');
@@ -246,13 +253,16 @@ describe('setupHerdr', () => {
     expect(run.calls).toContain('herdr integration install hermes');
     expect(run.calls).toContain('herdr integration install opencode');
     expect(run.calls).toContain('herdr integration install grok');
+    for (const plugin of DEFAULT_PLUGINS) {
+      expect(run.calls).toContain(`herdr plugin install ${plugin.repo} --ref ${plugin.commit} --yes`);
+    }
   });
 
   it('skips already-installed plugins', async () => {
     const run = fakeRun({ alreadyInstalled: [{ plugin_id: 'persiyanov.reviewr' }] });
     const res = await setupHerdr({ run, quiet: true, configPath: path.join(dir, 'config.toml'), homeDir: dir, installPlugins: true });
     expect(res.skipped).toContain('persiyanov.reviewr');
-    expect(run.calls).not.toContain('herdr plugin install persiyanov/herdr-reviewr --yes');
+    expect(run.calls).not.toContain(`herdr plugin install ${DEFAULT_PLUGINS[0].repo} --ref ${DEFAULT_PLUGINS[0].commit} --yes`);
   });
 
   it('tolerates a plugin whose build fails and still configures the rest', async () => {
