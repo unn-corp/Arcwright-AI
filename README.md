@@ -230,7 +230,8 @@ WSL2 dual-home aware — terminal tools (Claude Code, Codex, Hermes, OpenCode) u
 | `--output-folder <path>` | `_arcwright-output` | Where Arcwright writes output artifacts |
 | `--no-teams` | teams included | Skip the 17 team-* skills and `/team` command |
 | `--docker-check` | not installed | Opt in to `/docker-check` and the `docker-type-check` skill |
-| `--model-surface` | false | Install/configure Hermes CLI as the primary model surface through OmniRoute `agent-fallback` (grouped Claude/Codex subscriptions + free fallback). Selects Hermes automatically and installs the Hermes CLI if missing. |
+| `--model-surface` | false | Install/configure Hermes CLI as the primary model surface through OmniRoute `agent-fallback` (grouped Claude/Codex subscriptions + free fallback). Selects Hermes automatically; missing Hermes requires the explicit `--install-hermes` opt-in for the verified, pinned bootstrap. |
+| `--install-hermes` | false | Explicitly allow the verified, pinned Hermes bootstrap when `--model-surface` selects Hermes and the CLI is missing |
 | `--omniroute-base-url <url>` | env or `http://omniroute:20128/v1` | OmniRoute OpenAI-compatible base URL for `--model-surface` |
 | `--omniroute-api-key <key>` | env | OmniRoute gateway API key for `--model-surface`; prefer `ARCWRIGHT_OMNIROUTE_API_KEY` or `OMNIROUTE_API_KEY` |
 | `--omniroute-model <id>` | `agent-fallback` | Hermes model id used by `--model-surface` |
@@ -310,13 +311,21 @@ paid Claude/Codex subscription capacity with free-model fallback. Operational de
 
 ## Herdr Setup
 
-Arcwright ships a `herdr` skill and configures an existing [Herdr](https://herdr.dev) installation. Herdr remains a standalone app that you install from [herdr.dev](https://herdr.dev). Run the setup again at any time with:
+Arcwright ships a `herdr` skill and configures an existing [Herdr](https://herdr.dev) installation. Herdr remains a standalone app that you install from [herdr.dev](https://herdr.dev). Third-party plugins are not installed unless you explicitly pass `--install-plugins`. Run the setup again at any time with:
 
 ```bash
 arcwright herdr
 ```
 
-The managed defaults install Claude and Codex integrations, the standard plugin set, MIME-aware `Ctrl+V` for text and images, native conversation restoration, `--yolo` for Codex, and `--dangerously-skip-permissions` for Claude. Claude sessions record their `CLAUDE_CONFIG_DIR`, so restored conversations return to the correct account when multiple profiles are used.
+Install the reviewed, pinned third-party plugin set only when you explicitly want it:
+
+```bash
+arcwright herdr --install-plugins
+```
+
+The managed defaults install Claude and Codex integrations, the standard plugin set when opted in, MIME-aware `Ctrl+V` for text and images, native conversation restoration, `--yolo` for Codex, and `--dangerously-skip-permissions` for Claude. Claude sessions record their `CLAUDE_CONFIG_DIR`, so restored conversations return to the correct account when multiple profiles are used.
+
+The plugin defaults use reviewed full Git commit pins. See the [model launcher trust decision](packages/agent-orchestration/docs/dev/model-launchers.md#bootstrap-trust-decision) for the Hermes installer hash, Hermes source pin, and plugin commit pins.
 
 New panes and tabs use `terminal.new_cwd = "follow"`. Give each space its own root with `herdr workspace create --cwd /path/to/project`; descendants inherit that directory unless `--cwd` is supplied explicitly. Agents are grouped by space with `ui.agent_panel_sort = "spaces"`. Herdr 0.7.1 cannot hide agents belonging to inactive spaces.
 
