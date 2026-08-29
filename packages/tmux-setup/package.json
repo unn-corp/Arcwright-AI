@@ -19,6 +19,9 @@
     "arcwright-tmux": "bin/arcwright-tmux.js"
   },
   "main": "lib/installer.js",
+  "scripts": {
+    "test": "node --test"
+  },
   "files": [
     "bin/",
     "lib/",

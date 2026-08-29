@@ -8,13 +8,21 @@
 
 const fs = require('fs-extra');
 const path = require('path');
+const {
+  assertNoControlCharacters,
+  buildPosixAliasBlock,
+  buildPowerShellAliasBlock,
+} = require('./shell-quoting');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
 
 async function setupTmux(projectRoot, chalk, opts = {}) {
+  const resolvedRoot = path.resolve(projectRoot || process.cwd());
+  assertNoControlCharacters(resolvedRoot, 'Project directory');
+
   const readline = require('readline');
   const os = require('os');
-  const { execSync } = require('child_process');
+  const { execSync, execFileSync } = require('child_process');
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const ask = (q) => new Promise(res => rl.question(q, res));
@@ -113,12 +121,8 @@ async function setupTmux(projectRoot, chalk, opts = {}) {
 
   // ── Step 2: Shell aliases ──────────────────────────────────────────────────
   console.log('\n' + chalk.bold('Step 2 — Shell aliases'));
-  const resolvedRoot = path.resolve(projectRoot || process.cwd());
   const isWslEnv = !!(process.env.WSL_DISTRO_NAME || await fs.pathExists('/proc/sys/fs/binfmt_misc/WSLInterop'));
-
-  const tmuxAlias = `alias tmux-ai='tmux new-session -c ${resolvedRoot}'`;
-  const tmuxClaudeAlias = `alias tmux-claude='tmux new-session -c ${resolvedRoot} "claude --dangerously-skip-permissions"'`;
-  const aliasBlock = `\n# Arcwright tmux shortcuts\n${tmuxAlias}\n${tmuxClaudeAlias}\n`;
+  const aliasBlock = buildPosixAliasBlock(resolvedRoot);
 
   const addAliases = await ask(chalk.yellow(`  Add 'tmux-ai' and 'tmux-claude' shortcuts to shell startup files? (Y/n): `));
   if (!addAliases.toLowerCase().startsWith('n')) {
@@ -148,25 +152,13 @@ async function setupTmux(projectRoot, chalk, opts = {}) {
     if (isWslEnv) {
       try {
         const distro = process.env.WSL_DISTRO_NAME || '';
-        const wslRoot = (() => {
-          try {
-            return execSync(`wslpath -w "${resolvedRoot}"`, { stdio: 'pipe' }).toString().trim();
-          } catch { return resolvedRoot; }
-        })();
-        const distroFlag = distro ? `-d ${distro} ` : '';
-        const psBlock = [
-          '',
-          '# Arcwright tmux shortcuts (wraps WSL tmux)',
-          `function tmux-ai     { wsl ${distroFlag}--cd "${resolvedRoot}" -- tmux new-session }`,
-          `function tmux-claude { wsl ${distroFlag}--cd "${resolvedRoot}" -- tmux new-session "claude --dangerously-skip-permissions" }`,
-          '',
-        ].join('\n');
+        const psBlock = buildPowerShellAliasBlock(resolvedRoot, distro);
 
         const profilePathRaw = execSync(
           'powershell.exe -NoProfile -Command "$PROFILE.CurrentUserAllHosts"',
           { stdio: 'pipe' }
         ).toString().trim().replace(/\r/g, '');
-        const profilePathWsl = execSync(`wslpath "${profilePathRaw}"`, { stdio: 'pipe' }).toString().trim();
+        const profilePathWsl = execFileSync('wslpath', [profilePathRaw], { stdio: 'pipe' }).toString().trim();
 
         await fs.ensureDir(path.dirname(profilePathWsl));
         let profileContent = '';
@@ -177,13 +169,13 @@ async function setupTmux(projectRoot, chalk, opts = {}) {
         } else {
           console.log(chalk.dim(`  ○ PowerShell functions already in ${profilePathRaw}`));
         }
-        // Suppress unused-var lint:
-        void wslRoot;
       } catch {
         console.log(chalk.yellow('  ⚠  Could not write PowerShell profile (Windows path detection failed)'));
         console.log(chalk.dim('     Add manually to $PROFILE in PowerShell:'));
-        console.log(chalk.dim(`       function tmux-ai     { wsl --cd "${resolvedRoot}" -- tmux new-session }`));
-        console.log(chalk.dim(`       function tmux-claude { wsl --cd "${resolvedRoot}" -- tmux new-session "claude --dangerously-skip-permissions" }`));
+        const manualPsBlock = buildPowerShellAliasBlock(resolvedRoot);
+        for (const line of manualPsBlock.trim().split('\n')) {
+          console.log(chalk.dim(`       ${line}`));
+        }
       }
     }
 
@@ -287,7 +279,7 @@ async function setupTmux(projectRoot, chalk, opts = {}) {
       try {
         const winProfile = execSync('powershell.exe -NoProfile -Command "$env:USERPROFILE"', { stdio: 'pipe' })
           .toString().trim().replace(/\r/g, '');
-        const winHome = execSync(`wslpath "${winProfile}"`, { stdio: 'pipe' }).toString().trim();
+        const winHome = execFileSync('wslpath', [winProfile], { stdio: 'pipe' }).toString().trim();
         const wslConfigPath = path.join(winHome, '.wslconfig');
 
         let wslConfigContent = (await fs.pathExists(wslConfigPath))
