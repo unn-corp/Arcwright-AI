@@ -1,11 +1,9 @@
 # Arcwright workshop — CI gates (scaffolded by the ci-gates skill, trimmed to this repo).
 # Monorepo: root build pipeline + website (Vite/React/TS) + npm packages.
 #
-# Runners: self-hosted only (no GitHub-hosted fallback). All jobs target the
-# unn-corp org runners on the mothership VPS via labels [self-hosted, linux, x64,
-# unn] (myoung34/github-runner, ubuntu-jammy, RUNNER_SCOPE=org, RUNNER_GROUP=
-# default). If a job queues forever: confirm the org runner group `default`
-# grants this repo access and that ci-runner-runner-{1,2,3} are online on the VPS.
+# Runners: every job uses a fresh GitHub-hosted VM. Pull requests must not execute
+# contributor-controlled code on shared self-hosted runners. Keep any future
+# privileged self-hosted workflow separate and restricted to trusted branches.
 name: ci
 
 on:
@@ -23,10 +21,8 @@ permissions:
   # to read the pull request; without it the job 403s "Resource not accessible".
   pull-requests: read
 
-# All deps are public npm. The self-hosted runners carry a user-level ~/.npmrc
-# pointed at a private AWS CodeArtifact mirror with a frequently-expired token,
-# which 401s every npm install. Force the public registry and ignore that
-# userconfig on every npm step via these env vars.
+# All deps are public npm. Force the public registry and ignore runner-local npm
+# configuration so installs do not depend on or expose private registry credentials.
 env:
   npm_config_registry: https://registry.npmjs.org/
   NPM_CONFIG_USERCONFIG: /dev/null
@@ -35,9 +31,11 @@ jobs:
   # Build verification — runs the workshop packager (includes the no-leak check).
   build-package:
     name: build (package)
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -46,12 +44,14 @@ jobs:
   # Unit tests + coverage gate (agent-orchestration package, Vitest 80/80/70).
   test-package:
     name: test (package)
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: packages/agent-orchestration
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -63,12 +63,14 @@ jobs:
   # Website static gates: lint + type-check + production build.
   website:
     name: static (website)
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: website
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -83,22 +85,19 @@ jobs:
       - run: npm run build # tsc -b && vite build (type-check + bundle)
 
   # Security: secret scan, dependency/vuln, SAST — language-agnostic.
-  # NOTE: scanners run as NATIVE binaries on the runner, not `docker run -v`.
-  # These self-hosted runners are containerized with the host docker socket
-  # mounted (DinD-sibling), so a `-v "${{ github.workspace }}:/x"` bind mounts an
-  # empty host path (the workspace exists inside the runner container, not on the
-  # host daemon) — the scanner would see nothing and pass vacuously. Running the
-  # binaries directly against $GITHUB_WORKSPACE avoids that trap.
+  # NOTE: scanners run as native binaries against $GITHUB_WORKSPACE instead of
+  # relying on runner-local container mounts. This keeps the scan target explicit
+  # on the fresh hosted VM.
   security:
     name: security
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write # allow SARIF upload to the Security tab
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Secret scan (gitleaks)
         # gitleaks CLI (MIT, free). The gitleaks-action wrapper requires a paid
         # GITLEAKS_LICENSE on private repos; the binary does not. fetch-depth:0
@@ -110,9 +109,8 @@ jobs:
             --config="$GITHUB_WORKSPACE/.gitleaks.toml" \
             --redact --no-banner --exit-code=1 -v
       - name: Dependency + vuln scan (trivy)
-        # trivy CLI (Apache-2.0). trivy-action runs trivy inside a container with
-        # the workspace mounted, which hits the same DinD-mount trap; run the
-        # binary natively instead.
+        # trivy CLI (Apache-2.0). Run the binary natively against the workspace
+        # instead of adding another container mount to the validation path.
         run: |
           curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz \
             | tar -xz -C /tmp trivy
@@ -125,18 +123,16 @@ jobs:
             -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
           /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
 
-  # SAST (semgrep) — HARD gate. The semgrep image ships `semgrep-core` (which
-  # won't pip-install reliably on the bare runner). A `container:` job can't be
-  # used here: this self-hosted DinD runner doesn't provision the externals
-  # (node) or the `_temp` script mount that container jobs require. And a plain
-  # `docker run -v "$GITHUB_WORKSPACE:/src"` mounts an empty host path (the
-  # DinD-sibling bind-mount trap). So: checkout on the bare runner, then push the
-  # tree INTO the container with `docker cp` (daemon API, no path mismatch).
+  # SAST (semgrep) — HARD gate. The semgrep image ships `semgrep-core`, which
+  # won't pip-install reliably. Checkout on the hosted VM, then copy the tree
+  # into the container so the scanner sees exactly the checked-out workspace.
   sast:
     name: sast (semgrep)
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: SAST (semgrep)
         # Gate on ERROR severity only (WARNING/INFO are noise on a skills+tooling
         # monorepo). Three rules are excluded as false-positives here:
@@ -162,7 +158,7 @@ jobs:
   pr-title:
     name: pr title
     if: github.event_name == 'pull_request'
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: ubuntu-latest
     steps:
       - uses: amannn/action-semantic-pull-request@v5
         env:
