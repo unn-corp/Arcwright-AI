@@ -54,6 +54,11 @@ describe('guard-bash: destructive command guard', () => {
     ['rm --recursive --force /'],
     ['sudo rm -rf /'],
     ['rm -rf --no-preserve-root /'],
+    ['rm -rf "$(printf -- --no-preserve-root)" "$(printf /)"'],
+    ['rm -rf `printf /`'],
+    ['rm -rf "$TARGET"'],
+    ['rm "$(printf -- -rf)" "$(printf /)"'],
+    ['rm -rf ./build > /tmp/rm.log'],
     ['ls && rm -rf /'],
   ])('denies %j', (cmd) => {
     expect(bash(cmd)).toBe(DENY);
@@ -65,7 +70,6 @@ describe('guard-bash: destructive command guard', () => {
     ['rm -rf dist/'],
     ['rm -rf /tmp/scratch'],
     ['rm file.txt'],
-    ['rm -rf "$BUILD_DIR"'],
     ['git push origin dev'],
     // Merely naming a dangerous command in quoted text, a comment, or a
     // here-document fixture must not trip the guard.
