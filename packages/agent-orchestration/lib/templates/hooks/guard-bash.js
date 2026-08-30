@@ -8,6 +8,8 @@
  * Most patterns are matched against an effective command with quoted strings
  * and comments removed. Recursive rm is handled separately with a shell-aware
  * tokenizer so quoted filesystem operands such as `rm -rf "/"` remain blocked.
+ * rm commands with unresolved shell syntax are denied rather than evaluated by
+ * this lightweight parser.
  */
 'use strict';
 
@@ -180,6 +182,14 @@ function effectiveCommand(cmd) {
 const ROOTISH_TARGET =
   /^(?:\/|~|\$HOME|\$\{HOME\})(?:\/)?(?:\*)?$|^(?:\$HOME|\$\{HOME\}|~)\/\*$/;
 const RECURSIVE_FLAG = /^-(?:-recursive$|[a-zA-Z]*[rR][a-zA-Z]*$)/;
+const SHELL_EXPANSION_CHARS = new Set(['$', '`', '<', '>', '*', '?', '[', ']', '{', '}', '~']);
+
+/** Return true when a token cannot be safely evaluated without a shell. */
+function hasShellExpansion(tokens) {
+  return tokens.some((token) =>
+    [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
+  );
+}
 
 /** Tokenize executable shell commands without treating quoted text as syntax. */
 function shellCommands(cmd) {
@@ -254,9 +264,13 @@ function hasDestructiveRm(cmd) {
     while (i < tokens.length && /^(sudo|doas|env|command|nohup|time)$/.test(tokens[i])) i++;
     if (tokens[i] !== 'rm') continue;
     const rest = tokens.slice(i + 1);
-    // `--no-preserve-root` has essentially one purpose; treat it as sufficient.
-    if (rest.some((t) => t === '--no-preserve-root')) return true;
     const recursive = rest.some((t) => RECURSIVE_FLAG.test(t));
+    const noPreserveRoot = rest.some((t) => t === '--no-preserve-root');
+    // Do not guess what a shell expansion produces. In particular, a quoted
+    // command substitution can hide both `--no-preserve-root` and `/`.
+    if (hasShellExpansion(rest)) return true;
+    // `--no-preserve-root` has essentially one purpose; treat it as sufficient.
+    if (noPreserveRoot) return true;
     const rootish = rest.some((target) => !target.startsWith('-') && ROOTISH_TARGET.test(target));
     if (recursive && rootish) return true;
   }
