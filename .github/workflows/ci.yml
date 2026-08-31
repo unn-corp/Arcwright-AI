@@ -4,6 +4,7 @@
 # Runners: every job uses a fresh GitHub-hosted VM. Pull requests must not execute
 # contributor-controlled code on shared self-hosted runners. Keep any future
 # privileged self-hosted workflow separate and restricted to trusted branches.
+# Third-party actions, scanner archives, and the SAST image are pinned below.
 name: ci
 
 on:
@@ -33,10 +34,10 @@ jobs:
     name: build (package)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
       - run: node build/build.js
@@ -49,10 +50,10 @@ jobs:
       run:
         working-directory: packages/agent-orchestration
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -68,10 +69,10 @@ jobs:
       run:
         working-directory: website
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -126,7 +127,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -135,8 +136,14 @@ jobs:
         # GITLEAKS_LICENSE on private repos; the binary does not. fetch-depth:0
         # gives it full history. .gitleaks.toml allowlists doc false-positives.
         run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
-            | tar -xz -C /tmp gitleaks
+          set -euo pipefail
+          gitleaks_archive=/tmp/gitleaks_8.30.1_linux_x64.tar.gz
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --output "$gitleaks_archive" \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $gitleaks_archive" \
+            | sha256sum --check --status
+          tar -xzf "$gitleaks_archive" -C /tmp gitleaks
           /tmp/gitleaks detect --source="$GITHUB_WORKSPACE" \
             --config="$GITHUB_WORKSPACE/.gitleaks.toml" \
             --redact --no-banner --exit-code=1 -v
@@ -144,16 +151,28 @@ jobs:
         # trivy CLI (Apache-2.0). Run the binary natively against the workspace
         # instead of adding another container mount to the validation path.
         run: |
-          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz \
-            | tar -xz -C /tmp trivy
+          set -euo pipefail
+          trivy_archive=/tmp/trivy_0.71.2_Linux-64bit.tar.gz
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --output "$trivy_archive" \
+            https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz
+          echo "0510e71e2fd39bf863856d499c8dc19feb4e7336546394c502a8f5cc7ab27460  $trivy_archive" \
+            | sha256sum --check --status
+          tar -xzf "$trivy_archive" -C /tmp trivy
           /tmp/trivy fs --scanners vuln,secret --severity HIGH,CRITICAL \
             --exit-code 1 --no-progress "$GITHUB_WORKSPACE"
       - name: Dependency vulnerabilities (OSV-Scanner / OSV.dev)
         # Scans every committed lockfile against OSV.dev; fails on findings.
         run: |
-          curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 \
-            -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
-          /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
+          set -euo pipefail
+          osv_scanner=/tmp/osv-scanner
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --output "$osv_scanner" \
+            https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64
+          echo "15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0  $osv_scanner" \
+            | sha256sum --check --status
+          chmod +x "$osv_scanner"
+          "$osv_scanner" scan source --recursive "$GITHUB_WORKSPACE"
 
   # SAST (semgrep) — HARD gate. The semgrep image ships `semgrep-core`, which
   # won't pip-install reliably. Checkout on the hosted VM, then copy the tree
@@ -162,7 +181,7 @@ jobs:
     name: sast (semgrep)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       - name: SAST (semgrep)
@@ -176,7 +195,8 @@ jobs:
         # secrets, injection) fail the gate.
         run: |
           set -euo pipefail
-          CID=$(docker create semgrep/semgrep:1.168.0 \
+          # Semgrep 1.168.0, pinned to the Linux/amd64 image manifest digest.
+          CID=$(docker create semgrep/semgrep@sha256:525beaba156b9bd3f9847d6ec0eb8f308e11f407e0c0b2da641e7c8dd99c97d6 \
             semgrep scan --config auto --severity ERROR --error \
               --exclude-rule javascript.lang.security.detect-child-process.detect-child-process \
               --exclude-rule javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket \
@@ -192,6 +212,6 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: amannn/action-semantic-pull-request@v5
+      - uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
