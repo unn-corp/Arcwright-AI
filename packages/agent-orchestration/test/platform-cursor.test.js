@@ -67,9 +67,27 @@ describe('writeCursorConfig — project install', () => {
     expect(hooks.hooks.sessionStart).toHaveLength(1);
     expect(hooks.hooks.beforeSubmitPrompt).toHaveLength(1);
     expect(hooks.hooks.afterFileEdit).toHaveLength(1);
-    expect(hooks.hooks.stop).toHaveLength(1);
+    expect(hooks.hooks.stop).toBeUndefined();
     expect(first.filter((entry) => entry.relPath === '.cursor/hooks.json')).toHaveLength(1);
     expect(second.filter((entry) => entry.relPath === '.cursor/hooks.json')).toHaveLength(1);
+  });
+
+  it('removes a legacy managed stop hook while preserving foreign stop hooks', async () => {
+    const hooksPath = path.join(projectDir, '.cursor', 'hooks.json');
+    fs.ensureDirSync(path.dirname(hooksPath));
+    fs.writeFileSync(hooksPath, JSON.stringify({
+      hooks: {
+        stop: [
+          { command: '.cursor/hooks/unnamed-dev-context.js --harness=cursor', loop_limit: 1 },
+          { command: 'user-owned-stop-hook' },
+        ],
+      },
+    }));
+
+    await writeCursorConfig(projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true);
+
+    const hooks = await fs.readJson(hooksPath);
+    expect(hooks.hooks.stop).toEqual([{ command: 'user-owned-stop-hook' }]);
   });
 
   it('preserves a malformed user hook configuration', async () => {

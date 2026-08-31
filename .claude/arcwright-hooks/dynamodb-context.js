@@ -44,4 +44,4 @@ if (isRelevant(prompt)) {
   }) + '\n');
 }
 
-module.exports = { isRelevant, context };
+module.exports = { context, isRelevant };

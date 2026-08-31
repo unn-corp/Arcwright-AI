@@ -95,4 +95,4 @@ if (require.main === module) {
   if (isRelevant(payload)) emit(payload);
 }
 
-module.exports = { MESSAGING_PROMPT_TERMS, isRelevant, projectRoot, readPayload, repoLooksMessaging };
+module.exports = { MESSAGING_PROMPT_TERMS, context, isRelevant, projectRoot, readPayload, repoLooksMessaging };

@@ -115,6 +115,7 @@ if (require.main === module) {
 
 module.exports = {
   AMPLIFY_PROMPT_TERMS,
+  context,
   isRelevant,
   projectRoot,
   readPayload,

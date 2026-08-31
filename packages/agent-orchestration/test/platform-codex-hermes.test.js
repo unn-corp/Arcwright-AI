@@ -133,6 +133,7 @@ describe('writeCodexConfig — native Unnamed MCP hooks', () => {
     fs.writeJsonSync(hooksPath, {
       hooks: {
         UserPromptSubmit: [{ hooks: [{ type: 'command', command: 'echo user-hook' }] }],
+        Stop: [{ hooks: [{ type: 'command', command: 'node old/unnamed-dev-context.js --harness=codex' }] }],
       },
     }, { spaces: 2 });
 
@@ -146,7 +147,7 @@ describe('writeCodexConfig — native Unnamed MCP hooks', () => {
     expect(userPromptGroups.filter((group) => group.hooks.some((h) => h.command === 'echo user-hook'))).toHaveLength(1);
     expect(userPromptGroups.filter((group) => group.hooks.some((h) => h.command?.includes('unnamed-dev-context.js')))).toHaveLength(1);
     expect(hooks.hooks.SessionStart).toHaveLength(1);
-    expect(hooks.hooks.Stop).toHaveLength(1);
+    expect(hooks.hooks.Stop).toBeUndefined();
     expect(first.some((entry) => entry.relPath === '.codex/hooks.json')).toBe(true);
     expect(second.some((entry) => entry.relPath === '.codex/hooks.json')).toBe(true);
   });

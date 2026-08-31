@@ -98,4 +98,4 @@ if (require.main === module) {
   if (isRelevant(payload)) emit(payload);
 }
 
-module.exports = { S3_PROMPT_TERMS, isRelevant, projectRoot, readPayload, repoLooksS3 };
+module.exports = { S3_PROMPT_TERMS, context, isRelevant, projectRoot, readPayload, repoLooksS3 };
