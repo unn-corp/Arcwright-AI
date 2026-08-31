@@ -110,6 +110,12 @@ learned from a gate in this repo that violated it:
    `Atomics.wait` on a `SharedArrayBuffer` for a synchronous sleep; spawning
    `node -e setTimeout(...)` costs a full interpreter boot per tick.
 
+Arcwright's optional domain routers are dispatched through one `domain-router.js`
+command per event. This keeps the individual skill checks available while
+avoiding one Node startup and one possible chat injection per installed domain
+skill. Lifecycle `Stop` hooks should remain silent when their output could be
+interpreted as a continuation request.
+
 One more, specific to type-checking: a **solution-style** `tsconfig.json` (`"files": []`
 plus `"references"`, the shape Vite scaffolds emit) has no inputs of its own, so plain
 `tsc --noEmit` checks *nothing* and exits 0 in ~50ms. That reads as a passing gate while

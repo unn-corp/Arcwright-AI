@@ -101,4 +101,4 @@ if (require.main === module) {
   if (isRelevant(payload)) emit(payload);
 }
 
-module.exports = { AURORA_PROMPT_TERMS, isRelevant, projectRoot, readPayload, repoLooksAurora };
+module.exports = { AURORA_PROMPT_TERMS, context, isRelevant, projectRoot, readPayload, repoLooksAurora };

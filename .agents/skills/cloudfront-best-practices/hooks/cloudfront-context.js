@@ -98,4 +98,4 @@ if (require.main === module) {
   if (isRelevant(payload)) emit(payload);
 }
 
-module.exports = { CLOUDFRONT_PROMPT_TERMS, isRelevant, projectRoot, readPayload, repoLooksCloudFront };
+module.exports = { CLOUDFRONT_PROMPT_TERMS, context, isRelevant, projectRoot, readPayload, repoLooksCloudFront };

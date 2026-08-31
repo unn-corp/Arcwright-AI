@@ -119,6 +119,7 @@ if (require.main === module) {
 
 module.exports = {
   COGNITO_PROMPT_TERMS,
+  context,
   isRelevant,
   projectRoot,
   readPayload,

@@ -1,0 +1,31 @@
+# ─── Arcwright customization — team-level overrides ────────────────────────────
+#
+# File: _arcwright/custom/<name>.toml  (team-level — safe to commit)
+#       _arcwright/custom/<name>.user.toml  (personal — add to .gitignore)
+#
+# Resolution order (lowest → highest precedence):
+#   shipped defaults < <name>.toml < <name>.user.toml
+#
+# Merge semantics:
+#   - Scalars (string, number, boolean): higher layer wins.
+#   - Arrays: higher layer replaces by default.
+#   - Arrays with a `<key>__append = true` sibling: values accumulate
+#     (base entries first, then team, then user entries appended).
+#   - Keyed arrays (array of objects with an `id` or `name` field): matched by
+#     key and deep-merged; unmatched entries are appended.
+#
+# Example: override the default language for a module
+#
+# communication_language = "French"
+# document_output_language = "French"
+#
+# Example: add extra context paths (append mode)
+#
+# context_paths = [".notes/", "docs/adr/"]
+# context_paths__append = true
+#
+# Example: override a keyed-array entry by name
+#
+# [[personas]]
+# name = "dev"
+# tone = "terse"

@@ -118,6 +118,7 @@ if (require.main === module) {
 
 module.exports = {
   STEP_FUNCTIONS_PROMPT_TERMS,
+  context,
   isRelevant,
   projectRoot,
   readPayload,

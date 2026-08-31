@@ -71,4 +71,4 @@ function emit(payload) {
   process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: event, additionalContext: context(event) } }) + '\n');
 }
 if (require.main === module) { const payload = readPayload(); if (isRelevant(payload)) emit(payload); }
-module.exports = { EVENTBRIDGE_PROMPT_TERMS, isRelevant, projectRoot, readPayload, repoLooksEventBridge };
+module.exports = { EVENTBRIDGE_PROMPT_TERMS, context, isRelevant, projectRoot, readPayload, repoLooksEventBridge };
