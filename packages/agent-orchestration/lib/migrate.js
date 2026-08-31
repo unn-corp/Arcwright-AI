@@ -253,15 +253,6 @@ function preflightMigration(root) {
     plannedRenames.push(rename);
   }
 
-  const commandsDir = path.join(root, '.claude', 'commands');
-  for (const { from, to } of COMMANDS_TO_RENAME) {
-    const sourcePath = path.join(commandsDir, from);
-    const targetPath = path.join(commandsDir, to);
-    if (fs.existsSync(sourcePath) && fs.existsSync(targetPath)) {
-      errors.push(`.claude/commands/${from} -> .claude/commands/${to}: target already exists`);
-    }
-  }
-
   if (errors.length > 0) {
     throw new Error(`Migration preflight failed:\n  - ${errors.join('\n  - ')}`);
   }

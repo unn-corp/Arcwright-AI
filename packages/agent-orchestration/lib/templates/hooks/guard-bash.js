@@ -259,11 +259,13 @@ const ROOTISH_TARGET =
 const RECURSIVE_FLAG = /^-(?:-recursive$|[a-zA-Z]*[rR][a-zA-Z]*$)/;
 const SHELL_EXPANSION_CHARS = new Set(['$', '`', '<', '>', '*', '?', '[', ']', '{', '}', '~']);
 const SHELL_WRAPPERS = new Set(['sudo', 'doas', 'env', 'command', 'nohup', 'time']);
+const SAFE_RM_EXPANSION = /^\$(?:BUILD_DIR|\{BUILD_DIR\})(?:\/(?:\*)?)?$/;
 
 /** Return true when a token cannot be safely evaluated without a shell. */
 function hasShellExpansion(tokens) {
   return tokens.some((token) =>
-    [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
+    !SAFE_RM_EXPANSION.test(token)
+    && [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
   );
 }
 
