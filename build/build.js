@@ -974,6 +974,28 @@ const UNSHIPPED_COMMANDS = {
 };
 
 /**
+ * Generated installer launchers may be present in a maintainer checkout. They
+ * are accounted for by bundleSkillCommands() or bundleSpecialistCommands(),
+ * not the curated SHIPPED_COMMANDS list. Only accept the generated shape when
+ * its referenced source still exists so a typo or stale launcher remains a
+ * hard coverage failure.
+ */
+function isGeneratedCommandLauncher(commandsSrc, fileName) {
+  const content = readSourceText(path.join(commandsSrc, fileName));
+  const skillMatch = content.match(
+    /Load and run the `[^`]+` skill \(`\.agents\/skills\/([^/]+)\/SKILL\.md`\)/
+  );
+  if (skillMatch) {
+    return sourceExists(path.join(SKILLS_SRC, skillMatch[1], 'SKILL.md'));
+  }
+
+  const agentMatch = content.match(
+    /LOAD the FULL agent file from (?:\{project-root\}\/)?_arcwright\/([^\s`]+)/
+  );
+  return Boolean(agentMatch && sourceExists(path.join(ARCWRIGHT_SRC, agentMatch[1])));
+}
+
+/**
  * SHIPPED_COMMANDS is a hand-maintained allowlist, so a new command silently
  * fails to publish if someone forgets step 2 of the CLAUDE.md procedure. That
  * already happened once: /security-scan shipped nowhere for its whole life
@@ -987,7 +1009,9 @@ function verifyCommandCoverage() {
 
   const files = readSourceDirectory(commandsSrc).filter(f => f.endsWith('.md'));
   const uncovered = files.filter(
-    f => !SHIPPED_COMMANDS.some(re => re.test(f)) && !(f in UNSHIPPED_COMMANDS)
+    f => !SHIPPED_COMMANDS.some(re => re.test(f))
+      && !(f in UNSHIPPED_COMMANDS)
+      && !isGeneratedCommandLauncher(commandsSrc, f)
   );
   const dead = SHIPPED_COMMANDS.filter(re => !files.some(f => re.test(f)));
 
