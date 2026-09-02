@@ -207,6 +207,71 @@ describe('manifest read/write round-trips', () => {
       fs.rmSync(external, { recursive: true, force: true });
     }
   });
+  it('rejects existing managed symlinks even when they resolve inside the project', async () => {
+    const targets = [
+      { managedPath: '.claude', targetName: '.git', marker: 'git sentinel\n' },
+      { managedPath: '.agents', targetName: 'protected', marker: 'protected sentinel\n' },
+    ];
+    const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+
+    for (const { managedPath, targetName, marker } of targets) {
+      const target = path.join(dir, targetName);
+      fs.mkdirSync(target, { recursive: true });
+      fs.writeFileSync(path.join(target, 'sentinel.txt'), marker);
+      fs.symlinkSync(target, path.join(dir, managedPath), linkType);
+    }
+
+    await expect(preflightProjectManagedPaths(dir)).rejects.toThrow(/\.claude is an existing managed symlink/);
+    await expect(preflightProjectManagedPaths(dir)).rejects.toThrow(/\.agents is an existing managed symlink/);
+    await expect(installer.install({
+      directory: dir,
+      modules: 'core',
+      tools: 'claude-code',
+      userName: 'Symlink Test',
+      yes: true,
+      hooks: 'none',
+      tmux: false,
+      modelLaunchers: false,
+      gitignore: 'none',
+    })).rejects.toThrow(/Install preflight failed/);
+
+    for (const { managedPath, targetName, marker } of targets) {
+      const target = path.join(dir, targetName);
+      expect(fs.readdirSync(target)).toEqual(['sentinel.txt']);
+      expect(fs.readFileSync(path.join(target, 'sentinel.txt'), 'utf8')).toBe(marker);
+      expect(fs.lstatSync(path.join(dir, managedPath)).isSymbolicLink()).toBe(true);
+    }
+  });
+  it('rejects internal managed symlinks before update and uninstall can mutate targets', async () => {
+    const installOptions = {
+      directory: dir,
+      modules: 'core',
+      tools: 'claude-code',
+      userName: 'Symlink Test',
+      yes: true,
+      hooks: 'none',
+      tmux: false,
+      modelLaunchers: false,
+      gitignore: 'none',
+    };
+    await installer.install(installOptions);
+
+    const target = path.join(dir, 'protected');
+    const managedPath = path.join(dir, '.claude');
+    fs.mkdirSync(target);
+    fs.writeFileSync(path.join(target, 'sentinel.txt'), 'protected sentinel\n');
+    fs.rmSync(managedPath, { recursive: true, force: true });
+    fs.symlinkSync(target, managedPath, process.platform === 'win32' ? 'junction' : 'dir');
+
+    await expect(installer.install({ ...installOptions, action: 'update' }))
+      .rejects.toThrow(/Install preflight failed/);
+    await expect(installer.uninstall({ directory: dir, yes: true }))
+      .rejects.toThrow(/Install preflight failed/);
+
+    expect(fs.readdirSync(target)).toEqual(['sentinel.txt']);
+    expect(fs.readFileSync(path.join(target, 'sentinel.txt'), 'utf8')).toBe('protected sentinel\n');
+    expect(fs.lstatSync(managedPath).isSymbolicLink()).toBe(true);
+  }, 90000);
 });
 
 describe('project origin normalization', () => {

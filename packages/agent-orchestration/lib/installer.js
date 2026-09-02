@@ -666,9 +666,9 @@ function isWithinRoot(root, candidate) {
 }
 
 /**
- * Project contents are untrusted during an install/update. Refuse existing
- * Arcwright-managed symlinks that lead outside the selected project before any
- * writer can follow one during copy, update, or orphan cleanup.
+ * Project contents are untrusted during an install/update. Refuse any existing
+ * Arcwright-managed symlink before a writer can follow one during copy, update,
+ * or orphan cleanup.
  */
 async function preflightProjectManagedPaths(projectRoot, outputFolder = '_arcwright-output') {
   const realRoot = await fs.realpath(projectRoot);
@@ -699,7 +699,7 @@ async function preflightProjectManagedPaths(projectRoot, outputFolder = '_arcwri
         errors.push(`${relPath} resolves outside the project root`);
         return;
       }
-      await inspect(target, relPath);
+      errors.push(`${relPath} is an existing managed symlink`);
       return;
     }
 
