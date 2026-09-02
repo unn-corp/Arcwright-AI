@@ -143,6 +143,14 @@ describe('guard-write: secret/key-file write guard', () => {
     expect(write('.npmrc')).toBe(DENY);
   });
 
+  it('normalizes Windows path separators before checking protected paths', () => {
+    expect(write('C:\\repo\\.env')).toBe(DENY);
+    expect(write('C:\\repo\\config\\prod.env')).toBe(DENY);
+    expect(write('C:\\Users\\u\\.ssh\\id_rsa')).toBe(DENY);
+    expect(write('C:\\repo\\.npmrc')).toBe(DENY);
+    expect(write('C:\\repo\\src\\file.ts', 'export const x = 1;')).toBe(ALLOW);
+  });
+
   it('denies ordinary files whose content carries a real credential', () => {
     expect(write('notes.md', PEM_HEADER)).toBe(DENY);
     expect(write('setup.md', `aws key ${AWS_KEY_ID} here`)).toBe(DENY);

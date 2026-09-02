@@ -32,6 +32,8 @@ process.stdin.on('end', () => {
     process.exit(0);
   }
 
+  filePath = String(filePath).replaceAll('\\', '/');
+
   const pathBlocks = [
     // Both dotenv spellings: the dotfile form (`.env`, `.env.production`) and
     // the extension form (`prod.env`, `config/local.env`). Only the first was
