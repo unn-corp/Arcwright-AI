@@ -1426,7 +1426,7 @@ function buildCursorRule(modules, unnamedPm = false, options = {}) {
       '',
       '## Unnamed Development MCP trigger',
       '',
-      'The lifecycle hook performs the Unnamed Development MCP preflight once at session start. Do not repeat it on every turn. Refresh manually with the explicit Unnamed Development MCP command for the current harness when the repository, branch, milestone, or tracker state materially changes, or when the user explicitly asks for tracker synchronization. Reuse matching records; never duplicate them. Read CRM/commercial records before persisted mutations.',
+      'The lifecycle hook performs the Unnamed Development MCP preflight once at session start, using only an accepted GitHub repository origin (canonical credential-free HTTPS; never HTTP, local, FTP, custom-host, or malformed). Do not repeat it on every turn. Refresh manually with the explicit Unnamed Development MCP command for the current harness when the repository, branch, milestone, or tracker state materially changes, or when the user explicitly asks for tracker synchronization. Reuse matching records; never duplicate them. Read CRM/commercial records before persisted mutations.',
     ] : []),
     '<!-- arcwright-cursor-end -->',
     '',
@@ -3230,6 +3230,14 @@ const INSTALLER_OWNED_HOOKS = [
 // default for this optional integration; production installs can set the
 // variable before installing or update the generated settings explicitly.
 const UNNAMED_MCP_HOOK_SERVER = process.env.ARCWRIGHT_UNNAMED_MCP_HOOK_SERVER || 'unnamed-development';
+// get_project_context resolves records from Unnamed's GitHub-link registry;
+// it is not a generic remote URL resolver. Keep this allowlist local to the
+// installer so an untrusted git remote can never become an arbitrary native
+// MCP input. SSH and Git transports are accepted only as GitHub remotes and
+// are canonicalized to HTTPS before they reach the hook.
+const UNNAMED_ALLOWED_ORIGIN_PROTOCOLS = new Set(['https:', 'ssh:', 'git:']);
+const UNNAMED_ALLOWED_ORIGIN_HOST = 'github.com';
+const GITHUB_REPOSITORY_PATH = /^\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+(?:\.git)?\/?$/;
 // Stable substring of the SessionStart reminder written below. It carries no
 // filename, so it needs its own identifier; keep this in sync with the echo.
 const SESSION_START_SENTINEL = 'run the project-context scan';
@@ -3282,18 +3290,33 @@ function projectOrigin(projectRoot) {
     if (!remote) return '';
     const scpStyle = remote.includes('://') ? null : remote.match(/^(?:[^@/]+@)?([^:/]+):(.+)$/);
     if (scpStyle) {
-      return `https://${scpStyle[1]}/${scpStyle[2]}`;
+      if (scpStyle[1].toLowerCase() !== UNNAMED_ALLOWED_ORIGIN_HOST) return '';
+      const pathname = `/${scpStyle[2]}`;
+      return GITHUB_REPOSITORY_PATH.test(pathname)
+        ? `https://${UNNAMED_ALLOWED_ORIGIN_HOST}${pathname.replace(/\/$/, '')}`
+        : '';
     }
     try {
       const parsed = new URL(remote);
-      if (parsed.protocol === 'ssh:' || parsed.protocol === 'git:') {
-        return `https://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`;
-      }
-      parsed.username = '';
-      parsed.password = '';
-      return parsed.toString();
+      // URL normalizes default ports away, so inspect the raw authority too.
+      // The owner-side link contract accepts the host github.com, not an
+      // alternate port or a URL with query/fragment data.
+      const authority = remote.slice(remote.indexOf('://') + 3).split(/[/?#]/, 1)[0];
+      const hostPort = authority.slice(authority.lastIndexOf('@') + 1);
+      if (
+        !UNNAMED_ALLOWED_ORIGIN_PROTOCOLS.has(parsed.protocol) ||
+        parsed.hostname.toLowerCase() !== UNNAMED_ALLOWED_ORIGIN_HOST ||
+        parsed.port ||
+        hostPort.includes(':') ||
+        parsed.search ||
+        parsed.hash ||
+        !GITHUB_REPOSITORY_PATH.test(parsed.pathname)
+      ) return '';
+
+      const pathname = parsed.pathname.replace(/\/$/, '');
+      return `https://${UNNAMED_ALLOWED_ORIGIN_HOST}${pathname}`;
     } catch {
-      return remote.replace(/^(https?:\/\/)[^@/]+@/i, '$1');
+      return '';
     }
   } catch {
     return '';
@@ -3584,10 +3607,10 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
       : `node "$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/${name}"`;
 
   // This is the deterministic MCP part of the trigger. The command adapter
-  // still emits the ordered follow-up instructions for every harness, but a
-  // project-scoped Claude install can resolve the repository directly through
-  // Claude's native mcp_tool hook. Global installs intentionally skip this:
-  // they do not have a trustworthy repository URL at install time.
+  // still emits the ordered follow-up instructions for global/unscoped
+  // installs, but a project-scoped Claude install can resolve the repository
+  // directly through Claude's native mcp_tool hook only after projectOrigin()
+  // has validated and canonicalized the remote.
   const repoUrl = !isGlobal ? projectOrigin(projectRoot) : '';
   const projectContextMcpHook = repoUrl
     ? {
@@ -3648,9 +3671,14 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
   // A project-scoped Claude install has a native MCP hook that already
   // resolves the repository. Adding the command adapter beside it duplicates
   // model-visible context and costs another process per lifecycle event.
-  const unnamedContextEntries = () => projectContextMcpHook
-    ? [{ hooks: [projectContextMcpHook] }]
-    : [{ hooks: [cmd(ref(UNNAMED_DEV_CONTEXT_HOOK))] }];
+  const unnamedContextEntries = () => {
+    if (projectContextMcpHook) return [{ hooks: [projectContextMcpHook] }];
+    // A project-scoped install with no accepted origin must not fall back to
+    // an automatic adapter that could send the unsupported remote to MCP.
+    // Global/unscoped settings resolve their eventual project at runtime.
+    if (isGlobal || !projectRoot) return [{ hooks: [cmd(ref(UNNAMED_DEV_CONTEXT_HOOK))] }];
+    return [];
+  };
 
   if (mode === 'safe' || mode === 'full') {
     setEvent('PreToolUse', [
@@ -3740,7 +3768,7 @@ function buildArcwrightRulesEntry(modules, unnamedPm = false, options = {}) {
       '',
       '## Unnamed Development MCP trigger',
       '',
-      'The lifecycle hook performs the Unnamed Development MCP preflight once at session start. Do not repeat it on every turn. Refresh manually with the explicit Unnamed Development MCP command for the current harness when the repository, branch, milestone, or tracker state materially changes, or when the user explicitly asks for tracker synchronization. Reuse matching records; never duplicate them. Read CRM/commercial records before persisted mutations.',
+      'The lifecycle hook performs the Unnamed Development MCP preflight once at session start, using only an accepted GitHub repository origin (canonical credential-free HTTPS; never HTTP, local, FTP, custom-host, or malformed). Do not repeat it on every turn. Refresh manually with the explicit Unnamed Development MCP command for the current harness when the repository, branch, milestone, or tracker state materially changes, or when the user explicitly asks for tracker synchronization. Reuse matching records; never duplicate them. Read CRM/commercial records before persisted mutations.',
     ]
     : [];
   return [

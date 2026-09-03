@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
 const {
@@ -282,12 +282,27 @@ describe('manifest read/write round-trips', () => {
 });
 
 describe('project origin normalization', () => {
-  it('converts SSH Git remotes to canonical HTTPS URLs', () => {
+  const setOrigin = (remote) => {
     execSync('git init -q', { cwd: dir });
-    execSync('git remote add origin git@github.com:unn-corp/Arcwright-AI.git', { cwd: dir });
-    expect(projectOrigin(dir)).toBe('https://github.com/unn-corp/Arcwright-AI.git');
-    execSync('git remote set-url origin ssh://git@github.com/unn-corp/Arcwright-AI.git', { cwd: dir });
-    expect(projectOrigin(dir)).toBe('https://github.com/unn-corp/Arcwright-AI.git');
+    execFileSync('git', ['remote', 'add', 'origin', remote], { cwd: dir, stdio: 'pipe' });
+  };
+
+  it.each([
+    ['SCP/SSH', 'git@github.com:unn-corp/Arcwright-AI.git', 'https://github.com/unn-corp/Arcwright-AI.git'],
+    ['SSH URL', 'ssh://git@github.com/unn-corp/Arcwright-AI.git', 'https://github.com/unn-corp/Arcwright-AI.git'],
+    ['Git URL', 'git://github.com/unn-corp/Arcwright-AI.git', 'https://github.com/unn-corp/Arcwright-AI.git'],
+    ['HTTPS', 'https://github.com/unn-corp/Arcwright-AI.git', 'https://github.com/unn-corp/Arcwright-AI.git'],
+    ['credential-bearing HTTPS', 'https://user:secret@github.com/unn-corp/Arcwright-AI.git', 'https://github.com/unn-corp/Arcwright-AI.git'],
+    ['HTTP', 'http://github.com/unn-corp/Arcwright-AI.git', ''],
+    ['file', 'file:///tmp/unnamed-dev.git', ''],
+    ['FTP', 'ftp://github.com/unn-corp/Arcwright-AI.git', ''],
+    ['localhost', 'https://localhost:3001/unn-corp/Arcwright-AI.git', ''],
+    ['non-GitHub host', 'https://git.example.test/unn-corp/Arcwright-AI.git', ''],
+    ['malformed', 'not-a-url', ''],
+    ['invalid repository path', 'https://github.com/unn-corp', ''],
+  ])('handles %s remotes', (_label, remote, expected) => {
+    setOrigin(remote);
+    expect(projectOrigin(dir)).toBe(expected);
   });
 });
 
@@ -771,11 +786,24 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
       .filter((hook) => hook.command?.includes('unnamed-dev-context.js'))).toHaveLength(0);
     expect(s.hooks.Stop).toBeUndefined();
 
-    execSync('git remote set-url origin https://user:secret@example.com/project.git', { cwd: dir, stdio: 'pipe' });
+    execSync('git remote set-url origin https://user:secret@github.com/example/project.git', { cwd: dir, stdio: 'pipe' });
     await writeClaudeSettings(dir, chalk, 'none', false, true, dir);
     const sanitized = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
     expect(JSON.stringify(sanitized)).not.toContain('secret');
-    expect(JSON.stringify(sanitized)).toContain('https://example.com/project.git');
+    expect(JSON.stringify(sanitized)).toContain('https://github.com/example/project.git');
+  });
+  it('does not install project context hooks for unsupported origins', async () => {
+    execSync('git init -q', { cwd: dir });
+    execFileSync('git', ['remote', 'add', 'origin', 'file:///tmp/unnamed-dev.git'], { cwd: dir, stdio: 'pipe' });
+    await writeClaudeSettings(dir, chalk, 'none', false, true, dir);
+
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    const hooks = Object.values(s.hooks || {})
+      .flatMap((groups) => groups)
+      .flatMap((group) => group.hooks)
+      .filter((hook) => hook.type === 'mcp_tool' || hook.command?.includes('unnamed-dev-context.js'));
+
+    expect(hooks).toHaveLength(0);
   });
   it('does not delete foreign hooks that share the arcwright-hooks directory', async () => {
     // The ci-gates skill installs its gates into the SAME .claude/arcwright-hooks/
