@@ -95,7 +95,16 @@ describe('install() — fresh project install', () => {
     expect(fs.existsSync(path.join(projectDir, '.kiro', 'agents', 'unnamed-dev-mcp.json'))).toBe(true);
     expect(fs.existsSync(path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
     expect(settings.hooks.UserPromptSubmit).toBeDefined();
-    expect(settings.hooks.UserPromptSubmit.some((group) => group.hooks.some((hook) => hook.type === 'mcp_tool' && hook.tool === 'get_project_context'))).toBe(true);
+    const projectContextHooks = Object.values(settings.hooks)
+      .flatMap((groups) => groups)
+      .flatMap((group) => group.hooks)
+      .filter((hook) => hook.type === 'mcp_tool' && hook.tool === 'get_project_context');
+    expect(projectContextHooks).toHaveLength(2);
+    expect(projectContextHooks.every((hook) => (
+      hook.server === 'unnamed-development' &&
+      hook.input?.repoUrl === 'https://github.com/example/project.git'
+    ))).toBe(true);
+    expect(JSON.stringify(settings.hooks)).not.toContain('unnamed-dev-context.js');
     expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('Unnamed Development MCP trigger');
     expect(fs.readFileSync(path.join(projectDir, '.cursor', 'rules', 'arcwright.mdc'), 'utf8')).toContain('Perform the MCP calls; do not merely acknowledge this rule.');
     expect(cursorHooks.hooks.sessionStart).toHaveLength(1);
