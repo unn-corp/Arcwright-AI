@@ -19,6 +19,7 @@ const {
   installHerdrAssets,
   listClaudeProfileDirs,
   upsertTomlSetting,
+  tomlBasicString,
   SHELL_START,
   SHELL_END,
 } = require('./herdrAssets');
@@ -140,7 +141,7 @@ function buildKeybindingsBlock(installedIds, options = {}) {
       'type = "shell"',
       // Absolute path — herdr does NOT expand $HOME/env vars in command strings,
       // so a "$HOME/..." command silently no-ops when it becomes the live binding.
-      `command = "${path.join(homeDir, '.local', 'bin', 'herdr-clipboard-paste')}"`,
+      `command = ${tomlBasicString(path.join(homeDir, '.local', 'bin', 'herdr-clipboard-paste'))}`,
       'description = "Paste clipboard text or image"',
     ].join('\n'));
   }

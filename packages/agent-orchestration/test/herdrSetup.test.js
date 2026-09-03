@@ -5,13 +5,14 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import herdr from '../lib/herdrSetup.js';
 import herdrAssets from '../lib/herdrAssets.js';
+import { parseToml } from '../lib/customization.js';
 
 const {
   setupHerdr, detectHerdr, parsePluginIds, buildKeybindingsBlock,
   upsertTomlSetting, installHerdrAssets, listClaudeProfileDirs,
   DEFAULT_PLUGINS, KEYS_START, KEYS_END, SHELL_START,
 } = herdr;
-const { installProfileHook } = herdrAssets;
+const { installProfileHook, shellSingleQuote } = herdrAssets;
 
 let dir;
 beforeEach(() => {
@@ -279,5 +280,44 @@ describe('setupHerdr', () => {
     await setupHerdr({ run: fakeRun(), quiet: true, configPath, homeDir: dir });
     const toml = fs.readFileSync(configPath, 'utf8');
     expect(toml.match(new RegExp(KEYS_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')).length).toBe(1);
+  });
+
+  it('quotes hostile home paths in shell and TOML outputs', async () => {
+    const marker = path.join(dir, 'shell-command-executed');
+    const homeDir = path.join(dir, `home' "$(touch ${marker})"\\literal`);
+    const configPath = path.join(dir, 'config.toml');
+
+    await setupHerdr({ run: fakeRun(), quiet: true, configPath, homeDir });
+
+    const hookPath = path.join(homeDir, '.claude', 'hooks', 'herdr-agent-session.sh');
+    const settings = JSON.parse(
+      fs.readFileSync(path.join(homeDir, '.claude', 'settings.json'), 'utf8')
+    );
+    const hookCommand = settings.hooks.SessionStart[0].hooks[0].command;
+    expect(hookCommand).toBe(`bash ${shellSingleQuote(hookPath)}`);
+
+    const launcherPath = path.join(homeDir, '.config', 'arcwright', 'herdr-agent-launchers.sh');
+    const bashrcPath = path.join(homeDir, '.bashrc');
+    expect(fs.readFileSync(bashrcPath, 'utf8')).toContain(
+      `[ -f ${shellSingleQuote(launcherPath)} ] && source ${shellSingleQuote(launcherPath)}`
+    );
+
+    const tomlText = fs.readFileSync(configPath, 'utf8');
+    const parsed = parseToml(tomlText);
+    const clipboard = parsed.keys.command.find((binding) => binding.key === 'ctrl+v');
+    const clipboardPath = path.join(homeDir, '.local', 'bin', 'herdr-clipboard-paste');
+    expect(tomlText).toContain(`command = ${JSON.stringify(clipboardPath)}`);
+    expect(JSON.parse(`"${clipboard.command}"`)).toBe(clipboardPath);
+
+    expect(() => execFileSync('/bin/bash', [
+      '--noprofile', '--norc', '-c', 'source "$1"', 'herdr-test', bashrcPath,
+    ], {
+      env: { ...process.env, HOME: homeDir },
+    })).not.toThrow();
+    expect(() => execFileSync('/bin/bash', ['-c', hookCommand], {
+      input: '{}',
+      env: { ...process.env, HOME: homeDir, HERDR_ENV: '' },
+    })).not.toThrow();
+    expect(fs.existsSync(marker)).toBe(false);
   });
 });

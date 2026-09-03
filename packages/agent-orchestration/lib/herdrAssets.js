@@ -8,6 +8,18 @@ const { upsertManagedBlock } = require('./managed-md');
 const SHELL_START = '# >>> arcwright-herdr-launchers >>>';
 const SHELL_END = '# <<< arcwright-herdr-launchers <<<';
 
+/** Quote a value as one POSIX shell argument. */
+function shellSingleQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+/** Encode a value as a TOML basic string. */
+function tomlBasicString(value) {
+  // JSON's string escape sequences are the same escape sequences supported by
+  // TOML basic strings, so this also handles quotes, backslashes, and controls.
+  return JSON.stringify(String(value));
+}
+
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -86,7 +98,7 @@ async function installProfileHook(profileDir, hookPath) {
   if (settings.hooks === undefined) settings.hooks = {};
   if (!isPlainObject(settings.hooks)) return;
   const existing = Array.isArray(settings.hooks.SessionStart) ? settings.hooks.SessionStart : [];
-  const command = `bash '${hookPath}'`;
+  const command = `bash ${shellSingleQuote(hookPath)}`;
   settings.hooks.SessionStart = [
     { matcher: '*', hooks: [{ type: 'command', command, timeout: 10 }] },
     ...existing.filter((group) => !hasHerdrHook(group)),
@@ -110,7 +122,8 @@ async function installHerdrAssets(homeDir = os.homedir()) {
   await fs.copy(herdrTemplate('agent-launchers.sh'), launcherPath, { overwrite: true });
   await Promise.all([fs.chmod(clipboardPath, 0o755), fs.chmod(hookPath, 0o755)]);
 
-  const sourceLine = `[ -f "${launcherPath}" ] && source "${launcherPath}"`;
+  const quotedLauncherPath = shellSingleQuote(launcherPath);
+  const sourceLine = `[ -f ${quotedLauncherPath} ] && source ${quotedLauncherPath}`;
   const rcFiles = [path.join(homeDir, '.bashrc')];
   const zshrc = path.join(homeDir, '.zshrc');
   if (await fs.pathExists(zshrc)) rcFiles.push(zshrc);
@@ -129,6 +142,8 @@ module.exports = {
   installProfileHook,
   listClaudeProfileDirs,
   isPlainObject,
+  shellSingleQuote,
+  tomlBasicString,
   upsertTomlSetting,
   SHELL_START,
   SHELL_END,
