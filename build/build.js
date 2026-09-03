@@ -25,21 +25,21 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const { adaptKiroContent } = require('../packages/agent-orchestration/lib/kiro-adapter');
 const { renderActivationPath } = require('../packages/agent-orchestration/lib/activation-root');
 
 // Robustly remove a directory tree. Recursive rmSync can race to ENOTEMPTY on
 // reused CI workspaces (self-hosted runners, overlay filesystems); retry with a
-// backoff, then fall back to `rm -rf`, before failing the build.
+// backoff, then fall back to argument-safe `rm -rf`, before failing the build.
 function wipeSrc(dir) {
   if (!fs.existsSync(dir)) return;
   try {
     fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     if (!fs.existsSync(dir)) return;
-  } catch { /* fall through to rm -rf */ }
+  } catch { /* fall through to argument-safe rm -rf */ }
   try {
-    if (process.platform !== 'win32') execSync(`rm -rf "${dir}"`, { stdio: 'ignore' });
+    if (process.platform !== 'win32') execFileSync('rm', ['-rf', dir], { stdio: 'ignore' });
   } catch { /* fall through to a final throwing attempt */ }
   if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
@@ -299,7 +299,7 @@ function buildGenericPackage() {
 
   // Wipe and recreate src/. On reused CI workspaces (self-hosted runners) a
   // recursive rmSync can race to ENOTEMPTY on nested dirs. Retry, and fall back
-  // to `rm -rf` which tolerates the race, before giving up.
+  // to an argument-safe `rm -rf` invocation which tolerates the race, before giving up.
   wipeSrc(PKG_SRC);
   fs.mkdirSync(PKG_SRC, { recursive: true });
 
