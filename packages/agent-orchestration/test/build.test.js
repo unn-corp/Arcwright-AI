@@ -92,9 +92,9 @@ function link(target, linkPath) {
   );
 }
 
-const symlinkDescribe = process.platform === 'win32' ? describe.skip : describe;
+const unixDescribe = process.platform === 'win32' ? describe.skip : describe;
 
-symlinkDescribe('build input symlink boundaries', () => {
+unixDescribe('build input symlink boundaries', () => {
   it('rejects a symlinked package file', () => {
     withFixture((fixture) => {
       const linkPath = path.join(fixture.root, '_arcwright', 'awb', 'outside-package.txt');
@@ -172,6 +172,66 @@ symlinkDescribe('build input symlink boundaries', () => {
       expect(fs.existsSync(path.join(fixture.root, 'packages', 'agent-orchestration', 'src', 'launchers', 'outside-source.txt')))
         .toBe(false);
     });
+  });
+});
+
+unixDescribe('build cleanup fallback', () => {
+  it('removes a metacharacter path after the initial rmSync attempt fails', () => {
+    const markerDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-wipe-markers-'));
+    const dollarMarker = path.join(markerDir, 'dollar-side-effect');
+    const backtickMarker = path.join(markerDir, 'backtick-side-effect');
+    const unsafeName = 'checkout-"-$(touch $ARCWRIGHT_TEST_DOLLAR_MARKER)-`touch $ARCWRIGHT_TEST_BACKTICK_MARKER`-"-suffix';
+    const fixture = createFixture();
+    const unsafeRoot = path.join(path.dirname(fixture.root), unsafeName);
+    fs.renameSync(fixture.root, unsafeRoot);
+    fixture.root = unsafeRoot;
+
+    const srcDir = path.join(fixture.root, 'packages', 'agent-orchestration', 'src');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'stale.txt'), 'stale\n');
+
+    const attemptMarker = path.join(markerDir, 'initial-rm-attempt');
+    const preloadPath = path.join(markerDir, 'force-initial-rm-failure.cjs');
+    fs.writeFileSync(preloadPath, String.raw`
+'use strict';
+
+const fs = require('node:fs');
+const originalRmSync = fs.rmSync;
+let forced = false;
+
+fs.rmSync = function (target, ...args) {
+  if (!forced && target === process.env.ARCWRIGHT_TEST_WIPE_SRC) {
+    forced = true;
+    fs.writeFileSync(process.env.ARCWRIGHT_TEST_RM_ATTEMPT, 'forced\n');
+    throw Object.assign(new Error('forced initial rmSync failure'), { code: 'EIO' });
+  }
+  return originalRmSync.call(this, target, ...args);
+};
+`);
+
+    try {
+      execFileSync(process.execPath, ['--require', preloadPath, path.join(fixture.root, 'build', 'build.js')], {
+        cwd: fixture.root,
+        env: {
+          ...process.env,
+          ARCWRIGHT_TEST_WIPE_SRC: srcDir,
+          ARCWRIGHT_TEST_RM_ATTEMPT: attemptMarker,
+          ARCWRIGHT_TEST_DOLLAR_MARKER: dollarMarker,
+          ARCWRIGHT_TEST_BACKTICK_MARKER: backtickMarker,
+        },
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      expect(fs.readFileSync(attemptMarker, 'utf8')).toBe('forced\n');
+      expect(fs.existsSync(dollarMarker)).toBe(false);
+      expect(fs.existsSync(backtickMarker)).toBe(false);
+      expect(fs.existsSync(path.join(srcDir, 'stale.txt'))).toBe(false);
+      expect(fs.existsSync(path.join(srcDir, 'awb', 'inside.md'))).toBe(true);
+    } finally {
+      removeFixture(fixture);
+      fs.rmSync(markerDir, { recursive: true, force: true });
+    }
   });
 });
 
