@@ -64,9 +64,11 @@ describe('writeOpenCodeConfig — project install', () => {
 
   it('adds the MCP action trigger to the portable project instructions', async () => {
     await writeOpenCodeConfig(projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true);
-    expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('Perform the MCP calls; do not merely acknowledge this rule.');
+    expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('once at session start');
     expect(fs.existsSync(path.join(projectDir, '.opencode', 'plugins', 'unnamed-dev-mcp.js'))).toBe(true);
-    expect(fs.readFileSync(path.join(projectDir, '.opencode', 'plugins', 'unnamed-dev-mcp.js'), 'utf8')).toContain('experimental.chat.system.transform');
+    const plugin = fs.readFileSync(path.join(projectDir, '.opencode', 'plugins', 'unnamed-dev-mcp.js'), 'utf8');
+    expect(plugin).toContain('experimental.chat.system.transform');
+    expect(plugin).toContain('preflightInjected');
   });
 
   it('preserves user content outside the managed block', async () => {

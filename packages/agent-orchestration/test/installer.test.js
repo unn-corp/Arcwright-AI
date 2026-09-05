@@ -636,9 +636,9 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'unnamed-dev-context.js'))).toBe(true);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'guard-bash.js'))).toBe(false);
     expect(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command.includes('unnamed-dev-context.js')))).toBe(true);
-    expect(s.hooks.UserPromptSubmit.some((g) => g.hooks.some((h) => h.command.includes('unnamed-dev-context.js')))).toBe(true);
+    expect(s.hooks.UserPromptSubmit?.some((g) => g.hooks.some((h) => h.command.includes('unnamed-dev-context.js')))).not.toBe(true);
     expect(s.hooks.Stop).toBeUndefined();
-    expect(count('unnamed-dev-context.js')).toBe(2);
+    expect(count('unnamed-dev-context.js')).toBe(1);
   });
   it('adds a native project-context MCP trigger for project-scoped Claude installs', async () => {
     execSync('git init -q && git remote add origin https://github.com/example/project.git', { cwd: dir, stdio: 'pipe' });
@@ -651,7 +651,7 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
       .flatMap((group) => group.hooks)
       .filter((hook) => hook.type === 'mcp_tool');
 
-    expect(mcpHooks).toHaveLength(2);
+    expect(mcpHooks).toHaveLength(1);
     expect(mcpHooks.every((hook) => hook.server === 'unnamed-development')).toBe(true);
     expect(mcpHooks.every((hook) => hook.tool === 'get_project_context')).toBe(true);
     expect(mcpHooks.every((hook) => hook.input.repoUrl === 'https://github.com/example/project.git')).toBe(true);

@@ -94,14 +94,15 @@ describe('install() — fresh project install', () => {
     expect(fs.existsSync(path.join(projectDir, '.codex', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
     expect(fs.existsSync(path.join(projectDir, '.kiro', 'agents', 'unnamed-dev-mcp.json'))).toBe(true);
     expect(fs.existsSync(path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
-    expect(settings.hooks.UserPromptSubmit).toBeDefined();
-    expect(settings.hooks.UserPromptSubmit.some((group) => group.hooks.some((hook) => hook.type === 'mcp_tool' && hook.tool === 'get_project_context'))).toBe(true);
+    expect(settings.hooks.UserPromptSubmit?.some((group) => group.hooks.some((hook) => hook.type === 'mcp_tool' && hook.tool === 'get_project_context'))).not.toBe(true);
+    expect(settings.hooks.SessionStart.some((group) => group.hooks.some((hook) => hook.type === 'mcp_tool' && hook.tool === 'get_project_context'))).toBe(true);
     expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('Unnamed Development MCP trigger');
-    expect(fs.readFileSync(path.join(projectDir, '.cursor', 'rules', 'arcwright.mdc'), 'utf8')).toContain('Perform the MCP calls; do not merely acknowledge this rule.');
+    expect(fs.readFileSync(path.join(projectDir, '.cursor', 'rules', 'arcwright.mdc'), 'utf8')).toContain('Refresh manually with');
     expect(cursorHooks.hooks.sessionStart).toHaveLength(1);
-    expect(codexHooks.hooks.UserPromptSubmit).toHaveLength(1);
-    expect(kiroHooks.hooks.some((hook) => hook.trigger === 'UserPromptSubmit')).toBe(true);
-    expect(grokHooks.hooks.UserPromptSubmit).toHaveLength(1);
+    expect(codexHooks.hooks.UserPromptSubmit).toBeUndefined();
+    expect(kiroHooks.hooks).toHaveLength(1);
+    expect(kiroHooks.hooks[0].trigger).toBe('SessionStart');
+    expect(grokHooks.hooks.UserPromptSubmit).toBeUndefined();
     expect(fs.existsSync(path.join(projectDir, '.cursor', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
 
     await uninstall({ directory: projectDir, yes: true });

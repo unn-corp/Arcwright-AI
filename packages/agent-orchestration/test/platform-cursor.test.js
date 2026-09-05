@@ -65,8 +65,8 @@ describe('writeCursorConfig — project install', () => {
     expect(fs.existsSync(script)).toBe(true);
     expect(hooks.version).toBe(1);
     expect(hooks.hooks.sessionStart).toHaveLength(1);
-    expect(hooks.hooks.beforeSubmitPrompt).toHaveLength(1);
-    expect(hooks.hooks.afterFileEdit).toHaveLength(1);
+    expect(hooks.hooks.beforeSubmitPrompt).toBeUndefined();
+    expect(hooks.hooks.afterFileEdit).toBeUndefined();
     expect(hooks.hooks.stop).toBeUndefined();
     expect(first.filter((entry) => entry.relPath === '.cursor/hooks.json')).toHaveLength(1);
     expect(second.filter((entry) => entry.relPath === '.cursor/hooks.json')).toHaveLength(1);
