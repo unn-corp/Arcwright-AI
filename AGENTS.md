@@ -3,7 +3,7 @@
 ## Arcwright
 
 Arcwright agents, skills, and workflows are installed in `_arcwright/`.
-Key modules: awm, awb, core, _memory, aws-infra, unnamed-pm
+Key modules: core, awm, awb, _memory
 
 To use an agent, load its `.md` file and follow its activation instructions.
 Agent configs are in `_arcwright/{module}/config.yaml`.
