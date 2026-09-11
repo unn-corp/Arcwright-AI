@@ -5,17 +5,6 @@
       {
         "command": ".cursor/hooks/unnamed-dev-context.js --harness=cursor"
       }
-    ],
-    "beforeSubmitPrompt": [
-      {
-        "command": ".cursor/hooks/unnamed-dev-context.js --harness=cursor",
-        "matcher": "UserPromptSubmit"
-      }
-    ],
-    "afterFileEdit": [
-      {
-        "command": ".cursor/hooks/unnamed-dev-context.js --harness=cursor"
-      }
     ]
   }
 }

@@ -145,7 +145,7 @@ describe('writeCodexConfig — native Unnamed MCP hooks', () => {
 
     expect(fs.existsSync(path.join(projectDir, '.codex', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
     expect(userPromptGroups.filter((group) => group.hooks.some((h) => h.command === 'echo user-hook'))).toHaveLength(1);
-    expect(userPromptGroups.filter((group) => group.hooks.some((h) => h.command?.includes('unnamed-dev-context.js')))).toHaveLength(1);
+    expect(userPromptGroups.filter((group) => group.hooks.some((h) => h.command?.includes('unnamed-dev-context.js')))).toHaveLength(0);
     expect(hooks.hooks.SessionStart).toHaveLength(1);
     expect(hooks.hooks.Stop).toBeUndefined();
     expect(first.some((entry) => entry.relPath === '.codex/hooks.json')).toBe(true);
@@ -187,7 +187,7 @@ describe('writeHermesConfig — project install', () => {
 
   it('adds the MCP action trigger to the portable project instructions', async () => {
     await writeHermesConfig(projectDir, ['awm'], chalk, false, homes(), platform, true, false, false, true);
-    expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('Perform the MCP calls; do not merely acknowledge this rule.');
+    expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('once at session start');
   });
 });
 
@@ -204,13 +204,16 @@ describe('writeHermesConfig — global install', () => {
     expect(fs.existsSync(path.join(homeDir, '.hermes', 'AGENTS.md'))).toBe(false);
   });
 
-  it('installs the native pre_llm_call MCP context hook when enabled', async () => {
+  it('does not install a per-turn pre_llm_call hook when enabled', async () => {
+    const configPath = path.join(homeDir, '.hermes', 'config.yaml');
+    fs.ensureDirSync(path.dirname(configPath));
+    fs.writeFileSync(configPath, 'hooks:\\n  pre_llm_call:\\n    - command: node old/unnamed-dev-context.js --harness=hermes\\n');
+
     const entries = await writeHermesConfig(projectDir, ['awm'], chalk, true, homes(), platform, true, false, false, true);
     const config = yaml.parse(await fs.readFile(path.join(homeDir, '.hermes', 'config.yaml'), 'utf8'));
-    expect(config.hooks.pre_llm_call).toHaveLength(1);
-    expect(config.hooks.pre_llm_call[0].command).toContain('--harness=hermes');
-    expect(fs.existsSync(path.join(homeDir, '.hermes', 'agent-hooks', 'unnamed-dev-context.js'))).toBe(true);
-    expect(entries.some((entry) => entry.relPath === '.hermes/agent-hooks/unnamed-dev-context.js')).toBe(true);
+    expect(config.hooks?.pre_llm_call).toBeUndefined();
+    expect(fs.existsSync(path.join(homeDir, '.hermes', 'agent-hooks', 'unnamed-dev-context.js'))).toBe(false);
+    expect(entries.some((entry) => entry.relPath === '.hermes/agent-hooks/unnamed-dev-context.js')).toBe(false);
   });
 
   it('preserves a config with an invalid hooks object', async () => {

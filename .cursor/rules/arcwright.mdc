@@ -1,1 +1,19 @@
-Organization-specific content is maintained in the private archive and skills repository.
+---
+description: Arcwright workflow and skill guidance
+alwaysApply: true
+---
+
+<!-- arcwright-cursor-start -->
+# Arcwright
+
+Arcwright is installed for these modules: core, awm, awb, _memory.
+
+- Start by reading the root `AGENTS.md`, then load the relevant `SKILL.md` from `.agents/skills/` before applying a matching workflow.
+- Arcwright custom commands are available in `.cursor/commands/`; use them when the user invokes an Arcwright slash command.
+- Treat commands written for other agents as workflow instructions, not as a requirement to call unavailable tool names. Use Cursor's available tools and keep the same verification and handoff intent.
+- Keep user-owned instructions and files intact. Do not edit `_arcwright/` workflow assets unless the user explicitly asks to customize Arcwright.
+
+## Unnamed Development MCP trigger
+
+The lifecycle hook performs the Unnamed Development MCP preflight once at session start. Do not repeat it on every turn. Refresh manually with the explicit Unnamed Development MCP command for the current harness when the repository, branch, milestone, or tracker state materially changes, or when the user explicitly asks for tracker synchronization. Reuse matching records; never duplicate them. Read CRM/commercial records before persisted mutations.
+<!-- arcwright-cursor-end -->

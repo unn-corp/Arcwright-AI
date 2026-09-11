@@ -177,7 +177,7 @@ describe('writeGrokConfig — global install', () => {
     const hooks = await fs.readJson(hooksPath);
 
     expect(fs.existsSync(path.join(projectDir, '.grok', 'hooks', 'unnamed-dev-context.js'))).toBe(true);
-    expect(Object.keys(hooks.hooks)).toEqual(expect.arrayContaining(['SessionStart', 'UserPromptSubmit']));
+    expect(Object.keys(hooks.hooks)).toEqual(['SessionStart']);
     expect(hooks.hooks.Stop).toBeUndefined();
     expect(JSON.stringify(hooks)).toContain('--harness=grok');
     expect(entries.some((entry) => entry.relPath === '.grok/hooks/unnamed-dev-mcp.json')).toBe(true);

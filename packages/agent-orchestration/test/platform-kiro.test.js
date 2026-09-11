@@ -56,7 +56,7 @@ describe('writeKiroConfig — native Unnamed MCP hooks', () => {
     const generalAgent = await fs.readJson(path.join(projectDir, '.kiro', 'agents', 'triage.json'));
 
     expect(hooks.version).toBe('v1');
-    expect(hooks.hooks.map((hook) => hook.trigger)).toEqual(['SessionStart', 'UserPromptSubmit']);
+    expect(hooks.hooks.map((hook) => hook.trigger)).toEqual(['SessionStart']);
     expect(agent.includeMcpJson).toBe(true);
     expect(generalAgent.includeMcpJson).toBeUndefined();
   });
