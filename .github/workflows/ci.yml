@@ -212,6 +212,16 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
+      - name: Validate scheduled rollup title
+        if: github.event.pull_request.title == 'Pre-release rollup'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          case "$HEAD_REF" in
+            pre-release/*) ;;
+            *) echo "Pre-release rollup title is reserved for pre-release/* branches" >&2; exit 1 ;;
+          esac
       - uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
+        if: github.event.pull_request.title != 'Pre-release rollup'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
