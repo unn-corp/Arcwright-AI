@@ -69,8 +69,9 @@ open_it() {
     if is_wsl; then
         # wslview converts Linux paths to Windows paths and uses ShellExecute,
         # which shows the "Open with" dialog if no default is registered.
-        wslview "$t" 2>/dev/null \
-            || powershell.exe -NoProfile -Command "Start-Process $(printf '%q' "$t")" 2>/dev/null
+        if ! command -v wslview >/dev/null 2>&1 || ! wslview "$t" 2>/dev/null; then
+            tmux display-message "No safe WSL file opener found (install wslu)"
+        fi
     elif command -v xdg-open &>/dev/null; then
         xdg-open "$t" 2>/dev/null &
     elif command -v open &>/dev/null; then
