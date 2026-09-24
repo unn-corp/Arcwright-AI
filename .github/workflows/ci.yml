@@ -105,8 +105,10 @@ jobs:
           test -n "$port"
 
           for attempt in $(seq 1 30); do
-            if curl --fail --silent "http://127.0.0.1:${port}/health" | grep -qx 'ok' \
-              && curl --fail --silent "http://127.0.0.1:${port}/" | grep -Fq '<title>Arcwright:'; then
+            if health="$(curl --fail --silent "http://127.0.0.1:${port}/health")" \
+              && home="$(curl --fail --silent "http://127.0.0.1:${port}/")" \
+              && [ "$health" = 'ok' ] \
+              && [[ "$home" == *'<title>Arcwright:'* ]]; then
               echo "Docker production smoke check passed"
               exit 0
             fi
