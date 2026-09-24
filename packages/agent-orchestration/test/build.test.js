@@ -19,10 +19,6 @@ function createFixture() {
       path.join(REPO_ROOT, 'packages', 'agent-orchestration', 'lib', 'kiro-adapter.js'),
       path.join(root, 'packages', 'agent-orchestration', 'lib', 'kiro-adapter.js'),
     ],
-    [
-      path.join(REPO_ROOT, 'packages', 'agent-orchestration', 'lib', 'activation-root.js'),
-      path.join(root, 'packages', 'agent-orchestration', 'lib', 'activation-root.js'),
-    ],
   ];
 
   for (const [source, destination] of copyPairs) {
