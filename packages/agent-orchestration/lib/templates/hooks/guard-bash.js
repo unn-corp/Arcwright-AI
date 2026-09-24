@@ -255,27 +255,46 @@ function effectiveCommand(cmd) {
  * the flags no longer matter.
  */
 const ROOTISH_TARGET =
-  /^(?:\/|~|\$HOME|\$\{HOME\})(?:\/)?(?:\*)?$|^(?:\$HOME|\$\{HOME\}|~)\/\*$/;
+  /^(?:\/+)(?:\*)?$|^(?:~|\$HOME|\$\{HOME\})(?:\/)?(?:\*)?$|^(?:\$HOME|\$\{HOME\}|~)\/\*$/;
 const RECURSIVE_FLAG = /^-(?:-recursive$|[a-zA-Z]*[rR][a-zA-Z]*$)/;
+const SHELL_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 const SHELL_EXPANSION_CHARS = new Set(['$', '`', '<', '>', '*', '?', '[', ']', '{', '}', '~']);
 const SHELL_WRAPPERS = new Set(['sudo', 'doas', 'env', 'command', 'nohup', 'time']);
-const SAFE_RM_EXPANSION = /^\$(?:BUILD_DIR|\{BUILD_DIR\})(?:\/(?:\*)?)?$/;
-
 /** Return true when a token cannot be safely evaluated without a shell. */
 function hasShellExpansion(tokens) {
   return tokens.some((token) =>
-    !SAFE_RM_EXPANSION.test(token)
-    && [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
+    [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
   );
+}
+
+/** Remove shell redirections, which do not contribute rm operands or flags. */
+function withoutRedirections(tokens) {
+  const relevant = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (/^\d*(?:>>?|<<?)$/.test(token)) {
+      i++;
+      continue;
+    }
+    if (/^\d*(?:>>?|<<?).+/.test(token)) continue;
+    relevant.push(token);
+  }
+  return relevant;
 }
 
 function hasDestructiveRm(cmd) {
   for (const tokens of shellCommands(cmd)) {
-    // Skip leading privilege wrappers so `sudo rm …` is still inspected.
+    // Skip leading assignments and privilege wrappers so alternate but valid
+    // shell spellings such as `A=1 rm …` and `sudo A=1 rm …` stay inspected.
     let i = 0;
-    while (i < tokens.length && SHELL_WRAPPERS.has(tokens[i])) i++;
-    if (tokens[i] !== 'rm') continue;
-    const rest = tokens.slice(i + 1);
+    while (i < tokens.length && SHELL_ASSIGNMENT.test(tokens[i])) i++;
+    while (i < tokens.length && SHELL_WRAPPERS.has(tokens[i])) {
+      i++;
+      while (i < tokens.length && SHELL_ASSIGNMENT.test(tokens[i])) i++;
+    }
+    const executable = tokens[i];
+    if (!executable || hasShellExpansion([executable]) || !/(?:^|\/)rm$/.test(executable)) continue;
+    const rest = withoutRedirections(tokens.slice(i + 1));
     const recursive = rest.some((t) => RECURSIVE_FLAG.test(t));
     const noPreserveRoot = rest.some((t) => t === '--no-preserve-root');
     // Do not guess what a shell expansion produces. In particular, a quoted
@@ -336,6 +355,14 @@ function hasProtectedForcePush(cmd) {
     if (tokens[i] !== 'push') continue;
 
     const args = tokens.slice(i + 1);
+    const forcedProtectedRefspec = args.some((arg) => {
+      if (!arg.startsWith('+')) return false;
+      const refspec = arg.slice(1);
+      const separator = refspec.lastIndexOf(':');
+      const destination = separator === -1 ? refspec : refspec.slice(separator + 1);
+      return /^(?:refs\/heads\/)?(?:main|master)$/.test(destination);
+    });
+    if (forcedProtectedRefspec) return true;
     // `--force-with-lease` is the safe force-push variant and must not match.
     const force = args.some((arg) => arg === '-f' || /^--force(?:=|$)/.test(arg));
     const protectedBranch = args.some((arg) => /\b(?:main|master)\b/.test(arg));

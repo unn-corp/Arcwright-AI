@@ -863,6 +863,16 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(JSON.stringify(s.hooks)).not.toContain('guard-bash.js');
     expect(JSON.stringify(s.hooks)).not.toContain('run the project-context scan');
   });
+  it('keeps only the Unnamed context hook without acceptEdits when hooks are disabled', async () => {
+    await writeClaudeSettings(dir, chalk, 'safe', false);
+    await writeClaudeSettings(dir, chalk, 'none', false, true);
+
+    const s = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
+    expect(s.permissions?.defaultMode).toBeUndefined();
+    expect(JSON.stringify(s.hooks)).toContain('unnamed-dev-context.js');
+    expect(JSON.stringify(s.hooks)).not.toContain('guard-bash.js');
+    expect(JSON.stringify(s.hooks)).not.toContain('guard-write.js');
+  });
   it('preserves a user hook mixed into an installer-owned group when switching to none', async () => {
     await writeClaudeSettings(dir, chalk, 'safe', false);
     const safeSettings = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));

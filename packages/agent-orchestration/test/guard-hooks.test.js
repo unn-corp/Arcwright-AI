@@ -45,6 +45,8 @@ describe('guard-bash: destructive command guard', () => {
     ['rm -rf "$HOME"'],
     ["rm -rf '$HOME'"],
     ['rm -rf /*'],
+    ['rm -rf ///'],
+    ['rm -rf ///*'],
     ['rm -fr /'],
     ['rm -rf ~'],
     ['rm -rf ~/'],
@@ -60,12 +62,17 @@ describe('guard-bash: destructive command guard', () => {
     ['rm -r -f /'],
     ['rm --recursive --force /'],
     ['sudo rm -rf /'],
+    ['A=1 rm -rf /'],
+    ['sudo A=1 /bin/rm -rf /'],
+    ['/usr/bin/rm -rf /'],
     ['rm -rf --no-preserve-root /'],
     ['rm -rf "$(printf -- --no-preserve-root)" "$(printf /)"'],
     ['rm -rf `printf /`'],
     ['rm -rf "$TARGET"'],
+    ['rm -rf "$BUILD_DIR"'],
+    ['rm -rf "$BUILD_DIR"/*'],
+    ['unset BUILD_DIR; rm -rf $BUILD_DIR/*'],
     ['rm "$(printf -- -rf)" "$(printf /)"'],
-    ['rm -rf ./build > /tmp/rm.log'],
     ['ls && rm -rf /'],
   ])('denies %j', (cmd) => {
     expect(bash(cmd)).toBe(DENY);
@@ -77,9 +84,9 @@ describe('guard-bash: destructive command guard', () => {
     ['rm -rf dist/'],
     ['rm -rf /tmp/scratch'],
     ['rm file.txt'],
-    ['rm -rf "$BUILD_DIR"'],
-    ['rm -rf "$BUILD_DIR"/*'],
-    ['rm -rf "$BUILD_DIR"/'],
+    ['rm ./temporary-file 2>/dev/null'],
+    ['rm -f ./temporary-file >/dev/null'],
+    ['rm -rf ./build > /tmp/rm.log'],
     ['git push origin dev'],
     // Merely naming a dangerous command in quoted text, a comment, or a
     // here-document fixture must not trip the guard.
@@ -101,6 +108,9 @@ describe('guard-bash: destructive command guard', () => {
     expect(bash('git push origin main --force')).toBe(DENY);
     expect(bash('git push --force origin "main"')).toBe(DENY);
     expect(bash("git push origin 'master' --force")).toBe(DENY);
+    expect(bash('git push origin +HEAD:main')).toBe(DENY);
+    expect(bash('git push origin +refs/heads/topic:refs/heads/main')).toBe(DENY);
+    expect(bash('git push origin +master')).toBe(DENY);
   });
 
   // git accepts global options BEFORE the subcommand, so `\bgit\s+push\b` does

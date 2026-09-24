@@ -65,6 +65,7 @@ jobs:
   website:
     name: static (website)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: website
@@ -105,8 +106,8 @@ jobs:
           test -n "$port"
 
           for attempt in $(seq 1 30); do
-            if health="$(curl --fail --silent "http://127.0.0.1:${port}/health")" \
-              && home="$(curl --fail --silent "http://127.0.0.1:${port}/")" \
+            if health="$(curl --fail --silent --connect-timeout 1 --max-time 2 "http://127.0.0.1:${port}/health")" \
+              && home="$(curl --fail --silent --connect-timeout 1 --max-time 2 "http://127.0.0.1:${port}/")" \
               && [ "$health" = 'ok' ] \
               && [[ "$home" == *'<title>Arcwright:'* ]]; then
               echo "Docker production smoke check passed"

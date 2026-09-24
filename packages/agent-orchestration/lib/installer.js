@@ -3094,7 +3094,7 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
   );
   if (shouldReconcileHooks) {
     await seedArcwrightHooks(settings, claudeDir, hooksMode, isGlobal, unnamedPm, projectRoot);
-    if (hooksMode === 'safe' || hooksMode === 'full' || unnamedPm || hasUnnamedContextHook) {
+    if (hooksMode === 'safe' || hooksMode === 'full') {
       // Autonomous posture: auto-accept edits so agents don't stop on every write.
       // Destructive bash + secret writes are still fenced by the guard hooks, and
       // bash itself still prompts (acceptEdits only auto-accepts file edits).
