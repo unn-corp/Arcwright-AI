@@ -5,6 +5,7 @@ dist/
 output/
 *.log
 .DS_Store
+t3.json
 
 # Accidental installs into this workshop repo (run tests with HOME= override or a /tmp dir)
 # NOTE: .claude/commands/ IS source and stays tracked — only installer outputs are ignored
