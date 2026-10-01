@@ -253,6 +253,15 @@ function preflightMigration(root) {
     plannedRenames.push(rename);
   }
 
+  const commandsDir = path.join(root, '.claude', 'commands');
+  for (const { from, to } of COMMANDS_TO_RENAME) {
+    const sourcePath = path.join(commandsDir, from);
+    const targetPath = path.join(commandsDir, to);
+    if (fs.existsSync(sourcePath) && fs.existsSync(targetPath)) {
+      errors.push(`.claude/commands/${from} -> .claude/commands/${to}: target already exists`);
+    }
+  }
+
   if (errors.length > 0) {
     throw new Error(`Migration preflight failed:\n  - ${errors.join('\n  - ')}`);
   }
@@ -308,11 +317,6 @@ function migrateCommands(root, dryRun) {
     const destPath = path.join(commandsDir, to);
 
     if (!fs.existsSync(srcPath)) continue;
-
-    if (fs.existsSync(destPath)) {
-      actions.push({ type: 'skip', reason: `Target already exists: ${to}`, path: `.claude/commands/${from}` });
-      continue;
-    }
 
     actions.push({ type: 'rename-file', from: `.claude/commands/${from}`, to: `.claude/commands/${to}` });
     if (!dryRun) {
@@ -481,7 +485,6 @@ function migrate(projectRoot, dryRun) {
   for (const a of cmdActions) {
     if (a.type === 'delete') console.log(`   🗑  ${a.path}`);
     else if (a.type === 'rename-file') console.log(`   📄 ${a.from} → ${a.to}`);
-    else if (a.type === 'skip') console.log(`   ⏭  ${a.reason}`);
   }
   if (!cmdActions.length) console.log('   (no command changes needed)');
   allActions.push(...cmdActions);

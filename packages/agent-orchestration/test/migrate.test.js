@@ -110,6 +110,18 @@ describe('migrate — apply', () => {
     expect(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8')).toContain('_bmad-output/');
   });
 
+  it('aborts before mutation when a command rename target already exists', () => {
+    seedBmadProject();
+    const commands = path.join(dir, '.claude', 'commands');
+    fs.writeFileSync(path.join(commands, 'bmad-track-compact.md'), 'legacy\n');
+    fs.writeFileSync(path.join(commands, 'arcwright-track-compact.md'), 'current\n');
+
+    expect(() => migrate(dir, false)).toThrow(/bmad-track-compact.*arcwright-track-compact.*target already exists/);
+    expect(fs.existsSync(path.join(dir, '_bmad'))).toBe(true);
+    expect(fs.readFileSync(path.join(commands, 'bmad-track-compact.md'), 'utf8')).toBe('legacy\n');
+    expect(fs.readFileSync(path.join(commands, 'arcwright-track-compact.md'), 'utf8')).toBe('current\n');
+  });
+
   it.each([
     ['a chained module rename', ['_bmad/bmm', '_bmad/awm']],
     ['legacy output directories sharing a target', ['_bmad-output', '_bmad_output']],
@@ -135,26 +147,6 @@ describe('migrate — apply', () => {
     expect(() => migrate(dir, false)).toThrow(/outside the project root/);
     expect(fs.existsSync(path.join(dir, '_bmad'))).toBe(true);
     expect(fs.readFileSync(externalFile, 'utf8')).toBe('See _bmad-output/ here.\n');
-  });
-
-  it('preserves an existing Arcwright track command during migration', () => {
-    seedBmadProject();
-    const commandsDir = path.join(dir, '.claude', 'commands');
-    const sourcePath = path.join(commandsDir, 'bmad-track-compact.md');
-    const destinationPath = path.join(commandsDir, 'arcwright-track-compact.md');
-    const legacyContent = 'legacy track content\n';
-    const userContent = 'user Arcwright content\n';
-    fs.writeFileSync(sourcePath, legacyContent);
-    fs.writeFileSync(destinationPath, userContent);
-
-    const result = migrate(dir, false);
-
-    expect(result.actions).toContainEqual(expect.objectContaining({
-      type: 'skip',
-      reason: 'Target already exists: arcwright-track-compact.md',
-    }));
-    expect(fs.readFileSync(sourcePath, 'utf8')).toBe(legacyContent);
-    expect(fs.readFileSync(destinationPath, 'utf8')).toBe(userContent);
   });
 
   it('renames the module dir and rewrites references', () => {
