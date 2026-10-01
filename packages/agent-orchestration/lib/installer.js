@@ -699,6 +699,9 @@ async function preflightProjectManagedPaths(projectRoot, outputFolder = '_arcwri
         errors.push(`${relPath} resolves outside the project root`);
         return;
       }
+      // AGENTS.md is the cross-agent source of truth, and repositories may
+      // intentionally expose it to Claude through this exact top-level link.
+      if (relPath === 'CLAUDE.md' && target === path.join(realRoot, 'AGENTS.md')) return;
       errors.push(`${relPath} is an existing managed symlink`);
       return;
     }

@@ -242,6 +242,13 @@ describe('manifest read/write round-trips', () => {
       expect(fs.lstatSync(path.join(dir, managedPath)).isSymbolicLink()).toBe(true);
     }
   });
+  it('allows the documented top-level CLAUDE.md link to AGENTS.md', async () => {
+    fs.writeFileSync(path.join(dir, 'AGENTS.md'), '# Project instructions\n');
+    fs.symlinkSync('AGENTS.md', path.join(dir, 'CLAUDE.md'), 'file');
+
+    await expect(preflightProjectManagedPaths(dir)).resolves.toBeUndefined();
+    expect(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8')).toBe('# Project instructions\n');
+  });
   it('rejects internal managed symlinks before update and uninstall can mutate targets', async () => {
     const installOptions = {
       directory: dir,
