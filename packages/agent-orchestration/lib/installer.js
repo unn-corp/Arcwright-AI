@@ -81,11 +81,11 @@ async function setupWslAudio(platform, chalk) {
 // ─── Model surface / launcher setup ──────────────────────────────────────────
 
 const TEMPLATES_DIR = path.join(__dirname, 'templates', 'launchers');
-const HERMES_INSTALL_URL = 'https://hermes-agent.nousresearch.com/install.sh';
 // These pins are reviewed source-of-truth values. Update them only with a
 // source review and a corresponding documentation update.
-const HERMES_INSTALL_SHA256 = 'e6c7f2b516b2888ab740fd36cbceb5fd4e1db68d2ebc29f7306c6313c835b7d9';
 const HERMES_SOURCE_COMMIT = '5fc308a70719a83cccdbba4c0e39c23f5a8239d5';
+const HERMES_INSTALL_URL = `https://raw.githubusercontent.com/NousResearch/hermes-agent/${HERMES_SOURCE_COMMIT}/scripts/install.sh`;
+const HERMES_INSTALL_SHA256 = 'c0380bc1f78d3d662a77663ce20cc17e14cbc4bec35e61ab7a33bac5f3afed2d';
 const DEFAULT_OMNIROUTE_MODEL = 'agent-fallback';
 const DEFAULT_OMNIROUTE_BASE_URL = 'http://omniroute:20128/v1';
 

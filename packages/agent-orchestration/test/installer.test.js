@@ -250,7 +250,9 @@ describe('Hermes model surface helpers', () => {
       { download, expectedHash: sha256(script) },
     );
     expect(result).toMatchObject({ installed: true, available: true });
-    expect(downloadedUrl).toBe('https://hermes-agent.nousresearch.com/install.sh');
+    expect(downloadedUrl).toBe(
+      `https://raw.githubusercontent.com/NousResearch/hermes-agent/${HERMES_SOURCE_COMMIT}/scripts/install.sh`
+    );
     expect(calls.some((cmd) => cmd.includes('| bash'))).toBe(false);
     expect(calls.some((cmd) => cmd.includes(`--commit ${HERMES_SOURCE_COMMIT}`))).toBe(true);
   });
