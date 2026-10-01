@@ -26,7 +26,7 @@ program
   .description('Install Arcwright into the current project (default command — runs on `npx @arcwright-ai/agent-orchestration`)')
   .option('-d, --directory <path>', 'Target project root', process.cwd())
   .option('-m, --modules <ids>', 'Modules to install (comma-separated: awm,awb,core,_memory)', 'awm,awb,core,_memory')
-  .option('--tools <ids>', `IDE integrations to configure (comma-separated). Supported: ${SUPPORTED_TOOLS}`, 'claude-code')
+  .option('--tools <ids>', `IDE integrations to configure (comma-separated; defaults to claude-code on a fresh install). Supported: ${SUPPORTED_TOOLS}`, null)
   .option('--user-name <name>', 'Your name (written into config.yaml)', '')
   .option('--output-folder <path>', 'Output folder for Arcwright artifacts (preserves the installed value when omitted)', null)
   .option('-y, --yes', 'Skip interactive prompts and accept all defaults', false)

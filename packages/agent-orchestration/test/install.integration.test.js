@@ -342,7 +342,7 @@ describe('install() — flag handling', () => {
 });
 
 describe('install() — update / idempotency', () => {
-  it('CLI update --yes preserves omitted project tools and honors explicit tools', async () => {
+  it('CLI install/update --yes preserve omitted project tools and honor explicit tools', async () => {
     const runCli = (args) => {
       const result = spawnSync(process.execPath, [path.join(PKG_ROOT, 'bin', 'arcwright.js'), ...args], {
         cwd: projectDir,
@@ -359,6 +359,11 @@ describe('install() — update / idempotency', () => {
     const kiroSkill = path.join(projectDir, '.kiro', 'skills', 'triage', 'SKILL.md');
 
     runCli(['install', '--yes', '--tools', 'cursor,kiro', '--hooks', 'none', '--gitignore', 'none']);
+    expect((await readManifest(manifestDir)).tools).toEqual(['cursor', 'kiro']);
+    expect(fs.existsSync(cursorRule)).toBe(true);
+    expect(fs.existsSync(kiroSkill)).toBe(true);
+
+    runCli(['install', '--yes', '--hooks', 'none', '--gitignore', 'none']);
     expect((await readManifest(manifestDir)).tools).toEqual(['cursor', 'kiro']);
     expect(fs.existsSync(cursorRule)).toBe(true);
     expect(fs.existsSync(kiroSkill)).toBe(true);
