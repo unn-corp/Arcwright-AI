@@ -60,10 +60,17 @@ describe('guard-bash: destructive command guard', () => {
     ['rm -r -f /'],
     ['rm --recursive --force /'],
     ['sudo rm -rf /'],
+    ['env SAFE=1 rm -rf /'],
+    ['SAFE=1 rm -rf /'],
+    ['/bin/rm -rf /'],
     ['rm -rf --no-preserve-root /'],
     ['rm -rf "$(printf -- --no-preserve-root)" "$(printf /)"'],
     ['rm -rf `printf /`'],
     ['rm -rf "$TARGET"'],
+    ['rm -rf "$BUILD_DIR"'],
+    ['rm -rf "$BUILD_DIR"/*'],
+    ['rm -rf "$BUILD_DIR"/'],
+    ['BUILD_DIR=/; rm -rf "$BUILD_DIR"'],
     ['rm "$(printf -- -rf)" "$(printf /)"'],
     ['rm -rf ./build > /tmp/rm.log'],
     ['ls && rm -rf /'],
@@ -77,9 +84,6 @@ describe('guard-bash: destructive command guard', () => {
     ['rm -rf dist/'],
     ['rm -rf /tmp/scratch'],
     ['rm file.txt'],
-    ['rm -rf "$BUILD_DIR"'],
-    ['rm -rf "$BUILD_DIR"/*'],
-    ['rm -rf "$BUILD_DIR"/'],
     ['git push origin dev'],
     // Merely naming a dangerous command in quoted text, a comment, or a
     // here-document fixture must not trip the guard.
@@ -125,6 +129,10 @@ describe('guard-bash: destructive command guard', () => {
   });
 
   it('denies other high-confidence destructive patterns', () => {
+    expect(bash("bash -c 'rm -rf /'")).toBe(DENY);
+    expect(bash("sh -c 'git push --force origin main'")).toBe(DENY);
+    expect(bash("env MODE=ci zsh -lc 'rm -rf /'")).toBe(DENY);
+    expect(bash("eval 'git push --force origin main'")).toBe(DENY);
     expect(bash('chmod -R 777 /etc')).toBe(DENY);
     expect(bash('git reset --hard origin/main')).toBe(DENY);
     expect(bash('dd if=/dev/zero of=/dev/sda')).toBe(DENY);

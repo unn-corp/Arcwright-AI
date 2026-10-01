@@ -259,22 +259,52 @@ const ROOTISH_TARGET =
 const RECURSIVE_FLAG = /^-(?:-recursive$|[a-zA-Z]*[rR][a-zA-Z]*$)/;
 const SHELL_EXPANSION_CHARS = new Set(['$', '`', '<', '>', '*', '?', '[', ']', '{', '}', '~']);
 const SHELL_WRAPPERS = new Set(['sudo', 'doas', 'env', 'command', 'nohup', 'time']);
-const SAFE_RM_EXPANSION = /^\$(?:BUILD_DIR|\{BUILD_DIR\})(?:\/(?:\*)?)?$/;
 
 /** Return true when a token cannot be safely evaluated without a shell. */
 function hasShellExpansion(tokens) {
   return tokens.some((token) =>
-    !SAFE_RM_EXPANSION.test(token)
-    && [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
+    [...token].some((character) => SHELL_EXPANSION_CHARS.has(character))
   );
+}
+
+/**
+ * Nested interpreters can conceal an arbitrary second command line inside a
+ * quoted `-c` argument. This lightweight guard cannot safely re-parse every
+ * shell dialect, so deny those escape hatches instead of treating the quoted
+ * payload as inert prose.
+ */
+function hasNestedShellExecution(cmd) {
+  for (const tokens of shellCommands(cmd)) {
+    let i = 0;
+    while (i < tokens.length) {
+      if (SHELL_WRAPPERS.has(tokens[i]) || /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[i])) {
+        i++;
+        continue;
+      }
+      break;
+    }
+    const executable = tokens[i] || '';
+    if (/(?:^|\/)(?:ba|da|k|z)?sh$/.test(executable)) {
+      if (tokens.slice(i + 1).some((token) => /^-[a-zA-Z]*c[a-zA-Z]*$/.test(token))) return true;
+    }
+    if (/(?:^|\/)eval$/.test(executable)) return true;
+  }
+  return false;
 }
 
 function hasDestructiveRm(cmd) {
   for (const tokens of shellCommands(cmd)) {
-    // Skip leading privilege wrappers so `sudo rm …` is still inspected.
+    // Skip leading wrappers and assignments so `sudo rm …`, `env X=1 rm …`,
+    // and `X=1 /bin/rm …` are still inspected.
     let i = 0;
-    while (i < tokens.length && SHELL_WRAPPERS.has(tokens[i])) i++;
-    if (tokens[i] !== 'rm') continue;
+    while (i < tokens.length) {
+      if (SHELL_WRAPPERS.has(tokens[i]) || /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[i])) {
+        i++;
+        continue;
+      }
+      break;
+    }
+    if (!/(?:^|\/)rm$/.test(tokens[i] || '')) continue;
     const rest = tokens.slice(i + 1);
     const recursive = rest.some((t) => RECURSIVE_FLAG.test(t));
     const noPreserveRoot = rest.some((t) => t === '--no-preserve-root');
@@ -370,6 +400,7 @@ process.stdin.on('end', () => {
 
   if (hasDestructiveRm(executableCommand)) deny('rm -rf on / or home');
   if (hasProtectedForcePush(executableCommand)) deny('force-push to main/master');
+  if (hasNestedShellExecution(executableCommand)) deny('nested shell or eval command');
 
   const blocks = [
     [/\bgit\s+reset\s+--hard\s+origin\//, 'hard reset to remote (discards local work)'],
