@@ -525,13 +525,13 @@ function getHomes(platform) {
     try {
       const winProfile = execSync('cmd.exe /C "echo %USERPROFILE%"', { encoding: 'utf8' }).trim().replace(/\r/g, '');
       const winHome = execSync(`wslpath -u "${winProfile}"`, { encoding: 'utf8' }).trim();
-      return { linux: linuxHome, windows: winHome };
+      return { linux: linuxHome, windows: winHome, distro: process.env.WSL_DISTRO_NAME || '' };
     } catch {
       try {
         const user = execSync('cmd.exe /C "echo %USERNAME%"', { encoding: 'utf8' }).trim().replace(/\r/g, '');
-        return { linux: linuxHome, windows: `/mnt/c/Users/${user}` };
+        return { linux: linuxHome, windows: `/mnt/c/Users/${user}`, distro: process.env.WSL_DISTRO_NAME || '' };
       } catch {
-        return { linux: linuxHome, windows: linuxHome };
+        return { linux: linuxHome, windows: linuxHome, distro: process.env.WSL_DISTRO_NAME || '' };
       }
     }
   }
@@ -904,6 +904,8 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
       const content = rewriteActivationReferences(sourceContent, {
         isGlobal,
         homes,
+        platform,
+        tool: 'kiro',
         format: 'rules',
       });
       await fs.writeFile(path.join(steeringDest, rel), content, 'utf8');
@@ -933,17 +935,23 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
       let content = rewriteActivationReferences(sourceContent, {
         isGlobal,
         homes,
+        platform,
+        tool: 'kiro',
         format: 'file-uri',
       });
       content = rewriteActivationReferences(content, {
         isGlobal,
         homes,
+        platform,
+        tool: 'kiro',
         format: 'text',
       });
       if (['aws-infra.json', 'unnamed-pm.json'].includes(f)) {
         content = rewriteActivationReferences(content, {
           isGlobal,
           homes,
+          platform,
+          tool: 'kiro',
           format: 'rules',
         });
       }
@@ -1818,7 +1826,7 @@ async function removeCursorUnnamedDevHooks(projectRoot, isGlobal, homes, platfor
 async function writeCursorConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
   const entries = [];
   const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
-  const rule = buildCursorRule(modules, resolvedUnnamedPm, { isGlobal, homes });
+  const rule = buildCursorRule(modules, resolvedUnnamedPm, { isGlobal, homes, platform, tool: 'cursor' });
 
   if (isGlobal) {
     const userRulesPath = resolveToolPath('cursor', GLOBAL_PATHS.cursor.userRules, true, homes, platform);
@@ -2874,7 +2882,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     return;
   }
 
-  const arcwrightEntry = buildArcwrightRulesEntry(modules, resolvedUnnamedPm, { isGlobal, homes });
+  const arcwrightEntry = buildArcwrightRulesEntry(modules, resolvedUnnamedPm, { isGlobal, homes, platform, tool });
   const tmuxEntry = buildTmuxEntry();
   const proactiveEntry = buildProactiveEntry();
 

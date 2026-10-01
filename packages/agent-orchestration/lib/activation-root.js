@@ -8,6 +8,24 @@ const PROJECT_RULES_ROOT = '_arcwright';
 const PROJECT_FILE_ROOT = 'file://_arcwright';
 const GLOBAL_TEXT_ROOT = '~/.arcwright';
 
+function isWindowsGuiActivation(options) {
+  return options.platform === 'windows-wsl' && ['kiro', 'cursor'].includes(options.tool);
+}
+
+function wslWindowsRoot(options, format) {
+  const distro = options.homes && options.homes.distro;
+  const linuxHome = options.homes && options.homes.linux;
+  if (typeof distro !== 'string' || distro.length === 0 || typeof linuxHome !== 'string') {
+    throw new TypeError('A WSL distro and Linux home are required for Windows GUI activation paths');
+  }
+  const normalizedHome = linuxHome.replace(/\\/g, '/').replace(/^\/+/, '');
+  const segments = [distro, ...normalizedHome.split('/'), '.arcwright'];
+  if (format === 'file-uri') {
+    return `file://wsl.localhost/${segments.map(encodeURIComponent).join('/')}`;
+  }
+  return `//wsl.localhost/${segments.join('/')}`;
+}
+
 function globalActivationPath(homes) {
   if (!homes || typeof homes.linux !== 'string' || homes.linux.length === 0) {
     throw new TypeError('A Linux home is required to render a global Arcwright activation path');
@@ -15,7 +33,9 @@ function globalActivationPath(homes) {
   return path.join(homes.linux, '.arcwright');
 }
 
-function renderActivationRoot({ isGlobal = false, homes, format = 'text' } = {}) {
+function renderActivationRoot(options = {}) {
+  const { isGlobal = false, homes, format = 'text' } = options;
+  if (isGlobal && isWindowsGuiActivation(options)) return wslWindowsRoot(options, format);
   if (format === 'rules') return isGlobal ? GLOBAL_TEXT_ROOT : PROJECT_RULES_ROOT;
   if (format === 'text') return isGlobal ? GLOBAL_TEXT_ROOT : PROJECT_TEXT_ROOT;
   if (format === 'file-uri') {
@@ -36,6 +56,9 @@ function renderActivationPath(relativePath, options = {}) {
   }
 
   if (options.isGlobal && options.format === 'file-uri') {
+    if (isWindowsGuiActivation(options)) {
+      return `${renderActivationRoot(options)}/${normalized.split('/').map(encodeURIComponent).join('/')}`;
+    }
     return pathToFileURL(path.join(globalActivationPath(options.homes), ...normalized.split('/'))).href;
   }
   return `${renderActivationRoot(options)}/${normalized}`;
