@@ -4,7 +4,7 @@ The public [arcwright.space](https://arcwright.space) site is a Vite, React, and
 
 ## Local development
 
-Use Node.js 20 or newer.
+Use Node.js 24 or newer.
 
 ```bash
 cd website

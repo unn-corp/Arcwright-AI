@@ -302,8 +302,9 @@ revert steps: [`docs/multi-account-setup.md`](docs/multi-account-setup.md).
 **Hermes as the preferred global CLI agent:** for Codex global `AGENTS.md` bases or other
 machine-wide coding-agent policy, use Hermes CLI as the default model surface when OmniRoute
 is available. Enable it with `--model-surface`; Arcwright selects the Hermes integration,
-installs the Hermes CLI package if `hermes` is missing, and configures the colon-less
-`agent-fallback` model id when an OmniRoute gateway key is available. OmniRoute then groups
+requires `--install-hermes` before bootstrapping a missing Hermes CLI from its verified,
+pinned source, and configures the colon-less `agent-fallback` model id when an OmniRoute
+gateway key is available. OmniRoute then groups
 paid Claude/Codex subscription capacity with free-model fallback. Operational details are in
 [`packages/agent-orchestration/docs/dev/model-launchers.md`](packages/agent-orchestration/docs/dev/model-launchers.md#preferred-global-cli-agent-hermes-through-omniroute).
 

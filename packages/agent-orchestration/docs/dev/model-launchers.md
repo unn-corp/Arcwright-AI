@@ -27,9 +27,9 @@ Arcwright installer behavior:
 - `--model-surface` selects the Hermes integration automatically.
 - If `hermes` is not on `PATH`, Arcwright does not bootstrap it unless
   `--install-hermes` is explicitly supplied. With that opt-in, Arcwright downloads the
-  official Nous Research installer to a temporary file, verifies SHA-256
-  `e6c7f2b516b2888ab740fd36cbceb5fd4e1db68d2ebc29f7306c6313c835b7d9`, then runs it with
-  the reviewed Hermes source commit `5fc308a70719a83cccdbba4c0e39c23f5a8239d5`.
+  Nous Research installer from the immutable reviewed source commit
+  `5fc308a70719a83cccdbba4c0e39c23f5a8239d5` to a temporary file, verifies SHA-256
+  `c0380bc1f78d3d662a77663ce20cc17e14cbc4bec35e61ab7a33bac5f3afed2d`, then runs it.
 - Arcwright installs Hermes skills into `~/.hermes/skills/` and team bundles into
   `~/.hermes/skill-bundles/` for global installs.
 - When an OmniRoute API key is available, Arcwright configures Hermes with

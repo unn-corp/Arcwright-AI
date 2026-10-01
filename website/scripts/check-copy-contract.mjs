@@ -17,16 +17,25 @@ const pagesRoot = path.resolve(here, '..', 'src', 'pages');
 const pageFiles = fs.readdirSync(pagesRoot).filter((file) => file.endsWith('.tsx'));
 
 const errors = [];
-const elementBeforeHeading = /<div\b[^>]*className=(?:"[^"]*"|'[^']*')[^>]*>[\s\S]*?<\/div>\s*<h1\b/g;
+const pageHeaderMarker = '{/* Page header */}';
+const contentBeforeHeading = /<(?:p|span)\b|<div\b[^>]*>[\s\S]*?<\/div>/;
 
 for (const file of pageFiles) {
   const source = fs.readFileSync(path.join(pagesRoot, file), 'utf8');
 
-  for (const match of source.matchAll(elementBeforeHeading)) {
-    if (!/\bitems-baseline\b/.test(match[0])) continue;
+  const headerStart = source.indexOf(pageHeaderMarker);
+  if (headerStart < 0) continue;
 
-    const line = source.slice(0, match.index ?? 0).split('\n').length;
-    errors.push(`${file}:${line} contains an items-baseline row immediately before <h1>`);
+  const headingStart = source.indexOf('<h1', headerStart);
+  const line = source.slice(0, headerStart).split('\n').length;
+  if (headingStart < 0) {
+    errors.push(`${file}:${line} page header has no <h1>`);
+    continue;
+  }
+
+  const prefix = source.slice(headerStart + pageHeaderMarker.length, headingStart);
+  if (contentBeforeHeading.test(prefix)) {
+    errors.push(`${file}:${line} renders descriptor content before its <h1>`);
   }
 }
 
