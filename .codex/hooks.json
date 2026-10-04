@@ -1,14 +1,3 @@
 {
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/unnamed-dev-context.js\" --harness=codex"
-          }
-        ]
-      }
-    ]
-  }
+  "hooks": {}
 }

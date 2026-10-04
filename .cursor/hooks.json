@@ -1,10 +1,4 @@
 {
   "version": 1,
-  "hooks": {
-    "sessionStart": [
-      {
-        "command": ".cursor/hooks/unnamed-dev-context.js --harness=cursor"
-      }
-    ]
-  }
+  "hooks": {}
 }
