@@ -41,6 +41,12 @@ describe('parseToml — scalars', () => {
     expect(parseToml('color = "#ff0000"')).toEqual({ color: '#ff0000' });
   });
 
+  it('keeps a # that follows an escaped quote inside a string', () => {
+    const out = parseToml(String.raw`msg = "say \"hi\" # not a comment"  # real comment`);
+    expect(out.msg).toContain('# not a comment');
+    expect(out.msg).not.toContain('real comment');
+  });
+
   it('skips blank and unparseable (no =) lines gracefully', () => {
     expect(parseToml(['', 'garbage line', 'k = 1'].join('\n'))).toEqual({ k: 1 });
   });
@@ -86,6 +92,13 @@ describe('parseToml — arrays and tables', () => {
     });
   });
 
+  it('keeps commas and brackets after an escaped quote inside a double-quoted string', () => {
+    const out = parseToml(String.raw`tags = ["say \"a, b]\"", "c"]`);
+    expect(out.tags).toHaveLength(2);
+    expect(out.tags[0]).toContain('a, b]');
+    expect(out.tags[1]).toBe('c');
+  });
+
   it('rejects an unterminated array', () => {
     expect(() => parseToml('items = [\n  "a",')).toThrow('Unterminated array');
   });
@@ -120,6 +133,13 @@ describe('parseToml — sections', () => {
       ['[[items]]', 'name = "one"', '', '[[items]]', 'name = "two"'].join('\n')
     );
     expect(out).toEqual({ items: [{ name: 'one' }, { name: 'two' }] });
+  });
+
+  it('nests a dotted [[table-array]] header', () => {
+    const out = parseToml(
+      ['[[agents.extra]]', 'name = "one"', '', '[[agents.extra]]', 'name = "two"'].join('\n')
+    );
+    expect(out).toEqual({ agents: { extra: [{ name: 'one' }, { name: 'two' }] } });
   });
 });
 
