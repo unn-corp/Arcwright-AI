@@ -199,7 +199,7 @@ function mountScrollWorld(container, config) {
   const copies = [], dots = [];
   SECTIONS.forEach((s, i) => {
     const c = el('article', 'sw-copy'); c.style.setProperty('--sw-accent', s.accent || '');
-    c.innerHTML =
+    c.innerHTML =  // nosemgrep: javascript.browser.security.insecure-innerhtml, javascript.browser.security.insecure-document-method -- every interpolated value goes through esc(); the copy comes from the page author's config, not user input
       `<span class="sw-copy__num">${pad(i + 1)} / ${pad(N)}</span>` +
       (s.eyebrow ? `<span class="sw-copy__eyebrow">${esc(s.eyebrow)}</span>` : '') +
       (s.title ? `<h2 class="sw-copy__title">${esc(s.title)}</h2>` : '') +
@@ -209,7 +209,7 @@ function mountScrollWorld(container, config) {
     copylayer.appendChild(c); copies.push(c);
 
     const dot = el('button', 'sw-route__dot'); dot.style.setProperty('--sw-accent', s.accent || '');
-    dot.innerHTML = `<span class="sw-route__label">${esc(s.label || '')}</span><i></i>`;
+    dot.innerHTML = `<span class="sw-route__label">${esc(s.label || '')}</span><i></i>`;  // nosemgrep: javascript.browser.security.insecure-innerhtml, javascript.browser.security.insecure-document-method -- the label goes through esc()
     dot.addEventListener('click', () => jumpTo(i)); route.appendChild(dot); dots.push(dot);
 
     if (config.nav !== false) {
