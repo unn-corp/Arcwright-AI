@@ -36,3 +36,12 @@ entry bearing the actual nightly name and record the version, counter, source,
 artifact digest, launcher path, retired entries, and verification. Document the
 replacement each time. Keep running chats and the current build intact until the
 maintenance coordinator admits an authorized replacement.
+
+## Arcwright fork build retention — hard rule
+
+On GitHub, `unn-corp/t3code` retains only the newest five published nightly builds
+and the newest five stable/main releases. Remove completed Actions build-artifact
+copies and older fork release payloads. Cleanup must wait for active release
+transactions, preserve immutable source/counter tags, and retain local recovery
+assets needed by installed builds. Keep this policy automated and documented in
+`t3code/docs/operations/fork-releases.md`.
