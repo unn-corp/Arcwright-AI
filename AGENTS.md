@@ -20,3 +20,19 @@ To modify gitignore behavior on next update: add `--gitignore full|skills|output
 For global installs: add `--global` to any command. Update a global install with `npx @arcwright-ai/agent-orchestration update --global`.
 
 <!-- arcwright-agent-end -->
+
+## Arcwright Code nightly naming — hard rule
+
+For the `t3code` application, every new nightly installed on this PC must use the
+release pipeline's allocated `<version>-nightly.<YYYYMMDD>.<N>` identity and the
+display name **Arcwright Code — Nightly N**. This applies to locally built copies
+as well as downloaded releases. Do not install a `preview` build or invent a
+separate **Local Nightly** name/counter. Never rename an existing preview binary
+to impersonate a published nightly, reuse an allocated counter, or rewrite its
+digest/source identity. Use the verified published nightly when it already exists.
+
+After every installation, replace obsolete Start Menu entries with one canonical
+entry bearing the actual nightly name and record the version, counter, source,
+artifact digest, launcher path, retired entries, and verification. Document the
+replacement each time. Keep running chats and the current build intact until the
+maintenance coordinator admits an authorized replacement.
