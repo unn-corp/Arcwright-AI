@@ -1,17 +1,26 @@
-# Arcwright workshop — CI gates (scaffolded by the ci-gates skill, trimmed to this repo).
+# Arcwright workshop — CI gates.
 # Monorepo: root build pipeline + website (Vite/React/TS) + npm packages.
 #
-# Runners: self-hosted only (no GitHub-hosted fallback). All jobs target the
-# unn-corp org runners on the mothership VPS via labels [self-hosted, linux, x64,
-# unn] (myoung34/github-runner, ubuntu-jammy, RUNNER_SCOPE=org, RUNNER_GROUP=
-# default). If a job queues forever: confirm the org runner group `default`
-# grants this repo access and that ci-runner-runner-{1,2,3} are online on the VPS.
+# Security is the org baseline (unn-corp/.github security-baseline.yml): gitleaks,
+# OSV-Scanner, Opengrep, zizmor and actionlint. On pull requests it reports only
+# what the PR introduces; pushes, the weekly sweep and manual runs scan the whole
+# repo and its history. Exceptions belong in .gitleaksignore / osv-scanner.toml /
+# an inline `nosemgrep` with a reason, never in this workflow.
+#
+# Runners: the isolated self-hosted pool on the mothership VPS,
+# [self-hosted, linux, x64, unn-isolated]. Each job gets a fresh ephemeral runner
+# with its own DinD daemon, destroyed after the job. /tmp is mounted noexec there,
+# so anything a job downloads and runs belongs under $RUNNER_TEMP.
 name: ci
 
 on:
   pull_request:
   push:
     branches: [main, dev]
+  workflow_dispatch:
+  # Weekly sweep: catches newly disclosed advisories in unchanged dependencies.
+  schedule:
+    - cron: "0 6 * * 1"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -19,26 +28,37 @@ concurrency:
 
 permissions:
   contents: read
-  # Required by the pr-title semantic check (amannn/action-semantic-pull-request)
-  # to read the pull request; without it the job 403s "Resource not accessible".
-  pull-requests: read
 
-# All deps are public npm. The self-hosted runners carry a user-level ~/.npmrc
-# pointed at a private AWS CodeArtifact mirror with a frequently-expired token,
-# which 401s every npm install. Force the public registry and ignore that
-# userconfig on every npm step via these env vars.
+# All deps are public npm. Pin the public registry and ignore any user-level
+# ~/.npmrc on the runner (it used to point at a private CodeArtifact mirror with a
+# frequently-expired token, which 401s every install).
 env:
   npm_config_registry: https://registry.npmjs.org/
   NPM_CONFIG_USERCONFIG: /dev/null
 
 jobs:
+  security:
+    uses: unn-corp/.github/.github/workflows/security-baseline.yml@0867b7467a28b27c8b22c2a36f79b1fa0435b38f # v2
+    with:
+      languages: javascript typescript python
+      # detect-child-process: the hook scripts and installers spawn processes by
+      # design (CLI tooling, not request handlers).
+      # detect-insecure-websocket: its only hits are ws:// examples in skill docs.
+      skip-rules: >-
+        javascript/lang/security/detect-child-process.yaml
+        javascript/lang/security/detect-insecure-websocket.yaml
+
   # Build verification — runs the workshop packager (includes the no-leak check).
   build-package:
     name: build (package)
-    runs-on: [self-hosted, linux, x64, unn]
+    needs: security
+    runs-on: [self-hosted, linux, x64, unn-isolated]
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
       - run: node build/build.js
@@ -46,13 +66,17 @@ jobs:
   # Unit tests + coverage gate (agent-orchestration package, Vitest 80/80/70).
   test-package:
     name: test (package)
-    runs-on: [self-hosted, linux, x64, unn]
+    needs: security
+    runs-on: [self-hosted, linux, x64, unn-isolated]
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: packages/agent-orchestration
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
           # No npm cache: this package's package-lock.json is gitignored by repo
@@ -60,17 +84,25 @@ jobs:
           # the CI checkout. Use `npm install` (not `npm ci`) for the same reason.
       - run: npm install --no-audit --no-fund
       - run: npm run test:coverage
+        env:
+          # Tests write stub executables under os.tmpdir() and run them; /tmp is
+          # noexec on the isolated pool.
+          TMPDIR: ${{ runner.temp }}
 
   # Website static gates: lint + type-check + production build.
   website:
     name: static (website)
-    runs-on: [self-hosted, linux, x64, unn]
+    needs: security
+    runs-on: [self-hosted, linux, x64, unn-isolated]
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: website
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
           cache: npm
@@ -83,88 +115,15 @@ jobs:
       - run: npm run check:data
       - run: npm run build # tsc -b && vite build (type-check + bundle)
 
-  # Security: secret scan, dependency/vuln, SAST — language-agnostic.
-  # NOTE: scanners run as NATIVE binaries on the runner, not `docker run -v`.
-  # These self-hosted runners are containerized with the host docker socket
-  # mounted (DinD-sibling), so a `-v "${{ github.workspace }}:/x"` bind mounts an
-  # empty host path (the workspace exists inside the runner container, not on the
-  # host daemon) — the scanner would see nothing and pass vacuously. Running the
-  # binaries directly against $GITHUB_WORKSPACE avoids that trap.
-  security:
-    name: security
-    runs-on: [self-hosted, linux, x64, unn]
-    permissions:
-      contents: read
-      security-events: write # allow SARIF upload to the Security tab
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Secret scan (gitleaks)
-        # gitleaks CLI (MIT, free). The gitleaks-action wrapper requires a paid
-        # GITLEAKS_LICENSE on private repos; the binary does not. fetch-depth:0
-        # gives it full history. .gitleaks.toml allowlists doc false-positives.
-        run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
-            | tar -xz -C /tmp gitleaks
-          /tmp/gitleaks detect --source="$GITHUB_WORKSPACE" \
-            --config="$GITHUB_WORKSPACE/.gitleaks.toml" \
-            --redact --no-banner --exit-code=1 -v
-      - name: Dependency + vuln scan (trivy)
-        # trivy CLI (Apache-2.0). trivy-action runs trivy inside a container with
-        # the workspace mounted, which hits the same DinD-mount trap; run the
-        # binary natively instead.
-        run: |
-          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz \
-            | tar -xz -C /tmp trivy
-          /tmp/trivy fs --scanners vuln,secret --severity HIGH,CRITICAL \
-            --exit-code 1 --no-progress "$GITHUB_WORKSPACE"
-      - name: Dependency vulnerabilities (OSV-Scanner / OSV.dev)
-        # Scans every committed lockfile against OSV.dev; fails on findings.
-        run: |
-          curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 \
-            -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
-          /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
-
-  # SAST (semgrep) — HARD gate. The semgrep image ships `semgrep-core` (which
-  # won't pip-install reliably on the bare runner). A `container:` job can't be
-  # used here: this self-hosted DinD runner doesn't provision the externals
-  # (node) or the `_temp` script mount that container jobs require. And a plain
-  # `docker run -v "$GITHUB_WORKSPACE:/src"` mounts an empty host path (the
-  # DinD-sibling bind-mount trap). So: checkout on the bare runner, then push the
-  # tree INTO the container with `docker cp` (daemon API, no path mismatch).
-  sast:
-    name: sast (semgrep)
-    runs-on: [self-hosted, linux, x64, unn]
-    steps:
-      - uses: actions/checkout@v4
-      - name: SAST (semgrep)
-        # Gate on ERROR severity only (WARNING/INFO are noise on a skills+tooling
-        # monorepo). Three rules are excluded as false-positives here:
-        #   - detect-child-process: hook scripts/installers spawn processes by
-        #     design (CLI tooling, not request handlers).
-        #   - detect-insecure-websocket: only a `ws://` example in security docs.
-        #   - dockerfile missing-user: the nginx static image binds :80 as root.
-        # All rules still run, so new high-severity issues (eval, hardcoded
-        # secrets, injection) fail the gate.
-        run: |
-          set -euo pipefail
-          CID=$(docker create semgrep/semgrep:1.168.0 \
-            semgrep scan --config auto --severity ERROR --error \
-              --exclude-rule javascript.lang.security.detect-child-process.detect-child-process \
-              --exclude-rule javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket \
-              --exclude-rule dockerfile.security.missing-user.missing-user \
-              /src)
-          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
-          docker cp "$GITHUB_WORKSPACE/." "$CID:/src"
-          docker start -a "$CID"
-
   # Merge-gate hygiene: Conventional PR title (mirrors the local commit advisory).
   pr-title:
     name: pr title
     if: github.event_name == 'pull_request'
-    runs-on: [self-hosted, linux, x64, unn]
+    runs-on: [self-hosted, linux, x64, unn-isolated]
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read # the action reads the pull request's title
     steps:
-      - uses: amannn/action-semantic-pull-request@v5
+      - uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
