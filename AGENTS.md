@@ -21,6 +21,23 @@ For global installs: add `--global` to any command. Update a global install with
 
 <!-- arcwright-agent-end -->
 
+## Arcwright Code app delivery — default for every AI agent
+
+When a user asks any AI agent to build, package, install, or update the Arcwright
+Code app in `t3code`, default to delivering a numbered nightly. Install the latest
+eligible, verified published nightly if it contains the requested changes; otherwise
+commit and push the required changes, then publish a new nightly through the fork
+release pipeline from the tested, pinned commit on `main`. Reuse a suitable release
+or an existing run for that source instead of commissioning duplicate builds.
+Follow the [delivery procedure](t3code/docs/operations/fork-releases.md#default-agent-delivery).
+
+Honor explicit user choices such as source-only work, development/test builds,
+local-only packaging, a stable release, or a pinned version. Documentation, review,
+and unrelated app-development requests do not themselves commission an Arcwright
+release. This default does not enable scheduled publishing or automatic updates.
+Installation still requires native maintenance admission; protect running chats,
+verify the installed app, and document the canonical menu replacement below.
+
 ## Arcwright Code nightly naming — hard rule
 
 For the `t3code` application, every new nightly installed on this PC must use the
