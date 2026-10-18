@@ -1,7 +1,7 @@
 # Arcwright workshop — CI gates.
 # Monorepo: root build pipeline + website (Vite/React/TS) + npm packages.
 #
-# Public CI uses repository-local security checks and GitHub-hosted runners.
+# Public CI uses repository-local security checks and isolated self-hosted runners.
 # Fork contributions need neither organization credentials nor private submodules.
 name: ci
 
@@ -31,7 +31,7 @@ env:
 jobs:
   security:
     name: Secrets, dependency, code, and workflow security
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -231,7 +231,7 @@ jobs:
   build-package:
     name: build (package)
     needs: security
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -248,7 +248,7 @@ jobs:
   test-package:
     name: test (package)
     needs: security
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
     timeout-minutes: 20
     defaults:
       run:
@@ -274,7 +274,7 @@ jobs:
   website:
     name: static (website)
     needs: security
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
     timeout-minutes: 15
     defaults:
       run:
@@ -300,7 +300,7 @@ jobs:
   pr-title:
     name: pr title
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
     timeout-minutes: 5
     permissions:
       pull-requests: read # the action reads the pull request's title

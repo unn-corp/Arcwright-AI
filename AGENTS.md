@@ -56,6 +56,12 @@ project instructions here and follow the applicable instruction hierarchy.
 
 ## Build and integration references
 
+- Every GitHub Actions job in this repository uses the organization's isolated
+  self-hosted runners, including public-repository CI. Require `self-hosted`,
+  `unn`, `unn-isolated`, and `t3-ci`, plus the native OS and architecture. Never
+  switch to GitHub-hosted or Blacksmith runners as a fallback. Preserve ephemeral
+  workers and explicitly selected repository access.
+
 - `node build/build.js` builds the package and checks bundled references/leaks.
 - For package behavior changes, run focused tests, then required package gates
   (`npm run test:coverage` in `packages/agent-orchestration/`). Follow the test

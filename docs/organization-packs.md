@@ -55,7 +55,7 @@ before moving the parent pin. Private CI that checks out another private reposit
 needs an explicitly scoped credential; the default workflow token is scoped to its
 own repository. See [actions/checkout](https://github.com/actions/checkout#checkout-multiple-repos-private).
 
-Public GitHub CI uses repository-local security checks and GitHub-hosted runners.
+Public GitHub CI uses repository-local security checks and isolated organization self-hosted runners.
 It requires neither the private organization baseline nor private submodule access.
 
 Moving current files is insufficient to remove historical copies from Git.

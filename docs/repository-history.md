@@ -19,5 +19,5 @@ Commit IDs changed; private recovery mirrors and the rewrite map are kept outsid
 tracked source. Ordinary updates do not authorize another history rewrite.
 
 Public CI runs the package build, test/coverage gates, website checks, and pinned
-security scanners on GitHub-hosted runners. It needs no private organization
+security scanners on isolated organization self-hosted runners. It needs no private organization
 checkout, baseline workflow, credentials, or notification endpoint.
