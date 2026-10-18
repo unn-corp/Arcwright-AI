@@ -1,15 +1,8 @@
 ---
 name: pdflib-impl-pdf-generation
-description: >
-  Use when building complete PDF documents from scratch with pdf-lib — invoices,
-  reports, certificates, or multi-page layouts. Prevents content overflow by
-  providing page-break detection and content flow patterns.
-  Covers multi-page generation, headers/footers, page numbering, table layouts, templates.
-  Keywords: invoice, report, template, header, footer, page number, table,
-  multi-page, generate, create PDF, generate invoice, build report,
-  make PDF from scratch, PDF with tables.
+description: "Build complete pdf-lib documents such as invoices, reports, certificates, and paginated tables."
 license: MIT
-compatibility: "Designed for Claude Code. Requires pdf-lib 1.x with TypeScript/JavaScript."
+compatibility: "Requires pdf-lib 1.x with TypeScript/JavaScript."
 metadata:
   author: OpenAEC-Foundation
   version: "1.0"

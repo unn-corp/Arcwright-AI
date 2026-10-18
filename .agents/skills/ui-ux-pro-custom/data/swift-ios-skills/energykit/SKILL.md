@@ -1,6 +1,6 @@
 ---
 name: energykit
-description: "Query grid electricity forecasts and submit load events using EnergyKit to help users optimize home electricity usage. Use when building smart home apps, EV charger controls, HVAC scheduling, or energy management dashboards that guide users to use power during cleaner or cheaper grid periods."
+description: "Integrate EnergyKit electricity forecasts and load events for household energy features. Use for authorization, supported regions/devices, forecast queries, load submission, and energy-aware scheduling."
 ---
 
 # EnergyKit

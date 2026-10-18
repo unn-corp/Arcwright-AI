@@ -1,6 +1,6 @@
 ---
 name: pencilkit-drawing
-description: "Add Apple Pencil drawing, canvas views, tool pickers, and ink serialization using PencilKit. Use when building drawing apps, annotation features, handwriting capture, signature fields, or any Apple Pencil-powered experience on iOS/iPadOS/visionOS."
+description: "Add or debug PencilKit canvases, tool pickers, Apple Pencil interactions, and drawing serialization. Use for ink capture, annotation, signatures, and SwiftUI canvas wrappers."
 ---
 
 # PencilKit Drawing

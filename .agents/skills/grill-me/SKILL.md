@@ -1,10 +1,6 @@
 ---
 name: grill-me
-description: >
-  Use when a user wants adversarial pre-implementation design interrogation — relentlessly
-  challenges assumptions and forces design lock before any code is written. Triggers on
-  "/grill", "challenge my design", "interrogate my plan", or any time a user presents
-  an implementation idea and wants it stress-tested before starting.
+description: "Interrogate a proposed design before implementation when the user asks to challenge or stress-test it. Use clarification-gate for a written specification."
 allowed-tools: Read, Bash, Glob
 ---
 

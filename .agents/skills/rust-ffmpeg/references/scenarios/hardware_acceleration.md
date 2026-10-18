@@ -13,7 +13,7 @@ Use GPU and hardware encoders for faster video processing across all Rust FFmpeg
 - [Platform-Specific Examples](#platform-specific-examples)
 - [GPU Filter-Backend Probing](#gpu-filter-backend-probing)
 - [Custom GPU Shaders (wgpu)](#custom-gpu-shaders-wgpu)
-- [ffmpeg-next Hardware Transcoding](#ffmpeg-next-hardware-transcoding)
+- [ffmpeg-next Software Transcoding (x264)](#ffmpeg-next-software-transcoding-x264)
 - [ffmpeg-sidecar Hardware Encoding](#ffmpeg-sidecar-hardware-encoding)
 - [Decoder + Encoder Pipeline](#decoder--encoder-pipeline)
 - [When to Use Hardware vs Software](#when-to-use-hardware-vs-software)
@@ -24,7 +24,7 @@ Use GPU and hardware encoders for faster video processing across all Rust FFmpeg
 > **Dependencies**:
 > ```toml
 > # For ez-ffmpeg
-> ez-ffmpeg = "0.13.1"
+> ez-ffmpeg = "0.18.0"
 >
 > # For ffmpeg-next
 > ffmpeg-next = "8.1.0"
@@ -688,6 +688,16 @@ let output = Output::from("output.mp4")
 - ✅ GPU frame format preservation (`hwaccel_output_format`)
 - ✅ Runtime availability detection
 - ✅ Encoder-specific options
+
+**Device-context caching (0.17-documented policy)**: hardware device contexts
+are created on first use per configuration, cached **process-globally**, and
+reused across jobs — recreation is the expensive direction, matching ffmpeg CLI
+and persistent-context practice in GPU stacks. The cache is bounded at 32
+entries with LRU eviction of the cache handle only (FFmpeg refcounting keeps
+in-use contexts alive); contexts are released at process exit. Also 0.17: a
+failed filter-device init no longer poisons the process-wide slot — a later
+call with a valid specification can retry instead of silently degrading to the
+registry fallback.
 
 ### ffmpeg-next
 

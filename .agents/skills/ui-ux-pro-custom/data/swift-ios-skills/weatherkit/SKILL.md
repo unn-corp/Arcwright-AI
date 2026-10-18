@@ -1,6 +1,6 @@
 ---
 name: weatherkit
-description: "Fetch current, hourly, and daily weather forecasts and display required attribution using WeatherKit. Use when integrating weather data, showing forecasts, handling weather alerts, displaying Apple Weather attribution, or querying historical weather statistics in iOS apps."
+description: "Query WeatherKit forecasts, current conditions, and alerts, including authorization, caching, and required weather attribution. Use for Apple weather integration rather than generic weather UI."
 ---
 
 # WeatherKit

@@ -12,9 +12,9 @@ control that actually does.
 PII-bearing fields.
 ```bash
 # Sensitive columns in the data model
-grep -rniE "ssn|social_?security|tax_?id|ein|passport|driver_?licen|dob|date_?of_?birth|bank|routing|account_?number|iban|sort_?code|card|cardnum|pan|cvv|cvc|salary|health|medical|diagnosis|biometric" --include=*.{sql,py,ts,js,go,rb,prisma} . | head -40
+rg -l -i 'ssn|social_?security|tax_?id|ein|passport|driver_?licen|dob|date_?of_?birth|bank|routing|account_?number|iban|sort_?code|card|cardnum|pan|cvv|cvc|salary|health|medical|diagnosis|biometric' --glob '*.{sql,py,ts,js,go,rb,prisma}' .
 # Encryption usage + weak patterns
-grep -rniE "pgcrypto|encrypt\(|createCipher\b|AES|GCM|ECB|Fernet|libsodium|nacl|sealedbox|KMS|envelope|crypto\.(create|subtle)" --include=*.{sql,py,ts,js,go,rb} . | head -30
+rg -l -i 'pgcrypto|encrypt\(|createCipher\b|AES|GCM|ECB|Fernet|libsodium|nacl|sealedbox|KMS|envelope|crypto\.(create|subtle)' --glob '*.{sql,py,ts,js,go,rb}' .
 ```
 
 ## A. Data classification & minimization
@@ -74,10 +74,13 @@ same table/DB as the data it protects; one static key with no rotation path.
 - Masked in UI and in exports/reports; backups inherit encryption.
 
 **Tools (hybrid):**
+Reuse [topic 7's safe secret scan](posture-scan.md#7-environment-variable--secret-management)
+for encryption-key candidates. Keep key material and PII out of tool output.
+
 ```bash
-command -v gitleaks >/dev/null && gitleaks detect --no-banner --redact 2>/dev/null | grep -iE "key|crypt" | head
-grep -rniE "createCipher\b|ECB|iv\s*=\s*['\"]|MODE_ECB|DES\b|RC4|Blowfish" --include=*.{js,ts,py,go,java} .  # weak crypto
-grep -rniE "card(num)?|pan\b|cvv|cvc" --include=*.{sql,py,ts,js,prisma} . | grep -viE "stripe|token|placeholder|wildcard|discard" | head
+# Discovery returns filenames only; context determines whether the control is weak
+rg -l -i 'createCipher\b|ECB|iv\s*=|MODE_ECB|DES\b|RC4|Blowfish' --glob '*.{js,ts,py,go,java}' .
+rg -l -i 'card(num)?|pan\b|cvv|cvc' --glob '*.{sql,py,ts,js,prisma}' .
 ```
 
 **Verdict guidance:**

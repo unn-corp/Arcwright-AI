@@ -7,8 +7,8 @@ allowed-tools: Bash, Read
 # Herdr — Terminal Workspace Reference
 
 > **Scope:** This skill is a Herdr **mechanics** reference. It does NOT prescribe how to
-> spawn agents for Arcwright work, that is the `claude-subagent-protocol` skill
-> (in-process Agent tool + SendMessage reuse), which is the default orchestration method.
+> spawn agents for Arcwright work, that is the `subagent-protocol` skill
+> (current host task tools and lifecycle), which governs authorized orchestration.
 >
 > The one optional section at the end, **"Watching agents in panes (opt-in)"**, is the
 > only place this skill describes pane-based agent visibility. Load it only if you have
@@ -187,11 +187,11 @@ shipped `clipboard-paste.sh` does this. Or restart the server (`herdr server sto
 > **Stop, read this before using this section.**
 >
 > Pane-based agent visibility is **opt-in**, not the default. Arcwright's default
-> orchestration runs in-process via the `Agent` tool + `SendMessage` reuse, see the
-> `claude-subagent-protocol` skill. You do not need panes for that flow.
+> orchestration uses the current host's supported delegation tools; see the
+> `subagent-protocol` skill. You do not need panes for that flow.
 >
-> **Use panes only if you have an explicit reason:** the user said "spawn", "open agent",
-> "I want to watch", or asked for a visible split workflow, **and** `$HERDR_ENV` is set.
+> **Use panes only for an explicit visibility request:** the user asked to watch
+> agents or use a visible split workflow, **and** `$HERDR_ENV` is set.
 > Otherwise, stay in-process.
 
 Herdr makes visible agents first-class through `herdr agent start`, so no spawn wrapper
@@ -202,17 +202,19 @@ script is needed (unlike the old tmux flow).
 ```bash
 # Claude Code agent in a split beside the current pane
 herdr agent start <role> --split right -- \
-  claude --dangerously-skip-permissions \
-  'You are the <ROLE> agent. FIRST ACTION: load .agents/skills/claude-subagent-protocol/SKILL.md. <TASK_CONTEXT>'
+  claude \
+  'You are the <ROLE> agent. FIRST ACTION: load .agents/skills/subagent-protocol/SKILL.md. <TASK_CONTEXT>'
 
 # Kiro CLI agent
 herdr agent start <role> --split right -- \
-  kiro-cli chat --trust-all-tools --agent <name> '<task>'
+  kiro-cli chat --agent <name> '<task>'
 ```
 
-The spawned agent runs as a normal in-process agent (it uses `Agent` / `SendMessage`
-itself, defaults to `sonnet`, and asks before any opus escalation). The pane is only a
-viewing surface.
+The visible agent inherits the selected provider, model, permissions, and task
+authorization. Give it the shared protocol's small capability brief with actual
+installed skill paths and finder. Use the host's supported lifecycle; native reuse
+is conditional, and T3 review rounds are fresh delegated tasks. A pane is a viewing
+surface, not a reason to duplicate work or bypass permissions.
 
 ## Waiting, reading, following up, closing
 
@@ -228,5 +230,5 @@ there is nothing to grep for and no signal strings to maintain.
 
 ## See also
 
-- **`claude-subagent-protocol`** — THE orchestration method. Read first.
+- **`subagent-protocol`** — THE orchestration method. Read first.
 - **`/triage`** — recommends an execution approach before any heavy orchestration.

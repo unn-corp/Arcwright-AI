@@ -1,6 +1,6 @@
 ---
 name: ios-networking
-description: "Build, review, or improve networking code in iOS/macOS apps using URLSession with async/await, structured concurrency, and modern Swift patterns. Use when working with REST APIs, downloading files, uploading data, WebSocket connections, pagination, retry logic, request middleware, caching, background transfers, or network reachability monitoring. Also use when handling HTTP requests, API clients, network error handling, or data fetching in Swift apps."
+description: "Implement or debug URLSession networking in Swift, including HTTP validation, cancellation, uploads/downloads, retries, caching, and connectivity. Use for transport behavior; decoding-only changes use codable-patterns."
 ---
 
 # iOS Networking

@@ -1,5 +1,9 @@
 # Per-ecosystem tooling
 
+Coverage numbers in these snippets illustrate configuration syntax. Preserve
+existing required floors; choose new thresholds only for a requested gate with
+a justified project baseline.
+
 ## Node / TypeScript
 
 | Gate | Tool | Command |
@@ -8,7 +12,7 @@
 | Lint | ESLint (+ `@typescript-eslint`) | `npx eslint .` |
 | Type-check | tsc | `npx tsc --noEmit` |
 | Unit tests | Vitest (preferred) or Jest | `npx vitest run --coverage` / `npx jest --coverage` |
-| Coverage gate | Vitest `coverage.thresholds` / Jest `coverageThreshold` | 80/80/70 |
+| Coverage gate | Vitest `coverage.thresholds` / Jest `coverageThreshold` | Existing project requirements; agree new floors explicitly |
 | Git hooks (CI parity) | Husky + lint-staged, or Lefthook | staged-files only |
 
 Vitest reuses `vite.config.ts` (same plugins, aliases, env). Vitest config:
@@ -45,7 +49,7 @@ issues early.
 | Format | Ruff | `ruff format --check .` / (no `--check` to fix) |
 | Lint | Ruff (replaces Black + isort + Flake8) | `ruff check .` |
 | Type-check | Pyright (fast) or Mypy (strict) | `pyright` / `mypy .` |
-| Unit tests | pytest + pytest-cov | `pytest --cov --cov-fail-under=80` |
+| Unit tests | pytest + pytest-cov | `pytest --cov` using project-configured requirements |
 | Git hooks | pre-commit framework | `pre-commit run --all-files` |
 
 ## Cross-ecosystem security

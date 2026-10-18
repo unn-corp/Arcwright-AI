@@ -3,11 +3,13 @@ name: vitest
 description: Vitest fast unit testing framework powered by Vite with Jest-compatible API. Use when writing tests, mocking, configuring coverage, or working with test filtering and fixtures.
 metadata:
   author: Anthony Fu
-  version: "2026.6.22"
+  version: "2026.9.25"
   source: Generated from https://github.com/vitest-dev/vitest, scripts located at https://github.com/antfu/skills
 ---
 
 Vitest is a next-generation testing framework powered by Vite. It provides a Jest-compatible API with native ESM, TypeScript, and JSX support out of the box. Vitest shares the same config, transformers, resolvers, and plugins with your Vite app.
+
+Use the installed `test-quality` skill for test selection and useful assertions. Reuse nearby fixtures and tests. Start with the changed test file or named case; consult [filtering](references/features-filtering.md) and [fixtures](references/features-context.md) only when needed. Broaden to related tests and required gates after the focused check; avoid repeated green full-suite runs.
 
 **Key Features:**
 - Vite-native: Uses Vite's transformation pipeline for fast HMR-like test updates
@@ -18,7 +20,9 @@ Vitest is a next-generation testing framework powered by Vite. It provides a Jes
 - Built-in coverage via V8 or Istanbul
 - Snapshot testing, mocking, and spy utilities
 
-> The skill is based on Vitest 5.x (beta), generated at 2026-06-22.
+> The skill is based on Vitest 5.0.1, generated at 2026-09-25.
+
+Read the installed Vitest, Vite and Node versions first. Vitest 5 requires Vite >=6.4.0 and Node >=22.12.0. Use matching v3/v4 docs in older applications; defaults such as mock clearing and project inheritance depend on the major version. Updating this skill does not upgrade dependencies.
 
 ## Core
 

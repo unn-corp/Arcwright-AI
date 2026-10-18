@@ -1,20 +1,17 @@
 ---
 name: strands-agent-fundamentals
-description: >
-  The core Strands Agents SDK model: a model-driven agent loop built from a model, a
-  system prompt, and a set of tools, plus tool definitions, structured output, hooks,
-  and conversation management.
-  USE FOR: building a first Strands agent, understanding the agent loop and its stop
-  reasons, writing Python or TypeScript tools, getting schema-validated structured
-  output, intercepting the agent lifecycle with hooks, or bounding conversation context.
-  DO NOT USE FOR: choosing or configuring a model provider (see strands-model-providers),
-  coordinating multiple agents (see strands-multi-agent-patterns), or deploying an agent
-  to AWS (see strands-bedrock-agentcore-deploy, strands-aws-deployment-targets).
+description: "Build Strands SDK agents and tools, structured output, hooks, agent-loop behavior, and conversation management. Provider configuration, multi-agent coordination, and deployment have separate skills."
 ---
 
 # Strands Agents SDK: Fundamentals
 
 Strands Agents is AWS's open source, model-driven SDK for building AI agents in Python and TypeScript. Distilled from https://strandsagents.com/docs and https://github.com/strands-agents/harness-sdk (Apache-2.0).
+
+Python API examples below are checked against published `python/v1.61.1` (`5cb880559e5ed88bd55de2779e72d060020f756b`); inspect the installed package before using them on older versions. A newer repository `main` is not a released API guarantee.
+
+## SDK or ready-made harness
+
+Use `from strands import Agent` when the application owns the model, tools, permissions, session policy, and control flow. `strands-harness` is a separate, opinionated package: `from strands_harness import create_harness` produces an SDK `Agent` with configured defaults for tools, sessions, context, skills, and other facilities. Inspect and constrain those defaults before using it in an application; do not switch an existing SDK application to the harness merely to follow a new quickstart. Keep the project's installed package and API versions distinct.
 
 ## When to Use This Skill
 
@@ -56,10 +53,34 @@ Stop reasons that end the loop:
 |---|---|
 | `end_turn` | The model produced a final answer, no more tool calls |
 | `tool_use` | The model is still mid-loop, requesting another tool (internal to the loop, not a terminal state for the caller) |
-| Budget / token limit | A configured max-tokens or max-iterations bound was hit |
+| `limit_turns` | Invocation loop-turn cap reached |
+| `limit_output_tokens` / `limit_total_tokens` | Invocation token-spend cap reached, checked between turns |
+| `cancelled` | Invocation cancelled at a supported checkpoint |
+| `max_tokens` | The provider ended one response at its model output-token bound; distinct from an invocation budget |
 | Guardrail | A configured guardrail (e.g. a Bedrock guardrail) interrupted the response |
 
-> The loop is the whole story: Strands does not wrap this in extra orchestration primitives for a single agent. Complexity is added deliberately, via tools, hooks, or the multi-agent patterns (see `strands-multi-agent-patterns`), not by default.
+## Invocation limits and cancellation
+
+Provider `max_tokens` limits a model response. `Limits` constrains the whole invocation, independently on each call:
+
+```python
+from strands import Agent
+from strands.types.agent import Limits
+
+agent = Agent()  # supply the application's configured model and tools
+result = agent(
+    "Inspect the supplied build log and explain the failure.",
+    limits=Limits(turns=8, output_tokens=4000, total_tokens=24000),
+)
+if result.stop_reason in {"limit_turns", "limit_output_tokens", "limit_total_tokens", "cancelled"}:
+    print(f"Incomplete run: {result.stop_reason}")
+else:
+    print(result)
+```
+
+Caps must be positive integers; omit a dimension for no cap. Token budgets are soft: a model response may overshoot, and already-requested tools finish before the next boundary check. Limits do not roll back tool effects, guarantee a hard currency ceiling, or establish that the user's task completed. Preserve partial output and the stop reason so a caller can decide whether to resume.
+
+In this release `agent.cancel()` requests cancellation at the next supported checkpoint. A caller can instead pass a `threading.Event` as `cancel_signal` to the invocation; the SDK does not clear the caller's event. Neither mechanism forcibly interrupts arbitrary blocking tools. Do not use newer `cancel(after_current_tools=...)` forms without confirming support in the installed release. Keep one invocation per agent unless its explicit concurrency contract permits otherwise.
 
 ## Tool Failures Are Results, Not Exceptions
 
@@ -148,5 +169,5 @@ Pick based on scope: `use_aws` for one-off service calls, Knowledge Base for doc
 - [ ] The agent's system prompt and tool descriptions are written for the model to read, not just for humans
 - [ ] Tool errors are allowed to surface as results (not swallowed before the model sees them)
 - [ ] Structured output is used wherever another system consumes the agent's answer
-- [ ] Long-running agents have a `SlidingWindowConversationManager` (or equivalent) bounding context growth
+- [ ] Long-running agents bound context growth and per-invocation work separately; limit/cancellation results are handled as incomplete work
 - [ ] Durable memory needs are matched to the right mechanism (`use_aws`, Knowledge Base, or AgentCore Memory), not bolted onto the conversation window

@@ -1,14 +1,6 @@
 ---
 name: tauri-plugins
-description: >
-  Add and configure official Tauri v2 plugins — pairing the Rust crate (tauri-plugin-*)
-  with its JS package (@tauri-apps/plugin-*), registering it on the Builder, granting its
-  permissions, and using the updater plugin for auto-updates.
-  USE FOR: adding filesystem/dialog/shell/http/store/notification/updater/etc. capability,
-  wiring a plugin's Rust + JS + permission pieces together, debugging a plugin that won't
-  initialize or whose API is denied, or setting up app auto-updates.
-  DO NOT USE FOR: writing your own commands (see tauri-commands-ipc), the permission model
-  in depth (see tauri-capabilities), or distribution/signing (see tauri-distribution).
+description: "Add, configure, or implement a Tauri plugin and its frontend/Rust integration."
 ---
 
 # Tauri v2 Plugins

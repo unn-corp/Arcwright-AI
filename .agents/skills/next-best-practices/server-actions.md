@@ -10,7 +10,7 @@ A realistic mutation reads session state, guards against unauthenticated calls, 
 // app/actions/cart.ts
 'use server'
 
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
@@ -29,7 +29,7 @@ export async function addToCart(productId: string) {
       create: { sessionId, productId, quantity: 1 },
     })
 
-    revalidateTag('cart')
+    updateTag('cart')
     return { success: true }
   } catch (error) {
     return { error: 'Failed to add item to cart' }
@@ -81,3 +81,5 @@ export default function CheckoutPage() {
 ```
 
 This form works even with JavaScript disabled: the browser does a normal POST, Next.js runs the action on the server, and the `redirect()` becomes a normal server-side redirect response.
+
+For older Next.js versions without `updateTag`, use the installed invalidation contract. See [caching-strategies.md](./caching-strategies.md).

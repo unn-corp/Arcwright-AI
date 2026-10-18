@@ -1,61 +1,31 @@
 # Spec Compliance Reviewer Prompt Template
 
-Use this template when dispatching a spec compliance reviewer subagent.
+Use a fresh reviewer for this gate and each later round. On Arcwright Code/T3,
+create a new `delegate_task`; do not continue with `childThreadId`.
 
-**Purpose:** Verify implementer built what was requested (nothing more, nothing less)
+Treat the installed skill/template directory as read-only. Save all briefs, reports,
+snapshots, logs, and other workflow artifacts within the assigned Arcwright run.
+Do not substitute the skill directory or an unrelated temporary folder.
 
-```
-Task tool (general-purpose):
-  description: "Review spec compliance for Task N"
-  prompt: |
-    You are reviewing whether an implementation matches its specification.
+```text
+Task: Spec review [task ID], round [N]
+Requirements: [brief/spec path and exact acceptance criteria]
+Capabilities: [relevant installed skill names/paths, finder, tool limits; nonexclusive]
+Source: [immutable commit or snapshot manifest/digest]
+Review package: [task baseline, full delta, relevant source, report, validation]
+Prior findings: [verbatim findings and dispositions, or none]
+Artifact root: [absolute active-project _arcwright/_memory/skill-runs/<run> path]
+Report: [absolute file path within that run]
 
-    ## What Was Requested
+Compare the actual implementation to the requested behavior. Check missing
+requirements, extra scope, and misunderstandings. Read source and validation
+artifacts rather than relying on the implementer's confidence. Judge the current
+snapshot; if it differs from the stated identity, report that mismatch instead
+of approving a source you did not inspect.
 
-    [FULL TEXT of task requirements]
-
-    ## What Implementer Claims They Built
-
-    [From implementer's report]
-
-    ## CRITICAL: Do Not Trust the Report
-
-    The implementer finished suspiciously quickly. Their report may be incomplete,
-    inaccurate, or optimistic. You MUST verify everything independently.
-
-    **DO NOT:**
-    - Take their word for what they implemented
-    - Trust their claims about completeness
-    - Accept their interpretation of requirements
-
-    **DO:**
-    - Read the actual code they wrote
-    - Compare actual implementation to requirements line by line
-    - Check for missing pieces they claimed to implement
-    - Look for extra features they didn't mention
-
-    ## Your Job
-
-    Read the implementation code and verify:
-
-    **Missing requirements:**
-    - Did they implement everything that was requested?
-    - Are there requirements they skipped or missed?
-    - Did they claim something works but didn't actually implement it?
-
-    **Extra/unneeded work:**
-    - Did they build things that weren't requested?
-    - Did they over-engineer or add unnecessary features?
-    - Did they add "nice to haves" that weren't in spec?
-
-    **Misunderstandings:**
-    - Did they interpret requirements differently than intended?
-    - Did they solve the wrong problem?
-    - Did they implement the right feature but wrong way?
-
-    **Verify by reading code, not by trusting report.**
-
-    Report:
-    - ✅ Spec compliant (if everything matches after code inspection)
-    - ❌ Issues found: [list specifically what's missing or extra, with file:line references]
+Report PASS or FINDINGS, with the source identity reviewed. For each finding,
+include the requirement, observed behavior, path/line evidence, impact, and
+recommended correction. State what could not be verified and why. Stay within
+the task; record related out-of-scope observations separately. Do not edit files
+or create further delegates.
 ```

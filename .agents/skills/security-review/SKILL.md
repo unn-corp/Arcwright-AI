@@ -53,7 +53,7 @@ same confidence rules, severity table, and references below.
 **CRITICAL DISTINCTION:**
 
 - **Report on**: Only the specific file, diff, or code provided by the user
-- **Research**: The ENTIRE codebase to build confidence before reporting
+- **Research**: Trace relevant callers, data sources, validation, and integration paths across the codebase to establish confidence; expand for unanswered questions rather than preloading unrelated files
 
 Before flagging any issue, you MUST research the codebase to understand:
 - Where does this input actually come from? (Trace data flow)
@@ -77,7 +77,10 @@ Before flagging any issue, you MUST research the codebase to understand:
 - Test files (unless explicitly reviewing test security)
 - Dead code, commented code, documentation strings
 - Patterns using **constants** or **server-controlled configuration**
-- Code paths that require prior authentication to reach (note the auth requirement instead)
+
+Review authenticated paths too. Check attacker-controlled input, role escalation,
+object ownership, and tenant binding. State any required account/role and assess
+reachability and impact; authentication alone neither dismisses nor caps a finding.
 
 ### Server-Controlled Values (NOT Attacker-Controlled)
 
@@ -200,6 +203,9 @@ For each potential finding, confirm:
 - Input validation before this code
 - Sanitization libraries (DOMPurify, bleach, etc.)
 
+**Does authorization bind this actor to this action and resource?**
+- Required role/permission, resource ownership, and tenant membership checked server-side
+
 ### 6. Report HIGH Confidence Only
 
 Skip theoretical issues. Report only what you've confirmed is exploitable after research.
@@ -210,16 +216,19 @@ Skip theoretical issues. Report only what you've confirmed is exploitable after 
 
 | Severity | Impact | Examples |
 |----------|--------|----------|
-| **Critical** | Direct exploit, severe impact, no auth required | RCE, SQL injection to data, auth bypass, hardcoded secrets |
+| **Critical** | Severe compromise with practical exploitability | RCE, large-scale sensitive-data compromise, auth bypass, exposed privileged credentials |
 | **High** | Exploitable with conditions, significant impact | Stored XSS, SSRF to metadata, IDOR to sensitive data |
 | **Medium** | Specific conditions required, moderate impact | Reflected XSS, CSRF on state-changing actions, path traversal |
 | **Low** | Defense-in-depth, minimal direct impact | Missing headers, verbose errors, weak algorithms in non-critical context |
+
+Weigh impact, required privileges, attacker control, and effective mitigations.
+Scanner candidates and placeholders do not prove a live secret.
 
 ---
 
 ## Quick Patterns Reference
 
-### Always Flag (Critical)
+### Investigate for Code Execution or Unsafe Deserialization
 ```
 eval(user_input)           # Any language
 exec(user_input)           # Any language
@@ -231,7 +240,7 @@ shell=True + user_input    # Python subprocess
 child_process.exec(user)   # Node.js
 ```
 
-### Always Flag (High)
+### Investigate for Injection or XSS
 ```
 innerHTML = userInput              # DOM XSS
 dangerouslySetInnerHTML={user}     # React XSS
@@ -241,13 +250,17 @@ f"SELECT * FROM x WHERE {user}"    # SQL injection
 os.system(f"cmd {user_input}")     # Command injection
 ```
 
-### Always Flag (Secrets)
+### Investigate for Exposed Secrets
 ```
 password = "hardcoded"
 api_key = "sk-..."
 AWS_SECRET_ACCESS_KEY = "..."
 private_key = "-----BEGIN"
 ```
+
+Confirm these leads before assigning severity. Use [safe secret discovery](posture/posture-scan.md#7-environment-variable--secret-management);
+keep values out of tool output and reports. Show locations, credential type, and
+`[REDACTED]` in evidence snippets.
 
 ### Check Context First (MUST Investigate Before Flagging)
 ```

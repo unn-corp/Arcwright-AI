@@ -22,7 +22,7 @@ export const agents: Agent[] = [
     role: 'System Design',
     icon: 'Network',
     description:
-      'Designs system architecture, writes architecture notes and readiness checks. Reviews code for structural integrity, DRY violations, and implementation feasibility. Key reviewer in every Review Gate\'s AR+DRY sub-task.',
+      'Designs system architecture, writes architecture notes and readiness checks. Reviews structural integrity and implementation feasibility when the selected workflow calls for architecture review.',
     primarySkills: ['clean-code-standards', 'typescript-best-practices', 'systematic-debugging'],
     collaboratesWith: ['Developer', 'PM', 'QA'],
   },
@@ -31,7 +31,7 @@ export const agents: Agent[] = [
     role: 'Implementation',
     icon: 'Code2',
     description:
-      'Full-stack implementation agent. Handles code changes from quick fixes (quick-flow-solo-dev) to full feature implementations (dev-agent). Reads specs, UX designs, and architecture notes before writing code.',
+      'Implements the assigned story or coding task using relevant project context and existing patterns. Reviews concrete risks, verifies changed behavior, and returns the result without implicitly starting another story.',
     primarySkills: ['typescript-best-practices', 'react-expert', 'systematic-debugging', 'security-review'],
     collaboratesWith: ['QA', 'Architect', 'UX Designer'],
   },
@@ -49,8 +49,8 @@ export const agents: Agent[] = [
     role: 'Testing & Validation',
     icon: 'TestTube2',
     description:
-      'Writes Playwright .spec.ts test files, validates code changes, and runs the test loop. Uses playwright-cli for browser automation and screenshot comparison. Loops back to Developer on failures.',
-    primarySkills: ['playwright-cli', 'systematic-debugging', 'typescript-best-practices'],
+      'Verifies changed public behavior with suitable existing tests and fixtures. Adds focused regression cases only where needed, runs required checks, and inspects UI behavior with the available browser tools.',
+    primarySkills: ['test-quality', 'playwright-cli', 'systematic-debugging'],
     collaboratesWith: ['Developer', 'UX Designer'],
   },
   {
@@ -58,7 +58,7 @@ export const agents: Agent[] = [
     role: 'Sprint Management',
     icon: 'GitPullRequest',
     description:
-      'Decomposes PRDs into epics and user stories. Creates sprint plans, manages the per-story dev loop, and marks stories done after QA validates each.',
+      'Prepares scoped epics, stories, and sprint plans with traceable requirements and relevant context. Story preparation returns an implementation-ready plan; implementation and batch execution follow the user\'s requested scope.',
     primarySkills: ['project-context', 'triage'],
     collaboratesWith: ['PM', 'Developer', 'Architect'],
   },

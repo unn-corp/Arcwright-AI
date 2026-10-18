@@ -1,9 +1,21 @@
 # Image Sequences
 
 **Detection Keywords**: image sequence, frame extraction, video to images, images to video, image2, png sequence, jpg sequence, timelapse, frame by frame
-**Aliases**: frame sequence, image series, video frames, slideshow
+**Aliases**: frame sequence, image series, video frames, slideshow, fast thumbnail, skip_frame=nokey
 
 Cross-library guide for converting between video and image sequences.
+
+## Table of Contents
+
+- [Quick Reference](#quick-reference)
+- [One-shot thumbnail / sprite sheet (recipes)](#one-shot-thumbnail--sprite-sheet-recipes)
+- [Video to Image Sequence](#video-to-image-sequence)
+- [Image Sequence to Video](#image-sequence-to-video)
+- [Advanced Operations](#advanced-operations)
+- [Common Patterns](#common-patterns)
+- [Library Selection Guide](#library-selection-guide)
+- [Troubleshooting](#troubleshooting)
+- [Related Guides](#related-guides)
 
 ## Quick Reference
 
@@ -52,6 +64,7 @@ sprite_sheet(
 **Seek strategy — `SeekMode`** (`ThumbnailOptions::seek`, default `InputSeek`):
 - `SeekMode::InputSeek` — seeks at the input level. **Fast** for large offsets, but keyframe-approximate: it does not promise exact-second precision.
 - `SeekMode::FilterScan` — decodes from the start and picks the exact target frame. **Accurate**, but slow for large offsets in a long file.
+- **Fastest path (manual, not in `recipes`)** — `recipes::thumbnail` never sets `skip_frame`. When keyframe snapping is acceptable (scrub previews, batch grids), build the context by hand: `Input::set_start_time_us(...)` + `.set_video_codec_opt("skip_frame", "nokey")` + `Output::set_max_video_frames(1)` decodes keyframes only, skipping the keyframe→target pre-roll. The frame snaps to the first keyframe at/after the target; a target inside the file's last GOP fails with an encoder error. Full example: [ez_ffmpeg/video.md](../ez_ffmpeg/video.md#thumbnail-extraction).
 
 **Sprite cadence — `Every`**: `Every::Sec(2.0)` (one frame every N seconds), `Every::Frames(n)` (every N-th decoded frame), or `Every::EvenlySpread` (spread the `cols * rows` cells evenly across the whole clip — a full-video storyboard; needs a probeable input). The sheet always contains exactly `grid.0 * grid.1` cells.
 

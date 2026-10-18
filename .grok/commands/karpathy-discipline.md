@@ -1,5 +1,5 @@
 ---
-description: "Proactive behavioral minimalism layer. Use before writing any implementation — think first, smallest viable change, no over-engineering (\"50 lines into 500\" failure mode), goal-driven, delete before adding. Triggers a..."
+description: "Reduce scope creep, speculative abstractions, or unnecessary implementation complexity. Use when a change is expanding or its success criteria need clarification."
 ---
 
 Load and run the `karpathy-discipline` skill (`.agents/skills/karpathy-discipline/SKILL.md`) against $ARGUMENTS. Follow the skill exactly.

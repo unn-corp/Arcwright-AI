@@ -1,6 +1,6 @@
 ---
 name: core-nfc
-description: "Read and write NFC tags using CoreNFC. Use when scanning NDEF tags, reading ISO7816/ISO15693/FeliCa/MIFARE tags, writing NDEF messages, handling NFC session lifecycle, configuring NFC entitlements, or implementing background tag reading in iOS apps."
+description: "Implement or debug Core NFC sessions for NDEF and supported raw tag protocols, including reads, writes, entitlement setup, and session recovery. Wallet payments and passes use passkit-wallet."
 ---
 
 # CoreNFC

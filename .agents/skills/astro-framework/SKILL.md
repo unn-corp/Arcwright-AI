@@ -1,6 +1,6 @@
 ---
 name: astro-framework
-description: Astro framework specialist for building fast, content-driven websites with islands architecture. Use when creating Astro components, configuring hydration (client:load/idle/visible/media), using server:defer (server islands), Content Layer API (glob/file loaders, live loaders), sessions, astro:env, i18n routing, actions, SSR adapters, view transitions, or integrating React/Vue/Svelte/Solid. Not for full-SPA frameworks (Next.js, Remix, SvelteKit).
+description: "Build or debug Astro pages, content collections, islands, rendering, or integrations in an Astro project."
 license: MIT
 metadata:
   author: delineas

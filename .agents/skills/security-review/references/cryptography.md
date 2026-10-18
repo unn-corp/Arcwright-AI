@@ -290,14 +290,14 @@ grep -rn "MODE_ECB\|ecb" --include="*.py" --include="*.js"
 grep -rn "Math\.random\|random\.random\|random\.randint" --include="*.py" --include="*.js"
 grep -rn "mt_rand\|rand()" --include="*.php"
 
-# Hardcoded keys
-grep -rn "key\s*=\s*['\"]" --include="*.py" --include="*.js"
-grep -rn "secret\s*=\s*['\"]" --include="*.py" --include="*.js"
-grep -rn "AES\.new.*b'" --include="*.py"
+# Hardcoded keys: filenames only, never key material
+grep -rl "key\s*=\s*['\"]" --include="*.py" --include="*.js"
+grep -rl "secret\s*=\s*['\"]" --include="*.py" --include="*.js"
+grep -rl "AES\.new.*b'" --include="*.py"
 
 # Static IVs/nonces
-grep -rn "iv\s*=\s*b'\|nonce\s*=\s*b'" --include="*.py"
-grep -rn "\\x00.*\\x00.*\\x00" --include="*.py"
+grep -rl "iv\s*=\s*b'\|nonce\s*=\s*b'" --include="*.py"
+grep -rl "\\x00.*\\x00.*\\x00" --include="*.py"
 
 # CBC without HMAC
 grep -rn "MODE_CBC" --include="*.py" | grep -v "hmac\|mac\|tag"

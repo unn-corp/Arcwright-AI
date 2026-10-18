@@ -2,44 +2,42 @@
   <objective>Execute given workflow by loading its configuration, following instructions, and producing output</objective>
 
   <llm critical="true">
-    <mandate>Always read COMPLETE files - NEVER use offset/limit when reading any workflow related files</mandate>
-    <mandate>Instructions are MANDATORY - either as file path, steps or embedded list in YAML, XML or markdown</mandate>
-    <mandate>Execute ALL steps in instructions IN EXACT ORDER</mandate>
+    <mandate>Read the selected configuration, control instructions, and template completely; load supporting evidence only as needed.</mandate>
     <mandate>Save to template output file after EVERY "template-output" tag</mandate>
-    <mandate>NEVER skip a step - YOU are responsible for every steps execution without fail or excuse</mandate>
   </llm>
 
   <WORKFLOW-RULES critical="true">
-    <rule n="1">Steps execute in exact numerical order (1, 2, 3...)</rule>
-    <rule n="2">Optional steps: Ask user unless #yolo mode active</rule>
-    <rule n="3">Template-output tags: Save content, discuss with the user the section completed, and NEVER proceed until the users indicates
-      to proceed (unless YOLO mode has been activated)</rule>
+    <rule n="1">Steps execute in numerical order unless their conditions, loops, or explicit jumps select another path.</rule>
+    <rule n="2">Use execution-modes below; do not ask to re-enable authorized autonomy.</rule>
+    <rule n="3">Interactive checkpoints wait; autonomous synthesis continues without routine confirmation.</rule>
+    <rule n="4">Host rules and authorization govern both modes. Wait for consequential input or required approval; never invent answers, treat time as consent, or expand scope.</rule>
   </WORKFLOW-RULES>
 
   <flow>
     <step n="1" title="Load and Initialize Workflow">
       <substep n="1a" title="Load Configuration and Resolve Variables">
         <action>Read workflow.yaml from provided path</action>
+        <action>Set interaction mode using execution-modes below.</action>
         <mandate>Load config_source (REQUIRED for all modules)</mandate>
         <phase n="1">Load external config from config_source path</phase>
         <phase n="2">Resolve all {config_source}: references with values from config</phase>
         <phase n="3">Resolve system variables (date:system-generated) and paths ({project-root}, {installed_path})</phase>
-        <phase n="4">Ask user for input of any variables that are still unknown</phase>
+        <phase n="4">Resolve variables from context. State inconsequential defaults; ask and wait for an unknown required value or consequential choice.</phase>
       </substep>
 
       <substep n="1b" title="Load Required Components">
         <mandate>Instructions: Read COMPLETE file from path OR embedded list (REQUIRED)</mandate>
-        <check>If template path → Read COMPLETE template file</check>
-        <check>If validation path → Note path for later loading when needed</check>
-        <check>If template: false → Mark as action-workflow (else template-workflow)</check>
+        <check if="template path exists"><action>Read the complete template file.</action></check>
+        <check if="validation path exists"><action>Note the path for later loading when needed.</action></check>
+        <action>If template: false, mark as action-workflow; otherwise mark as template-workflow.</action>
         <note>Data files (csv, json) → Store paths only, load on-demand when instructions reference them</note>
       </substep>
 
       <substep n="1c" title="Initialize Output" if="template-workflow">
         <action>Resolve default_output_file path with all variables and {{date}}</action>
         <action>Create output directory if doesn't exist</action>
-        <action>If template-workflow → Write template to output file with placeholders</action>
-        <action>If action-workflow → Skip file creation</action>
+        <check if="the output file already exists"><action>Read and preserve its authored content; apply the requested changes in place instead of replacing it with the blank template.</action></check>
+        <check if="the output file does not exist"><action>Initialize it from the template only after the target is resolved within the authorized scope.</action></check>
       </substep>
     </step>
 
@@ -47,32 +45,31 @@
       <iterate>For each step in instructions:</iterate>
 
       <substep n="2a" title="Handle Step Attributes">
-        <check>If optional="true" and NOT #yolo → Ask user to include</check>
-        <check>If if="condition" → Evaluate condition</check>
-        <check>If for-each="item" → Repeat step for each item</check>
-        <check>If repeat="n" → Repeat step n times</check>
+        <action>Evaluate if="condition" first; omit a step whose condition is false.</action>
+        <check if="optional='true' and interactive mode">
+          <ask>Include this optional step? Wait for the user's choice.</ask>
+        </check>
+        <check if="optional='true' and autonomous mode">
+          <action>Include relevant, authorized work; otherwise omit with a brief reason. Ask only for an unresolved consequential choice.</action>
+        </check>
+        <action>If for-each="item", repeat the step for each item; if repeat="n", repeat it n times.</action>
       </substep>
 
       <substep n="2b" title="Execute Step Content">
-        <action>Process step instructions (markdown or XML tags)</action>
-        <action>Replace {{variables}} with values (ask user if unknown)</action>
-        <execute-tags>
-          <tag>action xml tag → Perform the action</tag>
-          <tag>check if="condition" xml tag → Conditional block wrapping actions (requires closing &lt;/check&gt;)</tag>
-          <tag>ask xml tag → Prompt user and WAIT for response</tag>
-          <tag>invoke-workflow xml tag → Execute another workflow with given inputs and the workflow.xml runner</tag>
-          <tag>invoke-task xml tag → Execute specified task</tag>
-          <tag>invoke-protocol name="protocol_name" xml tag → Execute reusable protocol from protocols section</tag>
-          <tag>goto step="x" → Jump to specified step</tag>
-        </execute-tags>
+        <action>Process markdown or XML instructions using supported-tags below.</action>
+        <action>Replace {{variables}} with resolved values; handle unknown values as in step 1a.</action>
       </substep>
 
       <substep n="2c" title="Handle template-output Tags">
         <if tag="template-output">
           <mandate>Generate content for this section</mandate>
           <mandate>Save to file (Write first time, Edit subsequent)</mandate>
-          <action>Display generated content</action>
-          <ask> [a] Advanced Elicitation, [c] Continue, [p] Party-Mode, [y] YOLO the rest of this document only. WAIT for response. <if
+          <check if="autonomous mode">
+            <action>Summarize the saved section and continue, unless required input or approval is missing.</action>
+          </check>
+          <check if="interactive mode">
+            <action>Display generated content</action>
+            <ask> [a] Advanced Elicitation, [c] Continue, [p] Party-Mode, [y] Complete the rest of this document autonomously within the current authorization. WAIT for response. <if
               response="a">
               <action>Start the advanced elicitation workflow {project-root}/_arcwright/core/workflows/advanced-elicitation/workflow.xml</action>
             </if>
@@ -85,104 +82,97 @@
             </if>
             <if
               response="y">
-              <action>Enter #yolo mode for the rest of the workflow</action>
+              <action>Use autonomous mode (#yolo alias) for the rest of this document within current authorization.</action>
             </if>
-          </ask>
+            </ask>
+          </check>
         </if>
       </substep>
 
       <substep n="2d" title="Step Completion">
-        <note name="synthesis-flows">SYNTHESIS FLOWS: If a step generates content from already-gathered information, write the output and immediately execute the next step — no [C] gate needed. Only halt when a step requires genuinely new information from the user.</note>
-        <check>If no special tags and NOT #yolo:</check>
-        <ask>Continue to next step? (y/n/edit)</ask>
+        <check if="interactive mode and the current step has no explicit question, continuation menu, or template-output checkpoint">
+          <ask>Continue to next step? (y/n/edit). Wait for the user's response.</ask>
+        </check>
       </substep>
     </step>
 
     <step n="3" title="Completion">
-      <check>Confirm document saved to output path</check>
-      <action>Report workflow completion</action>
+      <check if="template-workflow"><action>Verify the document was saved to the resolved output path.</action></check>
+      <action>Report completed work, blockers, and unrun checks accurately.</action>
     </step>
   </flow>
 
   <execution-modes>
-    <mode name="normal">Full user interaction and confirmation of EVERY step at EVERY template output - NO EXCEPTIONS except yolo MODE</mode>
-    <mode name="yolo">Skip all confirmations and elicitation, minimize prompts and try to produce all of the workflow automatically by
-      simulating the remaining discussions with an simulated expert user</mode>
+    <mode name="interactive" aliases="normal">Use for an explicit request to collaborate step by step, an interview/elicitation task, or a stated interactive workflow choice. Wait at questions/checkpoints; avoid duplicate prompts.</mode>
+    <mode name="autonomous" aliases="yolo,#yolo">Default for a supplied actionable task unless interactive work was selected. Complete the authorized scope, including full-send or full-stop with their distinct delivery boundaries. Continue routine decisions from evidence, state material assumptions, and wait for missing consequential input or approval. Never simulate discussions or user answers.</mode>
+    <note>Mode controls interaction, not permission. Preserve it across calls and resumes unless the user changes it; a local menu choice applies only to its stated scope. Honor later requests to pause, collaborate, or approve.</note>
   </execution-modes>
 
   <supported-tags desc="Instructions can use these tags">
     <structural>
-      <tag>step n="X" goal="..." - Define step with number and goal</tag>
-      <tag>optional="true" - Step can be skipped</tag>
-      <tag>if="condition" - Conditional execution</tag>
-      <tag>for-each="collection" - Iterate over items</tag>
-      <tag>repeat="n" - Repeat n times</tag>
+      <tag>step n="X" goal="..." - Numbered step</tag>
+      <tag>optional="true" - Optional step</tag>
+      <tag>if="condition" - Conditional</tag>
+      <tag>for-each="collection" - Iterate</tag>
+      <tag>repeat="n" - Repeat</tag>
     </structural>
     <execution>
-      <tag>action - Required action to perform</tag>
-      <tag>action if="condition" - Single conditional action (inline, no closing tag needed)</tag>
-      <tag>check if="condition"&gt;...&lt;/check&gt; - Conditional block wrapping multiple items (closing tag required)</tag>
-      <tag>ask - Get user input (ALWAYS wait for response before continuing)</tag>
-      <tag>goto - Jump to another step</tag>
-      <tag>invoke-workflow - Call another workflow</tag>
-      <tag>invoke-task - Call a task</tag>
-      <tag>invoke-protocol - Execute a reusable protocol (e.g., discover_inputs)</tag>
+      <tag>action - Perform action; an if attribute makes it conditional</tag>
+      <tag>check if="condition"&gt;...&lt;/check&gt; - Conditional block; closing tag required</tag>
+      <tag>ask - Use the host question tool when available, otherwise chat; wait before dependent work. Autonomous mode omits only routine continuation/navigation already authorized, never real missing-input or approval questions.</tag>
+      <tag>goto step="x" - Jump to step</tag>
+      <tag>invoke-workflow - Execute named workflow with its inputs and this runner</tag>
+      <tag>invoke-task - Execute named task</tag>
+      <tag>invoke-protocol name="protocol_name" - Execute protocol below</tag>
     </execution>
     <output>
       <tag>template-output - Save content checkpoint</tag>
-      <tag>critical - Cannot be skipped</tag>
+      <tag>critical - Required within its applicable branch</tag>
       <tag>example - Show example output</tag>
     </output>
   </supported-tags>
 
   <protocols desc="Reusable workflow protocols that can be invoked via invoke-protocol tag">
     <protocol name="discover_inputs" desc="Smart file discovery and loading based on input_file_patterns">
-      <objective>Intelligently load project files (whole or sharded) based on workflow's input_file_patterns configuration</objective>
-
       <critical>Only execute if workflow.yaml contains input_file_patterns section</critical>
 
       <flow>
         <step n="1" title="Parse Input File Patterns">
           <action>Read input_file_patterns from loaded workflow.yaml</action>
-          <action>For each pattern group (prd, architecture, epics, etc.), note the load_strategy if present</action>
+          <action>Use the configured strategy. Otherwise default to INDEX_GUIDED, or SELECTIVE_LOAD when sharded_single resolves to the known target. Execute only that strategy.</action>
+          <action>Reuse available unchanged inputs across steps and resumes. Recheck affected sources after source/scope changes; expand reads only for missing context, unresolved questions, or concrete risk.</action>
         </step>
 
         <step n="2" title="Load Files Using Smart Strategies">
           <iterate>For each pattern in input_file_patterns:</iterate>
 
-          <substep n="2a" title="Try Sharded Documents First">
-            <check if="sharded pattern exists">
-              <action>Determine load_strategy from pattern config (defaults to FULL_LOAD if not specified)</action>
+          <substep n="2a" title="Check Relevance and Try Sharded Documents First">
+            <action>Evaluate a group's optional when condition against the task before discovery. If false, set {pattern_name_content} to empty, note why, and skip to the next group.</action>
+            <action>Load fallback groups only for gaps in preferred evidence. Resolve uncertain relevance with an index or heading check, without preloading the group.</action>
+            <action>Discover file paths matching the sharded patterns, including sharded_single when present, without loading their contents.</action>
+            <check if="sharded matches found">
 
               <strategy name="FULL_LOAD">
-                <desc>Load ALL files in sharded directory - used for PRD, Architecture, UX, brownfield docs</desc>
+                <desc>Explicit opt-in for the entire matching corpus.</desc>
                 <action>Use glob pattern to find ALL .md files (e.g., "{output_folder}/*architecture*/*.md")</action>
-                <action>Load EVERY matching file completely</action>
+                <action>Load every matching file completely, reusing unchanged content already available.</action>
                 <action>Concatenate content in logical order (index.md first if exists, then alphabetical)</action>
                 <action>Store in variable: {pattern_name_content}</action>
               </strategy>
 
               <strategy name="SELECTIVE_LOAD">
-                <desc>Load specific shard using template variable - example: used for epics with {{epic_num}}</desc>
-                <action>Check for template variables in sharded_single pattern (e.g., {{epic_num}})</action>
-                <action>If variable undefined, ask user for value OR infer from context</action>
-                <action>Resolve template to specific file path</action>
-                <action>Load that specific file</action>
+                <desc>Load a target document or sections, such as the requested epic.</desc>
+                <action>Resolve sharded_single variables (e.g., {{epic_num}}) from context and read the target. Ask and wait for an unresolved consequential target choice.</action>
+                <action>Without sharded_single, select relevant files/sections using INDEX_GUIDED; no template is required.</action>
                 <action>Store in variable: {pattern_name_content}</action>
               </strategy>
 
               <strategy name="INDEX_GUIDED">
-                <desc>Load index.md, analyze structure and description of each doc in the index, then intelligently load relevant docs</desc>
-                <mandate>DO NOT BE LAZY - use best judgment to load documents that might have relevant information, even if only a 5% chance</mandate>
-                <action>Load index.md from sharded directory</action>
-                <action>Parse table of contents, links, section headers</action>
-                <action>Analyze workflow's purpose and objective</action>
-                <action>Identify which linked/referenced documents are likely relevant</action>
-                <example>If workflow is about authentication and index shows "Auth Overview", "Payment Setup", "Deployment" → Load auth
-                  docs, consider deployment docs, skip payment</example>
-                <action>Load all identified relevant documents</action>
+                <desc>Select evidence using an index, headings, or focused search.</desc>
+                <action>Read sharded_index or index.md when present; otherwise discover file names/headings or search for the task's unresolved questions.</action>
+                <action>Load relevant sections plus necessary definitions, constraints, and dependencies. Read a full supporting document when complete context is needed, not merely for a keyword match.</action>
                 <action>Store combined content in variable: {pattern_name_content}</action>
-                <note>When in doubt, LOAD IT - context is valuable, being thorough is better than missing critical info</note>
+                <note>Record source files/sections. Expand for unanswered required questions; do not claim a targeted read covers the corpus.</note>
               </strategy>
               <action>Mark pattern as RESOLVED, skip to next pattern</action>
             </check>
@@ -192,30 +182,24 @@
             <check if="no sharded matches found OR no sharded pattern exists">
               <action>Attempt glob match on 'whole' pattern (e.g., "{output_folder}/*prd*.md")</action>
               <check if="matches found">
-                <action>Load ALL matching files completely (no offset/limit)</action>
+                <action>For FULL_LOAD, read all matches completely. Otherwise apply the selected strategy to relevant files/sections, reusing unchanged content.</action>
                 <action>Store content in variable: {pattern_name_content} (e.g., {prd_content})</action>
+                <action>Record source paths/sections and unresolved evidence gaps.</action>
                 <action>Mark pattern as RESOLVED, skip to next pattern</action>
               </check>
             </check>
           </substep>
 
           <substep n="2c" title="Handle Not Found">
-            <check if="no matches for sharded OR whole">
+            <check if="no sharded or whole matches found">
               <action>Set {pattern_name_content} to empty string</action>
-              <action>Note in session: "No {pattern_name} files found" (not an error, just unavailable, offer use change to provide)</action>
+              <action>Note in session: "No {pattern_name} files found". Continue if that input is optional; ask for missing required evidence and keep dependent work pending.</action>
             </check>
           </substep>
         </step>
 
         <step n="3" title="Report Discovery Results">
-          <action>List all loaded content variables with file counts</action>
-          <example>
-            ✓ Loaded {prd_content} from 5 sharded files: prd/index.md, prd/requirements.md, ...
-            ✓ Loaded {architecture_content} from 1 file: Architecture.md
-            ✓ Loaded {epics_content} from selective load: epics/epic-3.md
-            ○ No ux_design files found
-          </example>
-          <note>This gives workflow transparency into what context is available</note>
+          <action>Briefly report content variables, strategies, source paths/sections, reused inputs, and missing required evidence, without repeating loaded content.</action>
         </step>
       </flow>
 
@@ -224,13 +208,8 @@
 
   <llm final="true">
     <critical-rules>
-      • This is the complete workflow execution engine
-      • You MUST Follow instructions exactly as written
-      • The workflow execution engine is governed by: {project-root}/_arcwright/core/tasks/workflow.xml
-      • You MUST have already loaded and processed: {installed_path}/workflow.yaml
-      • This workflow uses INTENT-DRIVEN PLANNING - adapt organically to product type and context
-      • YOU ARE FACILITATING A CONVERSATION With a user to produce a final document step by step. The whole process is meant to be
-      collaborative helping the user flesh out their ideas. Do not rush or optimize and skip any section.
+      • Execute {installed_path}/workflow.yaml using this runner: {project-root}/_arcwright/core/tasks/workflow.xml
+      • Adapt intent-driven planning to the task; complete applicable work with relevant evidence
     </critical-rules>
   </llm>
-</task> 
+</task>

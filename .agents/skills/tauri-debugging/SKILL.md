@@ -1,14 +1,6 @@
 ---
 name: tauri-debugging
-description: >
-  Debug a Tauri v2 app across both halves — opening the webview devtools inspector in dev
-  and in production builds, logging and breakpoint-debugging the Rust core, inspecting IPC
-  with CrabNebula DevTools, and fixing Linux/WebKitGTK rendering failures.
-  USE FOR: opening or programmatically toggling devtools, enabling the inspector in a
-  release build, setting up VS Code launch configs for Rust + frontend, tracing IPC calls
-  and events, and diagnosing blank/white windows or crashes on resize on Linux.
-  DO NOT USE FOR: writing automated tests or mocking IPC (see tauri-testing), defining
-  commands (see tauri-commands-ipc), or the permission/capability system.
+description: "Diagnose Tauri runtime, build, IPC, or platform failures using focused reproduction and logs."
 ---
 
 # Tauri v2 Debugging

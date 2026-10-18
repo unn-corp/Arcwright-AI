@@ -61,6 +61,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
+      - run: node build/skill-sources.js --check
+      - run: node build/skill-efficiency.js --check
       - run: node build/build.js
 
   # Unit tests + coverage gate (agent-orchestration package, Vitest 80/80/70).

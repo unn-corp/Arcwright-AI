@@ -1,0 +1,6 @@
+interface:
+  display_name: "Full Stop"
+  short_description: "Deliver a verified PR ready for your merge"
+  default_prompt: "Use $full-stop to finish and verify this work, leaving the PR ready for me to merge."
+policy:
+  allow_implicit_invocation: true

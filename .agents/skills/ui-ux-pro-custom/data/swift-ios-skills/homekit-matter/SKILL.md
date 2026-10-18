@@ -1,6 +1,6 @@
 ---
 name: homekit-matter
-description: "Control smart-home accessories and commission Matter devices using HomeKit and MatterSupport. Use when managing homes/rooms/accessories, creating action sets or triggers, reading accessory characteristics, onboarding Matter devices, or building a third-party smart-home ecosystem app."
+description: "Manage HomeKit homes, accessories, characteristics, automations, or Matter commissioning. Use for home authorization, accessory discovery, device control, and MatterSupport setup flows."
 ---
 
 # HomeKit + MatterSupport

@@ -310,6 +310,7 @@ describe('getClaudeMdLocations', () => {
   it('global install covers every per-tool global rules file', () => {
     const locs = getClaudeMdLocations('/proj', true, 'linux', { linux: '/h', windows: null });
     expect(locs).toContain('/h/.claude/CLAUDE.md');
+    expect(locs).toContain('/h/.arcwright/AGENTS.md');
     expect(locs).toContain('/h/.codex/AGENTS.md');
     expect(locs).toContain('/h/.config/opencode/AGENTS.md');
     expect(locs).toContain('/h/.grok/AGENTS.md');
@@ -516,8 +517,8 @@ describe('cleanupManagedBlocks — markerless legacy pairs vs current marker blo
 });
 
 describe('migrateOldClaudeMd — consecutive update cycles do not corrupt CLAUDE.md', () => {
-  // Mirrors what writeIdeConfig does on every install/update: migrate, then
-  // upsert the three managed blocks. Pre-fix, the markerless legacy pairs
+  // Reproduces the old install/update layout: migrate, then upsert three
+  // managed blocks. Pre-fix, the markerless legacy pairs
   // matched headings INSIDE the managed blocks and each cycle ate markers and
   // duplicated content.
   async function updateCycle(f) {
@@ -702,7 +703,7 @@ describe('writeClaudeSettings / stripInstallerSettingsKeys', () => {
     expect(count('guard-write.js')).toBe(1);
     expect(count('typecheck.js')).toBe(1);
     expect(count('domain-router.js')).toBe(3); // SessionStart + UserPromptSubmit + PostToolUse
-    expect(count('run the project-context scan')).toBe(1);
+    expect(count("follow the project's AGENTS.md")).toBe(1);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'dynamodb-context.js'))).toBe(true);
     expect(fs.existsSync(path.join(dir, 'arcwright-hooks', 'amplify-review.js'))).toBe(true);
     expect(s.hooks.UserPromptSubmit.some((group) => (
@@ -793,6 +794,8 @@ describe('rules-entry builders', () => {
     expect(out).toMatch(/awm, core/);
     expect(out).toMatch(/npx @arcwright-ai\/agent-orchestration/);
     expect(out).toMatch(/pending tracker payload/);
+    expect(out).toContain('For writing or reviewing tests, load `test-quality`');
+    expect(out).toContain('Run focused tests first, then required checks');
   });
   it('buildTmuxEntry and buildProactiveEntry return non-empty strings', () => {
     expect(typeof buildTmuxEntry()).toBe('string');

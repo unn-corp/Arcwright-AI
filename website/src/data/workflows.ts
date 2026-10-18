@@ -1,7 +1,7 @@
 // Workflow data for the website. Replaces the retired "track" system (nano /
 // small / compact / medium / extended / large / rv) with four native
 // orchestration runtimes plus an opt-in Herdr visibility layer. See
-// `.agents/skills/triage/SKILL.md` and `.agents/skills/claude-subagent-protocol/SKILL.md`.
+// `.agents/skills/triage/SKILL.md` and `.agents/skills/subagent-protocol/SKILL.md`.
 
 export type WorkflowCategory = 'router' | 'runtime' | 'loop' | 'visibility';
 
@@ -31,9 +31,9 @@ export const workflows: Workflow[] = [
     slug: 'in-process',
     name: 'Plain In-Process Agent',
     category: 'runtime',
-    trigger: 'Agent tool + SendMessage',
+    trigger: 'Native subagent or Arcwright Code delegated task',
     description:
-      'Spawn a specialist sub-agent in-process; reuse it across follow-up work via SendMessage and the Session Agent Registry. Default for small-to-medium focused work.',
+      'Delegate authorized specialist work through the shared subagent protocol. Reuse supported native agents; Arcwright Code review rounds use fresh delegated tasks with prior findings and evidence. Keep each task within its assigned scope.',
     bestFor:
       '1-10 files, single role or 2-3 disjoint roles, clear deliverable, no unknown-size discovery.',
     icon: 'cpu',
@@ -66,7 +66,7 @@ export const workflows: Workflow[] = [
     category: 'visibility',
     trigger: 'herdr agent start (when $HERDR_ENV is set)',
     description:
-      'Watch agents work in split panes via Herdr (herdr.dev). It is purely a viewing surface. The in-process Agent tool + SendMessage flow inside the pane is still governed by claude-subagent-protocol. Add it to whichever runtime above was chosen, not as a primary mode.',
+      'Watch agents work in split panes via Herdr (herdr.dev). Delegation follows the shared subagent protocol and the active host. Add visibility to an authorized workflow; it does not start extra reviews or expand the task.',
     bestFor:
       'When you want to see what agents are doing, or want a long-running task visible while you do other work.',
     icon: 'eye',

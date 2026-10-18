@@ -141,10 +141,15 @@ trivy image myimage
 grype myimage
 
 # Check for secrets in image
-trufflehog docker --image myimage
-# Or manually inspect layers
-docker history --no-trunc myimage
+# Resolve security_review_skill to the installed skill directory
+bash "$security_review_skill/scripts/secret-scan.sh" image myimage
+# List layer identities without exposing build commands/credential values
+docker history --no-trunc --format '{{.ID}}' myimage
 ```
+
+Follow [safe secret discovery](../posture/posture-scan.md#7-environment-variable--secret-management)
+for status interpretation and redacted follow-up. Unfiltered `docker history` can
+expose credentials from build commands; do not put it in tool output or reports.
 
 ### High-Risk Packages
 

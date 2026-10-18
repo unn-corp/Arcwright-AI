@@ -1,6 +1,6 @@
 ---
 name: ios-localization
-description: "Implement, review, or improve localization and internationalization in iOS/macOS apps — String Catalogs (.xcstrings), LocalizedStringKey, LocalizedStringResource, pluralization, FormatStyle for numbers/dates/measurements, right-to-left layout, Dynamic Type, and locale-aware formatting. Use when adding multi-language support, setting up String Catalogs, handling plural forms, formatting dates/numbers/currencies for different locales, testing localizations, or making UI work correctly in RTL languages like Arabic and Hebrew."
+description: "Localize an iOS/macOS app with String Catalogs, plural rules, locale-aware formatting, and right-to-left layouts. Use for extraction, translated resources, pseudolocalization, and locale-sensitive UI defects."
 ---
 
 # iOS Localization & Internationalization
@@ -10,13 +10,13 @@ Localize iOS 26+ apps using String Catalogs, modern string types, FormatStyle, a
 ## Contents
 
 - [String Catalogs (.xcstrings)](#string-catalogs-xcstrings)
-- [String Types -- Decision Guide](#string-types-decision-guide)
+- [String Types -- Decision Guide](#string-types----decision-guide)
 - [String Interpolation in Localized Strings](#string-interpolation-in-localized-strings)
 - [Pluralization](#pluralization)
-- [FormatStyle -- Locale-Aware Formatting](#formatstyle-locale-aware-formatting)
+- [FormatStyle -- Locale-Aware Formatting](#formatstyle----locale-aware-formatting)
 - [Right-to-Left (RTL) Layout](#right-to-left-rtl-layout)
 - [Common Mistakes](#common-mistakes)
-- [Localization Review Checklist](#localization-review-checklist)
+- [Localization Review Checklist](#review-checklist)
 - [References](#references)
 
 ## String Catalogs (.xcstrings)

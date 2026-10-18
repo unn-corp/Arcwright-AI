@@ -1,291 +1,104 @@
 ---
 name: "task-manager"
-description: "Use when decomposing an epic or SPEC.md into discrete task files, planning conflict-free parallel waves, tracking execution status, or syncing tasks to GitHub Issues. Complements (never replaces) tracks and team compositions — task-manager is the durable registry that feeds wave execution via claude-subagent-protocol fan-out."
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+description: "Plan or maintain the active task list, dependencies, and progress using the project's chosen tracking convention."
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, SendMessage, mcp__t3_code__orchestrator_capabilities, mcp__t3_code__delegate_task, mcp__t3_code__task_status, mcp__t3_code__task_cancel
 ---
 
-# task-manager
+# Task and wave manager
 
-CCPM-inspired parallel task and epic manager, native to Arcwright's in-process orchestration model. Handles decomposition, wave planning, execution dispatch, and optional GitHub Issues sync.
+Decompose, track, and execute authorized work using the project's existing task
+registry. Reuse its format and location rather than migrating a live plan. For a
+new Arcwright registry, use `_arcwright/_memory/skill-runs/tasks-<epic>/`; keep
+installed bundles read-only. Planning does not dispatch agents or publish issues.
 
-**Position in the Arcwright stack:**
-```
-SPEC.md / PRD
-    ↓ /tasks decompose
-task-manager (durable registry)
-    ↓ /tasks run
-claude-subagent-protocol fan-out (wave execution)
-    ↓ feeds
-17 team compositions + tracks (unchanged)
-```
+| Operation | Outcome |
+| --- | --- |
+| `decompose [spec-path]` | Task files, dependency graph, and wave plan; planning only |
+| `status [--epic slug]` | Reconciled task counts, blockers, and next actionable work |
+| `run [--wave WN] [--task T-NNN] [--worktree]` | Execute the authorized selected work and verify its evidence |
+| `sync` | Explicitly requested GitHub Issues mirror; local registry stays authoritative |
 
----
+Use the supplied task to infer a clear operation. Ask only when ambiguity changes
+the result, such as multiple plausible epics with no current context. Keep planning
+and reports concise; an extra compression skill is optional.
 
-## 1. When to Load
+## Task contract
 
-- User runs `/tasks decompose`, `/tasks status`, `/tasks run`, or `/tasks sync`
-- A SPEC.md or PRD exists and the next step is breaking it into executable work items
-- Orchestrator needs to plan parallel execution before invoking claude-subagent-protocol §5.2 fan-out
+For the Arcwright format, each `T-{NNN}.md` has a permanent, zero-padded ID:
 
-**Pre-output discipline:** Before writing any task file, INDEX.md, or wave plan — invoke `caveman` (`.agents/skills/caveman/SKILL.md`) at `full` level.
-
----
-
-## 2. Task File Schema
-
-Each task lives at: `_arcwright-output/planning/tasks/T-{NNN}.md`
-
-IDs are permanent and zero-padded (T-001, T-002 …). Never reuse a deleted ID.
-
-```markdown
-# T-{NNN} — {short title}
-
-id: T-{NNN}
-status: pending | in-progress | done | blocked | skipped
-epic: {epic slug or SPEC.md path}
-goal: >
-  One sentence. What this task achieves, not how.
+```yaml
+id: T-001
+status: pending # pending | in-progress | done | blocked | skipped
+epic: selected-epic
+goal: Observable requested outcome
 acceptance_criteria:
-  - AC-1: {observable, testable condition}
-  - AC-2: …
+  - Public result that demonstrates completion
 reads:
-  - {path relative to project root}
+  - path/to/input
 writes:
-  - {path relative to project root}
-depends_on:
-  - T-{NNN}   # must be `done` before this task starts
-conflicts_with:
-  - T-{NNN}   # shares a write path — cannot run in same wave
-agent: arcwright-{role}   # suggested executor
-model: sonnet             # default; propose opus only with user permission
-notes: >
-  {optional free text — constraints, risks, open questions}
+  - path/to/owned-output
+depends_on: []
+conflicts_with: []
+agent: arcwright-dev # suggested role, not a delegation requirement
+notes: Known decisions, constraints, and source/evidence references
 ```
 
-**Rules:**
-- `writes` is the conflict-detection signal. Two tasks that share any `writes` path MUST appear in separate waves.
-- `reads` drives dependency inference: if task B reads a path that task A writes, B depends on A even if `depends_on` is empty — flag this and add the dependency.
-- `status` transitions: `pending → in-progress → done`. Side exits: `blocked`, `skipped`.
-- Keep `goal` to one sentence. ACs are the verification contract; three or fewer is ideal.
-
----
-
-## 3. INDEX.md Schema
-
-Registry at: `_arcwright-output/planning/tasks/INDEX.md`
-
-```markdown
-# Task Index — {epic slug}
-
-epic: {slug}
-spec: {path to SPEC.md or PRD, or "none"}
-updated: {YYYY-MM-DD}
-total: {N}
-done: {N}
-in-progress: {N}
-pending: {N}
-blocked: {N}
-
-## Tasks
-
-| ID | Title | Status | Depends on | Wave | Agent | GH Issue |
-|----|-------|--------|------------|------|-------|----------|
-| T-001 | {title} | pending | — | W1 | arcwright-dev | #42 |
-| T-002 | {title} | pending | T-001 | W2 | arcwright-qa | — |
-
-## Wave Plan
-
-| Wave | Tasks (parallel) | Sequential after |
-|------|-----------------|-----------------|
-| W1 | T-001, T-003 | — |
-| W2 | T-002 | W1 complete |
-| W3 | T-004 | W2 complete |
-
-## Dependency Graph
-
-T-001 → T-002 → T-004
-T-003 ─────────↗
-```
-
-Update INDEX.md atomically whenever any task file's `status` changes.
-
----
-
-## 4. Command Surface
-
-### 4.1 `/tasks decompose`
-
-**Input:** path to SPEC.md / PRD / epic description (or `$ARGUMENTS`)
-
-**Procedure:**
-
-1. Read the spec. Apply `caveman full` discipline before writing.
-2. Extract capabilities (CAP-NNN from spec-kernel) or user stories — each becomes one or more tasks.
-3. For each task: create `T-{NNN}.md` with the full schema. Assign `reads` and `writes` from file ownership analysis.
-4. Infer `depends_on` from `writes`/`reads` cross-references. Flag inferred dependencies.
-5. Flag `conflicts_with` for all tasks sharing any `writes` path.
-6. Assign wave numbers (see §5 Wave Planning).
-7. Write INDEX.md with complete wave plan and dependency graph.
-8. Report summary: N tasks, W waves, max parallelism, any conflicts or ambiguities.
-
-**Do NOT spawn any agents during decompose.** Decompose is a planning step only.
-
-### 4.2 `/tasks status`
-
-**Input:** optional `--epic {slug}` or task ID filter
-
-**Procedure:**
-
-1. Read `INDEX.md`. Read each `T-{NNN}.md` for current status.
-2. Diff INDEX.md summary counts against actual task file statuses.
-3. If divergence found, update INDEX.md to match task files (task files are authoritative).
-4. Output compact status table:
-
-```
-Epic: {slug}
-Progress: {done}/{total} done | {in-progress} in-progress | {blocked} blocked
-
-Wave W1: T-001 [done], T-003 [done]
-Wave W2: T-002 [in-progress] ← current
-Wave W3: T-004 [pending]
-
-Blocked: none
-Next: complete W2 → run /tasks run to dispatch W3
-```
-
-5. If `--epic` not specified and multiple epics exist, list all and prompt.
-
-### 4.3 `/tasks run`
-
-**Input:** optional `--wave {WN}` | `--task {T-NNN}` | `--worktree` (opt-in isolation)
-
-**Procedure:**
-
-1. Read INDEX.md. Identify the next executable wave: the lowest-numbered wave where all tasks are `pending` AND all `depends_on` tasks are `done`.
-2. If `--task {T-NNN}` specified, validate that all its `depends_on` are `done`.
-3. Read each task file in the wave. Extract: `agent`, `model`, `goal`, `acceptance_criteria`, `reads`, `writes`.
-4. Apply claude-subagent-protocol §5.2 (Parallel Fan-Out): emit one Agent tool call per task in a single assistant message.
-5. Compose each agent's prompt using the handoff contract (§7 of claude-subagent-protocol):
-
-```
-## Task {T-NNN}: {title}
-
-Goal: {goal}
-
-Acceptance criteria:
-{acceptance_criteria list}
-
-## Inputs
-{reads paths}
-
-## Output
-Write to: {writes paths}
-Append status update to: _arcwright-output/planning/tasks/T-{NNN}.md (set status: done)
-```
-
-6. After all agents return: verify writes paths exist (trust-but-verify per claude-subagent-protocol §9). Update each T-{NNN}.md status and INDEX.md.
-7. Report wave results. Prompt: run next wave, pause, or abort.
-
-**Worktree isolation (opt-in):** If `--worktree` flag passed, add `"isolation": "worktree", "baseRef": "head"` to each Agent call. Default is no worktree isolation.
-
-**Model note:** All spawns default to `sonnet`. If any task's `model:` field is `opus`, apply the permission-before-opus gate (claude-subagent-protocol §6.3) before spawning.
-
-**Wave planning integrity check:** Before dispatching, verify no two tasks in the wave share a `writes` path. Abort with a clear error if conflict detected — fix INDEX.md first.
-
-### 4.4 `/tasks sync` (OPTIONAL — GitHub Issues)
-
-**Availability check (graceful degradation):**
-```bash
-gh --version >/dev/null 2>&1 || { echo "gh CLI not found — sync skipped"; exit 0; }
-git remote -v >/dev/null 2>&1 || { echo "no git remote — sync skipped"; exit 0; }
-```
-
-If `gh` absent or no remote: print a single line "GitHub sync skipped (gh CLI not available or no remote)" and return. Do not error.
-
-**Procedure:**
-
-1. Read INDEX.md. For each task:
-   - If `GH Issue` column is empty → create a GitHub issue.
-   - If `GH Issue` has a number → sync status: update issue label and comment.
-2. Issue creation:
-```bash
-gh issue create \
-  --title "T-{NNN}: {title}" \
-  --body "{goal}\n\n**Acceptance Criteria**\n{ACs}\n\n**Reads:** {reads}\n**Writes:** {writes}\n**Depends on:** {depends_on}" \
-  --label "arcwright-task,wave-{WN},{status}"
-```
-3. Issue labels: `arcwright-task` (always), `wave-W{N}`, `pending|in-progress|done|blocked`.
-4. Status update (existing issues):
-```bash
-gh issue edit {number} --remove-label "pending,in-progress,done,blocked" --add-label "{new_status}"
-gh issue comment {number} --body "Status → {new_status} | {YYYY-MM-DD}"
-```
-5. Write issue number back to `GH Issue` column in INDEX.md.
-6. Report: N created, N updated, N skipped.
-
-**Sync is always opt-in.** It never blocks decompose or run. Task files and INDEX.md are the primary source of truth; GitHub is a mirror.
-
----
-
-## 5. Wave Planning (conflict-free parallel grouping)
-
-Implements claude-subagent-protocol §8 (Wave Planning) applied to task files.
-
-**Algorithm:**
-
-1. Build write-path ownership map: `{path → [task IDs]}`.
-2. Build read-after-write edges: if task B reads path P and task A writes P → add `B depends_on A`.
-3. Build conflict edges: tasks sharing any write path → `conflicts_with` each other.
-4. Topological sort on `depends_on` edges → yields ordered layers.
-5. Within each layer, split conflicting tasks into separate sub-waves.
-6. Assign wave labels (W1, W2, W3…) in order. Same wave = can run in parallel.
-
-**Max parallelism cap: 5 tasks per wave** (claude-subagent-protocol §8 concurrency rule).
-
-If a layer has more than 5 non-conflicting tasks, split into sub-waves of ≤5.
-
-**Document the wave plan in INDEX.md before dispatching any agent.**
-
----
-
-## 6. Integration with Existing Arcwright Workflows
-
-task-manager is additive. It does not replace or modify:
-
-- **Team compositions (17 teams)** — teams are ad-hoc multi-role setups; task-manager is the persistent registry feeding them.
-- **Tracks (nano/small/compact)** — tracks are single-epic workflows; task-manager sits above them, breaking epics into track-sized chunks.
-- **SM agent sprint planning** — SM owns sprint ceremonies; task-manager owns the task file format and wave dispatch. The SM agent MAY call `/tasks decompose` as part of sprint setup.
-- **External PM tool** — high-level project status lives in the external PM tool / tracker. INDEX.md tracks task-level granularity. Both coexist.
-
-**Recommended flow:**
-```
-1. /spec-kernel → SPEC.md
-2. /tasks decompose SPEC.md → T-001…T-NNN + INDEX.md
-3. /tasks status → review wave plan
-4. /tasks run → execute W1 (fan-out via claude-subagent-protocol)
-5. /tasks status → check W1 complete
-6. /tasks run → execute W2
-7. repeat until all done
-8. /tasks sync → optional GitHub mirror
-```
-
----
-
-## 7. Artifact Paths
-
-| Artifact | Path |
-|----------|------|
-| Task files | `_arcwright-output/planning/tasks/T-{NNN}.md` |
-| Index | `_arcwright-output/planning/tasks/INDEX.md` |
-| Agent registry (wave run) | `_arcwright-output/sessions/{session-id}/agent-registry.md` |
-| Wave execution notes | `_arcwright-output/planning/tasks/waves/{wave-id}.md` (optional) |
-
-All paths are project-relative. Never write to `src/`, `packages/*/src/`, or `.kiro/`.
-
----
-
-## 8. Cross-References
-
-- **[`claude-subagent-protocol`](.agents/skills/claude-subagent-protocol/SKILL.md)** — §5.2 (parallel fan-out), §6.3 (permission-before-opus), §8 (wave planning + concurrency cap), §9 (trust-but-verify). Load before `/tasks run`.
-- **[`spec-kernel`](.agents/skills/spec-kernel/SKILL.md)** — CAP-NNN IDs map 1:1 to tasks during decompose.
-- **[`caveman`](.agents/skills/caveman/SKILL.md)** — `full` level required before all task file writes.
+Retain existing issue mappings and any explicitly selected provider/model fields.
+Omit a model override by default; inherit the host selection. Do not turn a role
+suggestion into a model or tool allowlist. Acceptance criteria cover the actual
+outcome without an arbitrary count quota. Never reuse a deleted task ID.
+
+`INDEX.md` summarizes epic/spec, task counts, each task's status/dependencies/wave,
+role, issue mapping, and the wave graph. Task records are authoritative; reconcile
+the index to them. One coordinator owns registry writes and updates the index at
+meaningful status changes; workers return evidence rather than racing to edit it.
+Keep blocked and skipped work distinct from done.
+
+## Plan and execute
+
+1. Read the supplied spec and existing decisions once. Decompose by observable
+   deliverables and assign explicit input/output ownership. Add producer-to-consumer
+   dependencies when a task needs another task's changed output; a shared read
+   alone does not imply execution order. Check inferred edges for cycles.
+2. Group dependency-ready tasks into waves with disjoint writes. Include directory
+   overlaps, shared generators, lockfiles, installs, and mutable environments in
+   conflict analysis. Use the real available host capacity, including active work;
+   split a large wave instead of imposing a fixed five-task limit. Record the plan
+   before dispatch. `decompose` ends after producing this plan.
+3. For `run`, load the [delegation protocol](../subagent-protocol/SKILL.md).
+   Validate selected task dependencies and ownership. Give each task its goal,
+   acceptance criteria, source identity, owned paths, existing authorization, and a
+   small [capability brief](../subagent-protocol/guide-07-7-handoff-context-contract.md)
+   with actual installed skill paths, finder, and tool constraints. Suggestions are
+   nonexclusive; read only needed skills/references and reuse unchanged context.
+4. Dispatch through supported host tools. Native follow-up applies only to a live
+   compatible agent; every T3 delegated review round is fresh and carries prior
+   findings. Retain task IDs. `--worktree` requests supported checkout isolation;
+   in Arcwright Code use `delegate_task` with `isolation: "worktree"`. It starts
+   from the parent local commit without copying uncommitted edits. Do not invent
+   native `baseRef` fields or commit somebody else's changes for isolation.
+5. Inspect returned changes and public behavior. For test work use `test-quality`,
+   existing fixtures, focused checks, then required gates. Mark done only when
+   acceptance evidence and required review sign-offs cover the current source;
+   file existence alone is insufficient. Record unrun checks and failed gates.
+6. Update task records and index. Continue the already authorized queue without
+   prompting after each wave; stop at the requested endpoint, real blocker, or
+   user budget. A status-only request does not launch the queue. Recover from
+   failures through the protocol and reconcile active work before retrying.
+
+## Optional GitHub sync
+
+Run only when requested or already authorized. Confirm the intended repository,
+actual `gh` availability, and authentication without printing secrets. If the tool
+or remote is missing, report what could not sync and continue applicable local
+work. Unnamed Development MCP use requires its separate explicit authorization.
+
+Create one issue for each unmapped task; retain returned issue numbers/URLs in
+the index before a retry. Reconcile uncertain writes to avoid duplicates. Update
+only changed status/labels/content; avoid repeated identical comments. Preserve
+existing project labels, with `arcwright-task`, wave, and status labels when the
+project uses them. Send multiline bodies with structured arguments or a body
+file, treating task text as data. No push, PR, or production action is implied.
+
+Report completed/blocked tasks, current wave, evidence, remaining queue, and actual
+sync outcomes. Omit AI/model attribution and keep required source/license credits.

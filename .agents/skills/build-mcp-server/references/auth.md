@@ -1,24 +1,14 @@
 # Auth for MCP Servers
 
-Auth is the reason most people end up needing a **remote** server even when a local one would be simpler. OAuth redirects, token storage, and refresh all work cleanly when there's a real hosted endpoint to redirect back to.
+Choose authentication from the selected transport, client capabilities, and upstream service. A remote callback requirement for one client does not establish that every MCP server must be remote.
 
-## Claude-specific authentication
+## Host compatibility
 
-Claude's MCP client supports a specific set of auth types — not every spec-compliant flow works. Full reference: https://claude.com/docs/connectors/building/authentication
-
-| Type | Notes |
-|---|---|
-| `oauth_dcr` | Supported. For high-volume directory entries, prefer CIMD or Anthropic-held creds — DCR registers a new client on every fresh connection. |
-| `oauth_cimd` | Supported, recommended over DCR for directory entries. |
-| `oauth_anthropic_creds` | Partner provides `client_id`/`client_secret` to Anthropic; user-consent-gated. Contact `mcp-review@anthropic.com`. |
-| `custom_connection` | User supplies URL/creds at connect time (Snowflake-style). Contact `mcp-review@anthropic.com`. |
-| `none` | Authless. |
-
-**Not supported:** user-pasted bearer tokens (`static_bearer`); pure machine-to-machine `client_credentials` grant without user consent.
-
-**Callback URL** (single, all surfaces): `https://claude.ai/api/mcp/auth_callback`
-
----
+Use the negotiated transport and current protocol/SDK authorization guidance.
+Verify the intended client's supported flow, redirect requirements, token handling,
+and upstream service requirements. For a selected Claude connector or its directory,
+load [the conditional adapter](claude-connector.md) and current host documentation;
+its auth labels and directory requirements are not universal MCP requirements.
 
 ## The three tiers
 

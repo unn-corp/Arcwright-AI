@@ -1,6 +1,6 @@
 ---
 name: goal-backward-verify
-description: "Use when you need to verify that a completed implementation actually achieves its stated goals — a goal-backward, 4-level integration check (file exists → real code → wired in → real data flows). Distinct from QA: this proves capabilities are genuinely delivered, not stubbed, mocked, or orphaned. Use as a post-implementation gate before sign-off."
+description: "Verify that an implementation achieves its acceptance criteria through real code, integration wiring, and observable data flow."
 allowed-tools: Read, Grep, Glob, Bash
 ---
 

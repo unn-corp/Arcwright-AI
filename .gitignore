@@ -1,11 +1,18 @@
 node_modules/
 packages/*/src/
+# Retired submodule checkouts may remain locally; skills are maintained in .agents/skills/.
+/herdr/
+/collie/
+/vendor/mattpocock-skills/
 !packages/tmux-setup/src/
 dist/
 output/
 *.log
 .DS_Store
 t3.json
+
+# Private fleet inventory, rollout records, downloaded artifacts, and recovery notes
+/.fleet/
 
 # Accidental installs into this workshop repo (run tests with HOME= override or a /tmp dir)
 # NOTE: .claude/commands/ IS source and stays tracked — only installer outputs are ignored
@@ -15,6 +22,9 @@ t3.json
 /.claude/skills/
 /.kiro/
 /_arcwright/_config/
+/_arcwright/_memory/skill-runs/
+/.agents/skills/arcwright/catalog.json
+/.agents/skills/arcwright/commands/
 /_arcwright-output/
 packages/*/package-lock.json
 

@@ -1,18 +1,16 @@
 # PR Review Panel — Quick Rules
 
-> Load full `SKILL.md` when executing this skill as a formal procedure.
+> Load full `SKILL.md` for the procedure and the R4 reference for verification-gap review.
 
-## Core Rules
-- Fan-out exactly 6 lens agents in ONE assistant message (parallel). Never sequential.
-- Each lens: only its own domain. Cross-lens findings go to the closest match.
-- Confidence threshold default = 70. Findings below threshold are silently dropped.
-- Dedup: same file ±5 lines + same root issue → keep higher confidence.
-- Verdict is deterministic: any Critical → BLOCK; ≥2 High → BLOCK; 1 High or ≥3 Medium → REVISE.
-- Aggregation is done by the orchestrator itself (no extra agent spawn).
-- Lens agents are disposable — do NOT reuse via SendMessage.
-- review-orchestrator AR cycle is optional, only on BLOCK verdicts or user request.
-- Sonnet for all lenses; Opus for AR cycle only with user permission.
-- Max 10 findings per lens. Terse detail — ≤3 sentences per finding.
+- Discover native host / Arcwright Code / T3 Code tools and real task IDs; retain the authorized model/provider.
+- Run selected lenses in waves within available live-agent capacity, including the coordinator. Without delegation, disclose sequential review.
+- A complete empty finding list is clean; timeout, absent output, or partial scope is not.
+- Verify every reported claim against code, callers, guards, or actual tests before filtering/grouping.
+- Keep one evidence-and-disposition ledger row per raw finding, including rejected, deferred, filtered, and duplicate entries.
+- Group only a shared root defect; preserve all member IDs and verified outcomes.
+- Default display confidence is 70; a verified Critical/High issue still affects the merge verdict below it.
+- Any Critical or two High issues block; one High or three Medium require revision. An incomplete required lens cannot yield clean approval.
+- Carry settled findings only while all evidence they depended on remains unchanged.
+- Review is read-only without existing fix authorization. Optional architecture review works with available capabilities; no mandatory extra agent or model upgrade.
 
-## Trigger
-Use when: "review this PR", "review this diff", "check before merge", or `/pr-review`.
+Use for a PR, diff, or changed-file review before merge.

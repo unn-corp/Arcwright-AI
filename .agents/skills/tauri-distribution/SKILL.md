@@ -1,14 +1,6 @@
 ---
 name: tauri-distribution
-description: >
-  Ship a Tauri v2 desktop app — building and bundling installers, code signing per OS,
-  cross-compilation realities, reducing binary size, and embedding helper binaries via
-  the sidecar (externalBin) mechanism.
-  USE FOR: producing release installers (.msi/.exe/.dmg/.app/.deb/.rpm/.AppImage),
-  code-signing and notarization, shrinking the binary, or bundling/running an external
-  executable (a sidecar) alongside the app.
-  DO NOT USE FOR: auto-updates (see tauri-plugins, updater section), mobile builds (see
-  tauri-mobile), or dev-time config (see tauri-architecture).
+description: "Package or distribute a Tauri app, including platform bundles, signing, release configuration, and updater artifacts."
 ---
 
 # Tauri v2 Distribution

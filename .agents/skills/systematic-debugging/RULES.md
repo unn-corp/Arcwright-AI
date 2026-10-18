@@ -3,6 +3,8 @@
 > Load full `SKILL.md` when executing this skill as a formal procedure.
 
 ## Core Rules
+- Treat installed skill files as read-only; save generated artifacts under the active project’s `_arcwright/_memory/skill-runs/systematic-debugging-<run-id>/`
+- Run helpers by absolute path from the application or its isolated Arcwright fixture, never from an installed skill directory
 - NEVER propose fixes before completing Phase 1 (root cause investigation)
 - Read error messages and stack traces completely — they often contain the exact solution
 - Reproduce the bug consistently before doing anything else

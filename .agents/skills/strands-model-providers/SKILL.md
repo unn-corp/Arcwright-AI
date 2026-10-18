@@ -1,14 +1,6 @@
 ---
 name: strands-model-providers
-description: >
-  Configuring which model backend a Strands agent uses: Amazon Bedrock (the AWS
-  default, via BedrockModel), plus OpenAI, Anthropic direct, Gemini, Ollama, and
-  custom provider integrations.
-  USE FOR: wiring a model into an Agent, choosing a Bedrock model ID and region,
-  applying a Bedrock guardrail to an agent, or swapping between providers.
-  DO NOT USE FOR: the agent loop and tools themselves (see strands-agent-fundamentals),
-  or deploying the agent once it's built (see strands-bedrock-agentcore-deploy,
-  strands-aws-deployment-targets).
+description: "Configure or switch Strands model providers and provider-specific authentication, capabilities, and runtime options."
 ---
 
 # Strands Model Providers
@@ -25,30 +17,32 @@ An `Agent` needs a model backend to reason with. Strands ships a `BedrockModel` 
 
 ## Amazon Bedrock: the AWS Default
 
-`BedrockModel` is the provider Strands (and AgentCore, see `strands-bedrock-agentcore-deploy`) is built around. It defaults to the `AWS_REGION` environment variable, or `us-west-2` if unset.
+`BedrockModel` is the provider Strands (and AgentCore, see `strands-bedrock-agentcore-deploy`) is built around. In Python v1.61.1 it resolves the region from explicit `region_name`, then the boto3 session’s resolved region (including its profile/config), then `AWS_REGION`, then `us-west-2`. Supplying both `region_name` and a `boto_session` raises `ValueError`; configure the region on one path.
 
 ```python
 from strands import Agent
 from strands.models import BedrockModel
 
 model = BedrockModel(
-    model_id="us.anthropic.claude-sonnet-4-6-20260101-v1:0",
+    model_id="<available-bedrock-model-or-inference-profile-id>",
     region_name="us-west-2",
 )
 
 agent = Agent(model=model)
 ```
 
+Use a model/profile ID available to this account and region, rather than constructing an ID from a marketing model name. Verify IDs against the service or configured catalog.
+
 Key config:
 
 - **`model_id`** - the Bedrock model ID, including cross-region inference profile prefixes (`us.`, `global.`) where applicable
-- **`region_name`** - defaults from `AWS_REGION`, then `us-west-2`
+- **`region_name`** - explicit override, otherwise session/profile region, then `AWS_REGION`, then `us-west-2`; mutually exclusive with `boto_session`
 - **`guardrail_id`** / **`guardrail_version`** / **`guardrail_trace`** - attach an Amazon Bedrock Guardrail to filter agent input/output
 - **`boto_client_config`** - pass a custom `botocore.config.Config`; the SDK merges its own `user_agent_extra` in if you don't override it
 
 ```python
 model = BedrockModel(
-    model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    model_id="<available-bedrock-model-or-inference-profile-id>",
     guardrail_id="<your-guardrail-id>",
     guardrail_version="1",
     guardrail_trace="enabled",

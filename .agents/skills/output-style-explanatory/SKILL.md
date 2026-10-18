@@ -1,13 +1,6 @@
 ---
 name: output-style-explanatory
-description: >
-  Use when the user wants explanations woven into responses, the "why" stated as you go
-  rather than just the "what". Two modes on one dial: explain (inline one-sentence
-  rationale, default) and learn (concept explanations on first encounter + LEARN MORE
-  checkpoints + pattern naming). Triggers on "/explain-mode", "explain as you go", "tell
-  me why", "teach me as you go", "learn mode", or when a user is exploring or learning an
-  unfamiliar system. Opposite dial from caveman (concise). Does NOT replace caveman for
-  artifact writing.
+description: "Use an explicitly requested explanatory coding style, with concise teaching notes tied to relevant implementation decisions."
 allowed-tools: Read, Bash, Glob, Write, Edit
 version: 1.1.0
 author: arcwright

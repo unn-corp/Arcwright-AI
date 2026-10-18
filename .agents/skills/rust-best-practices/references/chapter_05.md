@@ -284,12 +284,14 @@ Rust comes with 2 macros to make assertions:
 * Rust asserts support formatted strings, like the previous examples, those strings will be printed in case of failure, so it is a good practice to add what the actual state was and how it differs from the expected.
 * If you don't care about the exact pattern matching value, using `matches!` combined with `assert!` might be a good alternative.
 ```rust
-assert!(matches!(error, MyError::BadInput(_), "Expected `BadInput`, found {error}"));
+assert!(matches!(error, MyError::BadInput(_)), "Expected `BadInput`, found {error}");
 ```
 * Use `#[should_panic]` wisely. It should only be used when panic is the desired behavior, prefer result instead of panic.
 * There are some other that can enhance your testing experience like:
     * [`rstest`](https://crates.io/crates/rstest): fixture based test framework with procedural macros.
     * [`pretty_assertions`](https://crates.io/crates/pretty_assertions): overrides `assert_eq` and `assert_ne`, and creates colorful diffs between them.
+
+For projects on an older MSRV, `assert!(matches!(...))` remains portable. Use newer assertion APIs only after checking their stabilization against the project's `rust-version`; a newer guide is not permission to raise MSRV. Keep failure messages descriptive and related assertions together when they prove one behavior, rather than splitting tests to satisfy a numerical assertion rule.
 
 ## 5.5 Snapshot Testing with `cargo insta`
 

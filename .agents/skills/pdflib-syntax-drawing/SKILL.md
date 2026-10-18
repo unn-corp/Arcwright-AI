@@ -1,15 +1,8 @@
 ---
 name: pdflib-syntax-drawing
-description: >
-  Use when drawing shapes, lines, or SVG paths on PDF pages with pdf-lib.
-  Prevents the common color value mistake: pdf-lib uses 0-1 range for rgb/cmyk,
-  not 0-255. Covers drawRectangle, drawCircle, drawLine, drawSvgPath,
-  color constructors (rgb, cmyk, grayscale), rotation helpers.
-  Keywords: drawRectangle, drawCircle, drawLine, drawSvgPath, rgb, cmyk,
-  grayscale, BlendMode, draw shapes, add line, draw on PDF, colors,
-  rectangles circles, SVG path.
+description: "Draw pdf-lib shapes, lines, and SVG paths with correct colors, transformations, and rotations."
 license: MIT
-compatibility: "Designed for Claude Code. Requires pdf-lib 1.x with TypeScript/JavaScript."
+compatibility: "Requires pdf-lib 1.x with TypeScript/JavaScript."
 metadata:
   author: OpenAEC-Foundation
   version: "1.0"

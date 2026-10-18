@@ -14,7 +14,7 @@ Three structural moves do most of the work:
 2. **Use semantic structure.** Headings name the question. Lists separate items. Tables compare options. Code blocks contain code.
 3. **Be self-contained.** Each section should make sense without depending on the section above.
 
-Everything below is an application of these three moves.
+Everything below illustrates these writing techniques. Example statistics are placeholders, not evidence to publish. No particular phrasing, length, or structure guarantees a citation or search feature.
 
 ---
 
@@ -70,7 +70,7 @@ Define the term in one sentence, then expand.
 >
 > A service blueprint is a diagram that maps every step of a service experience, both what the customer sees and what happens behind the scenes. It typically uses lanes for the customer journey, frontstage actions, backstage actions, and supporting systems. Originally developed by G. Lynn Shostack in the 1980s, it is now standard in service design, healthcare workflow design, and operations planning.
 
-The first sentence is a complete, extractable definition. AI assistants quoting your page will quote this sentence. Search snippets will lift it.
+The first sentence is a complete, extractable definition. This gives readers a concise definition. A search or AI product may select other text; do not promise snippet or citation selection.
 
 ---
 
@@ -91,7 +91,7 @@ Sequenced procedures go in numbered lists. Not in prose.
 > 3. Deploy to your environment: `npm run deploy`
 > 4. Verify the deployment by checking the status endpoint.
 
-The numbered list extracts cleanly into "how-to" snippets, FAQ-style answers, and HowTo schema. The prose version forces the extractor (human or AI) to do the work of parsing the steps.
+The numbered list makes the procedure easier to follow. It does not justify adding HowTo schema or promise a search feature. The prose version forces the extractor (human or AI) to do the work of parsing the steps.
 
 ---
 
@@ -203,7 +203,7 @@ For any content that depends on currency or expertise, expose the metadata visib
 - **Reviewer** if the content is reviewed by an SME.
 - Article schema with `author`, `datePublished`, `dateModified`, and (where applicable) `reviewedBy`.
 
-AI search uses author and date signals as part of trustworthiness scoring.
+Accurate author/date metadata helps readers assess the source. Do not present it as a documented AI ranking weight.
 
 ---
 
@@ -236,7 +236,7 @@ Sections like "Summary," "Key takeaways," "TL;DR" at the top or bottom of an art
 > - The single highest-impact factor is manager time, not program design.
 > - Track time-to-productivity, not arbitrary onboarding completion.
 
-A summary block doubles as the AI snippet, the social card excerpt, and the email digest line.
+A useful summary can support readers and editorial reuse; add one only when it contributes information.
 
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: "Default in-process Agent tool orchestration for Arcwright — spawn-once + SendMessage reuse via a Session Agent Registry, sonnet-first with permission-before-opus, no legacy signals, herdr pane visibility opt-in only."
+description: Compatibility route for the neutral subagent-protocol skill.
 ---
 
-Load and run the `claude-subagent-protocol` skill (`.agents/skills/claude-subagent-protocol/SKILL.md`) against $ARGUMENTS. Follow the skill exactly.
+Load and run the `claude-subagent-protocol` skill (`.agents/skills/claude-subagent-protocol/SKILL.md`) against $ARGUMENTS. Follow its Arcwright integration instructions.

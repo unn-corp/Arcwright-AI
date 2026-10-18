@@ -1,10 +1,6 @@
 ---
 name: scc-implementation
-description: >-
-  Guides implementation of EU Standard Contractual Clauses under Commission Decision
-  2021/914 across all four modules (C2C, C2P, P2P, P2C). Covers clause-by-clause
-  completion, Annex I-III drafting, and SCC module selection. Keywords: SCCs, standard
-  contractual clauses, module selection, data transfers, Annex completion.
+description: "Select and complete EU Standard Contractual Clauses under Decision 2021/914, including module choice and Annexes I-III."
 license: Apache-2.0
 metadata:
   author: mukul975

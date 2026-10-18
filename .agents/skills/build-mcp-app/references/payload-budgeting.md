@@ -43,7 +43,7 @@ if (JSON.stringify(out).length > MAX) {
 
 ## Heavy assets go via `callServerTool`, not the result
 
-Geometry, image bytes, or any blob the widget needs but Claude doesn't should
+Geometry, image bytes, or any blob the widget needs but the model doesn't should
 be served by a separate tool the widget calls after mount:
 
 ```js
@@ -51,4 +51,4 @@ const topo = await app.callServerTool({ name: "get-topojson", arguments: { level
 ```
 
 Mark that helper tool with `_meta.ui.visibility: ["app"]` so it doesn't appear
-in Claude's tool list.
+in the model's tool list.

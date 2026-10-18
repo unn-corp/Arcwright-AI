@@ -7,6 +7,7 @@ targetWorkflowPath: '{workflow_folder_path}'
 validationReportFile: '{workflow_folder_path}/validation-report-{datetime}.md'
 intentVsPrescriptive: '../data/intent-vs-prescriptive-spectrum.md'
 workflowPlanFile: '{workflow_folder_path}/workflow-plan.md'
+promptQuality: '../data/prompt-quality.md'
 ---
 
 # Validation Step 7: Instruction Style Check
@@ -54,6 +55,8 @@ To validate that workflow instructions use appropriate style - intent-based for 
 ### 1. Load Instruction Style Standards
 
 Load {intentVsPrescriptive} to understand:
+
+Also read {promptQuality}. Prefer outcome/consumer/bar instructions when methods may vary, and preserve exact procedure where dependencies or consequences justify it. A domain label alone does not justify scripting every turn. Check whether the user's existing answers/authorization already settle a menu before requiring another response.
 
 **Intent-Based (Default):**
 - Use for: Most workflows - creative, exploratory, collaborative

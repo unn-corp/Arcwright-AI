@@ -1,22 +1,22 @@
-# Tool Design — Writing Tools Claude Uses Correctly
+# Tool Design — Portable Tool Contracts
 
-Tool schemas and descriptions are prompt engineering. They land directly in Claude's context and determine whether Claude picks the right tool with the right arguments. Most MCP integration bugs trace back to vague descriptions or loose schemas.
+Tool schemas and descriptions define the model-facing interface. They land directly in the model's context and determine whether the model picks the right tool with the right arguments. Most MCP integration bugs trace back to vague descriptions or loose schemas.
 
 ## Anthropic Directory hard requirements
 
 If this server will be submitted to the Anthropic Directory, the following are pass/fail review criteria (full list: https://claude.com/docs/connectors/building/review-criteria):
 
-- Every tool **must** include `readOnlyHint`, `destructiveHint`, and `title` annotations — these determine auto-permissions in Claude.
+- Every tool **must** include `readOnlyHint`, `destructiveHint`, and `title` annotations — these determine auto-permissions in the model.
 - Tool names **must** be ≤64 characters.
 - Read and write operations **must** be in separate tools. A single tool accepting both GET and POST/PUT/PATCH/DELETE is rejected — documenting safe vs unsafe within one tool's description does not satisfy this.
-- Tool descriptions **must not** instruct Claude how to behave (e.g. "always do X", "you must call Y first", overriding system instructions, promoting products) — treated as prompt injection at review.
+- Tool descriptions **must not** instruct the model how to behave (e.g. "always do X", "you must call Y first", overriding system instructions, promoting products) — treated as prompt injection at review.
 - Tools that accept freeform API endpoints/params **must** reference the target API's documentation in their description.
 
 ---
 
 ## Descriptions
 
-**The description is the contract.** It's the only thing Claude reads before deciding whether to call the tool. Write it like a one-line manpage entry plus disambiguating hints.
+**The description is the contract.** It's the only thing the model reads before deciding whether to call the tool. Write it like a one-line manpage entry plus disambiguating hints.
 
 ### Good
 
@@ -36,7 +36,7 @@ use search_comments / search_prs for those.
 search_issues — Searches for issues.
 ```
 
-Claude will call this for anything vaguely search-shaped, including things it can't do.
+the model will call this for anything vaguely search-shaped, including things it can't do.
 
 ### Disambiguate siblings
 
@@ -60,7 +60,7 @@ find_user_by_email — Look up a user by email address. Returns null if not foun
 | `z.string()` for a choice | `z.enum(["open", "closed", "all"])` |
 | optional with no hint | `.optional().describe("Defaults to the caller's workspace")` |
 
-**Describe every parameter.** The `.describe()` text shows up in the schema Claude sees. Omitting it is leaving money on the table.
+**Describe every parameter.** The `.describe()` text shows up in the schema the model sees. Omitting it is leaving money on the table.
 
 ```typescript
 {
@@ -76,18 +76,18 @@ find_user_by_email — Look up a user by email address. Returns null if not foun
 
 ## Return shapes
 
-Claude reads whatever you put in `content[].text`. Make it parseable.
+the model reads whatever you put in `content[].text`. Make it parseable.
 
 **Do:**
 - Return JSON for structured data (`JSON.stringify(result, null, 2)`)
 - Return short confirmations for mutations (`"Created issue #123"`)
-- Include IDs Claude will need for follow-up calls
+- Include IDs the model will need for follow-up calls
 - Truncate huge payloads and say so (`"Showing 10 of 847 results. Refine the query to narrow down."`)
 
 **Don't:**
 - Return raw HTML
 - Return megabytes of unfiltered API response
-- Return bare success with no identifier (`"ok"` after a create — Claude can't reference what it made)
+- Return bare success with no identifier (`"ok"` after a create — the model can't reference what it made)
 
 ---
 
@@ -99,13 +99,13 @@ Claude reads whatever you put in `content[].text`. Make it parseable.
 | 15–30 | Still workable. Audit for near-duplicates that could merge. |
 | 30+ | Switch to search + execute. Optionally promote the top 3–5 to dedicated tools. |
 
-The ceiling isn't a hard protocol limit — it's context-window economics. Every tool schema is tokens Claude spends *every turn*. Thirty tools with rich schemas can eat 3–5k tokens before the conversation even starts.
+The ceiling isn't a hard protocol limit — it's context-window economics. Every tool schema is tokens the model spends *every turn*. Thirty tools with rich schemas can eat 3–5k tokens before the conversation even starts.
 
 ---
 
 ## Errors
 
-Return MCP tool errors, not exceptions that crash the transport. Include enough detail for Claude to recover or retry differently.
+Return MCP tool errors, not exceptions that crash the transport. Include enough detail for the model to recover or retry differently.
 
 ```typescript
 if (!item) {

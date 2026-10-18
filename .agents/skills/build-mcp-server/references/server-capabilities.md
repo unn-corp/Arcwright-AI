@@ -6,7 +6,7 @@ Features beyond the three core primitives. Most are optional, a few are near-fre
 
 ## `instructions` — system prompt injection
 
-One line of config, lands directly in Claude's system prompt. Use it for tool-use hints that don't fit in individual tool descriptions.
+One line of config, lands directly in the model's system prompt. Use it for tool-use hints that don't fit in individual tool descriptions.
 
 ```typescript
 const server = new McpServer(
@@ -19,7 +19,7 @@ const server = new McpServer(
 mcp = FastMCP("my-server", instructions="Always call search_items before get_item — IDs aren't guessable.")
 ```
 
-This is the highest-leverage one-liner in the spec. If Claude keeps misusing your tools, put the fix here.
+This is the highest-leverage one-liner in the spec. If the model keeps misusing your tools, put the fix here.
 
 ---
 
@@ -43,7 +43,7 @@ const result = await extra.sendRequest({
 response = await ctx.sample("Summarize this document", context=doc)
 ```
 
-**Requires client support** — check `clientCapabilities.sampling` first. Model preference hints are substring-matched (`"claude-3-5"` matches any Claude 3.5 variant).
+**Requires client support** — check `clientCapabilities.sampling` first. Model preference hints are substring-matched (a configured model-family hint selects a supported matching model).
 
 ---
 
@@ -158,7 +158,7 @@ Low priority unless your prompts have many valid values.
 | Logging | `logging: {}` | — | stderr |
 | Progress | — | sends `progressToken` | silently skip |
 | Sampling | — | `sampling: {}` | bring your own LLM |
-| Elicitation | — | `elicitation: {}` | return text, ask Claude to relay |
+| Elicitation | — | `elicitation: {}` | return text, ask the model to relay |
 | Roots | — | `roots: {}` | config env var |
 
 Check client caps via `server.getClientCapabilities()` (TS) or `ctx.session.client_params.capabilities` (fastmcp) before using the bottom three.

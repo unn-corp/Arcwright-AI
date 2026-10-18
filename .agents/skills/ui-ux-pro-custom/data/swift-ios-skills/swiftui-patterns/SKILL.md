@@ -1,6 +1,6 @@
 ---
 name: swiftui-patterns
-description: "Build SwiftUI views with modern MV architecture, state management, and view composition patterns. Covers @Observable ownership rules, @State/@Bindable/@Environment wiring, view decomposition, custom ViewModifiers, environment values, async data loading with .task, iOS 26+ new APIs, Writing Tools, and performance guidelines. Use when structuring an MV-pattern app, managing state with @Observable, composing view hierarchies, or applying SwiftUI best practices. For navigation patterns see swiftui-navigation skill."
+description: "Design SwiftUI view composition and state ownership with Observation, bindings, environment, tasks, and reusable modifiers. Use for view architecture; measured runtime bottlenecks use swiftui-performance."
 ---
 
 # SwiftUI Patterns

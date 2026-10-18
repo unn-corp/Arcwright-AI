@@ -1,6 +1,6 @@
 # ez-ffmpeg: Streaming
 
-**Detection Keywords**: rtmp server, stream output, hls output, live streaming, rtmp push, stream publish
+**Detection Keywords**: rtmp server, stream output, hls output, live streaming, rtmp push, stream publish, whip, webrtc, srt, capability probe
 **Aliases**: streaming output, live stream, rtmp embed
 
 ## Table of Contents
@@ -9,6 +9,7 @@
 - [Embedded High-Concurrency RTMP Server](#embedded-high-concurrency-rtmp-server)
   - [StreamBuilder API](#streambuilder-api)
   - [Traditional API (Full Control)](#traditional-api-full-control)
+  - [Server Lifecycle & Clone Semantics](#server-lifecycle--clone-semantics-015)
   - [External RTMP Server](#external-rtmp-server-no-rtmp-feature-needed)
 - [RTMP Streaming](#rtmp-streaming)
 - [Multi-Source Streaming](#multi-source-streaming)
@@ -18,6 +19,8 @@
 - [Low-Latency Streaming Tips](#low-latency-streaming-tips)
 - [Hardware-Accelerated Streaming](#hardware-accelerated-streaming)
 - [Timestamp Preservation for Re-streaming](#timestamp-preservation-for-re-streaming)
+- [Capability Probes](#capability-probes)
+- [WHIP Output (WebRTC)](#whip-output-webrtc-ffmpeg-8)
 - [SRT Streaming](#srt-streaming)
 - [Async Streaming (with tokio)](#async-streaming-with-tokio)
 - [Troubleshooting](#troubleshooting)
@@ -85,6 +88,59 @@ FfmpegContext::builder()
     .output(output)
     .build()?.start()?.wait()?;
 ```
+
+### Server Lifecycle & Clone Semantics (0.15+)
+
+`EmbedRtmpServer` is `Clone` — clones share **one** underlying lifecycle, not
+independent servers. As of 0.15, that lifecycle can be started only once:
+
+```rust
+let first = EmbedRtmpServer::new("127.0.0.1:1935");
+let second = first.clone();
+
+let running = first.start()?;         // the family's first start wins
+let err = second.start().unwrap_err(); // any later attempt is refused...
+// ...even a sibling clone taken before start(), and even AFTER running.stop()
+// matches Error::RtmpServerAlreadyStarted
+```
+
+The advisory check runs **before** the socket bind, so a fixed-port retry via
+a stale clone gets the typed `RtmpServerAlreadyStarted` instead of a raw
+`AddrInUse`. A `start()` that fails *before* claiming the lifecycle (e.g. the
+bind itself failing) leaves it untouched, so a clone may still retry — once
+claimed, a failing `start()` ends the lifecycle for good.
+
+`create_rtmp_input()` / `create_stream_sender()` can fail with
+`Error::RtmpRegistrationQueueFull` if 1024+ stream registrations are already
+waiting for the reactor to drain them — a fixed internal bound, not
+configurable. This replaces a blocking-hang risk from earlier versions with a
+fast, typed error under extreme registration backlogs; ordinary usage (a
+handful of concurrent publishers) never approaches it.
+
+**`stop()` is fully synchronous (0.16)** — it signals the listening and
+connection threads, then **joins them**, returning only once teardown settled:
+the listener socket is released, every connection closed, every publisher torn
+down with its stream key freed. You can rebind the address or reuse a stream
+key immediately after it returns, no polling. Blocking is bounded but not
+hard-real-time (the reactor finishes its loop turn and may spend a few seconds
+draining tails to peers that stopped reading). Two rules that come with the
+joins:
+
+- **Never call `stop()` from inside a logger implementation, or while holding
+  a lock your logger sink also takes** (e.g. an `Arc<Mutex<_>>` shared between
+  app code and a custom logger). The winding-down server threads log through
+  the global logger during shutdown — blocking in `stop()` while holding a
+  resource that logger needs is a lock inversion. The one reentrant edge the
+  crate can detect (user-logger code on a server thread calling `stop()`)
+  degrades to signal-only instead of deadlocking.
+- An FFmpeg job still pushing into this server via `create_rtmp_input` loses
+  its feed and fails its next write; the server classifies that failure as a
+  deliberate stop rather than an opaque send error. Stop such jobs first if
+  their clean completion matters.
+
+Also in 0.16: idle watchers are pinged before the 60s inactivity timeout would
+reap them (an idle-but-connected viewer no longer gets dropped), and ping
+delivery itself no longer counts as peer liveness.
 
 ### External RTMP Server (No `rtmp` feature needed)
 
@@ -325,7 +381,103 @@ FfmpegContext::builder()
     .build()?.start()?.wait()?;
 ```
 
+## Capability Probes
+
+Whether a streaming output works depends on the FFmpeg build your process **links
+against**, not on ez-ffmpeg itself. The `capabilities` module (new in 0.14) probes
+the linked build up front, so unsupported setups fail with a clear message instead
+of a mid-pipeline failure:
+
+```rust
+use ez_ffmpeg::capabilities;
+
+// Muxers (output formats) and I/O protocols are SEPARATE namespaces.
+let has_whip = capabilities::is_muxer_available("whip");
+let has_srt  = capabilities::is_output_protocol_available("srt");
+```
+
+**Full probe set (0.18)** — all take an exact registry name and return `bool`:
+
+| Probe | Answers |
+|-------|---------|
+| `is_muxer_available(name)` | output format (`"whip"`, `"mpegts"`, `"hls"`) |
+| `is_input_protocol_available(name)` | **input**-side protocol (`"https"`, `"rtmp"`) |
+| `is_output_protocol_available(name)` | **output**-side protocol (`"srt"`, `"rtmp"`) |
+| `is_encoder_available(name)` | encoder wrapper (`"libx264"`, `"h264_nvenc"`) |
+| `is_decoder_available(name)` | decoder wrapper |
+| `is_filter_available(name)` | lavfi filter (`"zscale"`, `"libplacebo"`) — same answer as `hwaccel::is_filter_available` |
+| `is_filter_option_available(filter, option)` | one option on one filter — for options that exist only in newer FFmpeg |
+
+Input and output protocol namespaces are distinct — probe the side you will
+actually use. A `true` result only means the component is compiled into the
+linked FFmpeg: encoders, TLS backends, endpoint compatibility, and network
+reachability are all separate concerns. Probe **before** configuring a pipeline
+that depends on an optional component, so it fails fast with your own message
+instead of a mid-job FFmpeg errno.
+
+## WHIP Output (WebRTC, FFmpeg 8+)
+
+**Experimental.** FFmpeg 8 ships an upstream `whip` muxer that publishes WebRTC
+streams to WHIP endpoints (Twitch/IVS, Cloudflare Stream, LiveKit, MediaMTX). The
+muxer is marked experimental upstream (known Opus-timestamp FIXME) and cannot be
+exercised by ez-ffmpeg's own CI — treat this as status + instructions, not a
+verified recipe.
+
+Requirements, all imposed by the upstream muxer:
+- **FFmpeg ≥ 8.0 built with a DTLS-capable TLS backend** (8.0: OpenSSL or Schannel;
+  8.1: also GnuTLS / mbedTLS). Without one, `is_muxer_available("whip")` is `false`.
+- **Video: H.264 with B-frames disabled** (`bf=0`). Baseline / Constrained Baseline
+  is the conservative WebRTC-interop profile. ez-ffmpeg raises the encoder's
+  global-header flag automatically when a muxer requires it.
+- **Audio: Opus at 48 kHz stereo** — the muxer enforces this combination.
+
+Discover the encoders your build offers with `ez_ffmpeg::codec::get_encoders()`
+(H.264 is commonly `libx264` (GPL), `libopenh264`, or `h264_nvenc`; Opus is `libopus`).
+
+```rust
+use ez_ffmpeg::{capabilities, FfmpegContext, FfmpegScheduler, Input, Output};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if !capabilities::is_muxer_available("whip") {
+        return Err("this FFmpeg build has no 'whip' muxer \
+                    (needs FFmpeg >= 8.0 with a DTLS backend)".into());
+    }
+
+    let input = Input::from("input.mp4").set_readrate(1.0); // pace file to real time
+
+    let output = Output::from("https://example.com/whip/endpoint")
+        .set_format("whip")                          // required: never guessed from URL
+        .set_format_opt("authorization", "<token>")  // raw token; FFmpeg adds "Bearer "
+        .set_video_codec("libx264")                  // pick from codec::get_encoders()
+        .set_video_codec_opt("profile", "baseline")
+        .set_video_codec_opt("bf", "0")              // WHIP: no B-frames
+        .set_audio_codec("libopus")
+        .set_audio_sample_rate(48000)                // muxer requires 48 kHz stereo Opus
+        .set_audio_channels(2);
+
+    FfmpegScheduler::new(FfmpegContext::builder().input(input).output(output).build()?)
+        .start()?
+        .wait()?;
+    Ok(())
+}
+```
+
 ## SRT Streaming
+
+SRT output needs **two** independent components in the linked build: the `srt`
+**protocol** (`--enable-libsrt`) for transport, plus a container muxer (MPEG-TS
+below) for the payload. Probe both:
+
+```rust
+use ez_ffmpeg::capabilities;
+
+let srt_ready = capabilities::is_output_protocol_available("srt")
+    && capabilities::is_muxer_available("mpegts");
+```
+
+> **Never probe SRT with `is_muxer_available("srt")`.** That name matches the SubRip
+> **subtitle** muxer (present in nearly every FFmpeg build), so it returns `true`
+> whether or not the SRT transport exists — it tells you nothing about SRT streaming.
 
 ```rust
 use ez_ffmpeg::{FfmpegContext, Input, Output};
@@ -357,7 +509,7 @@ For async operations, enable the `async` feature and use `.await`:
 > **Dependencies**:
 > ```toml
 > [dependencies]
-> ez-ffmpeg = { version = "0.13.1", features = ["async"] }
+> ez-ffmpeg = { version = "0.18.0", features = ["async"] }
 > tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 > ```
 
@@ -429,6 +581,18 @@ Error: Address already in use
 - Verify OBS/encoder is pushing to correct URL: `rtmp://localhost:1935/app_name/stream_key`
 - Check app name and stream key match `create_rtmp_input()` parameters.
 - Ensure encoder starts before calling `create_rtmp_input()`.
+
+**`Error::RtmpServerAlreadyStarted`** (0.15+):
+- You called `.start()` on more than one clone of the same `EmbedRtmpServer`,
+  or called it again after `.stop()`. Clones share one lifecycle — keep a
+  single `start()` call per server family. See
+  [Server Lifecycle & Clone Semantics](#server-lifecycle--clone-semantics-015).
+
+**`Error::RtmpRegistrationQueueFull`** (0.15+):
+- 1024+ stream registrations are already waiting on the reactor. Check for a
+  registration leak (calling `create_rtmp_input`/`create_stream_sender`
+  without the corresponding FFmpeg job ever starting/finishing) rather than
+  raising the bound — it isn't configurable.
 
 ### Hardware Acceleration Issues
 

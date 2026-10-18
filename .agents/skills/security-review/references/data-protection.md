@@ -333,8 +333,8 @@ response.headers['Expires'] = '0'
 
 ```bash
 # Sensitive data in logs
-grep -rn "logger.*password\|log.*password\|print.*password" --include="*.py" --include="*.js"
-grep -rn "logger.*token\|log.*api_key\|print.*secret" --include="*.py" --include="*.js"
+grep -rl "logger.*password\|log.*password\|print.*password" --include="*.py" --include="*.js"
+grep -rl "logger.*token\|log.*api_key\|print.*secret" --include="*.py" --include="*.js"
 
 # Debug mode
 grep -rn "debug.*[Tt]rue\|DEBUG.*=.*1" --include="*.py" --include="*.js" --include="*.env"

@@ -1,14 +1,6 @@
 ---
 name: tauri-architecture
-description: >
-  Understand how a Tauri v2 app is structured — the Rust Core process vs the WebView
-  frontend, the multi-process model, project layout, the lib.rs / main.rs entry split,
-  and tauri.conf.json. Includes Tauri v1 → v2 migration guidance.
-  USE FOR: scaffolding or reasoning about a Tauri v2 project, deciding what code belongs
-  in the Rust core vs the frontend, understanding the entry-point split that enables
-  mobile, configuring tauri.conf.json, or migrating a Tauri v1 app to v2.
-  DO NOT USE FOR: writing individual commands (see tauri-commands-ipc), the permission
-  system (see tauri-capabilities), or non-Tauri desktop frameworks (Electron, Wails).
+description: "Design or navigate Tauri frontend/Rust boundaries, process structure, and application architecture."
 ---
 
 # Tauri v2 Architecture

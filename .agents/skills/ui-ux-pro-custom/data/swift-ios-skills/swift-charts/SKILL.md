@@ -1,6 +1,6 @@
 ---
 name: swift-charts
-description: "Implement, review, or improve data visualizations using Swift Charts. Use when building bar, line, area, point, pie, or donut charts; when adding chart selection, scrolling, or annotations; when plotting functions with vectorized BarPlot, LinePlot, AreaPlot, or PointPlot; when customizing axes, scales, legends, or foregroundStyle grouping; or when creating specialized visualizations like heat maps, Gantt charts, stacked/grouped bars, sparklines, or threshold lines."
+description: "Build or debug Swift Charts marks, scales, axes, selection, scrolling, annotations, and accessible data presentation. Use for chart behavior and data encoding rather than general SwiftUI layout."
 ---
 
 # Swift Charts

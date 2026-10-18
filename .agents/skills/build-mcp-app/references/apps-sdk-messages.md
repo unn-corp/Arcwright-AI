@@ -29,11 +29,11 @@ app.sendMessage({
 });
 ```
 
-The message appears in chat and Claude responds to it. Use `role: "user"` — the widget speaks on the user's behalf.
+The message appears in chat and the model responds to it. Use `role: "user"` — the widget speaks on the user's behalf.
 
 ### `app.updateModelContext({ content })`
 
-Update Claude's context **silently** — no visible message. Use for state that informs but doesn't warrant a chat bubble.
+Update the model's context **silently** — no visible message. Use for state that informs but doesn't warrant a chat bubble.
 
 ```js
 app.updateModelContext({
@@ -43,7 +43,7 @@ app.updateModelContext({
 
 ### `app.callServerTool({ name, arguments })`
 
-Call a tool on your MCP server directly, bypassing Claude. Returns the tool result.
+Call a tool on your MCP server directly, bypassing the model. Returns the tool result.
 
 ```js
 const result = await app.callServerTool({
@@ -52,7 +52,7 @@ const result = await app.callServerTool({
 });
 ```
 
-Use for data fetches that don't need Claude's reasoning — pagination, detail lookups, refreshes.
+Use for data fetches that don't need the model's reasoning — pagination, detail lookups, refreshes.
 
 ### `app.openLink({ url })`
 
@@ -114,11 +114,11 @@ app.ontoolresult = ({ content }) => {
 
 ### `app.ontoolinput = ({ arguments }) => {...}`
 
-Fires with the arguments Claude passed to the tool. Useful if the widget needs to know what was asked for (e.g., highlight the search term).
+Fires with the arguments the model passed to the tool. Useful if the widget needs to know what was asked for (e.g., highlight the search term).
 
 ### `app.ontoolinputpartial = ({ arguments }) => {...}` / `app.ontoolcancelled = () => {...}`
 
-`ontoolinputpartial` fires while Claude is still streaming arguments — use it to show a skeleton ("Preparing: <title>…") before the result lands. `ontoolcancelled` fires if the call is aborted; clear the skeleton.
+`ontoolinputpartial` fires while the model is still streaming arguments — use it to show a skeleton ("Preparing: <title>…") before the result lands. `ontoolcancelled` fires if the call is aborted; clear the skeleton.
 
 ### `app.getHostContext()` / `app.onhostcontextchanged = (ctx) => {...}`
 
@@ -173,7 +173,7 @@ No `{ notify }` destructure — `extra` is `RequestHandlerExtra`; progress goes 
 
 ## Lifecycle
 
-1. Claude calls a tool with `_meta.ui.resourceUri` declared
+1. the model calls a tool with `_meta.ui.resourceUri` declared
 2. Host fetches the resource (your HTML) and mounts a **fresh iframe** for this call
 3. Widget script runs, sets handlers, calls `await app.connect()`
 4. Host pipes the tool's return value → `ontoolresult` fires

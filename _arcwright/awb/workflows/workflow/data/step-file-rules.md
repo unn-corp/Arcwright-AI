@@ -6,12 +6,9 @@
 
 ## File Size Limits
 
-| Metric      | Value    |
-| ----------- | -------- |
-| Recommended | < 200 lines |
-| Absolute Maximum | 250 lines |
+Read [workflow-limits.json](workflow-limits.json), the single authoritative numeric source. `stepLines.recommendedBelow` is the warning boundary and `stepLines.maximum` is the inclusive hard maximum for every step type and mode. Do not define separate thresholds in validators.
 
-**If exceeded:** Split into multiple steps or extract to `/data/` files.
+Use the read-only [size checker](../scripts/check-step-size.mjs) or apply those same values manually. Above the maximum fails; at/above the recommendation through the maximum warns. See [prompt quality](prompt-quality.md) for model-aware advisory token counts and branch-relevant disclosure. Split genuinely separate work or extract conditional references when needed; preserve required context and wiring.
 
 ---
 
@@ -158,7 +155,7 @@ See: `frontmatter-standards.md`
 
 For every step file:
 
-- [ ] File < 200 lines (250 max)
+- [ ] Step fits the canonical line thresholds in `workflow-limits.json`
 - [ ] `name` and `description` in frontmatter
 - [ ] All frontmatter variables are used
 - [ ] File references use `{variable}` format
@@ -204,7 +201,7 @@ Display: "**Select:** [A] [action A] [P] [action P] [C] Continue"
 | Missing handler section | Add handler after menu display |
 | No "halt and wait" instruction | Add to EXECUTION RULES |
 | Hardcoded `stepsCompleted: [1,2,3]` | Append: "update stepsCompleted to add this step" |
-| File > 250 lines | Split into multiple steps or extract to /data/ |
+| File exceeds `stepLines.maximum` | Split independent work or extract branch-only reference material |
 | Absolute path for same-folder ref | Use relative path or `{workflow_path}` |
 
 ---
@@ -212,7 +209,7 @@ Display: "**Select:** [A] [action A] [P] [action P] [C] Continue"
 ## When to Extract to Data Files
 
 Extract step content to `/data/` when:
-- Step file exceeds 200 lines
+- Step approaches the canonical recommendation and contains material only some branches need
 - Content is reference material
 - Content is reused across steps
 - Content is domain-specific (examples, patterns)

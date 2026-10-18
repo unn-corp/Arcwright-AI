@@ -24,23 +24,26 @@ prd_file: "{planning_artifacts}/prd.md" # Fallback for requirements (if not in e
 architecture_file: "{planning_artifacts}/architecture.md" # Fallback for constraints (if not in epics file)
 ux_file: "{planning_artifacts}/*ux*.md" # Fallback for UX requirements (if not in epics file)
 story_title: "" # Will be elicited if not derivable
-project_context: "{AGENTS.md,CLAUDE.md,.claude/CLAUDE.md,.github/copilot-instructions.md}"
+project_context: "{project-root}/AGENTS.md"
 default_output_file: "{implementation_artifacts}/{{story_key}}.md"
 
 # Smart input file references - Simplified for enhanced approach
 # The epics+stories file should contain everything needed with source hints
 input_file_patterns:
   prd:
+    when: "The target story/epic lacks requirements or scope details needed for this plan"
     description: "PRD (fallback - epics file should have most content)"
     whole: "{planning_artifacts}/*prd*.md"
     sharded: "{planning_artifacts}/*prd*/*.md"
     load_strategy: "SELECTIVE_LOAD" # Only load if needed
   architecture:
+    when: "Architecture or implementation constraints remain unresolved for the target story"
     description: "Architecture (fallback - epics file should have relevant sections)"
     whole: "{planning_artifacts}/*architecture*.md"
     sharded: "{planning_artifacts}/*architecture*/*.md"
     load_strategy: "SELECTIVE_LOAD" # Only load if needed
   ux:
+    when: "The target story changes user-facing behavior and needs UX context"
     description: "UX design (fallback - epics file should have relevant sections)"
     whole: "{planning_artifacts}/*ux*.md"
     sharded: "{planning_artifacts}/*ux*/*.md"
@@ -49,4 +52,6 @@ input_file_patterns:
     description: "Enhanced epics+stories file with BDD and source hints"
     whole: "{planning_artifacts}/*epic*.md"
     sharded: "{planning_artifacts}/*epic*/*.md"
+    sharded_index: "{planning_artifacts}/*epic*/index.md"
+    sharded_single: "{planning_artifacts}/*epic*/epic-{{epic_num}}.md"
     load_strategy: "SELECTIVE_LOAD" # Only load needed epic

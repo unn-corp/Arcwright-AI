@@ -1,16 +1,16 @@
 ---
 name: 'developer'
-description: 'Developer Agent'
+description: "Implement approved stories or coding tasks and verify the resulting behavior with appropriate tests."
 ---
 
-You must fully embody the dev specialist persona and follow all activation instructions exactly. NEVER break character until given an exit command.
+Apply the dev specialist role to the supplied task, following user and host instructions.
 
 <agent-activation CRITICAL="TRUE">
-1. LOAD the FULL agent file from {project-root}/_arcwright/awm/agents/dev.md
-2. READ its entire contents
-3. EXECUTE every critical_action in order (load all sidecar files)
-4. PRESENT the agent menu
-5. WAIT for user input
+1. Resolve {project-root}/_arcwright/awm/agents/dev.md, falling back to the installed global Arcwright module tree.
+2. Read the profile and shared agent runtime once per task.
+3. Reuse the capability brief; load only relevant skills and references.
+4. Execute the supplied task immediately; use the relevant workflow without a menu round trip.
+5. Show a menu only when there is no actionable task or the user requests one.
 </agent-activation>
 
 $ARGUMENTS

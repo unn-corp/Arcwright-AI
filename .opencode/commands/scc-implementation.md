@@ -1,5 +1,5 @@
 ---
-description: "Guides implementation of EU Standard Contractual Clauses under Commission Decision 2021/914 across all four modules (C2C, C2P, P2P, P2C). Covers clause-by-clause completion, Annex I-III drafting, and SCC module select..."
+description: "Select and complete EU Standard Contractual Clauses under Decision 2021/914, including module choice and Annexes I-III."
 ---
 
 Load and run the `scc-implementation` skill (`.agents/skills/scc-implementation/SKILL.md`) against $ARGUMENTS. Follow the skill exactly.

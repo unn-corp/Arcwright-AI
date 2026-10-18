@@ -1,6 +1,6 @@
 ---
 name: rust-math-algorithms-performance
-description: "Use when implementing, optimizing, or reviewing Rust graph, search, stochastic, simulation, and numerical algorithms: BFS, DFS, Dijkstra, A*, Markov chains, Monte Carlo, Poisson processes/distributions, ndarray, Rayon, petgraph, statrs, rand/rand_distr, SIMD, sparse layouts, zero-copy data flow, and cache-aware math kernels."
+description: "Optimize a measured Rust numerical or algorithmic bottleneck while preserving accuracy and domain constraints."
 ---
 
 # Rust Math Algorithms Performance

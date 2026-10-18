@@ -98,13 +98,19 @@ npm test 2>&1 | grep 'DEBUG git init'
 
 If something appears during tests but you don't know which test:
 
-Use the bisection script `find-polluter.sh` in this directory:
+Resolve the installed helper by its absolute path. Run from the application or a
+clean isolated fixture under the project’s Arcwright run directory, never from
+this installed skill directory. Keep generated debug output in that run:
 
 ```bash
-./find-polluter.sh '.git' 'src/**/*.test.ts'
+bash "/installed/systematic-debugging/find-polluter.sh" 'unexpected-output' 'src/**/*.test.ts'
 ```
 
 Runs tests one-by-one, stops at first polluter. See script for usage.
+
+Exit codes: `0` means the matching tests created no marker, `1` identifies a
+polluter, and `2` means the pattern matched no files or the fixture was already
+polluted. A no-match run is not evidence that the tests are clean.
 
 ## Real Example: Empty projectDir
 

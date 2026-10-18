@@ -1,0 +1,18 @@
+{
+  "project_name": "Arcwright Fixture",
+  "category": "SaaS",
+  "pattern": {"name": "Dashboard", "sections": "Navigation > Content"},
+  "style": {"name": "Minimalism"},
+  "colors": {
+    "primary": "#2563EB",
+    "secondary": "#3B82F6",
+    "cta": "#F97316",
+    "accent": "#F97316",
+    "on_accent": "#000000",
+    "background": "#FFFFFF",
+    "foreground": "#111827",
+    "text": "#111827",
+    "border": "#E5E7EB"
+  },
+  "typography": {"heading": "Inter", "body": "Inter"}
+}

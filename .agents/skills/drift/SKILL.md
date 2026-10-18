@@ -1,6 +1,6 @@
 ---
 name: drift
-description: Catch codebase drift with VibeDrift, keep AI-written code consistent with a repo's own conventions and avoid re-implementing functions that already exist. Use when scanning a project for architectural inconsistency, hidden duplicates, convention drift, dead code, or security gaps; when gating CI on a drift score; or in the write loop to check a proposed function against the repo's dominant patterns BEFORE it lands. Drives the local @vibedrift/cli (no MCP server required). Triggers on "check drift", "is this consistent with the codebase", "find duplicate functions", "vibedrift", "drift score", or "/drift".
+description: "Check an implementation, plan, or API for divergence from its established requirements, contracts, or recorded decisions."
 allowed-tools: Bash(*) Read Write Edit Glob Grep
 ---
 

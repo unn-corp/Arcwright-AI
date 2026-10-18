@@ -1,6 +1,6 @@
 ---
 name: swift-testing
-description: "Write and migrate tests using the Swift Testing framework with @Test, @Suite, #expect, #require, confirmation, parameterized tests, test tags, traits, withKnownIssue, XCTest UI testing, XCUITest, test plan, mocking, test doubles, testable architecture, snapshot testing, async test patterns, test organization, and test-driven development in Swift. Use when writing or migrating tests with Swift Testing framework, implementing parameterized tests, working with test traits, converting XCTest to Swift Testing, or setting up test organization and mocking patterns."
+description: "Write or migrate Swift Testing and XCTest tests, including async confirmations, parameterized cases, traits, test plans, and XCUITest. Use for framework mechanics; general test effort and selection use test-quality."
 ---
 
 # Swift Testing

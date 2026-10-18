@@ -80,7 +80,8 @@ grep -rniE "normaliz|NFC|NFKC|unicodedata|\\\\u20[0-6][0-9A-Fa-f]|zero.?width|ho
 # ReDoS candidate patterns
 grep -rniE "new RegExp\(|re\.compile|\(\.\*\)\+|\(\.\+\)\+|\(\[\^?.*\]\+\)\+|\(\w\+\)\+" --include=*.{js,ts,py} .
 # Secrets/PII in URL query
-grep -rniE "[?&](password|passwd|pwd|token|otp|ssn|card|cvv|secret|api_?key)=" --include=*.{js,ts,py,go,html} .
+# Filenames only: query strings can contain credential values
+rg -l -i '[?&](password|passwd|pwd|token|otp|ssn|card|cvv|secret|api_?key)=' --glob '*.{js,ts,py,go,html}' .
 command -v semgrep >/dev/null && semgrep --config p/xss --config p/react 2>/dev/null | tail -25
 ```
 

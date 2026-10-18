@@ -1,15 +1,6 @@
 ---
 name: tauri-commands-ipc
-description: >
-  Call Rust from the frontend in Tauri v2 — defining #[tauri::command] functions,
-  registering them with generate_handler!, invoking them from JavaScript, async commands,
-  passing arguments, and returning Result for error handling.
-  USE FOR: exposing Rust functionality to the web frontend, debugging "command not found"
-  or argument-mismatch errors, async/fallible commands, accessing AppHandle/Window/State
-  inside a command.
-  DO NOT USE FOR: Rust → frontend communication (see tauri-events), the permission gate
-  that must allow each command (see tauri-capabilities), or managing shared state
-  (see tauri-state-management).
+description: "Implement or debug typed Tauri frontend-to-Rust commands, arguments, results, and errors."
 ---
 
 # Tauri v2 Commands & IPC

@@ -1,7 +1,7 @@
 # FFmpeg Installation Guide
 
 **Detection Keywords**: install ffmpeg, setup, compilation, linking error, library not found, build from source, vcpkg, homebrew
-**Aliases**: installation, setup guide, dependency, linking
+**Aliases**: installation, setup guide, dependency, linking, unresolved external symbol
 
 Comprehensive platform-specific installation for FFmpeg library development in Rust.
 
@@ -25,6 +25,12 @@ Comprehensive platform-specific installation for FFmpeg library development in R
 |-------|---------|
 | [ez_ffmpeg.md](ez_ffmpeg.md) | High-level API (sync and async) |
 | [ffmpeg_sidecar.md](ffmpeg_sidecar.md) | Alternative: no-install binary approach |
+
+> **Canonical upstream guide (0.16)**: ez-ffmpeg now maintains its own
+> [docs/INSTALL.md](https://github.com/YeautyYE/ez-ffmpeg/blob/main/docs/INSTALL.md)
+> — platform prerequisites, Windows static linking, building FFmpeg from source, an
+> FFmpeg capability matrix, troubleshooting, and performance-build advice. When this
+> page and INSTALL.md disagree, trust INSTALL.md.
 
 ## Quick Reference
 
@@ -169,7 +175,7 @@ $env:VCPKGRS_DYNAMIC = "0"  # Force static linking
 **Cargo.toml**:
 ```toml
 [dependencies]
-ez-ffmpeg = { version = "0.13.1", features = ["static"] }
+ez-ffmpeg = { version = "0.18.0", features = ["static"] }
 # OR
 ffmpeg-next = { version = "8.1.0", features = ["static"] }
 ```
@@ -188,6 +194,29 @@ Add `C:\msys64\mingw64\bin` to PATH.
 **DLL not found at runtime**: Copy DLLs to executable directory or use static linking
 
 **Binary size too large**: Use `strip = true` and `opt-level = "z"` in `[profile.release]`
+
+**Static linking fails with `unresolved external symbol` errors** (`BCrypt*`, `MF*`, DirectShow, ...): `ffmpeg-sys-next`'s vcpkg path emits only a handful of Windows system libraries ([rust-ffmpeg-sys#28](https://github.com/zmwangx/rust-ffmpeg-sys/issues/28)), so the final link of your application can miss many system libs. Declare the missing libraries in **your own project's** `build.rs`:
+
+```rust
+// build.rs of your application
+fn main() {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
+        for lib in [
+            "user32", "kernel32", "gdi32", "shell32", "ole32", "oleaut32",
+            "uuid", "advapi32", "bcrypt", "ws2_32", "winmm", "crypt32",
+            "secur32", "strmiids", "mfplat", "mfuuid", "mf", "mfreadwrite",
+            "dxgi", "d3d11", "quartz", "comdlg32", "winspool", "version",
+            "setupapi", "shlwapi", "ncrypt", "vfw32",
+        ] {
+            println!("cargo:rustc-link-lib={}", lib);
+        }
+    }
+}
+```
+
+- Set `VCPKG_ROOT` in your **shell** before building — calling `std::env::set_var` inside `build.rs` does not work: `ffmpeg-sys-next`'s build script runs as a separate process and never sees those variables.
+- The exact list depends on the vcpkg FFmpeg port version and its enabled features (the list above is the union reported in [ez-ffmpeg#16](https://github.com/YeautyYE/ez-ffmpeg/issues/16)); your set may differ.
+- Dynamic linking (`vcpkg install ffmpeg`) is not affected.
 
 ---
 
@@ -284,14 +313,14 @@ jobs:
 # Check FFmpeg version
 ffmpeg -version  # Should show 7.x or 8.x
 
-# Check library versions (ez-ffmpeg 0.13 supports both majors)
+# Check library versions (ez-ffmpeg 0.15 supports both majors)
 pkg-config --modversion libavcodec   # 61.x for FFmpeg 7 / 62.x for FFmpeg 8
 pkg-config --modversion libavformat  # 61.x / 62.x
 pkg-config --modversion libavutil    # 59.x / 60.x
 
 # Test build
 cargo new --bin ffmpeg_test && cd ffmpeg_test
-echo 'ez-ffmpeg = "0.13.1"' >> Cargo.toml
+echo 'ez-ffmpeg = "0.18.0"' >> Cargo.toml
 cargo build --release
 ```
 
@@ -307,7 +336,7 @@ vcpkg integrate install
 # Test build (pkg-config/ffmpeg CLI may not be available)
 cargo new --bin ffmpeg_test
 cd ffmpeg_test
-Add-Content Cargo.toml 'ez-ffmpeg = { version = "0.13.1", features = ["static"] }'
+Add-Content Cargo.toml 'ez-ffmpeg = { version = "0.18.0", features = ["static"] }'
 cargo build --release
 ```
 
@@ -319,12 +348,25 @@ cargo build --release
 
 | Library | Version | FFmpeg Required | libavcodec Version |
 |---------|---------|-----------------|-------------------|
-| ez-ffmpeg | 0.13.1 | 7.0 – 8.x | 61.x (FFmpeg 7) / 62.x (FFmpeg 8) |
+| ez-ffmpeg | 0.18.0 | 7.1 – 8.x | 61.x (FFmpeg 7) / 62.x (FFmpeg 8) |
 | ffmpeg-next / -sys-next | 8.1.0 (current) | 7.0 – 8.x | 61.x / 62.x (auto-detected) |
 | ffmpeg-next / -sys-next | 7.1.x (legacy) | 4.x – 7.1 | ≤ 61.x |
 | ffmpeg-next / -sys-next | 6.x (legacy) | ≤ 6.x | ≤ 60.x |
 
 > The crate builds bindings from the **installed** FFmpeg headers, so the current `8.1.0` line compiles against FFmpeg 7 **and** 8 — you do not downgrade the crate to match an FFmpeg-7 system. Older crate lines are listed only for pre-FFmpeg-8 toolchains.
+
+> **MSRV is declared (0.18)**: `rust-version = "1.80"` is now in the manifest, so an
+> older toolchain gets a clear MSRV error instead of arbitrary compile failures. The
+> `wgpu` feature still needs **1.85+**. Dependency floors were also raised past two
+> advisories (`crossbeam-channel` ≥ 0.5.15 for RUSTSEC-2025-0024, `bytes` ≥ 1.11.1 for
+> RUSTSEC-2026-0007) — a fresh resolve can no longer pick the vulnerable versions.
+
+> **32-bit targets (0.17)**: ez-ffmpeg now compiles on 32-bit architectures
+> (`armv7-unknown-linux-gnueabihf`, `i686-unknown-linux-gnu`) — earlier versions
+> hit an `AVBPrint` layout mismatch there — and upstream CI runs a native armhf
+> lane. Useful for Raspberry Pi OS 32-bit and similar embedded targets.
+
+**How dual-major support works (and the history)**: `ffmpeg-sys-next` 8.1.0 runs bindgen against the installed headers and emits compile-time `ffmpeg_7_0`/`ffmpeg_7_1`/`ffmpeg_8_0`/`ffmpeg_8_1` cfgs for the detected version, which is why one crate line covers FFmpeg 7.0 through 8.x (libavcodec 61 on FFmpeg 7, 62 on FFmpeg 8). ez-ffmpeg links either major the same way; its documented floor is FFmpeg **7.1** because its pipeline is ported from the FFmpeg `n7.1` sources. You would only pin the legacy `7.1.x` crate line for reproducibility on a frozen toolchain — it is **not** required for FFmpeg 7 systems. (The old "pin 7.1.0" advice existed only because rust-ffmpeg 7.1.0 predated FFmpeg 8 support — the [#246](https://github.com/zmwangx/rust-ffmpeg/issues/246) EXIF side-data blocker, fixed and shipped in 8.0/8.1.) When pulling `ffmpeg-next` **alongside** ez-ffmpeg, keep it at `8.1.0` to match ez-ffmpeg's re-exported types — a `7.1.0` mixed in collides via the `links = "ffmpeg"` key.
 
 ---
 
@@ -340,7 +382,7 @@ When system FFmpeg installation is impossible (restricted environments, no admin
 ffmpeg-next = { version = "8.1.0", features = ["build"] }
 
 # ez-ffmpeg has NO `build` feature — enable source build via the sys crate:
-ez-ffmpeg = { version = "0.13.1" }
+ez-ffmpeg = { version = "0.18.0" }
 ffmpeg-sys-next = { version = "8.1.0", features = ["build"] }
 
 # With GPL codecs (x264, x265)

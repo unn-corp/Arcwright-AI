@@ -27,6 +27,9 @@ const fs   = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { adaptKiroContent } = require('../packages/agent-orchestration/lib/kiro-adapter');
+const { description: metadataDescription, body: metadataBody, gate: metadataGate } = require('../.agents/skills/arcwright/scripts/skill-metadata.cjs');
+const { SKILL_POLICY } = require('../packages/agent-orchestration/lib/skill-policy');
+const { createPack: createMattPocockPack, writePack: writeMattPocockPack } = require('./matt-pocock');
 
 // Robustly remove a directory tree. Recursive rmSync can race to ENOTEMPTY on
 // reused CI workspaces (self-hosted runners, overlay filesystems); retry with a
@@ -98,6 +101,7 @@ const LEAK_SCAN_SKIP_EXTS = new Set([
  * build-time hard gate instead of hand-mirroring it.
  */
 const { LEAK_PATTERNS } = require('./leak-patterns');
+const { buildInvocationCatalog, verifyModelInvocation, loadSkillAliases } = require('./invocation');
 
 /** Slash command files to ship. Shared by bundleKiroAgents() and bundleTrackCommands(). */
 const SHIPPED_COMMANDS = [
@@ -209,10 +213,11 @@ function sourceExists(filePath) {
   return fs.existsSync(safePath);
 }
 
-function readSourceDirectory(dir, options) {
+function readSourceDirectory(dir, options, skipEntry) {
   const safeDir = assertSafeBuildInput(dir);
   if (!fs.existsSync(safeDir)) return [];
-  const entries = fs.readdirSync(safeDir, options);
+  const entries = fs.readdirSync(safeDir, options)
+    .filter(entry => !skipEntry || !skipEntry(typeof entry === 'string' ? entry : entry.name));
   for (const entry of entries) {
     const name = typeof entry === 'string' ? entry : entry.name;
     assertSafeBuildInput(path.join(safeDir, name));
@@ -224,16 +229,17 @@ function readSourceDirectory(dir, options) {
  * Recursively walk a directory, returning [{full, rel}] pairs.
  * rel is relative to baseDir (defaults to dir itself).
  */
-function walk(dir, baseDir) {
+function walk(dir, baseDir, skipRelative) {
   if (!baseDir) baseDir = dir;
   const results = [];
   const safeDir = assertSafeBuildInput(dir);
   if (!fs.existsSync(safeDir)) return results;
-  for (const entry of readSourceDirectory(safeDir, { withFileTypes: true })) {
+  const skipEntry = skipRelative && (name => skipRelative(path.relative(baseDir, path.join(safeDir, name))));
+  for (const entry of readSourceDirectory(safeDir, { withFileTypes: true }, skipEntry)) {
     const full = path.join(safeDir, entry.name);
     const rel  = path.relative(baseDir, full);
     if (entry.isDirectory()) {
-      results.push(...walk(full, baseDir));
+      results.push(...walk(full, baseDir, skipRelative));
     } else {
       results.push({ full, rel });
     }
@@ -247,6 +253,8 @@ function normRel(relPath) {
 
 function isExcluded(rel) {
   const n = normRel(rel);
+  // Local workflow state must never become reusable package source.
+  if (n.startsWith('_memory/skill-runs/')) return true;
   return EXCLUDE_ALWAYS.some(p => n.includes(p));
 }
 
@@ -313,7 +321,10 @@ function buildGenericPackage() {
       continue;
     }
 
-    const files = walk(modSrc, modSrc);
+    // Runtime fixtures may contain symlinks and private reports. Prune them
+    // before traversing; other module inputs retain the existing link checks.
+    const skipRuntime = mod === '_memory' && (rel => normRel(rel) === 'skill-runs');
+    const files = walk(modSrc, modSrc, skipRuntime);
     let modCopied = 0;
 
     for (const { full, rel } of files) {
@@ -342,6 +353,15 @@ function buildGenericPackage() {
   const skillsCopied = copySkillsTo(path.join(PKG_SRC, '.agents', 'skills'), 'packages/agent-orchestration/src/.agents/skills/');
   totalCopied += skillsCopied;
 
+  // The optional pack is ordinary Arcwright source. Build it without Git,
+  // upstream checkouts, or a network fetch.
+  if (sourceExists(path.join(SKILLS_SRC, 'matt-pocock', 'SKILL.md'))) {
+    const pack = createMattPocockPack(PROJECT_ROOT);
+    writeMattPocockPack(pack, PKG_SRC);
+    totalCopied += pack.output.size;
+    console.log(`  ✓  Arcwright local Matt Pocock pack (${pack.count} skills + router)`);
+  }
+
   console.log(`\n  Total: ${totalCopied} files copied, ${totalSkipped} skipped\n`);
 }
 
@@ -356,7 +376,7 @@ function copySkillsTo(destBase, logLabel) {
   }
 
   const skills = readSourceDirectory(SKILLS_SRC, { withFileTypes: true })
-    .filter(e => e.isDirectory())
+    .filter(e => e.isDirectory() && !/^matt-pocock(?:-|$)/.test(e.name))
     .map(e => e.name);
 
   let copied = 0;
@@ -375,6 +395,16 @@ function copySkillsTo(destBase, logLabel) {
       }
       copied++;
     }
+  }
+
+  // Skills link to these shared provenance/license notices. Keeping them only
+  // in the workshop leaves installed copies with missing source information.
+  for (const entry of readSourceDirectory(SKILLS_SRC, { withFileTypes: true })) {
+    if (!/^(?:SOURCES-|VENDORED-)/.test(entry.name) || entry.isDirectory()) continue;
+    const full = path.join(SKILLS_SRC, entry.name);
+    const content = readSourceText(full);
+    writeFile(path.join(destBase, entry.name), content);
+    copied++;
   }
 
   console.log(`  ✓  .agents/skills/  (${skills.length} skills, ${copied} files)  → ${logLabel}`);
@@ -483,52 +513,15 @@ function generateAgentsSteering(steeringDir) {
   lines.push('Slash commands in `.claude/commands/*.md` activate the corresponding agent or skill directly.');
   lines.push('');
 
-  // ── Skill library catalog ─────────────────────────────────────────────────
-  // Include skill names + descriptions so the AI knows what's available and
-  // can auto-load the right skill when the user's request matches.
-  const skillsDir = path.join(PROJECT_ROOT, '.agents', 'skills');
-  if (sourceExists(skillsDir)) {
-    const skillDirs = readSourceDirectory(skillsDir, { withFileTypes: true })
-      .filter(e => e.isDirectory())
-      .map(e => e.name)
-      .sort();
-
-    const skills = [];
-    for (const dir of skillDirs) {
-      const skillMd = path.join(skillsDir, dir, 'SKILL.md');
-      if (!sourceExists(skillMd)) continue;
-      const content = readSourceText(skillMd);
-      // Extract description — handle single-line and multi-line YAML
-      let desc = null;
-      const singleLine = content.match(/^---[\s\S]*?description:\s*["']([^"'\n]+)["']/m);
-      if (singleLine) { desc = singleLine[1].trim(); }
-      else {
-        const unquoted = content.match(/^---[\s\S]*?description:\s*([^\n"'][^\n]+)/m);
-        if (unquoted) desc = unquoted[1].trim();
-      }
-      // Multi-line description (indented continuation)
-      if (!desc) {
-        const multiLine = content.match(/^---[\s\S]*?description:\s*\n((?:\s+[^\n]+\n?)+)/m);
-        if (multiLine) desc = multiLine[1].replace(/\n\s*/g, ' ').trim();
-      }
-      if (desc) skills.push({ name: dir, desc });
-    }
-
-    if (skills.length > 0) {
-      lines.push('## Skill Library');
-      lines.push('');
-      lines.push('The following skills are available in `.kiro/skills/` (Kiro) or `.agents/skills/` (Claude Code). Read the SKILL.md file to load a skill when the task matches its description.');
-      lines.push('');
-      lines.push('| Skill | Description |');
-      lines.push('|-------|-------------|');
-      for (const { name, desc } of skills) {
-        // Truncate long descriptions for the table
-        const shortDesc = desc.length > 150 ? desc.substring(0, 147) + '...' : desc;
-        lines.push(`| \`${name}\` | ${shortDesc} |`);
-      }
-      lines.push('');
-    }
-  }
+  // Native skill resources already expose the catalog. Keep always-loaded
+  // steering compact instead of duplicating every skill description here.
+  lines.push('## Skill discovery');
+  lines.push('');
+  lines.push('Use the native skill catalog to select a matching skill. Read its compact rules or entrypoint, then only the references needed for the current task. Do not scan or preload the whole skill library. Project skills take precedence over global copies.');
+  lines.push('');
+  lines.push('For a command or specialist unavailable as a native host entrypoint, use the `arcwright` skill to find and execute its installed procedure. A supplied task runs directly; menus are optional navigation.');
+  lines.push('');
+  lines.push(SKILL_POLICY);
 
   const dest = path.join(steeringDir, 'arcwright-core.md');
   writeFile(dest, lines.join('\n'));
@@ -541,84 +534,49 @@ function generateAgentsSteering(steeringDir) {
  * with workflow-router / ultracode / /goal guidance for Kiro.
  */
 function generateWorkflowsSteering(steeringDir) {
-  const lines = [
-    '---',
-    'inclusion: auto',
-    'name: arcwright-workflows',
-    'description: Arcwright workflow guidance — triage router, ultracode dynamic workflows, and /goal loops.',
-    '---',
-    '',
-    '# Arcwright — Workflows',
-    '',
-    'Arcwright has moved off bespoke tracks and pane-based subagent spawning.',
-    'Pick the right runtime for the task; the in-process `Agent` tool +',
-    '`SendMessage` reuse is the substrate underneath every option below.',
-    '',
-    '## 1. Triage router (entry point)',
-    '',
-    '`/triage` is the workflow router. Given a task it recommends one of the',
-    'three runtimes below (or, on top of any of them, Herdr opt-in visibility).',
-    'See `.agents/skills/triage/SKILL.md` for the full decision tree. Use it',
-    'when the user has not named a runtime explicitly.',
-    '',
-    'Output format: a runtime, the exact trigger to run, a one-sentence',
-    'rationale, the default model (`sonnet`), and a "next step" line. The',
-    'router does not start the work — the user runs the trigger.',
-    '',
-    '## 2. The three runtimes',
-    '',
-    '| Runtime | When | Trigger |',
-    '|---------|------|---------|',
-    '| Plain in-process agent(s) | 1–10 files, single role or small parallel fan-out, clear deliverable | Direct `Agent` tool spawn (one or a few, in one assistant message) |',
-    '| `ultracode` dynamic workflow | 12+ files, multi-stage, unknown-size discovery, or work larger than one context | `ultracode <describe the work>` (or `/effort ultracode` for session default) |',
-    '| `/goal` loop | Completion is a verification check ("tests pass", "no type errors", "lint clean") | `/goal <condition>` |',
-    '',
-    'In-process is the default for every runtime. Herdr is **opt-in visibility**',
-    'only — the pane mirrors the in-process session; the in-process flow inside',
-    'it is still governed by `.agents/skills/claude-subagent-protocol/`.',
-    '',
-    '## 3. Herdr opt-in visibility (additive)',
-    '',
-    'Add Herdr pane visibility only when **all** of these are true:',
-    '',
-    '- The user has explicitly asked to watch the agents as they work.',
-    '- `$HERDR_ENV` is set in the current shell.',
-    '- The recommended runtime would benefit from pane-by-pane view (typical',
-    '  for `ultracode` and `/goal` over a long duration).',
-    '',
-    'See `.agents/skills/herdr/SKILL.md`, "Watching agents in panes" section.',
-    'The pane is a viewing surface, never the spawn mechanism.',
-    '',
-    '## 4. Defaults and the permission gate',
-    '',
-    '- **Model:** `sonnet` for every role. `opus` is opt-in; the orchestrator',
-    '  (or skill) must ask the user before escalating. No version-pinned model',
-    '  names — use aliases only.',
-    '- **Reuse over re-spawn:** the Session Agent Registry in',
-    '  `_arcwright-output/sessions/<session-id>/agent-registry.md` records each',
-    "  role's `agentId`. Subsequent tasks for the same role use `SendMessage`",
-    '  to the existing agent; full prior context is retained.',
-    '- **No legacy signals:** `AGENT_SIGNAL`, `STEP COMPLETE`, `PEER_SIGNAL`,',
-    '  `STATUS_CHECK`, `$SPAWNER_PANE`, the old `tmux-protocol` skill, and',
-    '  `session-state.md` pane tables are all retired. The `Agent` tool return',
-    '  value is the sole completion signal.',
-    '',
-    '## 5. Cross-references',
-    '',
-    '- `.agents/skills/triage/SKILL.md` — the router (decision tree, output format).',
-    '- `.agents/skills/claude-subagent-protocol/SKILL.md` — the in-process protocol underneath every runtime.',
-    '- `.agents/skills/herdr/SKILL.md` — pane mechanics and opt-in visibility.',
-    '- `docs/dev/claude-code-patterns/ultracode.md` — full ultracode API (hooks, patterns, limits, resume).',
-    '- `docs/dev/claude-code-patterns/orchestration.md` — full `/goal` and `/loop` reference.',
-    '',
-  ];
+  const content = `---
+inclusion: auto
+name: arcwright-workflows
+description: Arcwright task routing, scoped delegation, and verification.
+---
 
+# Arcwright workflows
+
+Execute a clear supplied task directly. Use the installed triage or arcwright
+router when workflow selection is needed; do not require another slash command
+or menu selection. A small task can run inline. Delegate substantial independent
+work only when authorized by the user or invoked workflow.
+
+For a selected team preset, load subagent-protocol and its shared team
+procedure. Give each task scoped ownership, source identity, acceptance evidence,
+a small capability brief with actual installed skill paths, and a finder for
+additional discovery. Suggestions are nonexclusive; read selected skills directly
+without a Skill tool. Reuse context and briefs instead of preloading catalogs.
+
+Inherit the user's provider, model, effort, permissions, and budget. Discover
+actual host tools and live model IDs when an override is needed. Reuse native
+agents only when supported and live. In Arcwright Code/T3, each review round uses
+a fresh delegate_task with prior findings and current evidence; retain taskId and
+use task_status/task_cancel. Separate worktrees start from the parent local
+commit without uncommitted edits. Do not create top-level threads or recurring
+schedules unless explicitly requested.
+
+Use actual host concurrency limits and disjoint ownership. Inspect returned
+artifacts and require each preset's independent sign-offs. Run focused tests
+then required repository gates; repeat only for changes, failures, unresolved
+risk, or explicit requirements. Budget exhaustion is incomplete, not approval.
+Keep installed bundles read-only. Put working artifacts in the active project's
+_arcwright/_memory/skill-runs/<workflow>-<run>/, or host-managed evidence storage.
+
+Herdr visibility is optional when requested and its environment is available.
+Use the installed herdr procedure without duplicating the underlying task.
+Kiro subagent/DAG fields apply only when exposed by that host. Optional runtime
+names and old provider-specific examples do not override current host policy.
+`;
   const dest = path.join(steeringDir, 'arcwright-workflows.md');
-  writeFile(dest, lines.join('\n'));
-  console.log(`  ✓  .kiro/steering/arcwright-workflows.md  (workflow-router / ultracode / /goal guidance)`);
+  writeFile(dest, content);
+  console.log('  ✓  .kiro/steering/arcwright-workflows.md  (shared task routing and delegation)');
 }
-
-// ─── Step 2b: bundleKiroAgents ───────────────────────────────────────────────
 
 /**
  * Read each .claude/commands/*.md and write a Kiro-compatible agent JSON file
@@ -646,14 +604,7 @@ function bundleKiroAgents() {
   }
 
   /** Parse YAML frontmatter from a markdown file. */
-  function parseFrontmatter(content) {
-    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-    if (!fmMatch) return { description: null, body: content };
-    const fmBlock = fmMatch[1];
-    const body    = fmMatch[2];
-    const descMatch = fmBlock.match(/^description:\s*["']?(.*?)["']?\s*$/m);
-    return { description: descMatch ? descMatch[1].trim() : null, body };
-  }
+  const parseFrontmatter = content => ({ description: metadataDescription(content, ''), body: metadataBody(content) });
 
   /**
    * Kiro CLI tool names. These are the actual tool identifiers Kiro recognises.
@@ -667,10 +618,10 @@ function bundleKiroAgents() {
     'security-review':    ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'security-scan':      ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'sec-loop':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
-    'design':             ['fs_read', 'fs_write', 'grep', 'glob', 'web_search', 'web_fetch'],
+    'design':             ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'web_search', 'web_fetch'],
     'playwright':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
     'audit-site':         ['fs_read', 'fs_write', 'execute_bash', 'web_search', 'web_fetch'],
-    'diagram':            ['fs_read', 'fs_write', 'grep', 'glob'],
+    'diagram':            ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
     'triage':             ['fs_read', 'grep', 'glob', 'code'],
     'skill-scout':        ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'subagent', 'web_search', 'web_fetch'],
     'docker-check':       ['fs_read', 'execute_bash', 'grep'],
@@ -740,60 +691,24 @@ function bundleKiroAgents() {
   // `depends_on`). Herdr panes are opt-in visibility only — see the `herdr` skill.
   const KIRO_ORCHESTRATION_ADDENDUM = `
 
-## Kiro CLI — In-Process Orchestration (default) and Pane Visibility (opt-in)
+## Kiro delegation adapter
 
-**Default — in-process via the \`subagent\` tool:**
+Use the selected team recipe and shared subagent-protocol procedure.
+When this Kiro host exposes subagent/DAG execution, inspect its actual schema
+and map roles and dependencies to availableAgents. Inherit the selected model
+and permissions; do not add a model override or broad trust flag by default.
+Give every stage a small capability brief, scope, source identity, and evidence
+requirements. Sequence dependent stages and keep conditional consultation and
+review loops in the coordinator when a static DAG cannot express them.
 
-Kiro CLI's \`subagent\` tool runs agents in-process as a DAG pipeline. This is
-the default and is equivalent to Claude Code's \`Agent\` tool + \`SendMessage\`
-reuse. For each role in the pipeline, reference a Kiro agent config by name in
-the \`role\` field (e.g. \`arcwright-dev\`, \`arcwright-qa\`); available agents
-are listed in this agent's \`toolsSettings.crew.availableAgents\`.
+For Arcwright Code/T3 delegated work, discover live targets, retain task IDs,
+and create a fresh delegated task per review round with prior findings. Do not
+substitute a top-level thread or childThreadId messaging. Use host completion
+and status tools, actual concurrency limits, and proportionate verification.
 
-\`\`\`json
-{
-  "name": "subagent",
-  "input": {
-    "task": "<task description>",
-    "stages": [
-      { "name": "research", "role": "arcwright-analyst", "prompt_template": "…", "model": "sonnet" },
-      { "name": "design",   "role": "arcwright-architect", "prompt_template": "…", "model": "sonnet", "depends_on": ["research"] },
-      { "name": "build",    "role": "arcwright-dev",        "prompt_template": "…", "model": "sonnet", "depends_on": ["design"] }
-    ]
-  }
-}
-\`\`\`
-
-Stages with no \`depends_on\` run in parallel; dependent stages wait. Default
-\`model\` is \`sonnet\` for every stage. Promote to \`opus\` only with explicit
-user permission (ask the user before escalating).
-
-**Opt-in — visible panes via Herdr:**
-
-If the user has explicitly asked for split-pane visibility ("spawn", "watch",
-"open agent") AND \`$HERDR_ENV\` is set, spawn a Kiro agent into a Herdr pane as
-a *viewing surface*. Herdr makes visible agents first-class through
-\`herdr agent start\`, so no spawn wrapper is needed. The spawned agent still
-uses the in-process \`subagent\` orchestration above; the pane is only a window.
-
-\`\`\`bash
-herdr agent start <role> --split right -- \\
-  kiro-cli chat --trust-all-tools --agent arcwright-dev '<task description>'
-# then, when it needs you:
-herdr wait agent-status <role> --status blocked --timeout 600000
-herdr pane run <role> '<follow-up>'      # types + Enter (agent send does NOT)
-herdr pane close <role>
-\`\`\`
-
-**Key differences from Claude Code pane mode (opt-in only):**
-- Use \`kiro-cli chat --trust-all-tools --agent <agent-name>\` instead of \`claude --dangerously-skip-permissions\`
-- Agent names reference \`.kiro/agents/*.json\` configs (e.g. \`arcwright-dev\`, \`arcwright-qa\`)
-- Skills are at \`.kiro/skills/\` not \`.agents/skills/\`
-- \`herdr wait agent-status\` replaces all pane polling; there are no AGENT_SIGNAL
-  strings to grep. The in-process \`subagent\` tool return value is the completion signal.
-- Default to \`sonnet\`. Ask the user before any \`opus\` or effort upgrade.
-
-See the \`herdr\` skill for the full mapping and the send/run Enter trap.
+Visible panes require explicit user preference and an available Herdr runtime.
+Load the installed herdr skill for that adapter; preserve the same task ownership
+and required sign-offs. Omit unavailable optional viewing surfaces.
 `;
 
   let generated = 0;
@@ -989,14 +904,14 @@ function isGeneratedCommandLauncher(commandsSrc, fileName) {
   }
 
   const agentMatch = content.match(
-    /LOAD the FULL agent file from (?:\{project-root\}\/)?_arcwright\/([^\s`]+)/
+    /(?:LOAD the FULL agent file from|Resolve) (?:\{project-root\}\/)?_arcwright\/([A-Za-z0-9_./-]+\.md)/
   );
   return Boolean(agentMatch && sourceExists(path.join(ARCWRIGHT_SRC, agentMatch[1])));
 }
 
 /**
  * SHIPPED_COMMANDS is a hand-maintained allowlist, so a new command silently
- * fails to publish if someone forgets step 2 of the CLAUDE.md procedure. That
+ * fails to publish if someone forgets the command registration step in docs/dev/kiro-integration.md. That
  * already happened once: /security-scan shipped nowhere for its whole life
  * because the commit that added it never touched this list, and nothing
  * complained. Fail the build on an uncovered command instead — being
@@ -1133,17 +1048,17 @@ function bundleSpecialistCommands() {
       const body = [
         '---',
         `name: '${cmdName}'`,
-        `description: '${desc.replace(/'/g, "\\'")}'`,
+        `description: ${JSON.stringify(desc)}`,
         '---',
         '',
-        `You must fully embody the ${slug} specialist persona and follow all activation instructions exactly. NEVER break character until given an exit command.`,
+        `Apply the ${slug} specialist role to the supplied task, following user and host instructions.`,
         '',
         '<agent-activation CRITICAL="TRUE">',
-        `1. LOAD the FULL agent file from {project-root}/_arcwright/${relFromArcwright}`,
-        '2. READ its entire contents',
-        '3. EXECUTE every critical_action in order (load all sidecar files)',
-        '4. PRESENT the agent menu',
-        '5. WAIT for user input',
+        `1. Resolve {project-root}/_arcwright/${relFromArcwright}, falling back to the installed global Arcwright module tree.`,
+        '2. Read the profile and shared agent runtime once per task.',
+        '3. Reuse the capability brief; load only relevant skills and references.',
+        '4. Execute the supplied task immediately; use the relevant workflow without a menu round trip.',
+        '5. Show a menu only when there is no actionable task or the user requests one.',
         '</agent-activation>',
         '',
         '$ARGUMENTS',
@@ -1217,19 +1132,49 @@ function bundleLauncherTemplates() {
 function verifySkillReferences() {
   console.log('🔗  Verifying skill sidecar references...');
   const broken = [];
-  if (!sourceExists(SKILLS_SRC)) return;
+  const skillsBase = path.join(PKG_SRC, '.agents', 'skills');
+  if (!sourceExists(skillsBase)) return;
 
-  for (const skill of readSourceDirectory(SKILLS_SRC)) {
-    const md = path.join(SKILLS_SRC, skill, 'SKILL.md');
+  for (const skill of readSourceDirectory(skillsBase)) {
+    const md = path.join(skillsBase, skill, 'SKILL.md');
     if (!sourceExists(md)) continue;
     const src = readSourceText(md);
     const re = /(?:^|[\s(`"'])((?:references|templates|scripts)\/[A-Za-z0-9._/-]+\.[A-Za-z0-9]+)/g;
     for (const m of src.matchAll(re)) {
       const rel = m[1];
       if (rel.includes('*')) continue;
-      if (!sourceExists(path.join(SKILLS_SRC, skill, rel))) {
+      if (!sourceExists(path.join(skillsBase, skill, rel))) {
         broken.push(`${skill}: ${rel}`);
       }
+    }
+  }
+
+  // Follow declared Markdown resources in sidecars too, including dependencies
+  // on sibling skills. Ignore fenced examples: their paths describe output in
+  // the user's project, rather than inputs that the package must provide.
+  for (const { full, rel } of walk(skillsBase, skillsBase)) {
+    if (!full.endsWith('.md')) continue;
+    let fence;
+    const prose = readSourceText(full).split(/\r?\n/).map(line => {
+      const marker = line.match(/^\s*(`{3,}|~{3,})/);
+      if (marker) {
+        if (!fence) fence = marker[1];
+        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length) fence = undefined;
+        return '';
+      }
+      return fence ? '' : line;
+    }).join('\n');
+    const links = /!?\[[^\]\n]*\]\(\s*(<[^>\n]+>|[^)\s]+)(?:\s+"[^"\n]*")?\s*\)/g;
+    for (const match of prose.matchAll(links)) {
+      let target = match[1].replace(/^<|>$/g, '').split(/[?#]/)[0];
+      if (!target || /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('/') || /[{}<>*`]/.test(target)) continue;
+      try { target = decodeURIComponent(target); } catch { /* use literal path */ }
+      const resolved = target.startsWith('.agents/skills/')
+        ? path.resolve(PKG_SRC, target)
+        : path.resolve(path.dirname(full), target);
+      const within = path.relative(skillsBase, resolved);
+      if (within.startsWith(`..${path.sep}`) || path.isAbsolute(within)) continue;
+      if (!sourceExists(resolved)) broken.push(`${rel}: ${target}`);
     }
   }
 
@@ -1237,7 +1182,7 @@ function verifySkillReferences() {
   if (unique.length) {
     console.error(`\n  ❌  SKILL REFERENCE CHECK FAILED — ${unique.length} broken path(s):\n`);
     for (const b of unique) console.error(`     ${b}`);
-    console.error('\n  Fix the path in SKILL.md, or add the missing file.\n');
+    console.error('\n  Fix the declared resource path or bundle the required dependency.\n');
     process.exit(1);
   }
   console.log('  ✓  All skill sidecar references resolve\n');
@@ -1298,28 +1243,6 @@ function verifyNoLeaks() {
 // whose skill is absent — those stay reachable via their module command (/dotnet
 // etc.) and Hermes/Codex native invocation.
 // team-* included: they drop out under --no-teams, so their launchers cannot ship unconditionally.
-const MODULE_GATED_SKILL = /^(team-|docker-type-check$|dotnet-|electron-|tauri-|strands-|aws-serverless-cdk$|unnamed-pm-sync$|unnamed-dev-mcp$)/;
-
-function extractSkillDescription(skillMd, skill) {
-  const fallback = `Load and run the ${skill} skill.`;
-  const frontmatter = skillMd.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!frontmatter) return fallback;
-
-  const lines = frontmatter[1].split(/\r?\n/);
-  const descriptionIndex = lines.findIndex((line) => /^description:\s*/.test(line));
-  if (descriptionIndex === -1) return fallback;
-  const value = lines[descriptionIndex].replace(/^description:\s*/, '').trim();
-  if (['>', '|', '>-', '|-'].includes(value)) {
-    const folded = [];
-    for (const line of lines.slice(descriptionIndex + 1)) {
-      if (!/^\s+/.test(line)) break;
-      folded.push(line.trim());
-    }
-    return folded.join(' ').trim() || fallback;
-  }
-  return value.replace(/^(?:"|')|(?:"|')$/g, '').trim() || fallback;
-}
-
 function bundleSkillCommands() {
   console.log('🎯  Generating per-skill slash-command launchers → src/.claude/commands/ + src/.kiro/agents/');
   const commandsDest   = path.join(PKG_SRC, '.claude', 'commands');
@@ -1329,6 +1252,7 @@ function bundleSkillCommands() {
 
   const existingCmd  = new Set(fs.readdirSync(commandsDest).map(f => f.replace(/\.md$/, '')));
   const existingKiro = new Set(fs.readdirSync(kiroAgentsDest).map(f => f.replace(/\.json$/, '')));
+  const aliases = loadSkillAliases(PROJECT_ROOT);
 
   const skillDirs = readSourceDirectory(SKILLS_SRC, { withFileTypes: true })
     .filter(e => e.isDirectory() && sourceExists(path.join(SKILLS_SRC, e.name, 'SKILL.md')))
@@ -1336,23 +1260,31 @@ function bundleSkillCommands() {
 
   let generated = 0;
   for (const skill of skillDirs) {
-    if (MODULE_GATED_SKILL.test(skill)) continue;
+    if (metadataGate(skill)) continue;
     if (existingCmd.has(skill) && existingKiro.has(skill)) continue;
 
     const skillMd = readText(path.join(SKILLS_SRC, skill, 'SKILL.md')) || '';
-    let desc = extractSkillDescription(skillMd, skill);
+    const commandSource = path.join(PROJECT_ROOT, '.claude', 'commands', `${skill}.md`);
+    const maintainedCommand = sourceExists(commandSource) ? readSourceText(commandSource) : null;
+    let desc = metadataDescription(maintainedCommand || skillMd, `Run the ${skill} skill.`);
     if (desc.length > 220) desc = desc.slice(0, 217) + '...';
+    const needsDelegation = /^(arcwright|full-send|full-stop|review-loop|sol-loop|subagent-protocol|subagent-driven-development|pr-review-panel|agent-evaluation|agent-red-teaming|task-manager)$/.test(skill)
+      || /^allowed-tools:.*\b(?:Agent|Task|SendMessage)\b/m.test(skillMd);
 
     if (!existingCmd.has(skill)) {
-      const cmd = `---\ndescription: ${JSON.stringify(desc)}\n---\n\nLoad and run the \`${skill}\` skill (\`.agents/skills/${skill}/SKILL.md\`) against $ARGUMENTS. Follow the skill exactly.\n`;
+      const instruction = aliases[skill] ? 'Follow its Arcwright integration instructions.' : 'Follow the skill exactly.';
+      const cmd = maintainedCommand || `---\ndescription: ${JSON.stringify(desc)}\n---\n\nLoad and run the \`${skill}\` skill (\`.agents/skills/${skill}/SKILL.md\`) against $ARGUMENTS. ${instruction}\n`;
       writeFile(path.join(commandsDest, `${skill}.md`), cmd);
     }
     if (!existingKiro.has(skill)) {
       const agent = {
         name: skill,
         description: desc,
-        prompt: `Load and run the \`${skill}\` skill (skill://.kiro/skills/${skill}/SKILL.md) against the user's message. Follow the skill exactly.`,
-        tools: ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob'],
+        prompt: maintainedCommand
+          ? adaptKiroContent(metadataBody(maintainedCommand)).replace(/\$ARGUMENTS\b/g, "the user's message").trim()
+          : `Load and run the \`${skill}\` skill (skill://.kiro/skills/${skill}/SKILL.md) against the user's message. Follow the skill exactly.`,
+        tools: ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', ...(needsDelegation ? ['subagent'] : []), ...(skill === 'arcwright' ? ['web_search', 'web_fetch'] : [])],
+        includeMcpJson: true,
         resources: [`skill://.kiro/skills/${skill}/SKILL.md`],
       };
       writeFile(path.join(kiroAgentsDest, `${skill}.json`), JSON.stringify(agent, null, 2) + '\n');
@@ -1372,6 +1304,9 @@ bundleKiroAgents();
 bundleTrackCommands();
 bundleSpecialistCommands();
 bundleSkillCommands();
+const invocationCatalog = buildInvocationCatalog(PKG_SRC);
+verifyModelInvocation(PKG_SRC);
+console.log(`  ✓  ${invocationCatalog.entries.length} command/agent/skill routes available through the portable arcwright skill\n`);
 bundleLauncherTemplates();
 verifySkillReferences();
 verifyNoLeaks();

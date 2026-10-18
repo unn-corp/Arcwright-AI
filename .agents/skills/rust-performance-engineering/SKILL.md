@@ -1,6 +1,6 @@
 ---
 name: rust-performance-engineering
-description: "Primary router for Rust performance and quality work. Use when designing, implementing, optimizing, auditing, or reviewing Rust systems, Rust-backed Python extensions, WebAssembly modules, Tauri desktop/mobile applications, FFI/bindings, low-latency/HFT systems, async services, libraries, crates, or any code path with explicit or implied quality, safety, latency, throughput, memory, zero-copy, concurrency, cache, or packaging constraints."
+description: "Route a measured Rust performance problem to algorithm, async, memory, SIMD, I/O, or low-latency guidance. Routine Rust edits need no performance campaign."
 ---
 
 # Rust Performance Engineering

@@ -1,6 +1,6 @@
 ---
 name: realitykit-ar
-description: "Build augmented reality experiences with RealityKit and ARKit on iOS. Use when adding 3D content with RealityView, loading entities and models, placing objects via raycasting, configuring AR camera sessions, handling world tracking, scene understanding, or implementing entity interactions and gestures."
+description: "Build or debug RealityKit/ARKit experiences: RealityView, entity loading, placement, anchors, gestures, physics, and AR sessions. Use for interactive 3D or augmented reality rather than ordinary SwiftUI layout."
 ---
 
 # RealityKit + ARKit

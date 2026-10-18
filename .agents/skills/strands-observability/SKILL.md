@@ -1,14 +1,6 @@
 ---
 name: strands-observability
-description: >
-  Instrumenting a Strands agent with OpenTelemetry and CloudWatch: trace context
-  headers, spans over the agent loop, tool/model call latency, token consumption, and
-  general OTel-for-agents practice where the official docs are thin.
-  USE FOR: adding tracing/metrics to a Strands agent, propagating trace context across
-  service calls, diagnosing latency or token-usage issues, or deciding what to span.
-  DO NOT USE FOR: the agent loop itself (see strands-agent-fundamentals), or AgentCore's
-  own built-in observability dashboard (see strands-bedrock-agentcore-deploy, and AWS's
-  Bedrock AgentCore Observability docs directly for the managed dashboard).
+description: "Instrument or diagnose Strands agents using traces, metrics, logs, and measured tool/model behavior."
 ---
 
 # Observability for Strands Agents
@@ -51,6 +43,7 @@ The official docs describe what Strands emits automatically but stay light on pr
 
 - **One span per tool call.** Name it after the tool, attach arguments (redact anything sensitive) and the result status as attributes. This is what lets you see, per run, which tool ate the latency.
 - **One span per model call**, nested under the agent-loop span it belongs to. Attach model ID, token counts, and latency as attributes, this is where cost and latency usually concentrate.
+- **Record invocation budget and outcome.** Capture configured `Limits`, actual usage, and whether a cap was exceeded at a turn boundary; distinguish `limit_turns`, token-limit stop reasons, cancellation, and normal completion. These budgets are per invocation, so aggregate usage explicitly for a job spanning retries.
 - **Log the stop reason** (see `strands-agent-fundamentals`) on the top-level span for the invocation. A run that hit a token-budget or guardrail stop looks identical to a normal completion unless the stop reason is recorded somewhere queryable.
 - **Attach the AgentCore session ID** (if deployed there) as a span attribute, it's the natural correlation key across the microVM-isolated invocations of the same agent.
 - **Prefer hooks over ad-hoc instrumentation calls** scattered through tool code (see `strands-agent-fundamentals`), a before/after-tool-execution hook is a single seam to emit spans consistently instead of remembering to do it in every tool.

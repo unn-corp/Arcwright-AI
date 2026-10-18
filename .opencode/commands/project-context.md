@@ -1,5 +1,5 @@
 ---
-description: "Load and persist durable project context. Scans config, the agent-native memory file (CLAUDE.md / AGENTS.md), codebase structure, and prior artifacts before any workflow; and writes the generated project-context layer..."
+description: "Load missing task-relevant project context or persist verified durable facts. Reuse supplied instructions and resolve project skills before global fallbacks."
 ---
 
 Load and run the `project-context` skill (`.agents/skills/project-context/SKILL.md`) against $ARGUMENTS. Follow the skill exactly.

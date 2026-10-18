@@ -1,17 +1,6 @@
 ---
 name: jetpack-compose
-description: >
-  Jetpack Compose expert skill for Android UI development. Guides state management decisions
-  (@Composable, remember, mutableStateOf, derivedStateOf, State hoisting), view composition
-  and structure, Modifier chains, lazy lists, navigation, animation, side effects, theming,
-  accessibility, and performance optimization. Backed by actual androidx source code analysis.
-  Use this skill whenever the user mentions Compose, @Composable, remember, LaunchedEffect,
-  Scaffold, NavHost, MaterialTheme, LazyColumn, Modifier, recomposition, Style, styleable,
-  MutableStyleState, or any Jetpack Compose API. Also trigger when the user says "Android UI",
-  "Kotlin UI", "compose layout", "compose navigation", "compose animation", "material3",
-  "compose styles", "styles api", or asks about modern Android development patterns. Even
-  casual mentions like "my compose screen is slow" or "how do I pass data between screens"
-  should trigger this skill.
+description: "Build and review Jetpack Compose or Compose Multiplatform UI: state, composition, modifiers, navigation, animation, effects, Material 3, accessibility, performance, and styles. Includes source-backed Android and multiplatform references."
 ---
 
 # Jetpack Compose Expert Skill
@@ -19,6 +8,15 @@ description: >
 Non-opinionated, practical guidance for writing correct, performant Jetpack Compose code.
 Focuses on real pitfalls developers encounter daily, backed by analysis of the actual
 `androidx/androidx` source code (branch: `androidx-main`).
+
+## Version and scope
+
+This Arcwright skill retains its `jetpack-compose` name and local routing. The reference library is
+adapted from aldefy/compose-skill v2.4.0, pinned to commit
+`954ef54ea32288fbc90745f012d09d7b791f0d8a`. Check the application's Compose, Kotlin,
+Navigation and Material versions before using newer APIs. Experimental/Expressive APIs and Nav 3
+are conditional references; preserve existing dependency and plugin choices.
+Root `DESIGN.md` remains the canonical visual contract.
 
 ## Workflow
 
@@ -46,6 +44,15 @@ Read the relevant reference file(s) from `references/` before answering:
 | Semantics, content descriptions, traversal order, testing | `references/accessibility.md` |
 | Removed/replaced APIs, migration paths from older Compose versions | `references/deprecated-patterns.md` |
 | **Styles API** (experimental): `Style {}`, `MutableStyleState`, `Modifier.styleable()` | `references/styles-experimental.md` |
+| Compose Multiplatform and platform boundaries | [multiplatform](references/multiplatform.md), [platform specifics](references/platform-specifics.md) |
+| Nav 2 to Nav 3 migration and back stacks | [navigation migration](references/navigation-migration.md) |
+| Paging, offline data and testing | [paging](references/paging.md), [offline](references/paging-offline.md), [MVI/testing](references/paging-mvi-testing.md) |
+| Material 3 Expressive motion | [Material motion](references/material3-motion.md) |
+| Design-to-code and component structure | [design mapping](references/design-to-compose.md), [atomic design](references/atomic-design.md) |
+| Android TV and D-pad focus | [TV Compose](references/tv-compose.md) |
+| Production crashes | [crash playbook](references/production-crash-playbook.md) |
+| Requested PR/code review | [review checklist](references/pr-review.md), scoped to the user's request |
+
 
 ### 3. Apply and verify
 - Write code that follows the patterns in the reference
@@ -104,3 +111,5 @@ compose/
 ├── material3/material3/src/commonMain/kotlin/androidx/compose/material3/
 └── navigation/navigation-compose/src/commonMain/kotlin/androidx/navigation/compose/
 ```
+
+Source: [aldefy/compose-skill](https://github.com/aldefy/compose-skill/tree/954ef54ea32288fbc90745f012d09d7b791f0d8a/skills/compose-expert). Original guidance is MIT; AndroidX source receipts retain Apache-2.0 notices. See [LICENSE](LICENSE).

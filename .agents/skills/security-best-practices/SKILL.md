@@ -3,7 +3,7 @@ name: security-best-practices
 description: Web app security best practices — HTTPS, CORS, XSS, SQL injection, CSRF, rate limiting, OWASP Top 10. Use when securing APIs or implementing security policies.
 metadata:
   tags: security, HTTPS, CORS, XSS, SQL-injection, CSRF, OWASP, rate-limiting
-  platforms: Claude, ChatGPT, Gemini
+  platforms: Compatible coding hosts
 ---
 
 
@@ -312,11 +312,11 @@ Integrity Failures).
 ### Version
 - **Current version**: 1.0.0
 - **Last updated**: 2025-01-01
-- **Compatible platforms**: Claude, ChatGPT, Gemini
+- **Compatible platforms**: hosts with the required project/file tools
 
 ### Related skills
-- [authentication-setup](../authentication-setup/SKILL.md)
-- [deployment](../deployment-automation/SKILL.md)
+- [Authentication review](../security-review/references/authentication.md)
+- [Deployment configuration review](../security-review/references/misconfiguration.md)
 
 ### Tags
 `#security` `#OWASP` `#HTTPS` `#CORS` `#XSS` `#SQL-injection` `#CSRF` `#infrastructure`

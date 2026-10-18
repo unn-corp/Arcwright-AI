@@ -43,3 +43,7 @@ https://strandsagents.com/docs and https://aws.github.io/bedrock-agentcore-start
 when refreshing. The `agentcore` CLI in particular has moved fast: confirm the current
 subcommand set (`configure`/`deploy`/`invoke`/`status`/`destroy` at time of writing)
 before trusting an example verbatim.
+
+## October 16, 2026 API refresh
+
+Examples for invocation `Limits`, stop reasons, cancellation, and Bedrock region resolution were checked against published Python v1.61.1, commit `5cb880559e5ed88bd55de2779e72d060020f756b`, in `strands-agents/harness-sdk`: `strands-py/src/strands/{agent/agent.py,types/agent.py,models/bedrock.py}`. The separate `harness-py/README.md` establishes the ready-made `create_harness` distinction. Guidance is independently authored; no SDK implementation is shipped and no later default-branch cancellation API is assumed.

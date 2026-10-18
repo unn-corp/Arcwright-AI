@@ -5,6 +5,12 @@
 
 Get started with Rust FFmpeg in 5 minutes.
 
+## Table of Contents
+
+- [Choose Your Library](#choose-your-library)
+- [Common First Tasks](#common-first-tasks)
+- [Installation Help](#installation-help)
+
 ## Choose Your Library
 
 ### Option 1: ez-ffmpeg
@@ -29,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 **Installation** (sync):
 ```toml
 [dependencies]
-ez-ffmpeg = "0.13.1"
+ez-ffmpeg = "0.18.0"
 ```
 
 **Async version** (requires `async` feature):
@@ -51,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 **Installation** (async):
 ```toml
 [dependencies]
-ez-ffmpeg = { version = "0.13.1", features = ["async"] }
+ez-ffmpeg = { version = "0.18.0", features = ["async"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -178,7 +184,7 @@ ffmpeg-sidecar = "2.5.2"
 |------|-----------------|-------|
 | Convert video format | ez-ffmpeg, ffmpeg-next, ffmpeg-sidecar | [video_transcoding.md](scenarios/video_transcoding.md) |
 | Extract audio | ez-ffmpeg, ffmpeg-next, ffmpeg-sidecar | [audio_extraction.md](scenarios/audio_extraction.md) |
-| Generate thumbnails | ez-ffmpeg, ffmpeg-next, ffmpeg-sidecar | [video_transcoding.md](scenarios/video_transcoding.md) |
+| Generate thumbnails | ez-ffmpeg, ffmpeg-next, ffmpeg-sidecar | [image_sequences.md](scenarios/image_sequences.md) |
 | Stream to RTMP | ez-ffmpeg, ffmpeg-next, ffmpeg-sidecar | [streaming_rtmp_hls.md](scenarios/streaming_rtmp_hls.md) |
 | Hardware encoding | All libraries | [hardware_acceleration.md](scenarios/hardware_acceleration.md) |
 | Batch processing | ez-ffmpeg, ffmpeg-next, ffmpeg-sidecar | [batch_processing.md](scenarios/batch_processing.md) |

@@ -1,6 +1,6 @@
 ---
 name: swiftui-animation
-description: "Implement, review, or improve SwiftUI animations and transitions. Use when adding implicit or explicit animations with withAnimation, configuring spring animations (.smooth, .snappy, .bouncy), building phase or keyframe animations with PhaseAnimator/KeyframeAnimator, creating hero transitions with matchedGeometryEffect or matchedTransitionSource, adding SF Symbol effects (bounce, pulse, variableColor, breathe, rotate, wiggle), implementing custom Transition or CustomAnimation types, or ensuring animations respect accessibilityReduceMotion."
+description: "Implement or troubleshoot SwiftUI animation, transitions, springs, keyframes, phase animation, and matched geometry. Use for motion behavior while preserving Reduce Motion support and stable view identity."
 ---
 
 # SwiftUI Animation (iOS 26+)

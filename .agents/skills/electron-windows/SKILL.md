@@ -1,17 +1,6 @@
 ---
 name: electron-windows
-description: >
-  Create and customize native windows in Electron: BrowserWindow lifecycle, multiple and
-  parent/child/modal windows, frameless windows and custom title bars (titleBarStyle /
-  titleBarOverlay with native window controls), transparency, macOS vibrancy, window state
-  persistence, and the screen/display API.
-  USE FOR: creating or managing BrowserWindow instances, building a custom/frameless title
-  bar with working native controls, making a transparent or vibrant window, opening modal
-  or child windows, persisting and restoring window size/position, placing a window on a
-  specific display.
-  DO NOT USE FOR: native menus/tray/dialogs/notifications (see electron-native-ui),
-  webPreferences security (see electron-security), the show:false ready-to-show flicker fix
-  (see electron-performance), or renderer↔main IPC (see electron-ipc).
+description: "Create and manage Electron BrowserWindow instances, multiple/modal windows, custom title bars, transparency, vibrancy, saved window state, and display placement."
 ---
 
 # Electron Windows

@@ -52,8 +52,9 @@ Matchers filter by tool name (`Write|Edit`, `Bash`, etc.) or are omitted to matc
 - **Registry update** → mark the Session Agent Registry row `closed` automatically.
 
 ### 5. Context loading (SessionStart) — start every session grounded
-- **Load project context** → run `project-context` scan (CLAUDE.md / AGENTS.md). This is the
-  single most useful hook for our workflows.
+- **Instruction reminder** → follow shared `AGENTS.md` rules and use `project-context`
+  only for missing task context. Required host files import the shared instructions;
+  the hook does not print a second copy into the conversation.
 
 ## Example: `.claude/settings.json`
 

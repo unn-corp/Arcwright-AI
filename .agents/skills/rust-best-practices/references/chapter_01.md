@@ -75,7 +75,8 @@ let new_num = increment(num); // `num` still usable after this point
 * When to consider declaring `Copy` on your own types:
 * All fields are `Copy` themselves.
 * The struct is `small`, up to 2 (maybe 3) words of memory or 24 bytes (each word is 64 bits/8bytes).
-* The struct **represents a "plain data object"**, without resourcing to ownership (no heap allocations. Example: `Vec` and `Strings`).
+* The struct **represents a plain data value**, without owning heap allocations such as `Vec` or `String`.
+* Avoid deriving both `Copy` and `Iterator`: advancing a copied iterator changes only that copy, which can silently repeat items. Prefer a separate iterator type returned by `IntoIterator`. Small size alone does not make copying cursor state a good API.
 
 ❗**Rust Arrays are stack allocated.** Which means they can be copied if their underlying type is `Copy`, but this will be allocated in the program stack which can easily become a stack overflow. More on [Chapter 3 - Stack vs Heap](./chapter_03.md#33-stack-vs-heap-be-size-smart)
 
@@ -550,3 +551,9 @@ group_imports = "StdExternalCrate"
 ```
 
 > As of Rust version 1.88, it is necessary to execute rustfmt in nightly to correctly reorder code `cargo +nightly fmt`.
+
+## 1.8 Extract helpers when they clarify behavior
+
+Keep small, readable code inline when extraction would only relocate a few lines. Extract a function when its name expresses a meaningful operation, it owns an invariant, or genuinely shared behavior needs one implementation. Similar-looking code is not enough: avoid boolean switches and growing parameter lists that force different callers through an accidental abstraction. If a helper no longer models its callers, inline and separate their behaviors before finding a better boundary.
+
+In tests, make setup, action, and expected behavior readable in the test itself. Prefer modest duplication over helpers that hide the inputs or assertions; share expensive setup or meaningful domain builders when they improve that story. Do not turn line-count targets into an extraction rule.

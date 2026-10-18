@@ -1,6 +1,6 @@
 ---
 name: agent-red-teaming
-description: Adversarial safety testing for AI agents, probe whether an agent's judgment holds up under hostile, multi-turn input (system-prompt extraction, data exfiltration, excessive tool use/agency, jailbreaks). Use when hardening an agent before release, testing prompt-injection or agent-safety robustness, or when asked to "red-team", "jailbreak-test", or "attack" an agent. Distinct from security-review / security-scan, which are OWASP web-app code lenses (injection, auth, XSS), not agent-judgment robustness.
+description: "Assess agent resistance to prompt injection, unsafe tool use, and data disclosure in authorized adversarial tests. Use agent-evaluation for general behavior quality."
 allowed-tools: Read, Grep, Glob, Bash, Write, Edit
 version: 1.0.0
 author: arcwright

@@ -1,15 +1,8 @@
 ---
 name: pdflib-impl-merging
-description: >
-  Use when merging, splitting, or reordering PDF pages across documents with pdf-lib.
-  Prevents the critical cross-document error: directly adding pages from another
-  document instead of using copyPages() first, which corrupts the PDF.
-  Covers copyPages workflow, merge patterns, page extraction, splitting, reordering.
-  Keywords: copyPages, merge, split, extract, addPage, insertPage,
-  cross-document, merge PDFs, combine PDFs, split PDF, extract pages,
-  join PDF files, reorder pages.
+description: "Merge, split, extract, or reorder PDF pages with pdf-lib using cross-document page copying."
 license: MIT
-compatibility: "Designed for Claude Code. Requires pdf-lib 1.x with TypeScript/JavaScript."
+compatibility: "Requires pdf-lib 1.x with TypeScript/JavaScript."
 metadata:
   author: OpenAEC-Foundation
   version: "1.0"

@@ -130,9 +130,9 @@ RUN --mount=type=cache,target=/app/.next/cache \
 
 Pattern to find: `pnpm run build` or `npm run build` line in a `RUN` instruction.
 
-### 6. Update CLAUDE.md / project docs
+### 6. Update applicable project instructions
 
-Appends a note to the project's CLAUDE.md under the Testing Workflow section:
+Update the project's chosen instructions (normally AGENTS.md, or an existing host-specific file) under Testing Workflow when within scope:
 
 ```markdown
 **Pre-commit type check:** Active via `.githooks/pre-commit`.
@@ -168,7 +168,7 @@ docker exec {{CONTAINER_NAME}} {{PKG_MANAGER}} run type-check
 | `.githooks/pre-commit` | Created (or updated if exists) |
 | `package.json` | `type-check` script added if missing |
 | `Dockerfile*` | Optional — `RUN type-check` inserted before build |
-| `CLAUDE.md` | Optional — note appended to Testing Workflow section |
+| Project instructions | Optional — note appended to Testing Workflow section |
 
 ## Notes
 

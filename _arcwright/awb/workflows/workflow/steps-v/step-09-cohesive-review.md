@@ -6,6 +6,7 @@ nextStepFile: './step-10-report-complete.md'
 targetWorkflowPath: '{workflow_folder_path}'
 validationReportFile: '{workflow_folder_path}/validation-report-{datetime}.md'
 workflowPlanFile: '{workflow_folder_path}/workflow-plan.md'
+promptQuality: '../data/prompt-quality.md'
 ---
 
 # Validation Step 9: Cohesive Review
@@ -118,7 +119,7 @@ Load workflow.md and EVERY step file in steps-c/ sequentially in main context:
 
 **Evaluate the workflow across key dimensions:**
 
-Consider goal clarity, logical flow, facilitation quality, user experience, and goal achievement. Provide an overall quality assessment based on these dimensions.
+Load {promptQuality}. Check that the intended outcome, consumer, and bar are explicit; that required policy and operational constraints survive; and that substantial branch-only material is discoverable without loading every branch. Consider goal clarity, logical flow, facilitation quality, and goal achievement. Compare against baseline/variant cases where available, citing observed artifacts rather than inferring quality from length. Label paper walkthroughs and unmeasured behavior separately from independent execution. Provide an evidence-bounded assessment.
 
 ### 5. Identify Strengths and Weaknesses
 

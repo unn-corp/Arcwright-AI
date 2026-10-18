@@ -43,7 +43,7 @@ To create the validation report that all parallel tasks that this will kick off 
 
 ## MANDATORY SEQUENCE
 
-**CRITICAL:** Follow this sequence exactly. Do not skip or shortcut. IF there is no subprocess type tool available that can achieve running a process in a subprocess and handle starting multiple - let the user know they need to restart validation specifically NOT using max-parallel mode and HALT and end this workflow!
+**CRITICAL:** Complete every listed check using callable native host tools. Honor live-agent limits, including the coordinator and other tasks; use waves rather than launching beyond capacity. If parallel delegation is unavailable or prohibited, run checks serially here and disclose the reduced independence. Do not require a restart merely because a particular subprocess tool is absent.
 
 ### 1. Create Validation Report
 
@@ -78,11 +78,13 @@ Save the file (without the handlebars output of course) before proceeding.
 
 ### 2. Launch Mass Parallelization and consolidate results!
 
-Utilizing a subprocess for each step file in {parallel-steps} - complete all of these - with the caveat indication to the subprocess that at the end of the specific step it will not on its own proceed to the nextStep file!
+Use available native Arcwright Code / T3 Code or agent task tools for each check in {parallel-steps}, in waves fitting host capacity. Each worker stops after its assigned check rather than following nextStep. Without delegation, complete the same checks here. The structure check uses the same canonical `data/workflow-limits.json` and read-only size checker as serial validation.
 
 Critically - instruct that instructions to write out or return results within each subprocess for a step file in the array MUST ensure that it writes it to {partialValidationFragmentFile} file name even though the step file it loads might indicate otherwise!
 
 Once every process has completed - there should be a separate validation file for each given step. Also - each step should return JUST its results and recommendations to you also.
+
+Record completed, failed, and unchecked sections explicitly. Empty/missing worker output is not a passing check. Retain usable results and mark unavailable required sections incomplete in the consolidated report.
 
 ### 3. CRITICAL WRITES to the report.
 
@@ -101,9 +103,9 @@ ONLY after ensuring all has been written to the final report, let the user know 
 ### ✅ SUCCESS:
 
 - Validation report created with header structure
-- EVERY section of the template is filled in with content from a subprocess that added the results of its area of expertise
+- Every required section has evidence from its completed delegated or serial check; unavailable sections are explicitly incomplete
 
 ### ❌ SYSTEM FAILURE:
 
 - Output Report does not exist with content all filled in
-- EVERY step listed in {parallel-steps} was not executed in a subprocess and completed with its results captured in output
+- A required check is omitted, or missing worker results are presented as passing validation

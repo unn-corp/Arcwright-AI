@@ -1,15 +1,6 @@
 ---
 name: electron-testing
-description: >
-  Test, debug, and instrument Electron apps: end-to-end automation with Playwright (the
-  current standard), WebdriverIO as an alternative, running on headless CI, debugging the
-  main process and renderer, and shipping crash reports with crashReporter.
-  USE FOR: writing automated Electron E2E tests, choosing a test framework, running
-  Electron tests in CI without a display, attaching a debugger to the main process,
-  opening renderer DevTools, or wiring up crash/minidump collection.
-  DO NOT USE FOR: unit-testing pure JS modules (use a normal test runner directly),
-  Electron security hardening (see electron-security), or app lifecycle wiring (see
-  electron-app-lifecycle).
+description: "Test or debug Electron main/renderer integration, headless E2E, or crash reporting. Pure JavaScript unit tests use their normal runner."
 ---
 
 # Electron Testing & Debugging

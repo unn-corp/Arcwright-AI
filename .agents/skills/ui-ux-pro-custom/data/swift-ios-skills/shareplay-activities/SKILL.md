@@ -1,6 +1,6 @@
 ---
 name: shareplay-activities
-description: "Build shared real-time experiences using GroupActivities and SharePlay. Use when implementing shared media playback, collaborative app features, synchronized game state, or any FaceTime/iMessage-integrated group activity on iOS, macOS, tvOS, or visionOS."
+description: "Implement or debug SharePlay with GroupActivities, including activity activation, session lifecycle, messaging, shared state, and playback coordination. Use for system-integrated shared experiences."
 ---
 
 # GroupActivities / SharePlay

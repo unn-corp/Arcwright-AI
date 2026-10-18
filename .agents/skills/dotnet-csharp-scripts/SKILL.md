@@ -1,6 +1,6 @@
 ---
 name: dotnet-csharp-scripts
-description: "Run file-based C# apps with the .NET CLI when the user explicitly wants C#/.NET code without creating a project. Use for C# language/API experiments, one-file C# apps, small multi-file C# apps composed with `#:include`/`#:exclude`, or C# file-based apps linked with `#:ref`. Do not use for language-agnostic throwaway scripts, generic computations, Python/PowerShell-style automation, full projects, or existing app integration."
+description: "Run projectless C# file-based apps when C#/.NET is requested, including include/exclude/ref directives. Excludes existing project integration and generic scripting."
 license: MIT
 ---
 

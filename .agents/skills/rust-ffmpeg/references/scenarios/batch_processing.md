@@ -9,15 +9,15 @@ Process multiple media files concurrently using async/parallel execution.
 
 - [Quick Example](#quick-example-30-seconds)
 - [Concurrent Processing Patterns](#concurrent-processing-patterns)
-- [Progress Tracking](#progress-tracking)
-- [Error Handling](#error-handling)
-- [Resource Management](#resource-management)
-- [Sequential Processing](#sequential-processing)
+- [Progress Tracking](#with-progress-tracking)
+- [Bounded Concurrency](#bounded-concurrency-recommended)
+- [Concurrency Guidelines](#concurrency-guidelines)
+- [Library Comparison](#library-comparison)
 
 > **Dependencies**:
 > ```toml
 > # For ez-ffmpeg (async)
-> ez-ffmpeg = { version = "0.13.1", features = ["async"] }
+> ez-ffmpeg = { version = "0.18.0", features = ["async"] }
 > tokio = { version = "1", features = ["full"] }
 > futures = "0.3"
 >
@@ -65,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 |--------|-----------|----------------|
 | **Concurrent processing** | ✅ Native async | Thread-based (rayon/std::thread) |
 | **Resource efficiency** | High (async I/O) | Medium (process per file) |
-| **Progress tracking** | FrameFilter callback | Iterator events |
+| **Progress tracking** | Typed `progress_handle()` snapshots (0.16) | Iterator events |
 | **Use when** | Large batches, async apps | Small batches, simple CLI |
 
 ## Quick Examples
@@ -244,6 +244,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+> Per-**file** counting as above is usually enough for batches. For percent-within-a-file
+> (one long transcode among many), take each job's `scheduler.progress_handle()` and poll
+> `snapshot()` — see [advanced.md](../ez_ffmpeg/advanced.md#progress-monitoring) (0.16).
+
 **ffmpeg-sidecar (with per-file progress)**:
 ```rust
 use ffmpeg_sidecar::command::FfmpegCommand;
@@ -331,6 +335,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+> **Speed tip — mid-video thumbnails**: when grabbing a frame at time T (not the first frame), use `Input::from(&input).set_start_time_us(t_us).set_video_codec_opt("skip_frame", "nokey")` so each task decodes only keyframes instead of the whole keyframe→target pre-roll — the speedup grows with GOP length and resolution. Trade-off: the frame snaps to the first keyframe at/after T, and a T inside the file's last GOP fails with an encoder error. See [ez_ffmpeg/video.md](../ez_ffmpeg/video.md#thumbnail-extraction).
 
 ## Concurrency Guidelines
 

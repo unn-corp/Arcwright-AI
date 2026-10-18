@@ -1,0 +1,1412 @@
+{
+  "schemaVersion": 1,
+  "measurement": "UTF-8 bytes, not provider token counts",
+  "review": "Reviewed entrypoint and description footprints. Refresh only after reviewing additions, removals, and growth.",
+  "skills": {
+    ".agents/skills/agent-evaluation/SKILL.md": {
+      "name": "agent-evaluation",
+      "entrypointBytes": 5567,
+      "descriptionBytes": 154
+    },
+    ".agents/skills/agent-instructions/SKILL.md": {
+      "name": "agent-instructions",
+      "entrypointBytes": 3718,
+      "descriptionBytes": 193
+    },
+    ".agents/skills/agent-red-teaming/SKILL.md": {
+      "name": "agent-red-teaming",
+      "entrypointBytes": 4875,
+      "descriptionBytes": 165
+    },
+    ".agents/skills/agent-sop-constraints/SKILL.md": {
+      "name": "agent-sop-constraints",
+      "entrypointBytes": 4194,
+      "descriptionBytes": 149
+    },
+    ".agents/skills/amplify-best-practices/SKILL.md": {
+      "name": "amplify-best-practices",
+      "entrypointBytes": 11222,
+      "descriptionBytes": 140
+    },
+    ".agents/skills/arcwright/SKILL.md": {
+      "name": "arcwright",
+      "entrypointBytes": 3687,
+      "descriptionBytes": 161
+    },
+    ".agents/skills/astro-framework/SKILL.md": {
+      "name": "astro-framework",
+      "entrypointBytes": 12590,
+      "descriptionBytes": 105
+    },
+    ".agents/skills/audit-website/SKILL.md": {
+      "name": "audit-website",
+      "entrypointBytes": 4553,
+      "descriptionBytes": 172
+    },
+    ".agents/skills/aurora-db-best-practices/SKILL.md": {
+      "name": "aurora-db-best-practices",
+      "entrypointBytes": 4045,
+      "descriptionBytes": 157
+    },
+    ".agents/skills/aws-serverless-cdk/SKILL.md": {
+      "name": "aws-serverless-cdk",
+      "entrypointBytes": 4321,
+      "descriptionBytes": 146
+    },
+    ".agents/skills/browser-use/SKILL.md": {
+      "name": "browser-use",
+      "entrypointBytes": 3144,
+      "descriptionBytes": 282
+    },
+    ".agents/skills/build-mcp-app/SKILL.md": {
+      "name": "build-mcp-app",
+      "entrypointBytes": 3434,
+      "descriptionBytes": 131
+    },
+    ".agents/skills/build-mcp-server/SKILL.md": {
+      "name": "build-mcp-server",
+      "entrypointBytes": 4337,
+      "descriptionBytes": 138
+    },
+    ".agents/skills/build-mcpb/SKILL.md": {
+      "name": "build-mcpb",
+      "entrypointBytes": 7629,
+      "descriptionBytes": 161
+    },
+    ".agents/skills/caveman/SKILL.md": {
+      "name": "caveman",
+      "entrypointBytes": 4007,
+      "descriptionBytes": 154
+    },
+    ".agents/skills/caveman-compress/SKILL.md": {
+      "name": "caveman-compress",
+      "entrypointBytes": 2554,
+      "descriptionBytes": 308
+    },
+    ".agents/skills/ci-gates/SKILL.md": {
+      "name": "ci-gates",
+      "entrypointBytes": 5580,
+      "descriptionBytes": 253
+    },
+    ".agents/skills/clarification-gate/SKILL.md": {
+      "name": "clarification-gate",
+      "entrypointBytes": 5767,
+      "descriptionBytes": 261
+    },
+    ".agents/skills/claude-md-management/SKILL.md": {
+      "name": "claude-md-management",
+      "entrypointBytes": 286,
+      "descriptionBytes": 121
+    },
+    ".agents/skills/claude-subagent-protocol/SKILL.md": {
+      "name": "claude-subagent-protocol",
+      "entrypointBytes": 425,
+      "descriptionBytes": 108
+    },
+    ".agents/skills/clean-code-standards/SKILL.md": {
+      "name": "clean-code-standards",
+      "entrypointBytes": 6776,
+      "descriptionBytes": 122
+    },
+    ".agents/skills/cloudfront-best-practices/SKILL.md": {
+      "name": "cloudfront-best-practices",
+      "entrypointBytes": 12784,
+      "descriptionBytes": 271
+    },
+    ".agents/skills/code-graph/SKILL.md": {
+      "name": "code-graph",
+      "entrypointBytes": 8967,
+      "descriptionBytes": 154
+    },
+    ".agents/skills/cognito-best-practices/SKILL.md": {
+      "name": "cognito-best-practices",
+      "entrypointBytes": 4004,
+      "descriptionBytes": 160
+    },
+    ".agents/skills/commit-commands/SKILL.md": {
+      "name": "commit-commands",
+      "entrypointBytes": 3903,
+      "descriptionBytes": 281
+    },
+    ".agents/skills/contract-review/SKILL.md": {
+      "name": "contract-review",
+      "entrypointBytes": 14501,
+      "descriptionBytes": 229
+    },
+    ".agents/skills/core-web-vitals/SKILL.md": {
+      "name": "core-web-vitals",
+      "entrypointBytes": 9770,
+      "descriptionBytes": 239
+    },
+    ".agents/skills/correct-course/SKILL.md": {
+      "name": "correct-course",
+      "entrypointBytes": 3963,
+      "descriptionBytes": 124
+    },
+    ".agents/skills/design-md/SKILL.md": {
+      "name": "design-md",
+      "entrypointBytes": 7497,
+      "descriptionBytes": 123
+    },
+    ".agents/skills/design-taste-frontend/SKILL.md": {
+      "name": "design-taste-frontend",
+      "entrypointBytes": 4197,
+      "descriptionBytes": 178
+    },
+    ".agents/skills/doc-docx/SKILL.md": {
+      "name": "doc-docx",
+      "entrypointBytes": 4023,
+      "descriptionBytes": 148
+    },
+    ".agents/skills/doc-pdf/SKILL.md": {
+      "name": "doc-pdf",
+      "entrypointBytes": 3342,
+      "descriptionBytes": 119
+    },
+    ".agents/skills/doc-pptx/SKILL.md": {
+      "name": "doc-pptx",
+      "entrypointBytes": 4689,
+      "descriptionBytes": 159
+    },
+    ".agents/skills/doc-xlsx/SKILL.md": {
+      "name": "doc-xlsx",
+      "entrypointBytes": 3978,
+      "descriptionBytes": 146
+    },
+    ".agents/skills/docker-type-check/SKILL.md": {
+      "name": "docker-type-check",
+      "entrypointBytes": 5964,
+      "descriptionBytes": 117
+    },
+    ".agents/skills/dotnet-aot-compat/SKILL.md": {
+      "name": "dotnet-aot-compat",
+      "entrypointBytes": 3891,
+      "descriptionBytes": 148
+    },
+    ".agents/skills/dotnet-csharp-scripts/SKILL.md": {
+      "name": "dotnet-csharp-scripts",
+      "entrypointBytes": 11638,
+      "descriptionBytes": 164
+    },
+    ".agents/skills/dotnet-directory-build-organization/SKILL.md": {
+      "name": "dotnet-directory-build-organization",
+      "entrypointBytes": 10787,
+      "descriptionBytes": 210
+    },
+    ".agents/skills/dotnet-incremental-build/SKILL.md": {
+      "name": "dotnet-incremental-build",
+      "entrypointBytes": 4288,
+      "descriptionBytes": 199
+    },
+    ".agents/skills/dotnet-migrate-nullable-references/SKILL.md": {
+      "name": "dotnet-migrate-nullable-references",
+      "entrypointBytes": 4709,
+      "descriptionBytes": 168
+    },
+    ".agents/skills/dotnet-msbuild-antipatterns/SKILL.md": {
+      "name": "dotnet-msbuild-antipatterns",
+      "entrypointBytes": 4144,
+      "descriptionBytes": 205
+    },
+    ".agents/skills/dotnet-pinvoke/SKILL.md": {
+      "name": "dotnet-pinvoke",
+      "entrypointBytes": 4271,
+      "descriptionBytes": 146
+    },
+    ".agents/skills/dotnet-setup-local-sdk/SKILL.md": {
+      "name": "dotnet-setup-local-sdk",
+      "entrypointBytes": 14455,
+      "descriptionBytes": 148
+    },
+    ".agents/skills/drift/SKILL.md": {
+      "name": "drift",
+      "entrypointBytes": 6992,
+      "descriptionBytes": 121
+    },
+    ".agents/skills/dynamodb-best-practices/SKILL.md": {
+      "name": "dynamodb-best-practices",
+      "entrypointBytes": 9117,
+      "descriptionBytes": 299
+    },
+    ".agents/skills/edge-case-hunter/SKILL.md": {
+      "name": "edge-case-hunter",
+      "entrypointBytes": 6657,
+      "descriptionBytes": 140
+    },
+    ".agents/skills/electron-app-lifecycle/SKILL.md": {
+      "name": "electron-app-lifecycle",
+      "entrypointBytes": 7915,
+      "descriptionBytes": 161
+    },
+    ".agents/skills/electron-ipc/SKILL.md": {
+      "name": "electron-ipc",
+      "entrypointBytes": 9895,
+      "descriptionBytes": 156
+    },
+    ".agents/skills/electron-native-modules/SKILL.md": {
+      "name": "electron-native-modules",
+      "entrypointBytes": 5532,
+      "descriptionBytes": 154
+    },
+    ".agents/skills/electron-native-ui/SKILL.md": {
+      "name": "electron-native-ui",
+      "entrypointBytes": 10706,
+      "descriptionBytes": 199
+    },
+    ".agents/skills/electron-packaging/SKILL.md": {
+      "name": "electron-packaging",
+      "entrypointBytes": 11547,
+      "descriptionBytes": 200
+    },
+    ".agents/skills/electron-performance/SKILL.md": {
+      "name": "electron-performance",
+      "entrypointBytes": 5743,
+      "descriptionBytes": 149
+    },
+    ".agents/skills/electron-security/SKILL.md": {
+      "name": "electron-security",
+      "entrypointBytes": 13692,
+      "descriptionBytes": 195
+    },
+    ".agents/skills/electron-testing/SKILL.md": {
+      "name": "electron-testing",
+      "entrypointBytes": 6695,
+      "descriptionBytes": 135
+    },
+    ".agents/skills/electron-updates/SKILL.md": {
+      "name": "electron-updates",
+      "entrypointBytes": 5081,
+      "descriptionBytes": 123
+    },
+    ".agents/skills/electron-windows/SKILL.md": {
+      "name": "electron-windows",
+      "entrypointBytes": 9642,
+      "descriptionBytes": 161
+    },
+    ".agents/skills/eventbridge-best-practices/SKILL.md": {
+      "name": "eventbridge-best-practices",
+      "entrypointBytes": 15121,
+      "descriptionBytes": 277
+    },
+    ".agents/skills/excalidraw-dark-standard/SKILL.md": {
+      "name": "excalidraw-dark-standard",
+      "entrypointBytes": 8947,
+      "descriptionBytes": 143
+    },
+    ".agents/skills/excalidraw-diagram-generator/SKILL.md": {
+      "name": "excalidraw-diagram-generator",
+      "entrypointBytes": 3093,
+      "descriptionBytes": 127
+    },
+    ".agents/skills/frontend-responsive-design-standards/SKILL.md": {
+      "name": "frontend-responsive-design-standards",
+      "entrypointBytes": 10748,
+      "descriptionBytes": 192
+    },
+    ".agents/skills/full-send/SKILL.md": {
+      "name": "full-send",
+      "entrypointBytes": 4313,
+      "descriptionBytes": 198
+    },
+    ".agents/skills/full-stop/SKILL.md": {
+      "name": "full-stop",
+      "entrypointBytes": 3791,
+      "descriptionBytes": 194
+    },
+    ".agents/skills/gdpr-dpa-art28/SKILL.md": {
+      "name": "gdpr-dpa-art28",
+      "entrypointBytes": 7436,
+      "descriptionBytes": 99
+    },
+    ".agents/skills/goal-backward-verify/SKILL.md": {
+      "name": "goal-backward-verify",
+      "entrypointBytes": 4147,
+      "descriptionBytes": 127
+    },
+    ".agents/skills/grill-me/SKILL.md": {
+      "name": "grill-me",
+      "entrypointBytes": 4679,
+      "descriptionBytes": 154
+    },
+    ".agents/skills/gsudo/SKILL.md": {
+      "name": "gsudo",
+      "entrypointBytes": 2158,
+      "descriptionBytes": 119
+    },
+    ".agents/skills/herdr/SKILL.md": {
+      "name": "herdr",
+      "entrypointBytes": 11211,
+      "descriptionBytes": 229
+    },
+    ".agents/skills/hookify/SKILL.md": {
+      "name": "hookify",
+      "entrypointBytes": 2706,
+      "descriptionBytes": 106
+    },
+    ".agents/skills/ip-assignment/SKILL.md": {
+      "name": "ip-assignment",
+      "entrypointBytes": 5367,
+      "descriptionBytes": 111
+    },
+    ".agents/skills/ip-clause-review/SKILL.md": {
+      "name": "ip-clause-review",
+      "entrypointBytes": 4437,
+      "descriptionBytes": 130
+    },
+    ".agents/skills/java-fundamentals/SKILL.md": {
+      "name": "java-fundamentals",
+      "entrypointBytes": 2785,
+      "descriptionBytes": 88
+    },
+    ".agents/skills/java-performance/SKILL.md": {
+      "name": "java-performance",
+      "entrypointBytes": 2423,
+      "descriptionBytes": 82
+    },
+    ".agents/skills/karpathy-discipline/SKILL.md": {
+      "name": "karpathy-discipline",
+      "entrypointBytes": 4675,
+      "descriptionBytes": 162
+    },
+    ".agents/skills/lambda-best-practices/SKILL.md": {
+      "name": "lambda-best-practices",
+      "entrypointBytes": 4509,
+      "descriptionBytes": 241
+    },
+    ".agents/skills/lsp-diagnostics/SKILL.md": {
+      "name": "lsp-diagnostics",
+      "entrypointBytes": 6328,
+      "descriptionBytes": 222
+    },
+    ".agents/skills/matt-pocock/SKILL.md": {
+      "name": "matt-pocock",
+      "entrypointBytes": 572,
+      "descriptionBytes": 132
+    },
+    ".agents/skills/matt-pocock-ask-matt/SKILL.md": {
+      "name": "matt-pocock-ask-matt",
+      "entrypointBytes": 13544,
+      "descriptionBytes": 83
+    },
+    ".agents/skills/matt-pocock-code-review/SKILL.md": {
+      "name": "matt-pocock-code-review",
+      "entrypointBytes": 6863,
+      "descriptionBytes": 166
+    },
+    ".agents/skills/matt-pocock-codebase-design/SKILL.md": {
+      "name": "matt-pocock-codebase-design",
+      "entrypointBytes": 6562,
+      "descriptionBytes": 265
+    },
+    ".agents/skills/matt-pocock-diagnosing-bugs/SKILL.md": {
+      "name": "matt-pocock-diagnosing-bugs",
+      "entrypointBytes": 8780,
+      "descriptionBytes": 156
+    },
+    ".agents/skills/matt-pocock-domain-modeling/SKILL.md": {
+      "name": "matt-pocock-domain-modeling",
+      "entrypointBytes": 3462,
+      "descriptionBytes": 151
+    },
+    ".agents/skills/matt-pocock-grill-me/SKILL.md": {
+      "name": "matt-pocock-grill-me",
+      "entrypointBytes": 388,
+      "descriptionBytes": 51
+    },
+    ".agents/skills/matt-pocock-grill-with-docs/SKILL.md": {
+      "name": "matt-pocock-grill-with-docs",
+      "entrypointBytes": 357,
+      "descriptionBytes": 106
+    },
+    ".agents/skills/matt-pocock-grilling/SKILL.md": {
+      "name": "matt-pocock-grilling",
+      "entrypointBytes": 2145,
+      "descriptionBytes": 152
+    },
+    ".agents/skills/matt-pocock-handoff/SKILL.md": {
+      "name": "matt-pocock-handoff",
+      "entrypointBytes": 1026,
+      "descriptionBytes": 86
+    },
+    ".agents/skills/matt-pocock-implement/SKILL.md": {
+      "name": "matt-pocock-implement",
+      "entrypointBytes": 732,
+      "descriptionBytes": 60
+    },
+    ".agents/skills/matt-pocock-implement-spec/SKILL.md": {
+      "name": "matt-pocock-implement-spec",
+      "entrypointBytes": 2926,
+      "descriptionBytes": 81
+    },
+    ".agents/skills/matt-pocock-improve-codebase-architecture/SKILL.md": {
+      "name": "matt-pocock-improve-codebase-architecture",
+      "entrypointBytes": 6146,
+      "descriptionBytes": 125
+    },
+    ".agents/skills/matt-pocock-pr/SKILL.md": {
+      "name": "matt-pocock-pr",
+      "entrypointBytes": 4285,
+      "descriptionBytes": 27
+    },
+    ".agents/skills/matt-pocock-prototype/SKILL.md": {
+      "name": "matt-pocock-prototype",
+      "entrypointBytes": 3047,
+      "descriptionBytes": 179
+    },
+    ".agents/skills/matt-pocock-research/SKILL.md": {
+      "name": "matt-pocock-research",
+      "entrypointBytes": 910,
+      "descriptionBytes": 238
+    },
+    ".agents/skills/matt-pocock-retro/SKILL.md": {
+      "name": "matt-pocock-retro",
+      "entrypointBytes": 4479,
+      "descriptionBytes": 44
+    },
+    ".agents/skills/matt-pocock-setup-matt-pocock-skills/SKILL.md": {
+      "name": "matt-pocock-setup-matt-pocock-skills",
+      "entrypointBytes": 7219,
+      "descriptionBytes": 180
+    },
+    ".agents/skills/matt-pocock-tdd/SKILL.md": {
+      "name": "matt-pocock-tdd",
+      "entrypointBytes": 3858,
+      "descriptionBytes": 149
+    },
+    ".agents/skills/matt-pocock-teach/SKILL.md": {
+      "name": "matt-pocock-teach",
+      "entrypointBytes": 9830,
+      "descriptionBytes": 61
+    },
+    ".agents/skills/matt-pocock-to-questionnaire/SKILL.md": {
+      "name": "matt-pocock-to-questionnaire",
+      "entrypointBytes": 2990,
+      "descriptionBytes": 88
+    },
+    ".agents/skills/matt-pocock-to-spec/SKILL.md": {
+      "name": "matt-pocock-to-spec",
+      "entrypointBytes": 3141,
+      "descriptionBytes": 149
+    },
+    ".agents/skills/matt-pocock-to-tickets/SKILL.md": {
+      "name": "matt-pocock-to-tickets",
+      "entrypointBytes": 5922,
+      "descriptionBytes": 247
+    },
+    ".agents/skills/matt-pocock-triage/SKILL.md": {
+      "name": "matt-pocock-triage",
+      "entrypointBytes": 6536,
+      "descriptionBytes": 136
+    },
+    ".agents/skills/matt-pocock-wait-what/SKILL.md": {
+      "name": "matt-pocock-wait-what",
+      "entrypointBytes": 482,
+      "descriptionBytes": 50
+    },
+    ".agents/skills/matt-pocock-wayfinder/SKILL.md": {
+      "name": "matt-pocock-wayfinder",
+      "entrypointBytes": 12586,
+      "descriptionBytes": 197
+    },
+    ".agents/skills/matt-pocock-wizard/SKILL.md": {
+      "name": "matt-pocock-wizard",
+      "entrypointBytes": 4082,
+      "descriptionBytes": 154
+    },
+    ".agents/skills/matt-pocock-writing-for-agents/SKILL.md": {
+      "name": "matt-pocock-writing-for-agents",
+      "entrypointBytes": 11002,
+      "descriptionBytes": 103
+    },
+    ".agents/skills/motion/SKILL.md": {
+      "name": "motion",
+      "entrypointBytes": 7038,
+      "descriptionBytes": 138
+    },
+    ".agents/skills/nda-review/SKILL.md": {
+      "name": "nda-review",
+      "entrypointBytes": 4570,
+      "descriptionBytes": 175
+    },
+    ".agents/skills/next-best-practices/SKILL.md": {
+      "name": "next-best-practices",
+      "entrypointBytes": 5286,
+      "descriptionBytes": 279
+    },
+    ".agents/skills/nextjs-seo/SKILL.md": {
+      "name": "nextjs-seo",
+      "entrypointBytes": 3599,
+      "descriptionBytes": 276
+    },
+    ".agents/skills/output-style-explanatory/SKILL.md": {
+      "name": "output-style-explanatory",
+      "entrypointBytes": 4425,
+      "descriptionBytes": 124
+    },
+    ".agents/skills/pdflib-agents-project-scaffolder/SKILL.md": {
+      "name": "pdflib-agents-project-scaffolder",
+      "entrypointBytes": 11332,
+      "descriptionBytes": 120
+    },
+    ".agents/skills/pdflib-agents-review/SKILL.md": {
+      "name": "pdflib-agents-review",
+      "entrypointBytes": 9839,
+      "descriptionBytes": 115
+    },
+    ".agents/skills/pdflib-core-architecture/SKILL.md": {
+      "name": "pdflib-core-architecture",
+      "entrypointBytes": 9953,
+      "descriptionBytes": 120
+    },
+    ".agents/skills/pdflib-errors-common/SKILL.md": {
+      "name": "pdflib-errors-common",
+      "entrypointBytes": 10017,
+      "descriptionBytes": 108
+    },
+    ".agents/skills/pdflib-errors-fonts/SKILL.md": {
+      "name": "pdflib-errors-fonts",
+      "entrypointBytes": 11044,
+      "descriptionBytes": 100
+    },
+    ".agents/skills/pdflib-errors-loading/SKILL.md": {
+      "name": "pdflib-errors-loading",
+      "entrypointBytes": 11412,
+      "descriptionBytes": 119
+    },
+    ".agents/skills/pdflib-impl-form-filling/SKILL.md": {
+      "name": "pdflib-impl-form-filling",
+      "entrypointBytes": 8269,
+      "descriptionBytes": 109
+    },
+    ".agents/skills/pdflib-impl-merging/SKILL.md": {
+      "name": "pdflib-impl-merging",
+      "entrypointBytes": 9371,
+      "descriptionBytes": 91
+    },
+    ".agents/skills/pdflib-impl-page-layout/SKILL.md": {
+      "name": "pdflib-impl-page-layout",
+      "entrypointBytes": 7404,
+      "descriptionBytes": 102
+    },
+    ".agents/skills/pdflib-impl-pdf-generation/SKILL.md": {
+      "name": "pdflib-impl-pdf-generation",
+      "entrypointBytes": 10209,
+      "descriptionBytes": 95
+    },
+    ".agents/skills/pdflib-syntax-document/SKILL.md": {
+      "name": "pdflib-syntax-document",
+      "entrypointBytes": 7861,
+      "descriptionBytes": 78
+    },
+    ".agents/skills/pdflib-syntax-drawing/SKILL.md": {
+      "name": "pdflib-syntax-drawing",
+      "entrypointBytes": 8943,
+      "descriptionBytes": 94
+    },
+    ".agents/skills/pdflib-syntax-fonts/SKILL.md": {
+      "name": "pdflib-syntax-fonts",
+      "entrypointBytes": 10156,
+      "descriptionBytes": 91
+    },
+    ".agents/skills/pdflib-syntax-forms/SKILL.md": {
+      "name": "pdflib-syntax-forms",
+      "entrypointBytes": 10964,
+      "descriptionBytes": 126
+    },
+    ".agents/skills/pdflib-syntax-images/SKILL.md": {
+      "name": "pdflib-syntax-images",
+      "entrypointBytes": 7690,
+      "descriptionBytes": 104
+    },
+    ".agents/skills/pdflib-syntax-pages/SKILL.md": {
+      "name": "pdflib-syntax-pages",
+      "entrypointBytes": 10057,
+      "descriptionBytes": 94
+    },
+    ".agents/skills/pdflib-syntax-text/SKILL.md": {
+      "name": "pdflib-syntax-text",
+      "entrypointBytes": 8013,
+      "descriptionBytes": 65
+    },
+    ".agents/skills/playwright-cli/SKILL.md": {
+      "name": "playwright-cli",
+      "entrypointBytes": 4177,
+      "descriptionBytes": 77
+    },
+    ".agents/skills/postgresql-optimization/SKILL.md": {
+      "name": "postgresql-optimization",
+      "entrypointBytes": 11229,
+      "descriptionBytes": 152
+    },
+    ".agents/skills/pr-review-panel/SKILL.md": {
+      "name": "pr-review-panel",
+      "entrypointBytes": 7866,
+      "descriptionBytes": 155
+    },
+    ".agents/skills/privacy-page-generator/SKILL.md": {
+      "name": "privacy-page-generator",
+      "entrypointBytes": 10134,
+      "descriptionBytes": 121
+    },
+    ".agents/skills/privacy-policy-drafting/SKILL.md": {
+      "name": "privacy-policy-drafting",
+      "entrypointBytes": 8618,
+      "descriptionBytes": 117
+    },
+    ".agents/skills/project-context/SKILL.md": {
+      "name": "project-context",
+      "entrypointBytes": 3398,
+      "descriptionBytes": 157
+    },
+    ".agents/skills/python-backend/SKILL.md": {
+      "name": "python-backend",
+      "entrypointBytes": 3500,
+      "descriptionBytes": 114
+    },
+    ".agents/skills/python-fundamentals/SKILL.md": {
+      "name": "python-fundamentals",
+      "entrypointBytes": 6479,
+      "descriptionBytes": 84
+    },
+    ".agents/skills/python-performance/SKILL.md": {
+      "name": "python-performance",
+      "entrypointBytes": 10374,
+      "descriptionBytes": 99
+    },
+    ".agents/skills/react-expert/SKILL.md": {
+      "name": "react-expert",
+      "entrypointBytes": 2778,
+      "descriptionBytes": 195
+    },
+    ".agents/skills/redis-best-practices/SKILL.md": {
+      "name": "redis-best-practices",
+      "entrypointBytes": 8446,
+      "descriptionBytes": 104
+    },
+    ".agents/skills/renderdoc-gpu-debug/SKILL.md": {
+      "name": "renderdoc-gpu-debug",
+      "entrypointBytes": 15124,
+      "descriptionBytes": 202
+    },
+    ".agents/skills/review-loop/SKILL.md": {
+      "name": "review-loop",
+      "entrypointBytes": 6479,
+      "descriptionBytes": 206
+    },
+    ".agents/skills/rust-architecture-patterns/SKILL.md": {
+      "name": "rust-architecture-patterns",
+      "entrypointBytes": 912,
+      "descriptionBytes": 263
+    },
+    ".agents/skills/rust-async-concurrency/SKILL.md": {
+      "name": "rust-async-concurrency",
+      "entrypointBytes": 1096,
+      "descriptionBytes": 208
+    },
+    ".agents/skills/rust-best-practices/SKILL.md": {
+      "name": "rust-best-practices",
+      "entrypointBytes": 4517,
+      "descriptionBytes": 139
+    },
+    ".agents/skills/rust-ci-quality-gates/SKILL.md": {
+      "name": "rust-ci-quality-gates",
+      "entrypointBytes": 1938,
+      "descriptionBytes": 285
+    },
+    ".agents/skills/rust-code-quality/SKILL.md": {
+      "name": "rust-code-quality",
+      "entrypointBytes": 1812,
+      "descriptionBytes": 237
+    },
+    ".agents/skills/rust-expert-rulebook/SKILL.md": {
+      "name": "rust-expert-rulebook",
+      "entrypointBytes": 2109,
+      "descriptionBytes": 208
+    },
+    ".agents/skills/rust-ffi-bindings/SKILL.md": {
+      "name": "rust-ffi-bindings",
+      "entrypointBytes": 992,
+      "descriptionBytes": 265
+    },
+    ".agents/skills/rust-ffmpeg/SKILL.md": {
+      "name": "rust-ffmpeg",
+      "entrypointBytes": 2853,
+      "descriptionBytes": 157
+    },
+    ".agents/skills/rust-low-latency-hft/SKILL.md": {
+      "name": "rust-low-latency-hft",
+      "entrypointBytes": 1178,
+      "descriptionBytes": 277
+    },
+    ".agents/skills/rust-math-algorithms-performance/SKILL.md": {
+      "name": "rust-math-algorithms-performance",
+      "entrypointBytes": 1582,
+      "descriptionBytes": 110
+    },
+    ".agents/skills/rust-memory-simd-io-performance/SKILL.md": {
+      "name": "rust-memory-simd-io-performance",
+      "entrypointBytes": 2035,
+      "descriptionBytes": 266
+    },
+    ".agents/skills/rust-performance-core/SKILL.md": {
+      "name": "rust-performance-core",
+      "entrypointBytes": 1518,
+      "descriptionBytes": 218
+    },
+    ".agents/skills/rust-performance-engineering/SKILL.md": {
+      "name": "rust-performance-engineering",
+      "entrypointBytes": 7178,
+      "descriptionBytes": 155
+    },
+    ".agents/skills/rust-review-auditor/SKILL.md": {
+      "name": "rust-review-auditor",
+      "entrypointBytes": 1684,
+      "descriptionBytes": 242
+    },
+    ".agents/skills/rust-testing-verification/SKILL.md": {
+      "name": "rust-testing-verification",
+      "entrypointBytes": 1808,
+      "descriptionBytes": 265
+    },
+    ".agents/skills/rust-unsafe-soundness/SKILL.md": {
+      "name": "rust-unsafe-soundness",
+      "entrypointBytes": 893,
+      "descriptionBytes": 256
+    },
+    ".agents/skills/s3-best-practices/SKILL.md": {
+      "name": "s3-best-practices",
+      "entrypointBytes": 13135,
+      "descriptionBytes": 255
+    },
+    ".agents/skills/scc-implementation/SKILL.md": {
+      "name": "scc-implementation",
+      "entrypointBytes": 14442,
+      "descriptionBytes": 119
+    },
+    ".agents/skills/scroll-world/SKILL.md": {
+      "name": "scroll-world",
+      "entrypointBytes": 3895,
+      "descriptionBytes": 145
+    },
+    ".agents/skills/security-best-practices/SKILL.md": {
+      "name": "security-best-practices",
+      "entrypointBytes": 10122,
+      "descriptionBytes": 161
+    },
+    ".agents/skills/security-review/SKILL.md": {
+      "name": "security-review",
+      "entrypointBytes": 15241,
+      "descriptionBytes": 297
+    },
+    ".agents/skills/seo/SKILL.md": {
+      "name": "seo",
+      "entrypointBytes": 4966,
+      "descriptionBytes": 185
+    },
+    ".agents/skills/seo-aeo-geo/SKILL.md": {
+      "name": "seo-aeo-geo",
+      "entrypointBytes": 4050,
+      "descriptionBytes": 121
+    },
+    ".agents/skills/ses-sns-smtp-best-practices/SKILL.md": {
+      "name": "ses-sns-smtp-best-practices",
+      "entrypointBytes": 4586,
+      "descriptionBytes": 281
+    },
+    ".agents/skills/session-handoff/SKILL.md": {
+      "name": "session-handoff",
+      "entrypointBytes": 2869,
+      "descriptionBytes": 253
+    },
+    ".agents/skills/setting-up-customer-cicd-gates/SKILL.md": {
+      "name": "setting-up-customer-cicd-gates",
+      "entrypointBytes": 9907,
+      "descriptionBytes": 286
+    },
+    ".agents/skills/skill-scout/SKILL.md": {
+      "name": "skill-scout",
+      "entrypointBytes": 4101,
+      "descriptionBytes": 242
+    },
+    ".agents/skills/soc2/SKILL.md": {
+      "name": "soc2",
+      "entrypointBytes": 10404,
+      "descriptionBytes": 196
+    },
+    ".agents/skills/sol-loop/SKILL.md": {
+      "name": "sol-loop",
+      "entrypointBytes": 251,
+      "descriptionBytes": 116
+    },
+    ".agents/skills/spec-kernel/SKILL.md": {
+      "name": "spec-kernel",
+      "entrypointBytes": 5395,
+      "descriptionBytes": 214
+    },
+    ".agents/skills/squirrelscan/SKILL.md": {
+      "name": "squirrelscan",
+      "entrypointBytes": 4444,
+      "descriptionBytes": 183
+    },
+    ".agents/skills/step-functions-best-practices/SKILL.md": {
+      "name": "step-functions-best-practices",
+      "entrypointBytes": 4742,
+      "descriptionBytes": 300
+    },
+    ".agents/skills/strands-agent-fundamentals/SKILL.md": {
+      "name": "strands-agent-fundamentals",
+      "entrypointBytes": 9659,
+      "descriptionBytes": 198
+    },
+    ".agents/skills/strands-aws-deployment-targets/SKILL.md": {
+      "name": "strands-aws-deployment-targets",
+      "entrypointBytes": 5096,
+      "descriptionBytes": 139
+    },
+    ".agents/skills/strands-bedrock-agentcore-deploy/SKILL.md": {
+      "name": "strands-bedrock-agentcore-deploy",
+      "entrypointBytes": 6426,
+      "descriptionBytes": 144
+    },
+    ".agents/skills/strands-model-providers/SKILL.md": {
+      "name": "strands-model-providers",
+      "entrypointBytes": 4832,
+      "descriptionBytes": 116
+    },
+    ".agents/skills/strands-multi-agent-patterns/SKILL.md": {
+      "name": "strands-multi-agent-patterns",
+      "entrypointBytes": 5338,
+      "descriptionBytes": 100
+    },
+    ".agents/skills/strands-observability/SKILL.md": {
+      "name": "strands-observability",
+      "entrypointBytes": 5808,
+      "descriptionBytes": 100
+    },
+    ".agents/skills/subagent-driven-development/SKILL.md": {
+      "name": "subagent-driven-development",
+      "entrypointBytes": 11374,
+      "descriptionBytes": 140
+    },
+    ".agents/skills/subagent-protocol/SKILL.md": {
+      "name": "subagent-protocol",
+      "entrypointBytes": 6556,
+      "descriptionBytes": 159
+    },
+    ".agents/skills/systematic-debugging/SKILL.md": {
+      "name": "systematic-debugging",
+      "entrypointBytes": 12357,
+      "descriptionBytes": 142
+    },
+    ".agents/skills/task-manager/SKILL.md": {
+      "name": "task-manager",
+      "entrypointBytes": 5922,
+      "descriptionBytes": 113
+    },
+    ".agents/skills/tauri-architecture/SKILL.md": {
+      "name": "tauri-architecture",
+      "entrypointBytes": 13001,
+      "descriptionBytes": 99
+    },
+    ".agents/skills/tauri-capabilities/SKILL.md": {
+      "name": "tauri-capabilities",
+      "entrypointBytes": 6045,
+      "descriptionBytes": 105
+    },
+    ".agents/skills/tauri-commands-ipc/SKILL.md": {
+      "name": "tauri-commands-ipc",
+      "entrypointBytes": 5996,
+      "descriptionBytes": 89
+    },
+    ".agents/skills/tauri-debugging/SKILL.md": {
+      "name": "tauri-debugging",
+      "entrypointBytes": 7441,
+      "descriptionBytes": 93
+    },
+    ".agents/skills/tauri-distribution/SKILL.md": {
+      "name": "tauri-distribution",
+      "entrypointBytes": 14711,
+      "descriptionBytes": 117
+    },
+    ".agents/skills/tauri-events/SKILL.md": {
+      "name": "tauri-events",
+      "entrypointBytes": 4918,
+      "descriptionBytes": 83
+    },
+    ".agents/skills/tauri-frontend-setup/SKILL.md": {
+      "name": "tauri-frontend-setup",
+      "entrypointBytes": 6031,
+      "descriptionBytes": 186
+    },
+    ".agents/skills/tauri-mobile/SKILL.md": {
+      "name": "tauri-mobile",
+      "entrypointBytes": 5320,
+      "descriptionBytes": 112
+    },
+    ".agents/skills/tauri-plugins/SKILL.md": {
+      "name": "tauri-plugins",
+      "entrypointBytes": 12944,
+      "descriptionBytes": 78
+    },
+    ".agents/skills/tauri-security/SKILL.md": {
+      "name": "tauri-security",
+      "entrypointBytes": 12238,
+      "descriptionBytes": 95
+    },
+    ".agents/skills/tauri-state-management/SKILL.md": {
+      "name": "tauri-state-management",
+      "entrypointBytes": 4483,
+      "descriptionBytes": 105
+    },
+    ".agents/skills/tauri-testing/SKILL.md": {
+      "name": "tauri-testing",
+      "entrypointBytes": 7463,
+      "descriptionBytes": 97
+    },
+    ".agents/skills/tauri-windowing/SKILL.md": {
+      "name": "tauri-windowing",
+      "entrypointBytes": 8692,
+      "descriptionBytes": 175
+    },
+    ".agents/skills/team-arch-dev/SKILL.md": {
+      "name": "team-arch-dev",
+      "entrypointBytes": 1718,
+      "descriptionBytes": 164
+    },
+    ".agents/skills/team-audit/SKILL.md": {
+      "name": "team-audit",
+      "entrypointBytes": 2233,
+      "descriptionBytes": 167
+    },
+    ".agents/skills/team-blueprint/SKILL.md": {
+      "name": "team-blueprint",
+      "entrypointBytes": 2036,
+      "descriptionBytes": 194
+    },
+    ".agents/skills/team-dev-qa/SKILL.md": {
+      "name": "team-dev-qa",
+      "entrypointBytes": 1847,
+      "descriptionBytes": 154
+    },
+    ".agents/skills/team-docs/SKILL.md": {
+      "name": "team-docs",
+      "entrypointBytes": 1809,
+      "descriptionBytes": 158
+    },
+    ".agents/skills/team-full-dev/SKILL.md": {
+      "name": "team-full-dev",
+      "entrypointBytes": 2174,
+      "descriptionBytes": 158
+    },
+    ".agents/skills/team-hotfix/SKILL.md": {
+      "name": "team-hotfix",
+      "entrypointBytes": 2667,
+      "descriptionBytes": 191
+    },
+    ".agents/skills/team-research/SKILL.md": {
+      "name": "team-research",
+      "entrypointBytes": 1973,
+      "descriptionBytes": 155
+    },
+    ".agents/skills/team-review/SKILL.md": {
+      "name": "team-review",
+      "entrypointBytes": 1968,
+      "descriptionBytes": 152
+    },
+    ".agents/skills/team-sec-qa/SKILL.md": {
+      "name": "team-sec-qa",
+      "entrypointBytes": 2250,
+      "descriptionBytes": 145
+    },
+    ".agents/skills/team-solo-arch/SKILL.md": {
+      "name": "team-solo-arch",
+      "entrypointBytes": 1653,
+      "descriptionBytes": 188
+    },
+    ".agents/skills/team-solo-dev/SKILL.md": {
+      "name": "team-solo-dev",
+      "entrypointBytes": 1810,
+      "descriptionBytes": 178
+    },
+    ".agents/skills/team-solo-qa/SKILL.md": {
+      "name": "team-solo-qa",
+      "entrypointBytes": 1714,
+      "descriptionBytes": 159
+    },
+    ".agents/skills/team-sprint/SKILL.md": {
+      "name": "team-sprint",
+      "entrypointBytes": 2240,
+      "descriptionBytes": 171
+    },
+    ".agents/skills/team-tdd/SKILL.md": {
+      "name": "team-tdd",
+      "entrypointBytes": 2365,
+      "descriptionBytes": 185
+    },
+    ".agents/skills/team-ux-arch/SKILL.md": {
+      "name": "team-ux-arch",
+      "entrypointBytes": 2097,
+      "descriptionBytes": 198
+    },
+    ".agents/skills/team-ux-qa/SKILL.md": {
+      "name": "team-ux-qa",
+      "entrypointBytes": 1892,
+      "descriptionBytes": 169
+    },
+    ".agents/skills/test-quality/SKILL.md": {
+      "name": "test-quality",
+      "entrypointBytes": 3356,
+      "descriptionBytes": 241
+    },
+    ".agents/skills/triage/SKILL.md": {
+      "name": "triage",
+      "entrypointBytes": 4140,
+      "descriptionBytes": 203
+    },
+    ".agents/skills/typescript-best-practices/SKILL.md": {
+      "name": "typescript-best-practices",
+      "entrypointBytes": 9021,
+      "descriptionBytes": 170
+    },
+    ".agents/skills/ufl-extract/SKILL.md": {
+      "name": "ufl-extract",
+      "entrypointBytes": 1580,
+      "descriptionBytes": 258
+    },
+    ".agents/skills/ui-ux-pro-custom/data/jetpack-compose-expert-skill/SKILL.md": {
+      "name": "jetpack-compose",
+      "entrypointBytes": 7138,
+      "descriptionBytes": 237
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/alarmkit/SKILL.md": {
+      "name": "alarmkit",
+      "entrypointBytes": 14359,
+      "descriptionBytes": 206
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/app-clips/SKILL.md": {
+      "name": "app-clips",
+      "entrypointBytes": 3713,
+      "descriptionBytes": 214
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/app-intents/SKILL.md": {
+      "name": "app-intents",
+      "entrypointBytes": 3862,
+      "descriptionBytes": 206
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/app-store-review/SKILL.md": {
+      "name": "app-store-review",
+      "entrypointBytes": 3829,
+      "descriptionBytes": 218
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/apple-on-device-ai/SKILL.md": {
+      "name": "apple-on-device-ai",
+      "entrypointBytes": 3812,
+      "descriptionBytes": 201
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/authentication/SKILL.md": {
+      "name": "authentication",
+      "entrypointBytes": 3802,
+      "descriptionBytes": 188
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/background-processing/SKILL.md": {
+      "name": "background-processing",
+      "entrypointBytes": 5532,
+      "descriptionBytes": 203
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/callkit-voip/SKILL.md": {
+      "name": "callkit-voip",
+      "entrypointBytes": 14427,
+      "descriptionBytes": 187
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/cloudkit-sync/SKILL.md": {
+      "name": "cloudkit-sync",
+      "entrypointBytes": 3908,
+      "descriptionBytes": 204
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/codable-patterns/SKILL.md": {
+      "name": "codable-patterns",
+      "entrypointBytes": 3689,
+      "descriptionBytes": 204
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/contacts-framework/SKILL.md": {
+      "name": "contacts-framework",
+      "entrypointBytes": 13692,
+      "descriptionBytes": 164
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/core-bluetooth/SKILL.md": {
+      "name": "core-bluetooth",
+      "entrypointBytes": 4062,
+      "descriptionBytes": 223
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/core-motion/SKILL.md": {
+      "name": "core-motion",
+      "entrypointBytes": 11675,
+      "descriptionBytes": 210
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/core-nfc/SKILL.md": {
+      "name": "core-nfc",
+      "entrypointBytes": 15027,
+      "descriptionBytes": 191
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/coreml/SKILL.md": {
+      "name": "coreml",
+      "entrypointBytes": 4023,
+      "descriptionBytes": 204
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/debugging-instruments/SKILL.md": {
+      "name": "debugging-instruments",
+      "entrypointBytes": 15111,
+      "descriptionBytes": 209
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/device-integrity/SKILL.md": {
+      "name": "device-integrity",
+      "entrypointBytes": 4063,
+      "descriptionBytes": 210
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/energykit/SKILL.md": {
+      "name": "energykit",
+      "entrypointBytes": 14193,
+      "descriptionBytes": 202
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/eventkit-calendar/SKILL.md": {
+      "name": "eventkit-calendar",
+      "entrypointBytes": 13036,
+      "descriptionBytes": 193
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/healthkit/SKILL.md": {
+      "name": "healthkit",
+      "entrypointBytes": 2290,
+      "descriptionBytes": 208
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/homekit-matter/SKILL.md": {
+      "name": "homekit-matter",
+      "entrypointBytes": 13772,
+      "descriptionBytes": 185
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/ios-accessibility/SKILL.md": {
+      "name": "ios-accessibility",
+      "entrypointBytes": 11714,
+      "descriptionBytes": 217
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/ios-localization/SKILL.md": {
+      "name": "ios-localization",
+      "entrypointBytes": 14315,
+      "descriptionBytes": 208
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/ios-networking/SKILL.md": {
+      "name": "ios-networking",
+      "entrypointBytes": 14878,
+      "descriptionBytes": 218
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/ios-security/SKILL.md": {
+      "name": "ios-security",
+      "entrypointBytes": 4245,
+      "descriptionBytes": 206
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/live-activities/SKILL.md": {
+      "name": "live-activities",
+      "entrypointBytes": 3791,
+      "descriptionBytes": 187
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/mapkit-location/SKILL.md": {
+      "name": "mapkit-location",
+      "entrypointBytes": 3830,
+      "descriptionBytes": 200
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/metrickit-diagnostics/SKILL.md": {
+      "name": "metrickit-diagnostics",
+      "entrypointBytes": 2025,
+      "descriptionBytes": 199
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/musickit-audio/SKILL.md": {
+      "name": "musickit-audio",
+      "entrypointBytes": 11486,
+      "descriptionBytes": 184
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/natural-language/SKILL.md": {
+      "name": "natural-language",
+      "entrypointBytes": 12592,
+      "descriptionBytes": 200
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/passkit-wallet/SKILL.md": {
+      "name": "passkit-wallet",
+      "entrypointBytes": 12420,
+      "descriptionBytes": 198
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/pencilkit-drawing/SKILL.md": {
+      "name": "pencilkit-drawing",
+      "entrypointBytes": 11707,
+      "descriptionBytes": 174
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/permissionkit/SKILL.md": {
+      "name": "permissionkit",
+      "entrypointBytes": 13535,
+      "descriptionBytes": 211
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/photos-camera-media/SKILL.md": {
+      "name": "photos-camera-media",
+      "entrypointBytes": 3750,
+      "descriptionBytes": 202
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/push-notifications/SKILL.md": {
+      "name": "push-notifications",
+      "entrypointBytes": 3929,
+      "descriptionBytes": 192
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/realitykit-ar/SKILL.md": {
+      "name": "realitykit-ar",
+      "entrypointBytes": 14021,
+      "descriptionBytes": 210
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/shareplay-activities/SKILL.md": {
+      "name": "shareplay-activities",
+      "entrypointBytes": 13152,
+      "descriptionBytes": 198
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/speech-recognition/SKILL.md": {
+      "name": "speech-recognition",
+      "entrypointBytes": 2211,
+      "descriptionBytes": 202
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/storekit/SKILL.md": {
+      "name": "storekit",
+      "entrypointBytes": 14529,
+      "descriptionBytes": 174
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swift-charts/SKILL.md": {
+      "name": "swift-charts",
+      "entrypointBytes": 13640,
+      "descriptionBytes": 194
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swift-concurrency/SKILL.md": {
+      "name": "swift-concurrency",
+      "entrypointBytes": 14283,
+      "descriptionBytes": 194
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swift-language/SKILL.md": {
+      "name": "swift-language",
+      "entrypointBytes": 4264,
+      "descriptionBytes": 211
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swift-testing/SKILL.md": {
+      "name": "swift-testing",
+      "entrypointBytes": 13464,
+      "descriptionBytes": 215
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftdata/SKILL.md": {
+      "name": "swiftdata",
+      "entrypointBytes": 12143,
+      "descriptionBytes": 167
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-animation/SKILL.md": {
+      "name": "swiftui-animation",
+      "entrypointBytes": 15284,
+      "descriptionBytes": 205
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-gestures/SKILL.md": {
+      "name": "swiftui-gestures",
+      "entrypointBytes": 13531,
+      "descriptionBytes": 190
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-layout-components/SKILL.md": {
+      "name": "swiftui-layout-components",
+      "entrypointBytes": 11235,
+      "descriptionBytes": 178
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-liquid-glass/SKILL.md": {
+      "name": "swiftui-liquid-glass",
+      "entrypointBytes": 9665,
+      "descriptionBytes": 212
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-navigation/SKILL.md": {
+      "name": "swiftui-navigation",
+      "entrypointBytes": 10308,
+      "descriptionBytes": 190
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-patterns/SKILL.md": {
+      "name": "swiftui-patterns",
+      "entrypointBytes": 14091,
+      "descriptionBytes": 204
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-performance/SKILL.md": {
+      "name": "swiftui-performance",
+      "entrypointBytes": 4315,
+      "descriptionBytes": 204
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-uikit-interop/SKILL.md": {
+      "name": "swiftui-uikit-interop",
+      "entrypointBytes": 4201,
+      "descriptionBytes": 204
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/tipkit/SKILL.md": {
+      "name": "tipkit",
+      "entrypointBytes": 13789,
+      "descriptionBytes": 193
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/vision-framework/SKILL.md": {
+      "name": "vision-framework",
+      "entrypointBytes": 4186,
+      "descriptionBytes": 230
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/weatherkit/SKILL.md": {
+      "name": "weatherkit",
+      "entrypointBytes": 12370,
+      "descriptionBytes": 193
+    },
+    ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/widgetkit/SKILL.md": {
+      "name": "widgetkit",
+      "entrypointBytes": 4198,
+      "descriptionBytes": 191
+    },
+    ".agents/skills/ui-ux-pro-custom/SKILL.md": {
+      "name": "ui-ux-pro-custom",
+      "entrypointBytes": 4261,
+      "descriptionBytes": 114
+    },
+    ".agents/skills/unnamed-dev-mcp/SKILL.md": {
+      "name": "unnamed-dev-mcp",
+      "entrypointBytes": 3961,
+      "descriptionBytes": 227
+    },
+    ".agents/skills/unnamed-pm-sync/SKILL.md": {
+      "name": "unnamed-pm-sync",
+      "entrypointBytes": 11421,
+      "descriptionBytes": 128
+    },
+    ".agents/skills/ux-audit/SKILL.md": {
+      "name": "ux-audit",
+      "entrypointBytes": 9095,
+      "descriptionBytes": 166
+    },
+    ".agents/skills/visual-feedback-loop/SKILL.md": {
+      "name": "visual-feedback-loop",
+      "entrypointBytes": 4655,
+      "descriptionBytes": 255
+    },
+    ".agents/skills/vite/SKILL.md": {
+      "name": "vite",
+      "entrypointBytes": 2723,
+      "descriptionBytes": 187
+    },
+    ".agents/skills/vitepress/SKILL.md": {
+      "name": "vitepress",
+      "entrypointBytes": 3720,
+      "descriptionBytes": 156
+    },
+    ".agents/skills/vitest/SKILL.md": {
+      "name": "vitest",
+      "entrypointBytes": 4388,
+      "descriptionBytes": 176
+    },
+    ".agents/skills/websocket-engineer/SKILL.md": {
+      "name": "websocket-engineer",
+      "entrypointBytes": 6245,
+      "descriptionBytes": 121
+    },
+    ".agents/skills/writing-skills/SKILL.md": {
+      "name": "writing-skills",
+      "entrypointBytes": 10133,
+      "descriptionBytes": 125
+    }
+  }
+}

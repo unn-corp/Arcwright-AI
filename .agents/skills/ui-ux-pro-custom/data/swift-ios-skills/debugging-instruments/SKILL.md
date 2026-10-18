@@ -1,6 +1,6 @@
 ---
 name: debugging-instruments
-description: "Debug iOS apps and profile performance using LLDB, Memory Graph Debugger, and Instruments. Use when diagnosing crashes, memory leaks, retain cycles, main thread hangs, slow rendering, build failures, or when profiling CPU, memory, energy, and network usage."
+description: "Diagnose iOS crashes, leaks, hangs, rendering bottlenecks, or build/runtime failures with LLDB and Instruments. Use swiftui-performance when the issue is specifically SwiftUI invalidation, identity, or layout."
 ---
 
 # Debugging and Instruments

@@ -8,6 +8,8 @@ user-invocable: false
 
 Apply these rules when writing or reviewing Next.js code.
 
+First read [version-matched-docs.md](./version-matched-docs.md). Resolve the installed Next.js version and caching mode, then prefer its bundled docs/types over generic examples here. Preserve Arcwright's merged App Router guidance and the application's configuration.
+
 ## File Conventions
 
 See [file-conventions.md](./file-conventions.md) for:

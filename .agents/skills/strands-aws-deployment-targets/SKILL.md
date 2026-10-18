@@ -1,14 +1,6 @@
 ---
 name: strands-aws-deployment-targets
-description: >
-  Decision guide for where to run a Strands agent on AWS: Bedrock AgentCore, Lambda,
-  Fargate, App Runner, EKS, or EC2, with tradeoffs across cold-start, streaming
-  support, concurrency, and operational burden.
-  USE FOR: choosing a deployment target for a new Strands agent, or reconsidering the
-  target when requirements (streaming, concurrency, ops budget) change.
-  DO NOT USE FOR: the mechanics of the AgentCore path once chosen (see
-  strands-bedrock-agentcore-deploy), or the agent's own logic (see
-  strands-agent-fundamentals).
+description: "Choose an AWS deployment target for a Strands agent, comparing AgentCore, Lambda, containers, and Kubernetes against workload requirements."
 ---
 
 # Where to Deploy a Strands Agent on AWS

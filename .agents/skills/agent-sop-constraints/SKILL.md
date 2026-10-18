@@ -1,6 +1,6 @@
 ---
 name: agent-sop-constraints
-description: Write skill and SOP instructions with explicit constraint strength (MUST / MUST NOT / SHOULD / MAY, RFC 2119 style) so an agent can tell a hard requirement from a suggestion. Use when authoring or reviewing a SKILL.md, a workflow/SOP, or an agent prompt, or when a skill's instructions read as flat prose an agent might treat as optional. Complements writing-skills (which covers the TDD authoring loop).
+description: "Write or revise an agent SOP with explicit constraints, required outputs, and verification. Use when instructions are ambiguous or repeatedly missed."
 allowed-tools: Read, Grep, Glob, Edit, Write
 version: 1.0.0
 author: arcwright

@@ -1,15 +1,6 @@
 ---
 name: electron-native-modules
-description: >
-  Use native Node addons (N-API/node-gyp) in Electron correctly: understand ABI
-  mismatches between Node and Electron, rebuild against Electron's headers with
-  @electron/rebuild, prefer N-API for ABI stability, and produce per-platform/per-arch
-  builds.
-  USE FOR: adding or debugging a native (.node) dependency in Electron, fixing
-  "was compiled against a different Node.js version" / NODE_MODULE_VERSION errors,
-  setting up electron-rebuild, building native modules for multiple platforms/arches.
-  DO NOT USE FOR: pure-JS dependencies, packaging/signing (see electron-packaging), or
-  P/Invoke-style FFI in .NET (see dotnet-pinvoke).
+description: "Add or debug native Node addons in Electron, including ABI mismatches, rebuilds, and platform/architecture targets. Excludes pure JavaScript dependencies."
 ---
 
 # Electron Native Node Modules

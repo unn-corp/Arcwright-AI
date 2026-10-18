@@ -2,7 +2,7 @@
 /**
  * Verify that website/src/data/ still describes things that actually exist.
  *
- * CLAUDE.md requires the agent roster, team catalog and skill list to be kept
+ * AGENTS.md requires the agent roster, team catalog and skill list to be kept
  * in sync with the repo by hand, which means they drift. They had: six skill
  * slugs pointing at directories that no longer existed (dead links on the
  * public site), and two agents missing from the roster entirely.
@@ -30,15 +30,23 @@ if (!fs.existsSync(skillsRoot)) {
 
 const read = (p) => fs.readFileSync(path.join(websiteRoot, 'src', p), 'utf8');
 const matchAll = (src, re) => [...src.matchAll(re)].map((m) => m[1]);
-const skillExists = (slug) => fs.existsSync(path.join(skillsRoot, slug, 'SKILL.md'));
+const skillsSrc = read('data/skills.ts');
+const skillSources = new Map(
+  [...skillsSrc.matchAll(/slug: '([^']+)',\s*sourcePath: '([^']+)'/g)]
+    .map(([, slug, sourcePath]) => [slug, sourcePath]),
+);
+const skillExists = (slug) => fs.existsSync(
+  skillSources.has(slug)
+    ? path.join(repoRoot, skillSources.get(slug))
+    : path.join(skillsRoot, slug, 'SKILL.md'),
+);
 
 const errors = [];
 
 // 1. Every skills.ts slug must resolve to a real skill directory.
-const skillsSrc = read('data/skills.ts');
 for (const slug of matchAll(skillsSrc, /slug: '([^']+)'/g)) {
   if (!skillExists(slug)) {
-    errors.push(`skills.ts: slug '${slug}' has no .agents/skills/${slug}/SKILL.md`);
+    errors.push(`skills.ts: slug '${slug}' has no ${skillSources.get(slug) ?? `.agents/skills/${slug}/SKILL.md`}`);
   }
 }
 

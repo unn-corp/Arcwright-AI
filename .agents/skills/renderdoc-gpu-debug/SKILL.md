@@ -1,16 +1,6 @@
 ---
 name: renderdoc-gpu-debug
-description: >
-  GPU frame debugging with RenderDoc via rdc-cli. Use this skill when the user mentions:
-  GPU debugging, .rdc files, RenderDoc, shader issues, pipeline state, rendering artifacts,
-  frame capture, shadow problems, visual glitches, draw calls, render targets, pixel history,
-  texture inspection, depth buffer, blend state, rasterizer state, vertex shader, fragment shader,
-  pixel shader, compute shader, mesh output, GPU performance, overdraw, bandwidth, shadow map,
-  PCF filtering, screen-space artifacts, z-fighting, alpha blending, stencil, MSAA,
-  "why does this look wrong", "debug this pixel", "what's drawing here", "capture a frame",
-  "inspect the pipeline", "export render target", vulkan debugging, D3D debugging, GL debugging.
-  DO NOT use for: CSS rendering, React rendering, server-side rendering, HTML layout,
-  browser DevTools, web performance, canvas 2D, SVG rendering.
+description: "Capture and inspect native GPU frames with RenderDoc for Vulkan, Direct3D, or OpenGL debugging, pipeline state, pixel history, and render-target export. Not for browser/CSS rendering or web performance."
 ---
 
 # RenderDoc GPU Debugging Skill
@@ -179,7 +169,7 @@ rdc shader-map --json                # EID-to-shader mapping
 
 ## 6. Visual Inspection: Export-View-Analyze
 
-This is the core pattern for visual debugging. **Always export to PNG, then use Claude Code's Read tool to view the image.**
+This is the core pattern for visual debugging. **Always export to PNG, then use the host's image-viewing tool to view the image.**
 
 ### Export render targets
 
@@ -203,7 +193,7 @@ rdc thumbnail -o D:/renderdoc/captures/analysis/thumb.png
 
 ### View exported images
 
-After exporting a PNG, **use the Read tool** to view it (Claude Code is multimodal):
+After exporting a PNG, **use the host image-viewing tool** to inspect it:
 
 ```
 Read tool: D:/renderdoc/captures/analysis/render_target.png

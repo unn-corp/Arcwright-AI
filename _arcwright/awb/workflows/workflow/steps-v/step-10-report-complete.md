@@ -34,13 +34,13 @@ To check if a plan file exists (and run plan validation if it does), then summar
 
 - 🎯 Load the complete validation report
 - 💾 Summarize ALL findings
-- 📖 Update report status to COMPLETE
-- 🚫 DO NOT proceed without user review
+- 📖 Reconcile required-check scope before setting COMPLETE or INCOMPLETE
+- 🚫 Do not apply fixes unless requested or already authorized
 
 ## CONTEXT BOUNDARIES:
 
-- All 10 previous validation steps have completed
-- Report contains findings from all checks
+- Check which required validation steps actually completed
+- Report contains findings and names failed or unchecked scope
 - User needs to see summary and decide on changes
 - This step DOES NOT auto-proceed
 
@@ -61,7 +61,7 @@ Before finalizing the report, check if a plan file exists:
 
 ### 2. Load Complete Validation Report
 
-After plan validation (if applicable), load {validationReportFile} and read ALL findings from every validation step.
+After plan validation (if applicable), load {validationReportFile} and read all findings. Reconcile expected checks against actual results, including every `steps*` mode. A missing/empty worker result, unreadable file, or failed size-check invocation leaves scope incomplete; it is not a clean check. Preserve the finding that a known violation exists even when other scope is unavailable.
 
 ### 3. Create Summary Section
 
@@ -81,13 +81,13 @@ Present this information in a clear, readable format - the exact structure is fl
 
 ### 4. Update Report Status
 
-Update the frontmatter of {validationReportFile} to set validationStatus to COMPLETE and add the completionDate. Keep existing fields like validationDate, workflowName, and workflowPath unchanged.
+Set `validationStatus: COMPLETE` only when every required check actually ran, otherwise `validationStatus: INCOMPLETE` with named unchecked checks. Record the evidence-based assessment separately: FAIL for known blocking violations, WARN for nonblocking findings, PASS only when required scope is complete and no violations remain. Do not equate completed report writing with passing validation. Add the completionDate and preserve existing identity/path fields.
 
 ### 5. Present Summary to User
 
 Present a clear summary to the user that includes:
 
-- Confirmation that validation is complete
+- Whether required validation scope is complete, with any unchecked sections
 - Overall status of the workflow
 - Quick results overview showing each validation step and its result
 - Count of critical issues and warnings (or note if none found)
@@ -103,8 +103,8 @@ Display: **Validation Complete! Select an Option:** [R] Review Detailed Findings
 
 #### EXECUTION RULES:
 
-- ALWAYS halt and wait for user input after presenting menu
-- User chooses their next action
+- Wait only for an unresolved decision; if the user already authorized fixes or continuation, act within that scope and report the result
+- Otherwise the user chooses their next action
 
 #### Menu Handling Logic:
 
@@ -125,7 +125,7 @@ The exact format doesn't matter - just ensure the user understands their options
 
 ### 8. Update Plan with Validation Status
 
-If a plan file exists at {workflowPlanFile}, update its frontmatter to include the validation status (COMPLETE), the current validation date, and a reference to the validation report file.
+If a plan file exists at {workflowPlanFile}, update its frontmatter with the same reconciled COMPLETE/INCOMPLETE validation status, assessment, date, and report reference. Do not replace incomplete scope with COMPLETE during this summary write.
 
 ## CRITICAL STEP COMPLETION NOTE
 
@@ -140,7 +140,7 @@ This is the final validation step. User reviews findings and decides whether to 
 - All validation findings summarized
 - Complete report presented to user
 - Summary section added to report
-- Report status updated to COMPLETE
+- Report status and assessment accurately distinguish complete, failed, and unchecked scope
 - User can review findings and decide on changes
 - Plan updated with validation status
 

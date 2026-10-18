@@ -167,34 +167,22 @@ Older major versions are deprecated and retired on a rolling basis. Always targe
 
 ## Arcwright Delegation Pattern
 
-From this repo's `CLAUDE.md` "Model Delegation" rule — Opus orchestrates, Sonnet executes:
-
-| Role | Alias | How to set |
-|---|---|---|
-| Master orchestrator | `opus` | Session default or `--model opus` |
-| Specialist execution subagents | `sonnet` | `model: sonnet` frontmatter or `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` |
-| Cheap classification / search / routing | `haiku` | `model: haiku` frontmatter |
-
-```bash
-# Standard Arcwright session with correct delegation
-CLAUDE_CODE_SUBAGENT_MODEL=sonnet claude --model opus
-```
+The workshop's shared instructions live in [AGENTS.md](../../../AGENTS.md).
+`CLAUDE.md` is retired. Follow the shared
+[subagent-protocol](../../../.agents/skills/subagent-protocol/SKILL.md) for
+authorized delegation, including the user's model/provider choice, source-bound
+handoffs, task IDs, and the active host's capabilities. There is no fixed
+orchestrator/executor model split. Use live provider/model discovery rather than
+treating the host-specific examples above as Arcwright defaults.
 
 ---
 
 ## Related in Arcwright
 
-The Arcwright protocol is **sonnet-first + permission-before-opus**:
-[`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md) §6
-mandates that every spawned subagent default to `sonnet`, and that any upgrade to
-`opus` or any raise of effort above the session default must ask the user first.
-Architect and security sign-off roles are kept on `opus` *as a recommended default*,
-but even those gate behind the user's explicit permission.
-
-For overload/fallback resilience, the Arcwright installer writes
-`fallbackModel: ["sonnet"]` to `.claude/settings.json` — see
-[`hooks-skills-settings.md`](hooks-skills-settings.md) and the installer
-(`packages/agent-orchestration/lib/installer.js`).
+`claude-subagent-protocol` remains a compatibility alias for the shared protocol.
+Team presets and review workflows add their own stages while preserving user
+authorization and model-selection rules. See the
+[workshop guide](../../workshop-guide.md#installer) for instruction-file policy.
 
 ---
 

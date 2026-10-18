@@ -1,17 +1,6 @@
 ---
 name: tauri-frontend-setup
-description: >
-  Wire a JavaScript or Rust frontend framework to a Tauri v2 app — the build
-  section of tauri.conf.json (devUrl, frontendDist, beforeDevCommand,
-  beforeBuildCommand), the static-export / SSG requirement (Tauri is a static
-  host with no SSR server), dev-server port/strictPort, and per-framework setup
-  for Vite, Next.js, SvelteKit, Nuxt, and Rust (Trunk/Leptos).
-  USE FOR: configuring tauri.conf.json build keys, fixing a blank window or
-  "could not connect to devUrl" in dev, fixing a production build that 404s or
-  shows nothing because the frontend emitted an SSR server instead of static
-  files, choosing the right adapter/output mode per framework.
-  DO NOT USE FOR: calling Rust from JS (see tauri-commands-ipc), the permission
-  model (see tauri-capabilities), or window creation (see tauri-windowing).
+description: "Configure Tauri v2 frontend builds and dev servers, static export/SSG, and framework adapters. Diagnose blank windows, devUrl failures, and packaged asset errors; not IPC or permissions."
 ---
 
 # Tauri v2 Frontend Setup

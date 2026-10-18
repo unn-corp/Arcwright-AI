@@ -1,13 +1,6 @@
 ---
 name: electron-updates
-description: >
-  Ship automatic updates for Electron apps: the built-in autoUpdater, the
-  update-electron-app helper (Squirrel + the free update.electronjs.org service), or
-  electron-builder's electron-updater, plus signed/staged update channels.
-  USE FOR: adding auto-update to a packaged app, choosing an update mechanism, wiring an
-  update feed/server, configuring update channels, handling update lifecycle events.
-  DO NOT USE FOR: producing the installers themselves (see electron-packaging) or
-  general security config (see electron-security).
+description: "Implement or debug Electron application updates, release channels, update metadata, and platform-specific updater behavior."
 ---
 
 # Electron Auto-Updates

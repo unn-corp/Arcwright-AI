@@ -364,8 +364,8 @@ grep -rn "\*\|latest\|>=\|~\|^" package.json requirements.txt
 # Missing lock files
 ls package-lock.json yarn.lock Pipfile.lock Cargo.lock go.sum 2>/dev/null
 
-# Credentials in config
-grep -rn "_authToken\|registry.*token\|password" .npmrc .pypirc pip.conf
+# Credentials in config: filenames only, never credential values
+grep -l "_authToken\|registry.*token\|password" .npmrc .pypirc pip.conf
 
 # Suspicious install scripts
 grep -rn "preinstall\|postinstall\|prepare" package.json

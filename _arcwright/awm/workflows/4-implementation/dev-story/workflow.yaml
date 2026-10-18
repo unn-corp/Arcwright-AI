@@ -13,8 +13,9 @@ date: system-generated
 installed_path: "{project-root}/_arcwright/awm/workflows/4-implementation/dev-story"
 instructions: "{installed_path}/instructions.xml"
 validation: "{installed_path}/checklist.md"
+template: false
 
 story_file: "" # Explicit story path; auto-discovered if empty
 implementation_artifacts: "{config_source}:implementation_artifacts"
 sprint_status: "{implementation_artifacts}/sprint-status.yaml"
-project_context: "{AGENTS.md,CLAUDE.md,.claude/CLAUDE.md,.github/copilot-instructions.md}"
+project_context: "{project-root}/AGENTS.md"

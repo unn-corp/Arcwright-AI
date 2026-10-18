@@ -11,12 +11,32 @@ export type SkillCategory =
 export interface Skill {
   name: string;
   slug: string;
+  sourcePath?: string;
   description: string;
   category: SkillCategory;
 }
 
 export const skills: Skill[] = [
+  {
+    name: 'Arcwright Entrypoints',
+    slug: 'arcwright',
+    description: 'Model-selectable access to installed commands, workflows, and specialist profiles, with a compact lookup for hosts without native slash commands.',
+    category: 'workflow',
+  },
+  {
+    name: 'Arcwright Engineering Skills',
+    slug: 'matt-pocock-ask-matt',
+    sourcePath: '.agents/skills/matt-pocock-ask-matt/SKILL.md',
+    description: 'Locally maintained pack adapted from Matt Pocock: 27 skills for planning, TDD, code review, domain modeling, research, and teaching. Install with --matt-pocock.',
+    category: 'workflow',
+  },
   // Frontend / Design
+  {
+    name: 'Taste Frontend Design',
+    slug: 'design-taste-frontend',
+    description: 'Subject-specific art direction for public pages, researched composition libraries, licensed imagery, and a bounded visual review loop. Preserves the existing design system.',
+    category: 'design',
+  },
   {
     name: 'Frontend Responsive Design',
     slug: 'frontend-responsive-design-standards',
@@ -32,7 +52,7 @@ export const skills: Skill[] = [
   {
     name: 'Next.js App Router',
     slug: 'next-best-practices',
-    description: 'Next.js 14+ App Router conventions, server components, and streaming patterns.',
+    description: 'Installed-version Next.js guidance for App Router, server components, caching, and streaming.',
     category: 'frontend',
   },
   {
@@ -153,6 +173,12 @@ export const skills: Skill[] = [
   },
   // Quality / Debug
   {
+    name: 'Review Loop',
+    slug: 'review-loop',
+    description: 'Choose a review model, then review, fix substantive findings, and verify in bounded rounds with minimal interruption.',
+    category: 'quality',
+  },
+  {
     name: 'Systematic Debugging',
     slug: 'systematic-debugging',
     description: 'Structured approach to diagnosing bugs, failures, and unexpected behavior.',
@@ -162,6 +188,12 @@ export const skills: Skill[] = [
     name: 'Clean Code Standards',
     slug: 'clean-code-standards',
     description: '23 DRY/SOLID rules applied across the codebase for maintainability.',
+    category: 'quality',
+  },
+  {
+    name: 'Squirrelscan Operations',
+    slug: 'squirrelscan',
+    description: 'Operate local and cloud audits, stored reports, entity maps, and optional squirrelscan MCP integration.',
     category: 'quality',
   },
   {
@@ -190,6 +222,18 @@ export const skills: Skill[] = [
   },
   // Workflow
   {
+    name: 'Full Send',
+    slug: 'full-send',
+    description: 'Explicitly authorized delivery through implementation, verification, review, and a protected PR merge in Arcwright Code or T3 Code.',
+    category: 'workflow',
+  },
+  {
+    name: 'Full Stop',
+    slug: 'full-stop',
+    description: 'Complete implementation, verification, and review in Arcwright Code or T3 Code, leaving the PR ready for the user to merge.',
+    category: 'workflow',
+  },
+  {
     name: 'Project Context',
     slug: 'project-context',
     description: 'Scan the project for existing context before starting any workflow task.',
@@ -202,9 +246,9 @@ export const skills: Skill[] = [
     category: 'workflow',
   },
   {
-    name: 'Claude Subagent Protocol',
-    slug: 'claude-subagent-protocol',
-    description: 'In-process agent orchestration: Agent tool + SendMessage reuse + Session Agent Registry. The default orchestration method; Herdr is opt-in visibility only. Replaces the retired tmux-protocol skill.',
+    name: 'Subagent Protocol',
+    slug: 'subagent-protocol',
+    description: 'Coordinate specialists across supported hosts with scoped handoffs, real task IDs, inherited model choices, and verified results.',
     category: 'workflow',
   },
   {
@@ -246,7 +290,7 @@ export const skills: Skill[] = [
   {
     name: 'Hookify',
     slug: 'hookify',
-    description: 'Describe a behavior in plain language and get a correct, safely-merged Claude Code hook in settings.json.',
+    description: 'Create focused development hooks using the active host’s supported events, input format, and configuration.',
     category: 'workflow',
   },
   {
@@ -256,9 +300,9 @@ export const skills: Skill[] = [
     category: 'workflow',
   },
   {
-    name: 'CLAUDE.md Management',
-    slug: 'claude-md-management',
-    description: 'Audit CLAUDE.md quality, capture session learnings, and prune stale or contradictory guidance.',
+    name: 'Agent Instructions',
+    slug: 'agent-instructions',
+    description: 'Audit durable agent instructions, capture verified conventions, and prune stale or contradictory guidance across hosts.',
     category: 'workflow',
   },
   {
@@ -306,7 +350,7 @@ export const skills: Skill[] = [
   {
     name: 'Document Tools',
     slug: 'doc-pdf',
-    description: 'Read/write PDF, Word, Excel, and PowerPoint files from within Claude Code (pypdf, python-docx, openpyxl, python-pptx).',
+    description: 'Read/write PDF, Word, Excel, and PowerPoint files using the active host’s file and execution tools (pypdf, python-docx, openpyxl, python-pptx).',
     category: 'workflow',
   },
   // Teams (17)

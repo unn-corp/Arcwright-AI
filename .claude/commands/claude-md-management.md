@@ -1,5 +1,5 @@
 ---
-description: "Use when auditing CLAUDE.md quality, capturing session learnings into CLAUDE.md, or pruning stale/contradictory entries. Triggers on \"/claude-md\", \"update CLAUDE.md\", \"what should go in CLAUDE.md\", or at session end w..."
+description: Compatibility route for the neutral agent-instructions skill.
 ---
 
-Load and run the `claude-md-management` skill (`.agents/skills/claude-md-management/SKILL.md`) against $ARGUMENTS. Follow the skill exactly.
+Load and run the `claude-md-management` skill (`.agents/skills/claude-md-management/SKILL.md`) against $ARGUMENTS. Follow its Arcwright integration instructions.

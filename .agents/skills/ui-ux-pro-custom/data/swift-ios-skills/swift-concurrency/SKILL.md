@@ -1,6 +1,6 @@
 ---
 name: swift-concurrency
-description: "Resolve Swift concurrency compiler errors, adopt Swift 6.2 approachable concurrency (SE-0466), and write data-race-safe async code. Use when fixing Sendable conformance errors, actor isolation warnings, or strict concurrency diagnostics; when adopting default MainActor isolation, @concurrent, nonisolated(nonsending), or Task.immediate; when designing actor-based architectures, structured concurrency with TaskGroup, or background work offloading; or when migrating from @preconcurrency to full Swift 6 strict concurrency."
+description: "Diagnose Swift actor-isolation and Sendable errors, or design structured async work, cancellation, and task ownership. Match guidance to the project's Swift language mode and isolation defaults."
 ---
 
 # Swift 6.2 Concurrency

@@ -1,26 +1,32 @@
 # Code Quality Reviewer Prompt Template
 
-Use this template when dispatching a code quality reviewer subagent.
+Dispatch a separate fresh reviewer after spec compliance passes. Every T3 review
+round is a new `delegate_task`, without `childThreadId` continuation.
 
-**Purpose:** Verify implementation is well-built (clean, tested, maintainable)
+Treat the installed skill/template directory as read-only. Save all briefs, reports,
+snapshots, logs, and other workflow artifacts within the assigned Arcwright run.
+Do not substitute the skill directory or an unrelated temporary folder.
 
-**Only dispatch after spec compliance review passes.**
+```text
+Task: Code quality review [task ID], round [N]
+Requirements and constraints: [task brief path]
+Capabilities: [relevant installed skill names/paths, finder, tool limits; nonexclusive]
+Source: [exact immutable commit or snapshot manifest/digest]
+Spec approval: [verdict/report for this same source]
+Review package: [task baseline, full delta, context, test evidence, report]
+Prior findings: [verbatim findings and dispositions, or none]
+Artifact root: [absolute active-project _arcwright/_memory/skill-runs/<run> path]
+Report: [absolute file path within that run]
 
+Review correctness, relevant edge cases, integration, maintainability, and test
+coverage in the changed scope. Read the actual implementation and evidence;
+identify concrete behavior/impact rather than speculative style preferences.
+Do not rerun already-passing checks on identical source without a specific
+reason. Report any source-identity mismatch rather than approving stale evidence.
+
+Return PASS or FINDINGS and the reviewed source identity. Findings include
+severity (Critical/Important/Minor), path/line, concrete impact, and a targeted
+recommendation. State coverage limits and any verification you could not do.
+Do not edit files or dispatch other agents. A failed spec gate or changed source
+must be resolved before accepting this gate as approval of the final source.
 ```
-Task tool (superpowers:code-reviewer):
-  Use template at requesting-code-review/code-reviewer.md
-
-  WHAT_WAS_IMPLEMENTED: [from implementer's report]
-  PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-  BASE_SHA: [commit before task]
-  HEAD_SHA: [current commit]
-  DESCRIPTION: [task summary]
-```
-
-**In addition to standard code quality concerns, the reviewer should check:**
-- Does each file have one clear responsibility with a well-defined interface?
-- Are units decomposed so they can be understood and tested independently?
-- Is the implementation following the file structure from the plan?
-- Did this implementation create new files that are already large, or significantly grow existing files? (Don't flag pre-existing file sizes — focus on what this change contributed.)
-
-**Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Assessment

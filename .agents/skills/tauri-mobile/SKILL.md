@@ -1,15 +1,6 @@
 ---
 name: tauri-mobile
-description: >
-  Target iOS and Android from a Tauri v2 project — the v2-only mobile capability:
-  initializing the platforms, the lib.rs mobile entry point, dev/build commands,
-  prerequisites, and mobile-specific permissions/plugins.
-  USE FOR: adding iOS/Android targets to a Tauri app, running on a simulator/emulator or
-  device, understanding the mobile entry point and tooling prerequisites, or granting
-  mobile-only plugin permissions.
-  DO NOT USE FOR: desktop bundling/signing (see tauri-distribution), the general project
-  layout (see tauri-architecture), or the permission model in depth (see
-  tauri-capabilities).
+description: "Build or adapt a Tauri app for Android or iOS, including platform integration and mobile-specific configuration."
 ---
 
 # Tauri v2 Mobile (iOS & Android)

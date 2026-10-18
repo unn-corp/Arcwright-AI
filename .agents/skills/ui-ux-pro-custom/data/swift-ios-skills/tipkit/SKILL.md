@@ -1,6 +1,6 @@
 ---
 name: tipkit
-description: "Implement, review, or improve in-app tips and onboarding using Apple's TipKit framework. Use when adding feature discovery tooltips, onboarding flows, contextual tips, first-run experiences, coach marks, or working with Tip protocol, TipView, popoverTip, tip rules, tip events, or feature education UI."
+description: "Implement or debug TipKit feature-discovery tips, eligibility rules, events, tip groups, and display lifecycle. Use for contextual onboarding rather than mandatory walkthroughs or modal alerts."
 ---
 
 # TipKit

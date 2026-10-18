@@ -5,6 +5,11 @@ description: TRIGGER when encountering any bug, test failure, or unexpected beha
 
 # Systematic Debugging
 
+## Arcwright output location
+
+Treat this installed skill bundle as read-only during execution. Resolve the active project and put all workflow notes, reports, logs, snapshots, fixtures, and other generated artifacts in a unique `<project-root>/_arcwright/_memory/skill-runs/systematic-debugging-<run-id>/` directory. Never use the directory containing this skill as a working/output directory. Keep authorized application source edits in their requested paths. Follow the shared [runtime storage contract](../SOURCES-SUPERPOWERS.md), including host-managed evidence references.
+
+
 ## Overview
 
 Random fixes waste time and create new bugs. Quick patches mask underlying issues.
@@ -113,11 +118,11 @@ You MUST complete each phase before proceeding to the next.
    ```bash
    # Layer 1: Workflow
    echo "=== Secrets available in workflow: ==="
-   echo "IDENTITY: ${IDENTITY:+SET}${IDENTITY:-UNSET}"
+   echo "IDENTITY: $([ -n "${IDENTITY:-}" ] && echo SET || echo UNSET)"
 
    # Layer 2: Build script
    echo "=== Env vars in build script: ==="
-   env | grep IDENTITY || echo "IDENTITY not in environment"
+   printenv IDENTITY >/dev/null 2>&1 && echo "IDENTITY in environment" || echo "IDENTITY not in environment"
 
    # Layer 3: Signing script
    echo "=== Keychain state: ==="
@@ -199,7 +204,7 @@ You MUST complete each phase before proceeding to the next.
    - Automated test if possible
    - One-off test script if no framework
    - MUST have before fixing
-   - Use the `superpowers:test-driven-development` skill for writing proper failing tests
+   - Use the project's testing tools to create a minimal failing test or reproducible check before changing the behavior
 
 2. **Implement Single Fix**
    - Address the root cause identified
@@ -306,14 +311,7 @@ These techniques are part of systematic debugging and available in this director
 - **`defense-in-depth.md`** - Add validation at multiple layers after finding root cause
 - **`condition-based-waiting.md`** - Replace arbitrary timeouts with condition polling
 
-**Related skills:**
-- **superpowers:test-driven-development** - For creating failing test case (Phase 4, Step 1)
-- **superpowers:verification-before-completion** - Verify fix worked before claiming success
-
-## Real-World Impact
-
-From debugging sessions:
-- Systematic approach: 15-30 minutes to fix
-- Random fixes approach: 2-3 hours of thrashing
-- First-time fix rate: 95% vs 40%
-- New bugs introduced: Near zero vs common
+Before claiming success, rerun the original reproduction and the checks covering
+the repaired behavior. Name what passed and any verification that remains
+unavailable. Use an installed testing or verification skill when useful; this
+procedure does not depend on an absent skill namespace.

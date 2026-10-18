@@ -1,12 +1,17 @@
 ---
 name: code-graph
-description: Token-efficient code intelligence layer — build/maintain a local symbol graph (symbols → files → dependents) under _arcwright-output/graph/ as JSON, query blast radius of a change, stale-file detection via git. Use before any review or refactor to know "who imports X" and "what does changing Y affect" without loading whole files.
+description: "Inspect transitive code dependencies or reuse a symbol graph for a substantial impact analysis. A simple caller search does not require building an index."
 allowed-tools: Read, Grep, Glob, Bash, Write
 ---
 
 # Code Graph Skill
 
 Build and query a lightweight local symbol → dependency graph so reviewers can assess blast radius without loading whole files.
+
+For a small caller or import lookup, start with a focused search. Reuse an existing
+graph for substantial transitive-impact queries; build one only when it will save
+repeated exploration. Bound the scope and depth, and label incomplete or stale
+index evidence. A graph is optional for routine reviews and refactors.
 
 ---
 
@@ -268,7 +273,7 @@ Risk: HIGH — core auth module; changes propagate to app entry points.
 
 > **This section is a design note only. No MCP server is built here.**
 > The skill uses local JSON files and grep. The MCP path below is for a future
-> integration when real-time tool access from Claude is desired.
+> integration when real-time tool access from an MCP client is desired.
 
 ### MCP Server Design
 
@@ -283,9 +288,9 @@ Risk: HIGH — core auth module; changes propagate to app entry points.
 // Server reads _arcwright-output/graph/*.json; no indexing in the server process.
 // Use @modelcontextprotocol/sdk (TypeScript) or mcp (Python) — match whichever
 // the host project already uses.
-// Registration: add to .claude/settings.json mcpServers block:
+// Registration: use the selected MCP host's documented server configuration:
 //   "code-graph": { "command": "node", "args": ["path/to/mcp-server.js"] }
-// For Kiro: add to .kiro/agents/<agent>.json mcpServers block similarly.
+// Verify client transport and capability support before registration.
 ```
 
 To find existing MCP patterns in this repo:

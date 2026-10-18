@@ -23,9 +23,10 @@ Each topic below is a self-contained prompt. For every topic:
 
 1. **Detect** — does this topic apply? (e.g. skip JWT if no token auth exists). Use the
    globs/grep patterns to find the relevant code. If nothing matches, mark **N/A**.
-2. **Run tools** — execute the listed commands (hybrid mode). If a tool is not installed,
-   note `tool unavailable` and fall back to the LLM patterns. Never fail the scan because
-   a tool is missing.
+2. **Run tools** — execute applicable commands (hybrid mode). Distinguish a missing
+   executable, a completed scan with candidates, and an execution error or partial scan.
+   Continue other topics when a tool is missing; record the coverage gap and use source
+   review where useful. Missing or failed checks do not establish a Pass.
 3. **Evaluate** — compare what you find against *What good looks like* and *Red flags*.
 4. **Verdict** — assign one of: ✅ **Pass** · ⚠️ **Weak** · ❌ **Fail** · **N/A**.
    - **Pass**: control present and correctly implemented across the codebase.
@@ -130,8 +131,9 @@ grep -rniE "role|permission|is_?admin|can_?access|authorize|abac|rbac" --include
 
 **Run:**
 ```bash
-grep -rniE "bcrypt|argon2|scrypt|pbkdf2|password_hash|hashpw|make_password|set_password" --include=*.{js,ts,py,go,java,php} .
-grep -rniE "md5|sha1|sha256).{0,40}(password|passwd|pwd" --include=*.{js,ts,py,go,java,php} .
+# Filenames only: hashing calls may contain literal passwords or salts
+rg -l -i 'bcrypt|argon2|scrypt|pbkdf2|password_hash|hashpw|make_password|set_password' --glob '*.{js,ts,py,go,java,php}' .
+rg -l -i '(md5|sha1|sha256).{0,40}(password|passwd|pwd)|(password|passwd|pwd).{0,40}(md5|sha1|sha256)' --glob '*.{js,ts,py,go,java,php}' .
 ```
 
 **What good looks like:**
@@ -195,7 +197,7 @@ grep -rniE "\.raw\(|\.extra\(|RawSQL|cursor\.execute\([^,]*%|execute\(.*\+|knex\
 # XSS sinks
 grep -rniE "dangerouslySetInnerHTML|innerHTML|v-html|\|safe|mark_safe|render_template_string|document\.write" --include=*.{js,ts,jsx,tsx,py,html} .
 # CSRF protection presence
-grep -rniE "csrf|csurf|SameSite|samesite|X-CSRF|csrf_token|@csrf_exempt" --include=*.{js,ts,py} .
+rg -l -i 'csrf|csurf|SameSite|X-CSRF|csrf_token|@csrf_exempt' --glob '*.{js,ts,py}' .
 ```
 
 **What good looks like:**
@@ -220,8 +222,9 @@ grep -rniE "csrf|csurf|SameSite|samesite|X-CSRF|csrf_token|@csrf_exempt" --inclu
 
 **Run:**
 ```bash
-grep -rniE "jsonwebtoken|jose|pyjwt|python-jose|golang-jwt|jwt\.(sign|verify|decode|encode)" --include=*.{js,ts,py,go} .
-grep -rniE "algorithm[s]?|none|HS256|RS256|verify=False|verify_signature" --include=*.{js,ts,py,go} . | grep -i jwt
+# Filenames only: signing/verification calls can contain literal secrets
+rg -l -i 'jsonwebtoken|jose|pyjwt|python-jose|golang-jwt|jwt\.(sign|verify|decode|encode)' --glob '*.{js,ts,py,go}' .
+rg -l -i 'jwt.*(algorithm[s]?|none|HS256|RS256|verify=False|verify_signature)|(algorithm[s]?|none|HS256|RS256|verify=False|verify_signature).*jwt' --glob '*.{js,ts,py,go}' .
 ```
 
 **What good looks like:**
@@ -245,7 +248,7 @@ grep -rniE "algorithm[s]?|none|HS256|RS256|verify=False|verify_signature" --incl
 **Run:**
 ```bash
 grep -rniE "rate.?limit|express-rate-limit|slowapi|flask-limiter|throttle|bucket4j|limiter|RateLimiter" --include=*.{js,ts,py,go,java} .
-grep -rniE "login|signin|authenticate|reset.?password|forgot.?password|verify.?otp|/auth" --include=*.{js,ts,py,go} . | head -40
+rg -l -i 'login|signin|authenticate|reset.?password|forgot.?password|verify.?otp|/auth' --glob '*.{js,ts,py,go}' .
 ```
 
 **What good looks like:**
@@ -272,13 +275,39 @@ grep -rniE "login|signin|authenticate|reset.?password|forgot.?password|verify.?o
 committed credentials.
 
 **Run:**
+Resolve `security_review_skill` to the absolute installed skill directory. Reuse this
+scan for topics 14 and 24 instead of scanning credentials again.
+
 ```bash
-command -v gitleaks >/dev/null && gitleaks detect --no-banner --redact -v 2>/dev/null || echo "gitleaks unavailable"
-command -v trufflehog >/dev/null && trufflehog filesystem . --no-update 2>/dev/null | head -40
-git ls-files 2>/dev/null | grep -E "(^|/)\.env($|\.)" ; echo "--- .gitignore check ---"
+# Working files, including uncommitted changes
+bash "$security_review_skill/scripts/secret-scan.sh" files "$PWD"
+# Add history coverage when it is part of the requested audit
+bash "$security_review_skill/scripts/secret-scan.sh" git "$PWD"
+git ls-files -- '.env' '.env.*' '*/.env' '*/.env.*'
 grep -nE "^\.env|^\*\.env|secrets" .gitignore 2>/dev/null
-grep -rniE "(api[_-]?key|secret|token|password|aws_access|private[_-]?key)\s*[:=]\s*['\"][A-Za-z0-9/+_-]{12,}" --include=*.{js,ts,py,go,java,yaml,yml,json,env} . | grep -viE "process\.env|os\.(environ|getenv)|example|placeholder|\.env\." | head -40
+# Discovery returns filenames only, never matching source lines
+rg -l -i --glob '*.{js,ts,py,go,java,yaml,yml,json,env}' "(api[_-]?key|secret|token|password|aws_access|private[_-]?key)\s*[:=]\s*['\"][A-Za-z0-9/+_-]{12,}" .
 ```
+
+The [status-only helper](../scripts/secret-scan.sh) suppresses scanner stdout and
+stderr, uses full Gitleaks redaction, and disables TruffleHog credential verification.
+It exits `0` for a completed selected scope without candidates, `1` for candidates,
+and `2` for a missing tool or scan error (including unsupported flags). Each tool's
+status is printed separately; an error can coexist with candidates from another tool.
+Do not turn `1` into "unavailable" or `2` into "clean". Record exclusions/config and
+scope; a completed scan does not prove the absence of secrets.
+
+Treat matches as candidates until context confirms a real exposure; do not contact
+credential providers to test values without authorization. For follow-up, use a local
+redacting viewer or structured scanner output projected to locations/rule identifiers
+before it reaches tool output. Never print raw source matches, scanner logs/reports,
+credentials, or surrounding lines to chat/evidence. Report file/line, credential type,
+and remediation, with `[REDACTED]` in any example. `rg` exit `1` means no matches;
+exit `2` means a search error, not a clean result.
+
+CLI behavior: [Gitleaks usage](https://github.com/gitleaks/gitleaks#usage) and
+[exit handling](https://github.com/gitleaks/gitleaks/blob/master/cmd/root.go),
+[TruffleHog flags](https://github.com/trufflesecurity/trufflehog#usage).
 
 **What good looks like:**
 - All secrets read from env / a secrets manager (Vault, AWS Secrets Manager, Doppler, Infisical) — none hardcoded.
@@ -290,8 +319,9 @@ grep -rniE "(api[_-]?key|secret|token|password|aws_access|private[_-]?key)\s*[:=
 > it needs** (restricted Stripe keys, non-superuser DB users, minimal OAuth scopes) is
 > **topic 14** (`token-scoping.md`).
 
-**Red flags (Critical):**
-- Any real secret committed (gitleaks/trufflehog hit, live key in source or history).
+**Red flags (confirm severity):**
+- A confirmed credential exposed in source/history; assess its privilege, validity,
+  reachability, and impact. A scanner candidate alone is not a Critical finding.
 - `.env` tracked in git; secrets in client-side bundles (`NEXT_PUBLIC_*`, `VITE_*`) that aren't truly public.
 - Secrets passed as Docker `ARG` or baked into image layers.
 
@@ -444,8 +474,8 @@ grep -rniE "mimetype|content-type|file\.(name|filename)|originalname|extension|m
 
 **Run:**
 ```bash
-grep -rniE "logger|logging|winston|pino|bunyan|structlog|log\.(info|warn|error)|console\.log" --include=*.{js,ts,py,go} . | head -40
-grep -rniE "log.*(password|token|secret|authorization|cookie|ssn|credit|cvv|api[_-]?key)" --include=*.{js,ts,py,go} . | head -30
+rg -l 'logger|logging|winston|pino|bunyan|structlog|log\.(info|warn|error)|console\.log' --glob '*.{js,ts,py,go}' .
+rg -l -i 'log.*(password|token|secret|authorization|cookie|ssn|credit|cvv|api[_-]?key)' --glob '*.{js,ts,py,go}' .
 ```
 
 **What good looks like:**

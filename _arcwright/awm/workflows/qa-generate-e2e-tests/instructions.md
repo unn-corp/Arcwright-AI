@@ -101,7 +101,7 @@ If the project needs:
 - Comprehensive coverage analysis
 - Advanced testing patterns and utilities
 
-→ **Install Test Architect (TEA) module**: <https://arcwright-code-org.github.io/arcwright-method-test-architecture-enterprise/>
+Use the [TEA capability adapter](tea-capabilities.md) for risk-based design, test review, traceability, NFR evidence, or behavioral evaluation with Arcwright's existing tools. The [official Test Architect documentation](https://bmad-code-org.github.io/bmad-method-test-architecture-enterprise/) describes the upstream module. Its latest 3.1.0 skills require a newer core contract; the adapter does not install or replace Arcwright's runtime.
 
 ## Output
 

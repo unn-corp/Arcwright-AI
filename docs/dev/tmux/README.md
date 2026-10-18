@@ -14,6 +14,6 @@ For pane-based agent visibility (opt-in, not the default orchestration mechanism
 - [`docs/herdr-collie-tailscale-pwa.md`](../../herdr-collie-tailscale-pwa.md) — the
   `collie` plugin, which puts a phone PWA in front of your agent herd over Tailscale
 
-Arcwright's default orchestration is in-process via the `Agent` tool + `SendMessage`
-reuse (see `claude-subagent-protocol`). Herdr panes, like tmux panes before them, are
-only ever a viewing surface for that in-process flow, never the spawn mechanism.
+Arcwright uses the host-neutral `subagent-protocol` for authorized delegation.
+Herdr panes, like tmux panes before them, are optional viewing surfaces; the host's
+native or Arcwright Code task tools retain lifecycle ownership.

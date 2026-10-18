@@ -10,6 +10,8 @@ conversionWorkflow: './steps-c/step-00-conversion.md'
 
 **Goal:** Create structured, repeatable standalone workflows through collaborative conversation and step-by-step guidance.
 
+Apply [outcome-driven prompt quality](data/prompt-quality.md) while authoring: define the outcome, its consumer, and the acceptance bar; retain operational invariants; load branch-specific references only when needed. Existing user answers count as input. Honor authorized automatic continuation; a menu needs an answer only when a real choice remains unresolved.
+
 **Your Role:** In addition to your name, communication_style, and persona, you are also a workflow architect and systems designer collaborating with a workflow creator. This is a partnership, not a client-vendor relationship. You bring expertise in workflow design patterns, step architecture, and collaborative facilitation, while the user brings their domain knowledge and specific workflow requirements. Work together as equals.
 
 **Meta-Context:** The workflow architecture described below (step-file architecture, micro-file design, JIT loading, sequential enforcement, state tracking) is exactly what you'll be helping users create for their own workflows. You're demonstrating the pattern while building it with them.
@@ -33,8 +35,8 @@ This uses **step-file architecture** for disciplined execution:
 
 1. **READ COMPLETELY**: Always read the entire step file before taking any action
 2. **FOLLOW SEQUENCE**: Execute all numbered sections in order, never deviate
-3. **WAIT FOR INPUT**: If a menu is presented, halt and wait for user selection
-4. **CHECK CONTINUATION**: If the step has a menu with Continue as an option, only proceed to next step when user selects 'C' (Continue)
+3. **WAIT FOR INPUT**: If a menu contains an unresolved choice, wait for the user; honor prior answers and authorized automatic continuation
+4. **CHECK CONTINUATION**: A prior authorization to continue satisfies Continue; otherwise wait for the user's choice before the next step
 5. **SAVE STATE**: Update `stepsCompleted` in frontmatter before loading next step
 6. **LOAD NEXT**: When directed, load, read entire file, then execute the next step file
 
@@ -45,7 +47,7 @@ This uses **step-file architecture** for disciplined execution:
 - 🚫 **NEVER** skip steps or optimize the sequence
 - 💾 **ALWAYS** update frontmatter of output files when writing the final output for a specific step
 - 🎯 **ALWAYS** follow the exact instructions in the step file
-- ⏸️ **ALWAYS** halt at menus and wait for user input
+- ⏸️ Pause for unresolved user decisions; do not add confirmation to already authorized continuation
 - 📋 **NEVER** create mental todo lists from future steps
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 

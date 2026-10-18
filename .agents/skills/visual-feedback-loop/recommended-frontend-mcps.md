@@ -32,4 +32,4 @@ Browser-based visual testing and debugging. Connects to a running Chrome instanc
 
 ## Installation
 
-Each MCP is user-installed. Follow the provider's setup docs and register the server in your `.claude/settings.json` (or equivalent IDE config) under `mcpServers`.
+Each MCP is user-installed. Follow the provider's setup docs and register the server through the selected host's documented MCP configuration. Preserve existing settings and verify the actual registration schema.

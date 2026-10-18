@@ -1,6 +1,6 @@
 ---
 name: swiftui-navigation
-description: "Implement SwiftUI navigation patterns including NavigationStack, NavigationSplitView, sheet presentation, tab-based navigation, and deep linking. Use when building push navigation, programmatic routing, multi-column layouts, modal sheets, tab bars, universal links, or custom URL scheme handling."
+description: "Implement SwiftUI NavigationStack/SplitView, tabs, sheets, deep links, and programmatic routes. Use for navigation state, restoration, modal coordination, and adaptive multi-column behavior."
 ---
 
 # SwiftUI Navigation

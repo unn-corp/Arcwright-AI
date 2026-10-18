@@ -1,6 +1,6 @@
 # Karpathy Discipline — Quick Rules
 
-> Load full `SKILL.md` for failure mode detection table and pre-implementation checklist.
+> Use the full `SKILL.md` when scope or implementation choices need diagnosis; do not force an extra read for routine work.
 
 Behavioral minimalism layer — altitude and restraint during implementation.
 Complements `clean-code-standards` (structural DRY/SOLID) — this governs decisions, that governs structure.

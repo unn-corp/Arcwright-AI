@@ -1,18 +1,11 @@
 ---
 name: rust-best-practices
-description: >
-  Guide for writing idiomatic Rust code based on Apollo GraphQL's best practices handbook. Use this skill when:
-  (1) writing new Rust code or functions,
-  (2) reviewing or refactoring existing Rust code,
-  (3) deciding between borrowing vs cloning or ownership patterns,
-  (4) implementing error handling with Result types,
-  (5) optimizing Rust code for performance,
-  (6) writing tests or documentation for Rust projects.
+description: "Implement or review idiomatic Rust ownership, borrowing, errors, APIs, and tests. Use specialist Rust skills only for the affected concern."
 license: MIT
 compatibility: Rust 1.70+, Cargo
 metadata:
   author: apollographql
-  version: "1.1.0"
+  version: "1.1.2-arcwright.1"
 allowed-tools: Bash(cargo:*) Bash(rustc:*) Bash(rustfmt:*) Bash(clippy:*) Read Write Edit Glob Grep
 ---
 
@@ -21,6 +14,8 @@ allowed-tools: Bash(cargo:*) Bash(rustc:*) Bash(rustfmt:*) Bash(clippy:*) Read W
 Apply these guidelines when writing or reviewing Rust code. Based on Apollo GraphQL's [Rust Best Practices Handbook](https://github.com/apollographql/rust-best-practices).
 
 ## Best Practices Reference
+
+Check `rust-version`, the pinned toolchain, enabled features, and dependency versions first. Gate APIs and attributes on the project MSRV; for example, `#[expect]` requires Rust 1.81, so use a justified `#[allow]` on older compilers. Do not upgrade dependencies or MSRV just to follow this guide.
 
 Before reviewing, familiarize yourself with Apollo's Rust best practices. Read ALL relevant chapters in the same turn in parallel. Reference these files when providing feedback:
 
@@ -39,7 +34,7 @@ Before reviewing, familiarize yourself with Apollo's Rust best practices. Read A
 ### Borrowing & Ownership
 - Prefer `&T` over `.clone()` unless ownership transfer is required
 - Use `&str` over `String`, `&[T]` over `Vec<T>` in function parameters
-- Small `Copy` types (≤24 bytes) can be passed by value
+- Small plain `Copy` values can often be passed by value; avoid combining `Copy` and mutable iterator state
 - Use `Cow<'_, T>` when ownership is ambiguous
 
 ### Error Handling
@@ -62,11 +57,11 @@ Key lints to watch:
 - `large_enum_variant` - oversized variants (consider boxing)
 - `needless_collect` - premature collection
 
-Use `#[expect(clippy::lint)]` over `#[allow(...)]` with justification comment.
+On MSRV 1.81+, prefer `#[expect(clippy::lint)]` over `#[allow(...)]` with a justification; preserve older compiler compatibility otherwise.
 
 ### Testing
 - Name tests descriptively: `process_should_return_error_when_input_empty()`
-- One assertion per test when possible
+- Test one behavior; retain related assertions when they make its result clear
 - Use doc tests (`///`) for public API examples
 - Consider `cargo insta` for snapshot testing generated output
 

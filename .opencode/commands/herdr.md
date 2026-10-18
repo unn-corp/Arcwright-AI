@@ -61,7 +61,7 @@ Config: `~/.config/herdr/config.toml` (reload with `herdr server reload-config`)
 
 ## Agent Orchestration
 
-For in-process agent orchestration, see the `claude-subagent-protocol` skill
+For in-process agent orchestration, see the `subagent-protocol` skill
 (`Agent` tool + `SendMessage` reuse via the Session Agent Registry, the default).
 Pane-visibility usage is opt-in; see the `herdr` skill's "Watching agents in
 panes" section. To spawn a visible agent:

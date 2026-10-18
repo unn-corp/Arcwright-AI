@@ -1,14 +1,6 @@
 ---
 name: tauri-testing
-description: >
-  Test a Tauri v2 app at every layer — mocking the IPC bridge for frontend unit/component
-  tests, end-to-end WebDriver runs, and Rust-side unit tests of commands with the mock runtime.
-  USE FOR: writing Vitest/Jest tests that call invoke() without a running backend, faking
-  windows, end-to-end automation with tauri-driver + Selenium/WebdriverIO, unit-testing
-  #[tauri::command] functions in Rust, and wiring any of these into CI.
-  DO NOT USE FOR: defining the commands themselves (see tauri-commands-ipc), runtime
-  debugging or the devtools inspector (see tauri-debugging), or the permission/capability
-  configuration that gates commands.
+description: "Test Tauri frontend/Rust integration and application behavior using the existing project harness."
 ---
 
 # Tauri v2 Testing

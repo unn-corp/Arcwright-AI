@@ -1,14 +1,6 @@
 ---
 name: electron-performance
-description: >
-  Keep Electron apps fast and responsive: lazy/deferred work at startup, flicker-free
-  windows with show:false + ready-to-show, keeping the main process unblocked, trimming
-  what loads, and V8 snapshots for faster cold start.
-  USE FOR: diagnosing slow startup or a janky UI, eliminating the white window flash,
-  moving blocking work off the main process, reducing module-load cost, applying V8
-  snapshots.
-  DO NOT USE FOR: packaging/build config (see electron-packaging) or security
-  hardening (see electron-security).
+description: "Diagnose Electron startup delays, blocked main-process work, window flashes, or rendering jank. Use packaging and security skills for those concerns."
 ---
 
 # Electron Performance

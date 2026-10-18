@@ -57,7 +57,7 @@ Server Actions are the recommended way to handle mutations.
 // app/actions.ts
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 
 export async function createPost(formData: FormData) {
   const title = formData.get('title') as string;
@@ -70,7 +70,7 @@ export async function createPost(formData: FormData) {
 export async function deletePost(id: string) {
   await db.post.delete({ where: { id } });
 
-  revalidateTag('posts');
+  updateTag('posts');
 }
 ```
 
@@ -314,3 +314,5 @@ const posts = await db.post.findMany({
 | Server Action | Mutations, form submissions | POST only | No |
 | Route Handler | External APIs, webhooks | Any | GET can be cached |
 | Client fetch to API | Client-side reads | Any | HTTP cache headers |
+
+For older Next.js versions without `updateTag`, use the installed invalidation contract. See [caching-strategies.md](./caching-strategies.md).

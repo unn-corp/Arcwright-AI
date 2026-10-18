@@ -1,16 +1,6 @@
 ---
 name: strands-bedrock-agentcore-deploy
-description: >
-  Deploying a Strands agent to Amazon Bedrock AgentCore, the flagship AWS agent
-  runtime: wrapping the agent with BedrockAgentCoreApp, the agentcore CLI
-  (configure/deploy/invoke/status/destroy), arm64 container requirements, streaming,
-  and identity/memory integration.
-  USE FOR: exposing a Strands agent as an AgentCore-compatible HTTP service, deploying
-  it with the agentcore CLI, diagnosing an arm64/x86_64 build failure, adding
-  streaming, or wiring AgentCore Identity or AgentCore Memory.
-  DO NOT USE FOR: choosing AgentCore over Lambda/Fargate/EKS/etc. in the first place
-  (see strands-aws-deployment-targets), or the agent's own logic (see
-  strands-agent-fundamentals).
+description: "Deploy or debug a Strands agent on Amazon Bedrock AgentCore, including runtime integration, architecture compatibility, streaming, and identity."
 ---
 
 # Deploying a Strands Agent to Bedrock AgentCore

@@ -1,6 +1,6 @@
 ---
 name: natural-language
-description: "Tokenize, tag, and analyze natural language text using Apple's NaturalLanguage framework and translate between languages with the Translation framework. Use when adding language identification, sentiment analysis, named entity recognition, part-of-speech tagging, text embeddings, or in-app translation to iOS/macOS/visionOS apps."
+description: "Analyze text with NaturalLanguage or translate it with Translation: language detection, tokenization, tagging, embeddings, and translation sessions. Generative on-device models use apple-on-device-ai."
 ---
 
 # NaturalLanguage + Translation

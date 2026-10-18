@@ -1,15 +1,6 @@
 ---
 name: soc2
-description: >
-  Expert SOC 2 compliance assistant covering all five Trust Services Criteria (Security/CC,
-  Availability/A, Confidentiality/C, Processing Integrity/PI, Privacy/P). Use this skill
-  whenever a user mentions SOC 2, Trust Services Criteria, SOC 2 Type 1 or Type 2, audit
-  readiness, compliance gaps, control documentation, evidence collection, vendor risk
-  questionnaires, or anything related to AICPA service organization controls. Trigger even
-  for adjacent topics like "we need to get audited", "a customer asked for our security report",
-  "writing an information security policy", or "preparing for an audit". Covers gap analysis,
-  policy writing, control documentation, audit evidence preparation, and vendor risk reviews
-  for organizations at any maturity level — from first-time startups to seasoned compliance teams.
+description: "Prepare SOC 2 Type 1/2 readiness, Trust Services Criteria gap analysis, controls, policies, evidence, and vendor risk responses. Use for SOC 2 compliance work rather than unrelated security tasks."
 ---
 
 # SOC 2 Compliance Skill

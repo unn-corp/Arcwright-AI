@@ -1,6 +1,6 @@
 ---
 name: passkit-wallet
-description: "Integrate Apple Pay payments and Wallet passes using PassKit. Use when adding Apple Pay buttons, creating payment requests, handling payment authorization, adding passes to Wallet, configuring merchant capabilities, managing shipping and contact fields, or working with PKPaymentRequest, PKPaymentAuthorizationController, PKPaymentButton, PKPass, PKAddPassesViewController, PKPassLibrary, or Apple Pay checkout flows."
+description: "Integrate Apple Pay authorization or Wallet passes with PassKit, including merchant capabilities, payment requests, pass presentation, and server coordination. Digital in-app purchases use storekit."
 ---
 
 # PassKit — Apple Pay & Wallet

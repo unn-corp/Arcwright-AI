@@ -1,5 +1,5 @@
 ---
-description: "Motion (formerly Framer Motion) is the prioritized React animation library for Arcwright frontends. TRIGGER when implementing any JavaScript-driven animation, transition, gesture, drag-and-drop, scroll/parallax effect..."
+description: "Implement or debug Motion animations in React or JavaScript, including transitions, gestures, scroll effects, and reduced-motion behavior."
 ---
 
 Load and run the `motion` skill (`.agents/skills/motion/SKILL.md`) against $ARGUMENTS. Follow the skill exactly.

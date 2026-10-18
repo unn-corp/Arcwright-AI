@@ -1,15 +1,6 @@
 ---
 name: tauri-events
-description: >
-  Communicate from Rust to the frontend (and frontend to Rust) in Tauri v2 using the
-  event system — emit/listen in both directions — and stream incremental data with
-  Channels.
-  USE FOR: pushing updates from the Rust core to the WebView (progress, notifications,
-  background results), broadcasting between windows, or streaming a sequence of values
-  (download progress, log lines) efficiently.
-  DO NOT USE FOR: request/response calls where the frontend wants a single return value
-  (use a command — see tauri-commands-ipc), or shared mutable state (see
-  tauri-state-management).
+description: "Implement or debug Tauri event listeners, emission, payloads, and listener cleanup."
 ---
 
 # Tauri v2 Events & Channels

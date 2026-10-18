@@ -1,15 +1,8 @@
 ---
 name: pdflib-syntax-fonts
-description: >
-  Use when embedding fonts in pdf-lib or handling non-ASCII text in PDFs.
-  Prevents the #1 font error: using standard fonts for unicode text, which throws
-  WinAnsi encoding errors. Standard fonts only support Latin-1 characters.
-  Covers StandardFonts, custom TTF/OTF embedding, fontkit registration, text measuring.
-  Keywords: embedFont, StandardFonts, fontkit, registerFontkit, WinAnsi,
-  unicode, TTF, OTF, use custom font, embed font in PDF, font not working,
-  add text with special characters.
+description: "Embed or measure fonts in pdf-lib, including custom Unicode fonts and fontkit registration."
 license: MIT
-compatibility: "Designed for Claude Code. Requires pdf-lib 1.x with TypeScript/JavaScript."
+compatibility: "Requires pdf-lib 1.x with TypeScript/JavaScript."
 metadata:
   author: OpenAEC-Foundation
   version: "1.0"

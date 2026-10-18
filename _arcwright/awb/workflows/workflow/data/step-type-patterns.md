@@ -242,16 +242,5 @@ Save, mark complete
 - No next step
 
 ## Step Size Limits
-| Type                  | Max    |
-| --------------------- | ------ |
-| Init                  | 150    |
-| Init (with discovery) | 200    |
-| Continuation          | 200    |
-| Middle (simple)       | 200    |
-| Middle (complex)      | 250    |
-| Branch                | 200    |
-| Validation sequence   | 150    |
-| Final polish          | 200    |
-| Final                 | 200    |
 
-**If exceeded:** Split steps or extract to `/data/`.
+Every type uses the same `stepLines` thresholds in [workflow-limits.json](workflow-limits.json); step type does not create another maximum. Keep init/final steps short when their job is small. Extract substantial branch-only references or split work with genuinely separate outcomes rather than padding/splitting to a type-specific quota. See [prompt quality](prompt-quality.md).

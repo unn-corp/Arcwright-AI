@@ -35,10 +35,12 @@ Layer 3 — MERGE GATE (branch protection / rulesets)
   review. See branch-protection.md.
 ```
 
-## Default coverage thresholds (this skill ships)
+## Coverage requirements
 
-`lines 80, functions 80, branches 70` — the common industry baseline. Lower them
-per-repo if a legacy codebase can't meet it yet; raise for critical libraries.
+Keep existing required thresholds. When a new coverage gate is requested, choose
+a baseline from the project's current coverage and uncovered behavior. Percentages
+do not establish assertion quality. The numbers below illustrate syntax; they are
+not default requirements or a reason to add filler tests.
 
 - Vitest: `test.coverage.thresholds = { lines: 80, functions: 80, branches: 70 }`
 - Jest: `coverageThreshold.global = { lines: 80, functions: 80, branches: 70 }`

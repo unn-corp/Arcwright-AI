@@ -1,6 +1,6 @@
 ---
 name: amplify-best-practices
-description: Use when planning, implementing, deploying, debugging, or reviewing AWS Amplify Gen 2/Hosting applications, ampx commands, amplify.yml, amplify_outputs.json, Amplify Functions/Data/Auth/Storage, or a frontend whose build and runtime depend on Amplify. Especially relevant when reducing CI/CD time, Lambda latency, cache overhead, or UI load and interaction cost.
+description: "Build, debug, or review AWS Amplify Gen 2 and Hosting apps, including ampx, build configuration, runtime roles, and application performance."
 ---
 
 # Amplify best practices

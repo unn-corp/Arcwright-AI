@@ -1,14 +1,14 @@
 ---
 name: build-mcpb
-description: This skill should be used when the user wants to "package an MCP server", "bundle an MCP", "make an MCPB", "ship a local MCP server", "distribute a local MCP", discusses ".mcpb files", mentions bundling a Node or Python runtime with their MCP server, or needs an MCP server that interacts with the local filesystem, desktop apps, or OS and must be installable without the user having Node/Python set up.
+description: "Package a local MCP server as an MCPB bundle, including embedded runtimes and desktop or filesystem integration. Use for distribution, not general server design."
 version: 0.1.0
 ---
 
 # Build an MCPB (Bundled Local MCP Server)
 
-MCPB is a local MCP server **packaged with its runtime**. The user installs one file; it runs without needing Node, Python, or any toolchain on their machine. It's the sanctioned way to distribute local MCP servers.
+MCPB is a local MCP server **packaged with its runtime**. The user installs one file; it runs without needing Node, Python, or any toolchain on their machine. Use it only when the selected host supports MCPB bundles.
 
-> MCPB is the **secondary** distribution path. Anthropic recommends remote MCP servers for directory listing — see https://claude.com/docs/connectors/building/what-to-build.
+> Choose local packaging from the selected host and deployment needs. Directory-specific hosting preferences apply only when that directory is the requested distribution target.
 
 **Use MCPB when the server must run on the user's machine** — reading local files, driving a desktop app, talking to localhost services, OS-level APIs. If your server only hits cloud APIs, you almost certainly want a remote HTTP server instead (see `build-mcp-server`). Don't pay the MCPB packaging tax for something that could be a URL.
 
@@ -60,7 +60,6 @@ The host reads `manifest.json`, launches `server.mcp_config.command` as a **stdi
     }
   },
   "compatibility": {
-    "claude_desktop": ">=1.0.0",
     "platforms": ["darwin", "win32", "linux"]
   }
 }
@@ -186,7 +185,7 @@ npx @anthropic-ai/mcpb pack
 # Sign for distribution
 npx @anthropic-ai/mcpb sign dist/local-files.mcpb
 
-# Install: drag the .mcpb file onto Claude Desktop
+# Install through the selected MCPB-capable host; verify its documented procedure.
 ```
 
 Test on a machine **without** your dev toolchain before shipping. "Works on my machine" failures in MCPB almost always trace to a dependency that wasn't actually bundled.

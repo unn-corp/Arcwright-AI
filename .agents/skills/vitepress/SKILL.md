@@ -21,7 +21,11 @@ VitePress is a Static Site Generator (SSG) built on Vite and Vue 3. It takes Mar
 - Look at `.vitepress/theme/` for custom theme extensions
 - The `public/` directory contains static assets served as-is
 
-> The skill is based on VitePress 1.x, generated at 2026-01-28.
+## Choose the installed version first
+
+The references below preserve VitePress **1.x** behavior for existing sites. Read the installed `vitepress` version before selecting configuration or dependencies.
+
+For an application already using **VitePress 2**, or an explicitly requested v2 migration, use the [v2 reference index](references/v2/index.md), pinned to 2.0.0-alpha.20 and the 2026-09-25 docs snapshot. That prerelease requires Node 22+ and uses `vitepress@next`; it changes RTL, icons, lazy-image options and theme/config APIs. Preserve a v1 site's working configuration during ordinary docs edits.
 
 ## Core
 

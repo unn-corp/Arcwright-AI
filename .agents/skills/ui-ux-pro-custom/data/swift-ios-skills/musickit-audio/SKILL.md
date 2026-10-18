@@ -1,6 +1,6 @@
 ---
 name: musickit-audio
-description: "Integrate Apple Music playback, catalog search, and Now Playing metadata using MusicKit and MediaPlayer. Use when adding music search, Apple Music subscription flows, queue management, playback controls, remote command handling, or Now Playing info to iOS apps."
+description: "Integrate Apple Music catalog search, authorization, subscriptions, playback, and Now Playing controls with MusicKit/MediaPlayer. General camera/video capture uses photos-camera-media."
 ---
 
 # MusicKit + MediaPlayer

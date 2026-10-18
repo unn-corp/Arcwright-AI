@@ -1,132 +1,40 @@
-# Next.js SEO Audit Checklist
+# Scoped SEO audit
 
-## Contents
+Select representative route types, languages and deployment environments.
+Record production URLs and the relevant Next.js version/configuration.
+Do not add every optional feature to make a checklist pass.
 
-Critical | Important | Nice to Have | Audit Tools | Red Flags
+1. **Page usefulness:** Does each indexable page answer a distinct task with
+   accurate information? Check misleading availability/dates, duplicate pages
+   and repetitive UI copy.
+2. **Access and discovery:** Check actual status/redirect chains, internal
+   links, robots rules, sitemap entries and index directives. Verify public
+   versus preview/private intent.
+3. **Canonical/localization:** Inspect absolute canonical URLs, query handling
+   and reciprocal hreflang where applicable. Compare Google-selected canonicals
+   through URL Inspection when available.
+4. **Served metadata:** Inspect title/description, social images and icons for
+   the route. Check complete responses and streaming behavior for relevant
+   bots. Test image URLs; missing optional tags are not automatically defects.
+5. **Structured data:** Add only relevant accurate types. Check current
+   eligibility, visible facts and safe serialization; validate the production
+   output.
+6. **Rendering and usability:** Inspect critical public content in the response,
+   then directly open the route and exercise hydration/navigation. Check mobile
+   equivalence, media dimensions and the changed interaction.
+7. **Performance:** Use field CWV where available and lab tools for diagnosis.
+   Distinguish LCP, INP and CLS evidence; lab Lighthouse is not field INP.
+8. **Publication:** Change representative content and verify page, metadata
+   and sitemap freshness through the real invalidation/rebuild path.
+9. **Crawler policy:** Preserve intentional training/search distinctions and
+   access protection. Check firewall/access logs when public crawls fail.
+   For Google AI eligibility, check the effective Search Console inclusion
+   setting (including inheritance); see [AI search policy](ai-search.md#crawlers-and-policy).
+10. **Search evidence:** Use indexing/URL Inspection for indexing and canonical
+    questions, performance for query/traffic questions, and analytics for
+    referrals. A performance export cannot establish all three.
 
-## Critical (Must Have)
-
-### Technical Foundation
-
-- [ ] `metadataBase` set in root layout
-- [ ] Unique `<title>` on every page (~50-60 chars is a guideline, not a Google limit — titles are truncated by device width, not character count)
-- [ ] Unique `meta description` on every page (~150-160 chars is a guideline — Google has no hard limit and truncates per device/query)
-- [ ] `robots.txt` exists and allows crawling
-- [ ] `sitemap.xml` exists and is valid
-- [ ] Sitemap submitted to Google Search Console
-- [ ] No `noindex` on pages you want indexed
-- [ ] Canonical URLs set for all pages
-- [ ] `viewport` exported separately from `metadata`
-- [ ] `favicon.ico` (or `app/icon`) present — appears in Google SERPs and browser tabs
-
-### Rendering
-
-- [ ] SEO pages use SSG, SSR, or `"use cache"` Cache Components (not CSR)
-- [ ] Content visible without JavaScript (test with JS disabled)
-- [ ] No client-side only content for SEO-critical text
-- [ ] Metadata verified in production with a bot User-Agent (e.g. `curl -A "Googlebot" | grep '<title>'`) — Next.js 16.2.x has known PPR + streaming-metadata bugs that can drop `<title>`/canonical/description for some bots (vercel/next.js #93401, #95406)
-
-### Core Web Vitals
-
-- [ ] LCP (Largest Contentful Paint) < 2.5s
-- [ ] INP (Interaction to Next Paint) < 200ms
-- [ ] INP optimized (INP replaced FID in March 2024)
-- [ ] CLS (Cumulative Layout Shift) < 0.1
-- [ ] CWV checked on FIELD data (PageSpeed Insights / Search Console CrUX, 75th percentile) — not just Lighthouse (Lighthouse can't measure INP)
-- [ ] Mobile parity — same content/metadata/structured-data on mobile (mobile-first indexing complete since July 2024)
-
-## Important (Should Have)
-
-### Structured Data
-
-- [ ] WebSite schema on homepage
-- [ ] Organization schema
-- [ ] Relevant page-specific schemas (Article, Product) for rich results
-- [ ] FAQPage = AI-search/LLM signal only (rich results removed 2026-05-07)
-- [ ] JSON-LD matches visible content
-- [ ] Validated with Rich Results Test
-
-### Open Graph & Social
-
-- [ ] Open Graph title and description
-- [ ] OG image (1200x630 recommended)
-- [ ] OG image set via `opengraph-image` file convention or `ImageResponse` (not just a hardcoded URL)
-- [ ] Twitter Card configured
-- [ ] Images tested with Facebook Debugger
-
-### Links & Navigation
-
-- [ ] Internal links use `<Link>` component
-- [ ] No broken internal links
-- [ ] Logical URL structure
-- [ ] Breadcrumbs implemented (if applicable)
-
-### Images
-
-- [ ] All images have `alt` text
-- [ ] Images use `next/image` component
-- [ ] Images in sitemap (only if image-search traffic matters — e.g. products, recipes, photography)
-- [ ] Appropriate image sizes (no oversized images)
-
-## Nice to Have (Optimization)
-
-### PWA
-
-- [ ] `app/manifest.ts` present (name, short_name, theme_color, icons) — PWA completeness, not an SEO requirement
-
-### Performance
-
-- [ ] JavaScript bundle optimized
-- [ ] Fonts use `next/font`
-- [ ] Critical CSS inlined
-- [ ] Third-party scripts deferred
-
-### International (if applicable)
-
-- [ ] `hreflang` tags for language versions
-- [ ] Localized sitemaps
-- [ ] Language-specific metadata
-
-### Advanced
-
-- [ ] Video sitemap (if video content)
-- [ ] News sitemap (if news site)
-- [ ] App links configured (if mobile app)
-
-## Audit Tools
-
-| Tool | Purpose | URL |
-|------|---------|-----|
-| Google Search Console | Indexing, errors | search.google.com/search-console |
-| PageSpeed Insights | Core Web Vitals | pagespeed.web.dev |
-| Rich Results Test | Structured data | search.google.com/test/rich-results |
-| Lighthouse | Overall audit | Chrome DevTools |
-| Chrome DevTools device emulation | Mobile usability | Chrome DevTools (Google's Mobile-Friendly Test was retired Dec 2023) |
-| Ahrefs/Semrush | Backlinks, rankings | ahrefs.com / semrush.com |
-
-## Quick Commands
-
-```bash
-# Check robots.txt
-curl https://your-site.com/robots.txt
-
-# Check sitemap
-curl https://your-site.com/sitemap.xml
-
-# Check if indexed
-# Search in Google: site:your-site.com
-
-# Test mobile rendering
-# Use Chrome DevTools device emulation
-```
-
-## Red Flags to Watch
-
-1. **"Discovered - currently not indexed"** in GSC
-2. **Duplicate title tags** across pages
-3. **Missing canonical URLs**
-4. **Blocked resources in robots.txt**
-5. **Slow LCP (> 4s)**
-6. **High CLS (> 0.25)**
-7. **No structured data**
-8. **Missing alt text on images**
+Rank findings by impact and evidence, link affected routes/files and record
+checks that could not run. Separate confirmed bugs from hypotheses and
+optional improvements. See [troubleshooting.md](troubleshooting.md) and
+[Google Search Essentials](https://developers.google.com/search/docs/essentials).

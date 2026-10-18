@@ -1,14 +1,6 @@
 ---
 name: tauri-security
-description: >
-  Harden a Tauri v2 app at the WebView boundary — configuring a Content Security Policy
-  (CSP) in tauri.conf.json and enabling the Isolation pattern to vet IPC messages before
-  they reach the Rust core.
-  USE FOR: locking down what the WebView can load/execute, mitigating XSS impact, vetting
-  or sanitizing IPC payloads with an isolation app, or hardening a Tauri app before
-  release.
-  DO NOT USE FOR: the permission/capability ACL (see tauri-capabilities), or general web
-  security unrelated to Tauri's WebView (see security-best-practices).
+description: "Review Tauri trust boundaries, content policy, webview exposure, commands, and untrusted input."
 ---
 
 # Tauri v2 Security: CSP & Isolation

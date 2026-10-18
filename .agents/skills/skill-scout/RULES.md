@@ -1,12 +1,8 @@
-# Skill Scout — Quick Rules
+# Skill Scout quick rules
 
-Discover skills for a codebase, then install them globally and contribute them back to the
-Arcwright package. Flow: **profile → research (Sonnet fan-out) → rank → review → install globally → contribute to Arcwright**.
-
-- **Profile first:** detect stack, list installed skills (`.agents/skills/`, `~/.claude/skills/`), derive a gap list. Never re-recommend an installed skill.
-- **Research = Sonnet sub-agents, one per gap** via `claude-subagent-protocol` (model: sonnet; never escalate to opus without permission). Each sweeps skills.sh (`GET https://skills.sh/api/v1/skills/search`), GitHub (`gh search code/repos ... SKILL.md`), the wider web (`WebSearch`/`WebFetch`), and local global skills. Returns structured candidates, not prose.
-- **Rank:** dedup (trust order local > registry > github > web), drop installed, keep top ~10. State anything dropped (no silent caps).
-- **Review gate is mandatory** for registry/github/web skills: show the `SKILL.md` body, `allowed-tools`, any bash/`curl|sh`/network/credential use, AND the license. `local` (trusted) skips the gate.
-- **Install globally (offer first):** copy to BOTH `~/.claude/skills/<name>/` (mirror `~/.kiro/skills/` if present) AND `~/.arcwright/.agents/skills/<name>/` if a global Arcwright install exists. Project-only install available on request.
-- **Contribute to the package (offer second):** repo is `unn-corp/Arcwright-AI`; base branch is ALWAYS `dev` (main is the locked release branch — never push/PR to it). If `gh api repos/<repo> --jq .permissions.push` is true, push a branch + PR to dev; else fork + PR to dev. Only contribute skills whose license permits redistribution.
-- Keep `name`/`description`/`allowed-tools` frontmatter intact for Claude+Kiro portability. Authoring new skills is `writing-skills`, not this.
+- Find actual gaps; deduplicate installed equivalents before recommending additions.
+- Verify live per-skill installs, primary skill body, maintenance, license, tools, and dependencies. Record the date; repository stars are a separate metric.
+- Follow user/host provider choice. Use Codex when requested; delegate only useful, authorized gaps. No fixed model or recursive fan-out.
+- Compare entrypoint size and conditional loading. For tests, prefer real defect detection, fixture reuse, focused runs, and no arbitrary coverage quotas.
+- Research does not authorize installation, global updates, pushes, or PRs. Honor already granted scope without repeated approval.
+- Make third-party source/license reviewable before copying; retain required notices. Save research in host evidence or the project's Arcwright run area.

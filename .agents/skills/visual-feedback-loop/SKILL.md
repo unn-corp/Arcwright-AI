@@ -59,7 +59,7 @@ while ITERATION <= MAX:
        playwright-cli screenshot --filename=vfl-iter-<ITERATION>-mobile.png
        playwright-cli close
 
-  2. Read both screenshots with the Read tool (Claude is multimodal — read them visually).
+  2. Inspect both screenshots with the host's available image-viewing tool.
 
   3. Score each category:
        Layout     — structure, spacing, column rhythm, section proportions: /10

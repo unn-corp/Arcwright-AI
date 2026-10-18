@@ -15,6 +15,10 @@ function createFixture() {
   const copyPairs = [
     [BUILD_SCRIPT, path.join(root, 'build', 'build.js')],
     [path.join(REPO_ROOT, 'build', 'leak-patterns.js'), path.join(root, 'build', 'leak-patterns.js')],
+    [path.join(REPO_ROOT, 'build', 'matt-pocock.js'), path.join(root, 'build', 'matt-pocock.js')],
+    [path.join(REPO_ROOT, 'build', 'invocation.js'), path.join(root, 'build', 'invocation.js')],
+    [path.join(REPO_ROOT, '.agents/skills/arcwright/scripts/skill-metadata.cjs'), path.join(root, '.agents/skills/arcwright/scripts/skill-metadata.cjs')],
+    [path.join(REPO_ROOT, 'packages', 'agent-orchestration', 'lib', 'skill-policy.js'), path.join(root, 'packages', 'agent-orchestration', 'lib', 'skill-policy.js')],
     [
       path.join(REPO_ROOT, 'packages', 'agent-orchestration', 'lib', 'kiro-adapter.js'),
       path.join(root, 'packages', 'agent-orchestration', 'lib', 'kiro-adapter.js'),
@@ -176,6 +180,63 @@ symlinkDescribe('build input symlink boundaries', () => {
 });
 
 describe('ordinary build inputs', () => {
+  it('does not package local skill runs with the reusable memory module', () => {
+    withFixture((fixture) => {
+      const memory = path.join(fixture.root, '_arcwright', '_memory');
+      fs.mkdirSync(path.join(memory, 'skill-runs', 'local-run'), { recursive: true });
+      fs.writeFileSync(path.join(memory, 'skill-runs', 'local-run', 'private-report.md'), 'Local run only\n');
+      if (process.platform !== 'win32') {
+        fs.symlinkSync(fixture.external, path.join(memory, 'skill-runs', 'local-run', 'fixture-link'));
+      }
+      fs.writeFileSync(path.join(memory, 'README.md'), 'Reusable memory instructions\n');
+      runBuild(fixture);
+      const out = path.join(fixture.root, 'packages', 'agent-orchestration', 'src', '_memory');
+      expect(fs.existsSync(path.join(out, 'skill-runs'))).toBe(false);
+      expect(fs.readFileSync(path.join(out, 'README.md'), 'utf8')).toContain('Reusable memory');
+    });
+  });
+
+  it('rejects a missing sibling skill linked by a bundled reference', () => {
+    withFixture((fixture) => {
+      const skill = path.join(fixture.root, '.agents', 'skills', 'fixture-skill');
+      fs.mkdirSync(path.join(skill, 'references'));
+      fs.writeFileSync(path.join(skill, 'references', 'measurement.md'),
+        'Read [runtime evidence](../../missing-performance/SKILL.md).\n');
+
+      expect(() => runBuild(fixture)).toThrow(/missing-performance/);
+    });
+  });
+
+  it('ships shared source notices required by skill links', () => {
+    withFixture((fixture) => {
+      const skills = path.join(fixture.root, '.agents', 'skills');
+      fs.writeFileSync(path.join(skills, 'SOURCES-FIXTURE.md'), 'Required upstream source notice\n');
+      fs.appendFileSync(path.join(skills, 'fixture-skill', 'SKILL.md'),
+        '\n[Source notice](../SOURCES-FIXTURE.md)\n');
+      runBuild(fixture);
+      expect(fs.readFileSync(path.join(fixture.root, 'packages', 'agent-orchestration', 'src',
+        '.agents', 'skills', 'SOURCES-FIXTURE.md'), 'utf8')).toContain('Required upstream source notice');
+    });
+  });
+
+  it('accepts linked resources with fragments and ignores example links inside fences', () => {
+    withFixture((fixture) => {
+      const skill = path.join(fixture.root, '.agents', 'skills', 'fixture-skill');
+      fs.mkdirSync(path.join(skill, 'references'));
+      fs.writeFileSync(path.join(skill, 'references', 'evidence.md'), '# Evidence\n');
+      fs.appendFileSync(path.join(skill, 'SKILL.md'),
+        '\n[Evidence](references/evidence.md#evidence)\n\n```markdown\n[Example](../absent-example/SKILL.md)\n```\n');
+      expect(() => runBuild(fixture)).not.toThrow();
+    });
+  });
+
+  it('ignores retired submodule configuration when building local source', () => {
+    withFixture((fixture) => {
+      fs.writeFileSync(path.join(fixture.root, '.gitmodules'), '[submodule "skills"]\n path = vendor/mattpocock-skills\n');
+      expect(() => runBuild(fixture)).not.toThrow();
+    });
+  });
+
   it('builds an isolated fixture without including outside content', () => {
     withFixture((fixture) => {
       runBuild(fixture);

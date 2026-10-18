@@ -16,9 +16,10 @@ token's authority no larger than its job?**
 
 **Detect:**
 ```bash
-grep -rniE "stripe|sk_live|sk_test|rk_live|github|ghp_|gho_|github_pat_|personal.?access.?token|api[_-]?key|service.?account|oauth|scope" --include=*.{js,ts,py,go,java,env,yaml,yml,json} . | head -50
-grep -rniE "DATABASE_URL|postgres://|mysql://|mongodb(\+srv)?://|GRANT |createUser|db.?user|role.*superuser" --include=*.{js,ts,py,go,sql,env,yaml,yml} . | head -30
-grep -rniE "scope[s]?\s*[:=]|requested_scopes|access_type|permissions\s*[:=]|aud\b|\.read|\.write|readonly|read_only|full.?access" --include=*.{js,ts,py,go} . | head -40
+# Filenames only: token/config lines can include credentials
+rg -l -i 'stripe|sk_live|sk_test|rk_live|github|ghp_|gho_|github_pat_|personal.?access.?token|api[_-]?key|service.?account|oauth|scope' --glob '*.{js,ts,py,go,java,env,yaml,yml,json}' .
+rg -l -i 'DATABASE_URL|postgres://|mysql://|mongodb(\+srv)?://|GRANT |createUser|db.?user|role.*superuser' --glob '*.{js,ts,py,go,sql,env,yaml,yml}' .
+rg -l -i 'scope[s]?\s*[:=]|requested_scopes|access_type|permissions\s*[:=]|aud\b|\.read|\.write|readonly|read_only|full.?access' --glob '*.{js,ts,py,go}' .
 ```
 
 ## Outbound — tokens the app holds
@@ -74,13 +75,15 @@ grep -rniE "scope[s]?\s*[:=]|requested_scopes|access_type|permissions\s*[:=]|aud
 | Admin-scoped token handed to a client that only needs read | **High** |
 
 **Tools (hybrid):**
+Reuse [topic 7's safe secret scan](posture-scan.md#7-environment-variable--secret-management).
+Review credential class and effective provider/IAM configuration without printing key
+values; the key prefix alone does not establish its permissions.
+
 ```bash
-# Secret scanners also reveal the KIND of token leaked (full vs restricted) — reuse topic 7's run
-command -v gitleaks >/dev/null && gitleaks detect --no-banner --redact 2>/dev/null | grep -iE "stripe|github|aws|generic" | head
 # DB grant review (if SQL migrations define roles)
 grep -rniE "GRANT (ALL|SUPERUSER)|ALTER ROLE.*SUPERUSER|WITH GRANT OPTION|GRANT rds_superuser" --include=*.sql .
-# Stripe key class in use
-grep -rniE "sk_live_|sk_test_|rk_live_|rk_test_" --include=*.{js,ts,py,go,env} .
+# Stripe key candidates: filenames only
+rg -l 'sk_live_|sk_test_|rk_live_|rk_test_' --glob '*.{js,ts,py,go,env}' .
 ```
 
 **Verdict guidance:**

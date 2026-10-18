@@ -1,6 +1,6 @@
 ---
 name: swiftdata
-description: "Implement, review, or improve data persistence using SwiftData. Use when defining @Model classes with @Attribute, @Relationship, @Transient, @Unique, or @Index; when querying with @Query, #Predicate, FetchDescriptor, or SortDescriptor; when configuring ModelContainer and ModelContext for SwiftUI or background work with @ModelActor; when planning schema migrations with VersionedSchema and SchemaMigrationPlan; when setting up CloudKit sync with ModelConfiguration; or when coexisting with or migrating from Core Data."
+description: "Implement or debug SwiftData models, queries, relationships, migrations, containers, and actor-safe persistence. CloudKit sync and conflict handling use cloudkit-sync."
 ---
 
 # SwiftData

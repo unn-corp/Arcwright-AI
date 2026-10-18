@@ -1,36 +1,41 @@
 ---
 name: design-md
-description: Create, reference, and maintain a project's DESIGN.md, the single source of truth for its visual design system (Google Labs design.md format). Use before any color, typography, spacing, radius, elevation, or component-styling decision, when starting UI work on a codebase, or whenever a UX skill or agent runs. Every UX skill and agent MUST follow this protocol so the design system persists across sessions, agents, and tools.
+description: "Create or update a DESIGN.md with reusable visual decisions from project references, screenshots, or an existing interface."
 allowed-tools: Read, Grep, Glob, Bash, Write, Edit
-version: 1.0.0
+version: 1.1.0
 author: arcwright
 tags: [ux, design-system, design-tokens, design-md, visual-identity]
 ---
 
 # DESIGN.md
 
-`DESIGN.md` is a single plain-text file at the repo root that describes a product's visual identity so it persists across AI design sessions, agents, and tools. It is not a component library or a CSS framework, it is the context document an agent reads before making any styling decision. Format: Google Labs' design.md (Apache-2.0, see `SOURCES-DESIGNMD.md`).
+`DESIGN.md` is a single plain-text file at the repo root that describes a product's visual identity so it persists across AI design sessions, agents, and tools. It is not a component library or a CSS framework, it is the context document an agent reads before making any styling decision. Format: Google Labs' design.md (Apache-2.0, see [source notes](../SOURCES-DESIGNMD.md)).
 
 ## The protocol (every UX skill and agent MUST follow this)
 
 Before any color, typography, spacing, radius, elevation, or component-styling decision:
 
 1. **Check for `DESIGN.md` at the repo root** (Glob or `ls`).
-2. **If it exists: read it in full first.** The frontmatter tokens are normative, generated code that contradicts them is a defect, not a style choice. The prose (Overview, Do's and Don'ts) governs tone and negative constraints. Do NOT improvise a look that ignores it.
+2. **If it exists: read it in full first.** The merged YAML tokens are normative, generated code that contradicts them is a defect, not a style choice. The prose (Overview, Do's and Don'ts) governs tone and negative constraints. Do NOT improvise a look that ignores it.
 3. **If it does not exist: create it** at the repo root before shipping the first significant UI surface (see Authoring below).
-4. **Keep it current:** whenever a change introduces a token, palette, or component pattern not yet in `DESIGN.md`, add it (the frontmatter token AND a prose line explaining it) in the same change. A stale `DESIGN.md` is tech debt, flag it, do not silently drift from it.
+4. **Keep it current:** whenever a change introduces a token, palette, or component pattern not yet in `DESIGN.md`, add it (the YAML token AND a prose line explaining it) in the same change. A stale `DESIGN.md` is tech debt, flag it, do not silently drift from it.
 
 ## Required: all tokens and values live IN the file
 
-`DESIGN.md` MUST be self-contained. Every token and its concrete value goes in the YAML frontmatter, actual hex/oklch colors, actual px/rem sizes and weights, actual spacing and radius values, actual per-component values. Do NOT reference an external theme file, a Tailwind config, or "see the design system", the file IS the design system. The prose body explains the "why"; the frontmatter carries the normative values. An agent or the `@google/design.md export` command derives Tailwind/CSS/DTCG output FROM this file, never the reverse.
+`DESIGN.md` MUST be self-contained. Every token and its concrete value goes in YAML within the file: frontmatter, interleaved fenced `yaml` blocks under the relevant sections, or both. Use actual hex/oklch colors, px/rem sizes and weights, spacing and radius values, and per-component values. Do NOT reference an external theme file, a Tailwind config, or "see the design system", the file IS the design system. The prose body explains the "why"; the merged token tree carries the normative values. An agent or the `@google/design.md export` command derives Tailwind/CSS/DTCG output FROM this file, never the reverse.
 
-## Frontmatter token schema
+All YAML blocks merge into one token tree. Define each **top-level key at most once** across the whole file: splitting `colors` between frontmatter and a later block is an error even when the nested names differ. Put metadata in frontmatter and whole token groups in section blocks when this improves reading. A valid existing layout does not need reformatting.
+
+## YAML token schema
 
 ```yaml
 ---
 version: alpha            # optional
 name: <product name>      # required
 description: <optional>
+omitted:                 # optional: sections deliberately outside this design system
+  - section: elevation
+    reason: "A flat layout uses borders rather than shadows."
 colors:                   # `primary` is required; add as many roles as needed
   primary: "#1A1C1E"
   secondary: "#5B5F62"
@@ -71,7 +76,7 @@ components:               # per-component concrete values; may reference tokens 
 ---
 ```
 
-Notes: colors accept any valid CSS color (hex, rgb, hsl, oklch, lab, color-mix). Token references use `{path.to.token}` and must point to a primitive, except inside `components`, where composite refs like `{typography.body-md}` are allowed. Unknown keys are accepted (forward-compatible); a duplicate `##` heading is a hard error. Recommended token names: colors `primary/secondary/tertiary/neutral/surface/on-surface/error`; typography `headline-display/headline-lg/headline-md/body-lg/body-md/body-sm/label-lg/label-md/label-sm`; rounded `none/sm/md/lg/xl/full`.
+Notes: colors accept any valid CSS color (hex, rgb, hsl, oklch, lab, color-mix). Token references use `{path.to.token}` and must point to a primitive, except inside `components`, where composite refs like `{typography.body-md}` are allowed. Unknown keys are accepted (forward-compatible); a duplicate top-level YAML key or `##` heading is an error. Use `omitted` (section names or `{section, reason}` objects) to document intentionally absent sections; do not manufacture tokens to silence a warning. Recommended token names: colors `primary/secondary/tertiary/neutral/surface/on-surface/error`; typography `headline-display/headline-lg/headline-md/body-lg/body-md/body-sm/label-lg/label-md/label-sm`; rounded `none/sm/md/lg/xl/full`.
 
 ## Body sections (H2 headings, only present ones, in THIS order)
 
@@ -86,12 +91,13 @@ Notes: colors accept any valid CSS color (hex, rgb, hsl, oklch, lab, color-mix).
 
 ## Authoring (create-if-missing)
 
-1. Choose or confirm a **specific stylistic reference** with the user rather than adjectives.
+1. Choose a **specific stylistic reference** from the user’s direction or existing product context. Ask only if a missing visual decision materially changes the result.
 2. Write the **prose first**, per the section order.
-3. **Derive the frontmatter tokens from the prose** (not the reverse) and write every value concretely.
+3. **Derive the YAML tokens from the prose** (not the reverse) and write every value concretely.
 4. If Arcwright's `ui-ux-pro-custom` skill is available, use its style/palette/typography intelligence to source the reference and token values, then emit them into `DESIGN.md`.
 5. Validate if the CLI is available: `npx @google/design.md lint DESIGN.md` (checks broken refs, missing `primary`, WCAG contrast on component color pairs, section order, orphaned tokens).
-6. Export on demand once locked: `npx @google/design.md export DESIGN.md --format css-tailwind|json-tailwind|dtcg`.
+6. Compare revisions when useful: `npx @google/design.md diff before/DESIGN.md after/DESIGN.md` (check installed CLI help for flags).
+7. Export on demand once locked: `npx @google/design.md export DESIGN.md --format css-tailwind|json-tailwind|dtcg`.
 
 ## Canonicality
 
@@ -100,4 +106,4 @@ Notes: colors accept any valid CSS color (hex, rgb, hsl, oklch, lab, color-mix).
 ## See also
 
 - `ui-ux-pro-custom` (the style/palette/token intelligence that sources the content), `ux-audit` (audits code against DESIGN.md tokens), `frontend-responsive-design-standards` (defers to DESIGN.md spacing/rounded), `visual-feedback-loop` (scores rendered UI against DESIGN.md), `_arcwright/awm/agents/ux-designer.md` (the UX persona that owns it).
-- `SOURCES-DESIGNMD.md`, attribution for the Google Labs design.md format.
+- [Source notes](../SOURCES-DESIGNMD.md) for the Google Labs design.md format.

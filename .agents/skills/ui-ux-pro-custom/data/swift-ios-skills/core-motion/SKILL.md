@@ -1,6 +1,6 @@
 ---
 name: core-motion
-description: "Access accelerometer, gyroscope, magnetometer, pedometer, and activity-recognition data using CoreMotion. Use when reading device sensor data, counting steps, detecting user activity (walking/running/driving), tracking altitude changes, or implementing motion-based interactions in iOS/watchOS apps."
+description: "Read or troubleshoot accelerometer, gyroscope, magnetometer, pedometer, and activity data with Core Motion. Use for sensor permissions, sampling, reference frames, updates, and battery-aware lifecycle handling."
 ---
 
 # CoreMotion

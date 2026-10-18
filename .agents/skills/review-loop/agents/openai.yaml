@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Loop"
+  short_description: "Review and fix issues using your chosen model"
+  default_prompt: "Use $review-loop to review this scope, fix substantive findings, and verify the result. Ask me which model to use unless I already chose one for this run."

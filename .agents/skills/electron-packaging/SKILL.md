@@ -1,15 +1,6 @@
 ---
 name: electron-packaging
-description: >
-  Package and distribute Electron apps: choose Electron Forge vs electron-builder, use
-  electron-vite for dev/build of main/preload/renderer, and code-sign for each OS (macOS
-  signing + notarization, Windows Authenticode).
-  USE FOR: setting up a build/packaging pipeline, producing installers (dmg, nsis, deb,
-  rpm), configuring code signing and notarization, choosing a packaging tool, wiring a
-  Vite-based Electron build, publishing to app stores (Mac App Store, Microsoft Store,
-  Snapcraft), and adopting ECMAScript modules (ESM) in main/preload.
-  DO NOT USE FOR: auto-update at runtime (see electron-updates), security hardening (see
-  electron-security), or native module compilation (see electron-native-modules).
+description: "Build and distribute Electron installers with Forge or electron-builder, Vite/ESM setup, signing, notarization, and store packaging. Runtime updates and native-module compilation use their own skills."
 ---
 
 # Electron Packaging & Distribution

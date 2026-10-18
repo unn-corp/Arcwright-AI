@@ -1,6 +1,6 @@
 ---
 name: ios-accessibility
-description: "Implement, review, or improve accessibility in iOS/macOS apps with SwiftUI and UIKit. Use when adding VoiceOver support with accessibility labels, hints, values, and traits; when grouping or reordering accessibility elements; when managing focus with @AccessibilityFocusState; when supporting Dynamic Type with @ScaledMetric; when building custom rotors or accessibility actions; when auditing a11y compliance; or when adapting UI for assistive technologies and system accessibility preferences."
+description: "Implement or audit SwiftUI/UIKit accessibility: VoiceOver semantics, focus, Dynamic Type, contrast, Reduce Motion, and assistive interaction. Use for concrete accessibility behavior rather than general visual styling."
 ---
 
 # iOS Accessibility — SwiftUI and UIKit

@@ -1,6 +1,6 @@
 ---
 name: swiftui-gestures
-description: "Implement, review, or improve SwiftUI gesture handling. Use when adding tap, long press, drag, magnify, or rotate gestures, composing gestures with simultaneously/sequenced/exclusively, managing transient state with @GestureState, resolving parent/child gesture conflicts with highPriorityGesture or simultaneousGesture, building custom Gesture protocol conformances, or migrating from deprecated MagnificationGesture/RotationGesture to MagnifyGesture/RotateGesture."
+description: "Implement or debug SwiftUI tap, press, drag, magnify, rotate, composed, and simultaneous gestures. Use for gesture conflicts, transient state, coordinate spaces, and accessible alternatives."
 ---
 
 # SwiftUI Gestures (iOS 26+)

@@ -415,8 +415,8 @@ grep -rn "Access-Control-Allow-Origin.*\*\|origins.*\*\|origin.*\*" --include="*
 # SSL verification disabled
 grep -rn "verify.*=.*[Ff]alse\|rejectUnauthorized.*false\|NODE_TLS_REJECT_UNAUTHORIZED" --include="*.py" --include="*.js"
 
-# Default credentials
-grep -rn "password.*=.*['\"]admin\|password.*=.*['\"]root\|password.*=.*['\"]123456" --include="*.py" --include="*.yaml" --include="*.yml"
+# Default credential candidates: filenames only
+grep -rl "password.*=.*['\"]admin\|password.*=.*['\"]root\|password.*=.*['\"]123456" --include="*.py" --include="*.yaml" --include="*.yml"
 
 # Missing security headers (check for absence)
 grep -rn "after_request\|middleware" --include="*.py" | grep -v "X-Content-Type-Options\|X-Frame-Options"

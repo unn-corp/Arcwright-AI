@@ -61,7 +61,7 @@ gh api -X POST repos/unn-corp/<repo>/environments/production/deployment-branch-p
 ```
 
 This does **not** require PR review or block direct pushes — document that
-gap explicitly in the repo's CLAUDE.md rather than implying real protection
+gap explicitly in the repo's applicable agent instructions rather than implying real protection
 exists. Don't spend time on CODEOWNERS auto-assignment either: it requests
 reviews but can't require them without the same blocked branch-protection
 feature.
@@ -74,7 +74,7 @@ feature.
 | **Separate account per branch** | Repo is an internal multi-env workload with real dev/prod account separation | internal platform repos with per-branch account IDs (grep the repo's `bin/*.ts` for the account-ID constants) |
 
 Don't default to "dev branch → dev AWS account" without checking which
-pattern the specific repo already follows — grep the repo's own CLAUDE.md and
+pattern the specific repo already follows — grep the repo's own instructions and
 `bin/*.ts` for `Tenancy` / `envName` / account-ID constants before assuming.
 
 For the same-account pattern:

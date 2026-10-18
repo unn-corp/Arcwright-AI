@@ -9,6 +9,7 @@
 - [Built-in FFmpeg Filters](#built-in-ffmpeg-filters)
   - [Common Video Filters](#common-video-filters)
   - [Common Audio Filters](#common-audio-filters)
+- [Per-Output Simple Filters (set_video_filter 0.15+, set_audio_filter 0.18+)](#per-output-simple-filters-set_video_filter-015-set_audio_filter-018)
 - [Custom Rust Filters (FrameFilter)](#custom-rust-filters-framefilter)
 - [FrameFilter with Frame Request](#framefilter-with-frame-request)
 - [Frame Sender Filter](#frame-sender-filter)
@@ -106,6 +107,63 @@ FfmpegContext::builder()
 // Channel manipulation
 .filter_desc("pan=mono|c0=0.5*c0+0.5*c1")  // Stereo to mono
 ```
+
+## Per-Output Simple Filters (`set_video_filter` 0.15+, `set_audio_filter` 0.18+)
+
+A second way to attach a filter, scoped to **one output's stream** —
+the builder analog of the FFmpeg CLI's per-output `-vf` / `-af`, as distinct from
+`filter_desc()` above (a **context-level** graph, CLI's `-filter_complex`,
+which can span multiple inputs/outputs):
+
+```rust
+use ez_ffmpeg::{FfmpegContext, Output};
+
+// ffmpeg -i input.mp4 -vf scale=1280:-2 -c:a copy resized.mp4
+FfmpegContext::builder()
+    .input("input.mp4")
+    .output(
+        Output::from("resized.mp4")
+            .set_video_filter("scale=1280:-2") // -vf scale=1280:-2
+            .set_audio_codec("copy"),
+    )
+    .build()?.start()?.wait()?;
+
+// 0.18 — the audio side: ffmpeg -i in.m4a -af aformat=sample_rates=16000 -c:a aac out.m4a
+FfmpegContext::builder()
+    .input("in.m4a")
+    .output(
+        Output::from("out.m4a")
+            .set_audio_filter("aformat=sample_rates=16000") // -af
+            .set_audio_codec("aac"),
+    )
+    .build()?.start()?.wait()?;
+```
+
+`.clear_video_filter()` / `.clear_audio_filter()` remove a chain set earlier,
+restoring passthrough (`anull` on the audio side). Each setter touches only its
+own media type. `VideoWriter` (see [frame_io.md](frame_io.md)) honors
+`set_video_filter` and **rejects** `set_audio_filter` — a writer job has no
+audio stream.
+
+Each chain must be a single connected pipe from one in-pad to one out-pad of
+that media type; validation runs at `build()`, not at the setter call itself,
+and fails as one of these `OpenOutputError` variants:
+
+| Trigger | Error |
+|---------|-------|
+| Filter combined with `set_video_codec("copy")` / `set_audio_codec("copy")` (or a copy stream map covering that stream) | `FilterWithStreamCopy` |
+| This output's stream is also fed by a context-level `filter_desc` graph | `SimpleAndComplexFilter` |
+| Chain isn't one connected linear pipe (e.g. `"split"`/`"asplit"` — 2 output pads; or two disconnected sub-chains) | `SimpleFilterInvalidShape` |
+| Filter configured, but the output ends up with no re-encoded stream of that type to run it on (`disable_video()`/`disable_audio()`, an optional map matching nothing) | `VideoFilterUnused` / `AudioFilterUnused` |
+| A chain of the wrong media type, e.g. `set_video_filter("anull")` or `set_audio_filter("scale")` | `SimpleFilterMediaTypeMismatch` |
+
+An **empty string is kept**, and fails `build()` exactly as `-vf ""` / `-af ""`
+fails the CLI (an empty graph parses to zero pads) — use the `clear_*` setter to
+remove a chain instead.
+
+A runtime-conditional router like `streamselect` is accepted as long as it's
+*structurally* reachable — the check validates topology, not which branch a
+filter takes at runtime.
 
 ## Custom Rust Filters (FrameFilter)
 
@@ -383,7 +441,7 @@ A complete example showing how to create a custom video filter that tiles the in
 **Prerequisites**: Add dependencies to your `Cargo.toml`:
 ```toml
 [dependencies]
-ez-ffmpeg = "0.13.1"
+ez-ffmpeg = "0.18.0"
 ffmpeg-next = "8.1.0"
 ffmpeg-sys-next = "8.1.0"
 log = "0.4"
@@ -588,10 +646,19 @@ supersedes the deprecated OpenGL filter.
 Enable the feature and add `bytemuck` (for `#[derive(Pod)]` on param structs):
 ```toml
 [dependencies]
-ez-ffmpeg = { version = "0.13.1", features = ["wgpu"] }
+ez-ffmpeg = { version = "0.18.0", features = ["wgpu"] }
 bytemuck = { version = "1.8", features = ["derive"] }
 env_logger = "0.11"
 ```
+
+> **0.17 — one GPU device stack per process**: filters no longer build their own
+> instance/adapter/device (hundreds of ms to seconds each); they share one
+> process-level device per profile (basic vs dmabuf-capable). First init pays the
+> build, later filters and concurrent jobs reuse it. A fatal GPU error (readback
+> map failure, device loss, the wedge timeout) latches that stack dead: the
+> causing job keeps its original error, concurrent jobs fail promptly with a
+> `GpuGenerationLost` job error instead of timing out, and the next init builds a
+> fresh stack. Pipelines/shaders/buffers stay per-filter.
 
 Full example — a colour `adjust` shader with **live parameter updates** and
 **per-frame GPU timing**:

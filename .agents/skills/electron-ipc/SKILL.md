@@ -1,14 +1,6 @@
 ---
 name: electron-ipc
-description: >
-  Design safe inter-process communication in Electron: expose a narrow, typed API from
-  preload via contextBridge, choose invoke/handle (two-way) vs send/on (one-way), never
-  leak raw ipcRenderer, and validate the sender of every main-process handler.
-  USE FOR: building or reviewing the preload bridge, adding an ipcMain handler, deciding
-  between invoke/handle and send/on, exposing main-process capability to the renderer,
-  passing data between processes.
-  DO NOT USE FOR: BrowserWindow webPreferences hardening or CSP (see electron-security),
-  or non-IPC app architecture.
+description: "Design or review Electron preload bridges and main/renderer messages, including sender validation and contextBridge. Excludes general UI and packaging work."
 ---
 
 # Electron IPC

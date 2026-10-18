@@ -1,0 +1,10 @@
+{
+  "stepLines": {
+    "recommendedBelow": 200,
+    "maximum": 250
+  },
+  "promptTokensAdvisory": {
+    "desired": 2000,
+    "reviewAbove": 3000
+  }
+}

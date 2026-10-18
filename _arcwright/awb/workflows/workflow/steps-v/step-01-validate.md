@@ -7,6 +7,8 @@ targetWorkflowPath: '{workflow_folder_path}'
 workflowPlanFile: '{workflow_folder_path}/workflow-plan.md'
 validationReportFile: '{workflow_folder_path}/validation-report-{datetime}.md'
 stepFileRules: '../data/step-file-rules.md'
+sizeLimits: '../data/workflow-limits.json'
+sizeChecker: '../scripts/check-step-size.mjs'
 ---
 
 # Validation Step 1: File Structure & Size
@@ -106,8 +108,8 @@ validationStatus: IN_PROGRESS
 
 ### 2. Load File Structure Standards
 
-Load {stepFileRules} to understand:
-- File size limits (<200 recommended, 250 max)
+Load {stepFileRules} and {sizeLimits} to understand:
+- Canonical step-line limits; no separate local threshold
 - Required folder structure
 - Required files
 
@@ -148,16 +150,7 @@ find {targetWorkflowPath} -type f -name "*.md" | sort
 
 ### 4. Check File Sizes
 
-**DO NOT BE LAZY - For EACH step file in steps-c/, launch a subprocess that:**
-
-1. Loads that step file
-2. Counts lines and checks against size limits
-3. Returns structured findings to parent for aggregation
-
-**Limits:**
-- < 200 lines: ✅ Good
-- 200-250 lines: ⚠️ Approaching limit
-- > 250 lines: ❌ Exceeds limit
+Run `node "{sizeChecker}" "{targetWorkflowPath}"` when Node is available. It checks all `steps*` modes against {sizeLimits}; exit 1 is a size failure and exit 2 means scope is incomplete. Preserve per-file results and issues. Without Node, count those same files and apply `recommendedBelow`/`maximum` from the JSON. At/below maximum is allowed; above maximum fails. Advisory token estimates never change the line verdict.
 
 **Subprocess returns:** File name, line count, status (Good/Approaching limit/Exceeds limit), and any issues found.
 
@@ -167,7 +160,7 @@ find {targetWorkflowPath} -type f -name "*.md" | sort
 
 **Document findings in validation report:**
 - List all step files checked with their line counts
-- Note any files approaching or exceeding size limits (<200 recommended, 250 max)
+- Note files approaching or exceeding the canonical limits, and any unchecked paths
 - Check data and reference files for size issues (large files should be sharded or indexed)
 - Identify specific size violations and recommendations
 

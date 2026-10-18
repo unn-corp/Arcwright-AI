@@ -15,5 +15,6 @@
 - Incremental update: remove stale file's entries from both JSON files, then append fresh.
 
 ## Trigger
-Use when: "what does changing X affect", "who imports Y", "blast radius", "dead code", or `/code-graph`.
-Compose with `/pr-review`: run blast radius on changed files before spawning lens agents.
+Use an existing graph or build one for substantial transitive-impact queries.
+Use direct searches for small caller/import lookups; ordinary review does not
+require indexing or reviewer agents. Label incomplete and stale results.

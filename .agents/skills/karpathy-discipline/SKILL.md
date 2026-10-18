@@ -1,10 +1,6 @@
 ---
 name: karpathy-discipline
-description: >
-  Proactive behavioral minimalism layer. Use before writing any implementation — think first,
-  smallest viable change, no over-engineering ("50 lines into 500" failure mode), goal-driven,
-  delete before adding. Triggers automatically when starting any implementation task.
-  Complements clean-code-standards (structural DRY/SOLID) with altitude and discipline.
+description: "Reduce scope creep, speculative abstractions, or unnecessary implementation complexity. Use when a change is expanding or its success criteria need clarification."
 allowed-tools: Read, Bash, Glob
 ---
 

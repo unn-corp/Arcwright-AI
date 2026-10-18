@@ -1,7 +1,7 @@
 ---
 name: ip-assignment
 language: en
-description: Drafts intellectual property assignment agreements transferring patents, trademarks, copyrights, and trade secrets. Covers conveyancing language, registration recordation, consideration, representations and warranties, and post-closing obligations. Use when drafting IP assignments, asset purchase IP transfers, or technology transfer documents.
+description: "Draft or review intellectual-property assignment terms, including ownership, scope, and execution requirements."
 ---
 
 # IP Assignment Agreement

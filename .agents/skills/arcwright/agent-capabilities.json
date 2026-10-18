@@ -1,0 +1,609 @@
+{
+  "schemaVersion": 1,
+  "nonexclusive": true,
+  "maxSuggestions": 4,
+  "roles": {
+    "arcwright-master": {
+      "profile": "_arcwright/core/agents/arcwright-master.md",
+      "skills": [
+        {
+          "name": "triage"
+        },
+        {
+          "name": "project-context",
+          "when": [
+            "context",
+            "onboard",
+            "codebase"
+          ]
+        },
+        {
+          "name": "task-manager",
+          "when": [
+            "tasks",
+            "dependencies",
+            "parallel",
+            "sprint"
+          ]
+        },
+        {
+          "name": "session-handoff",
+          "when": [
+            "handoff",
+            "resume"
+          ]
+        }
+      ]
+    },
+    "analyst": {
+      "profile": "_arcwright/awm/agents/analyst.md",
+      "skills": [
+        {
+          "name": "project-context"
+        },
+        {
+          "name": "spec-kernel",
+          "when": [
+            "requirements",
+            "acceptance",
+            "specification"
+          ]
+        },
+        {
+          "name": "skill-scout",
+          "when": [
+            "skills",
+            "discover skills"
+          ]
+        },
+        {
+          "name": "matt-pocock-research",
+          "when": [
+            "research",
+            "investigate"
+          ]
+        }
+      ]
+    },
+    "pm": {
+      "profile": "_arcwright/awm/agents/pm.md",
+      "skills": [
+        {
+          "name": "spec-kernel"
+        },
+        {
+          "name": "task-manager",
+          "when": [
+            "tasks",
+            "tickets",
+            "dependencies",
+            "sprint"
+          ]
+        },
+        {
+          "name": "grill-me",
+          "when": [
+            "interview",
+            "requirements",
+            "ambiguous"
+          ]
+        },
+        {
+          "name": "correct-course",
+          "when": [
+            "scope",
+            "replan",
+            "change request"
+          ]
+        }
+      ]
+    },
+    "sm": {
+      "profile": "_arcwright/awm/agents/sm.md",
+      "skills": [
+        {
+          "name": "task-manager"
+        },
+        {
+          "name": "spec-kernel",
+          "when": [
+            "story",
+            "acceptance",
+            "requirements"
+          ]
+        },
+        {
+          "name": "session-handoff",
+          "when": [
+            "handoff",
+            "resume"
+          ]
+        },
+        {
+          "name": "correct-course",
+          "when": [
+            "scope",
+            "replan",
+            "blocked"
+          ]
+        }
+      ]
+    },
+    "architect": {
+      "profile": "_arcwright/awm/agents/architect.md",
+      "skills": [
+        {
+          "name": "project-context"
+        },
+        {
+          "name": "clean-code-standards",
+          "when": [
+            "architecture",
+            "design",
+            "refactor"
+          ]
+        },
+        {
+          "name": "security-review",
+          "when": [
+            "security",
+            "threat",
+            "auth",
+            "permissions"
+          ]
+        },
+        {
+          "name": "rust-performance-engineering",
+          "when": [
+            "rust performance"
+          ]
+        }
+      ]
+    },
+    "dev": {
+      "profile": "_arcwright/awm/agents/dev.md",
+      "skills": [
+        {
+          "name": "project-context",
+          "when": [
+            "context",
+            "onboard",
+            "codebase"
+          ]
+        },
+        {
+          "name": "test-quality",
+          "when": [
+            "test",
+            "tests",
+            "testing",
+            "regression",
+            "bug",
+            "fix"
+          ]
+        },
+        {
+          "name": "systematic-debugging",
+          "when": [
+            "bug",
+            "failure",
+            "debug",
+            "crash"
+          ]
+        },
+        {
+          "name": "ci-gates",
+          "when": [
+            "ci",
+            "pipeline"
+          ]
+        },
+        {
+          "name": "electron-testing",
+          "when": [
+            "electron tests",
+            "electron testing"
+          ]
+        },
+        {
+          "name": "tauri-testing",
+          "when": [
+            "tauri tests",
+            "tauri testing"
+          ]
+        }
+      ]
+    },
+    "quick-flow-solo-dev": {
+      "profile": "_arcwright/awm/agents/quick-flow-solo-dev.md",
+      "skills": [
+        {
+          "name": "karpathy-discipline"
+        },
+        {
+          "name": "test-quality",
+          "when": [
+            "test",
+            "tests",
+            "testing",
+            "regression",
+            "bug",
+            "fix"
+          ]
+        },
+        {
+          "name": "systematic-debugging",
+          "when": [
+            "bug",
+            "failure",
+            "debug",
+            "crash"
+          ]
+        },
+        {
+          "name": "project-context",
+          "when": [
+            "context",
+            "onboard",
+            "codebase"
+          ]
+        }
+      ]
+    },
+    "qa": {
+      "profile": "_arcwright/awm/agents/qa.md",
+      "skills": [
+        {
+          "name": "test-quality"
+        },
+        {
+          "name": "playwright-cli",
+          "when": [
+            "browser",
+            "playwright",
+            "web ui",
+            "e2e",
+            "end to end"
+          ]
+        },
+        {
+          "name": "vitest",
+          "when": [
+            "vitest",
+            "javascript unit",
+            "typescript unit"
+          ]
+        },
+        {
+          "name": "rust-testing-verification",
+          "when": [
+            "rust"
+          ]
+        },
+        {
+          "name": "swift-testing",
+          "when": [
+            "swift",
+            "ios"
+          ]
+        },
+        {
+          "name": "electron-testing",
+          "when": [
+            "electron"
+          ]
+        },
+        {
+          "name": "tauri-testing",
+          "when": [
+            "tauri"
+          ]
+        },
+        {
+          "name": "systematic-debugging",
+          "when": [
+            "flaky",
+            "failure",
+            "failures",
+            "debug"
+          ]
+        }
+      ]
+    },
+    "verifier": {
+      "profile": "_arcwright/awm/agents/verifier.md",
+      "skills": [
+        {
+          "name": "goal-backward-verify"
+        },
+        {
+          "name": "test-quality",
+          "when": [
+            "test",
+            "tests",
+            "testing",
+            "regression"
+          ]
+        },
+        {
+          "name": "playwright-cli",
+          "when": [
+            "browser",
+            "playwright",
+            "web ui",
+            "e2e"
+          ]
+        },
+        {
+          "name": "security-review",
+          "when": [
+            "security",
+            "auth",
+            "permissions"
+          ]
+        }
+      ]
+    },
+    "review-orchestrator": {
+      "profile": "_arcwright/awm/agents/review-orchestrator.md",
+      "skills": [
+        {
+          "name": "goal-backward-verify",
+          "when": [
+            "acceptance",
+            "complete",
+            "readiness"
+          ]
+        },
+        {
+          "name": "test-quality",
+          "when": [
+            "test",
+            "tests",
+            "testing",
+            "coverage",
+            "mock"
+          ]
+        },
+        {
+          "name": "security-review",
+          "when": [
+            "security",
+            "auth",
+            "permissions",
+            "threat"
+          ]
+        },
+        {
+          "name": "clean-code-standards",
+          "when": [
+            "architecture",
+            "maintainability",
+            "refactor"
+          ]
+        },
+        {
+          "name": "ux-audit",
+          "when": [
+            "ux",
+            "accessibility",
+            "usability"
+          ]
+        },
+        {
+          "name": "rust-review-auditor",
+          "when": [
+            "rust"
+          ]
+        }
+      ]
+    },
+    "ux-designer": {
+      "profile": "_arcwright/awm/agents/ux-designer.md",
+      "skills": [
+        {
+          "name": "ui-ux-pro-custom"
+        },
+        {
+          "name": "design-taste-frontend",
+          "when": [
+            "web",
+            "frontend",
+            "website"
+          ]
+        },
+        {
+          "name": "visual-feedback-loop",
+          "when": [
+            "implement",
+            "implementation",
+            "browser",
+            "visual",
+            "screenshot"
+          ]
+        },
+        {
+          "name": "ux-audit",
+          "when": [
+            "audit",
+            "accessibility",
+            "usability"
+          ]
+        },
+        {
+          "name": "frontend-responsive-design-standards",
+          "when": [
+            "responsive",
+            "mobile"
+          ]
+        }
+      ]
+    },
+    "tech-writer": {
+      "profile": "_arcwright/awm/agents/tech-writer/tech-writer.md",
+      "skills": [
+        {
+          "name": "project-context",
+          "when": [
+            "context",
+            "onboard",
+            "codebase"
+          ]
+        },
+        {
+          "name": "matt-pocock-writing-for-agents",
+          "when": [
+            "agents",
+            "agent documentation"
+          ]
+        },
+        {
+          "name": "design-md",
+          "when": [
+            "design md",
+            "design system"
+          ]
+        },
+        {
+          "name": "session-handoff",
+          "when": [
+            "handoff",
+            "resume"
+          ]
+        }
+      ]
+    },
+    "agent-builder": {
+      "profile": "_arcwright/awb/agents/agent-builder.md",
+      "skills": [
+        {
+          "name": "agent-sop-constraints"
+        },
+        {
+          "name": "writing-skills",
+          "when": [
+            "skill",
+            "skills"
+          ]
+        },
+        {
+          "name": "agent-evaluation",
+          "when": [
+            "evaluate",
+            "evaluation",
+            "benchmark"
+          ]
+        },
+        {
+          "name": "agent-red-teaming",
+          "when": [
+            "security",
+            "adversarial",
+            "red team"
+          ]
+        }
+      ]
+    },
+    "workflow-builder": {
+      "profile": "_arcwright/awb/agents/workflow-builder.md",
+      "skills": [
+        {
+          "name": "agent-sop-constraints"
+        },
+        {
+          "name": "writing-skills",
+          "when": [
+            "skill",
+            "skills"
+          ]
+        },
+        {
+          "name": "agent-evaluation",
+          "when": [
+            "evaluate",
+            "evaluation",
+            "benchmark"
+          ]
+        },
+        {
+          "name": "task-manager",
+          "when": [
+            "dependencies",
+            "parallel",
+            "tasks"
+          ]
+        }
+      ]
+    },
+    "module-builder": {
+      "profile": "_arcwright/awb/agents/module-builder.md",
+      "skills": [
+        {
+          "name": "writing-skills"
+        },
+        {
+          "name": "agent-sop-constraints",
+          "when": [
+            "agent",
+            "agents",
+            "workflow"
+          ]
+        },
+        {
+          "name": "agent-evaluation",
+          "when": [
+            "evaluate",
+            "evaluation",
+            "benchmark"
+          ]
+        }
+      ]
+    },
+    "aws-infra": {
+      "profile": "_arcwright/aws-infra/agents/aws-infra.md",
+      "skills": [
+        {
+          "name": "aws-serverless-cdk"
+        },
+        {
+          "name": "security-review",
+          "when": [
+            "security",
+            "iam",
+            "permissions"
+          ]
+        },
+        {
+          "name": "lambda-best-practices",
+          "when": [
+            "lambda"
+          ]
+        },
+        {
+          "name": "dynamodb-best-practices",
+          "when": [
+            "dynamodb"
+          ]
+        },
+        {
+          "name": "ci-gates",
+          "when": [
+            "ci",
+            "pipeline"
+          ]
+        }
+      ]
+    },
+    "unnamed-pm": {
+      "profile": "_arcwright/unnamed-pm/agents/unnamed-pm.md",
+      "skills": [
+        {
+          "name": "unnamed-dev-mcp"
+        },
+        {
+          "name": "unnamed-pm-sync"
+        }
+      ]
+    }
+  }
+}

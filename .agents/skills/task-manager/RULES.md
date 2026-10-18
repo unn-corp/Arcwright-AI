@@ -1,27 +1,10 @@
-# task-manager — Quick Rules
+# Task manager quick rules
 
-> Load full `SKILL.md` when executing this skill as a formal procedure.
-
-## Core Rules
-
-- task-manager is the **durable epic/task registry** — it feeds wave execution; it does NOT replace teams or tracks
-- Every task file MUST declare `id`, `goal`, `acceptance_criteria`, `reads`, `writes`, `depends_on`, `conflicts_with`, `status`
-- `writes` paths are the sole conflict-detection signal — two tasks sharing any write path go in separate waves
-- INDEX.md is the single source of truth for task status; update it atomically with each task file change
-- Wave planning: group tasks into conflict-free sets before spawning any Agent; follow claude-subagent-protocol §8 (Wave Planning)
-- Default isolation is `none` — omit `isolation` from Agent calls unless the user explicitly opts into worktree mode
-- All artifacts written under `_arcwright-output/planning/tasks/` — never `src/`, never `packages/*/src/`
-- GitHub sync (`/tasks sync`) is opt-in; degrade silently if `gh` is absent or no git remote
-- Use `caveman full` level before writing any task file, INDEX.md update, or wave plan
-
-## Trigger — load this skill when:
-- User says "decompose", "break down epic", "task list", "/tasks"
-- A SPEC.md or PRD exists and implementation planning is the next step
-- User wants parallel execution of work items
-- User asks about task status, wave progress, or dependency graph
-
-## Do NOT:
-- Replace existing sprint planning (SM agent) or track orchestration
-- Auto-spawn agents during `/tasks decompose` — decompose first, execute only on `/tasks run`
-- Create tasks with overlapping `writes` in the same wave
-- Write to `packages/*/src/` or `.kiro/` — these are build outputs only
+- Reuse the project's task format and registry. New Arcwright task artifacts use `_arcwright/_memory/skill-runs/tasks-<epic>/`; installed bundles stay read-only.
+- `decompose` plans without delegation. `status` reports without launching work. `run` executes only the authorized scope. Infer a clear operation from the supplied task.
+- Task records preserve permanent ID, goal, acceptance criteria, inputs, outputs, dependencies, conflicts, status, evidence, and issue mappings. The coordinator owns registry/index updates.
+- Plan dependencies and overlapping writes/shared resources before dispatch; use actual host capacity, not a fixed fan-out limit.
+- Follow `subagent-protocol`: small nonexclusive capability briefs, inherited model/permissions, actual task IDs, supported worktree isolation, fresh T3 review rounds.
+- Verify changed behavior and required sign-offs before marking done. Use `test-quality` for tests, focused checks, then required gates; report unrun checks.
+- Continue an already-authorized queue without a question after each wave. Real blockers and user budgets remain incomplete, not approval.
+- GitHub sync is explicit-only; reconcile IDs and changed state before external writes. Unnamed MCP requires its own request. No automatic push/PR or AI attribution.

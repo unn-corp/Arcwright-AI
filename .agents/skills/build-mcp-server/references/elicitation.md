@@ -42,7 +42,7 @@ server.registerTool("delete_all", {
     }
     return { content: [{ type: "text", text: "Cancelled." }] };
   }
-  // Fallback: return text asking Claude to relay the question
+  // Fallback: return text asking the model to relay the question
   return { content: [{ type: "text", text: "Confirmation required. Please ask the user: 'Delete all items? This cannot be undone.' Then call this tool again with their answer." }] };
 });
 ```

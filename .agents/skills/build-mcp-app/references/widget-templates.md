@@ -177,7 +177,7 @@ Server side, emit progress via `extra.sendNotification({ method: "notifications/
 
 ## Display-only (chart / preview)
 
-Display widgets don't call `sendMessage` — they render and sit there. The tool should return a text summary **alongside** the widget so Claude can keep reasoning while the user sees the visual:
+Display widgets don't call `sendMessage` — they render and sit there. The tool should return a text summary **alongside** the widget so the model can keep reasoning while the user sees the visual:
 
 ```typescript
 registerAppTool(server, "show_chart", {
@@ -230,8 +230,8 @@ For presenting multiple items (product picks, search results) in a horizontal sc
 
 - **Skip nav chevrons** — users know how to scroll. `scroll-snap-type` can cause a few-px-off-flush initial render; omit it and `scrollLeft = 0` after rendering.
 - **Layout-fork by item count** — `items.length === 1` → detail/PDP layout, `> 1` → carousel. Handle in widget JS, keep the tool schema flat.
-- **Put Claude's reasoning in each item** — a `note` field rendered as a small callout on the card gives users the "why" inline.
-- **Silent state via `updateModelContext`** — cart/selection changes should inform Claude without spamming the chat. Reserve `sendMessage` for terminal actions ("checkout", "done").
+- **Put the model's reasoning in each item** — a `note` field rendered as a small callout on the card gives users the "why" inline.
+- **Silent state via `updateModelContext`** — cart/selection changes should inform the model without spamming the chat. Reserve `sendMessage` for terminal actions ("checkout", "done").
 - **Outbound links via `app.openLink`** — `window.open` and `<a target="_blank">` are blocked by the sandbox.
 
 ```html

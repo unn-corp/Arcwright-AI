@@ -15,11 +15,13 @@ const os = require('os');
 const { execSync } = require('child_process');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
+const { filterSkillFiles, filterCommandNames, describeSkippedSkills } = require(path.join(SRC_DIR, '.agents/skills/arcwright/scripts/skill-metadata.cjs'));
 const { detectPlatform } = require('./platform');
 const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
 const { listClaudeProfileDirs } = require('./herdrAssets');
 const { loadCustomization } = require('./customization');
 const { adaptKiroContent } = require('./kiro-adapter');
+const { SKILL_POLICY } = require('./skill-policy');
 const { detectBmad: detectBmadArtifacts } = require('./migrate');
 
 // ─── WSL audio setup (Claude Code /voice) ────────────────────────────────────
@@ -351,7 +353,8 @@ const FILES_MANIFEST_FILE = '_config/files-manifest.csv';
 
 /**
  * All supported platforms and what files they write.
- * Each platform writes its own agent stub + optional CLAUDE.md / rules file.
+ * Each platform writes its own agent stub and supported instruction entrypoint.
+ * Shared project rules live in AGENTS.md; Claude uses a small import.
  *
  * `hint` feeds the interactive installer multiselect.
  * `summary` feeds `arcwright platforms` (agent stubs / skills column).
@@ -366,13 +369,13 @@ const FILES_MANIFEST_FILE = '_config/files-manifest.csv';
 const PLATFORMS = {
   'claude-code': {
     label: 'Claude Code',
-    hint: 'agents, CLAUDE.md, settings.json, herdr skill',
+    hint: 'agents, AGENTS.md + Claude import, settings.json, herdr skill',
     summary: '.claude/agents/',
     agentDir: '.claude/agents',
     skillsDir: null,
     steeringDir: null,
     hooksDir: null,
-    rulesFile: '.claude/CLAUDE.md',
+    rulesFile: 'AGENTS.md',
     rulesMarker: '## Arcwright',
   },
   'kiro': {
@@ -710,7 +713,8 @@ function hasOnlyInstallableModules(moduleIds) {
 async function writeFilesManifest(arcwrightDir, entries) {
   const p = path.join(arcwrightDir, FILES_MANIFEST_FILE);
   await fs.ensureDir(path.dirname(p));
-  const lines = ['path,hash', ...entries.map(e => `${e.relPath},${e.hash}`)];
+  const unique = [...new Map(entries.map(e => [e.relPath, e])).values()];
+  const lines = ['path,hash', ...unique.map(e => `${e.relPath},${e.hash}`)];
   await fs.writeFile(p, lines.join('\n') + '\n', 'utf8');
 }
 
@@ -789,6 +793,13 @@ function resolveInstalledPath(relPath, { isGlobal, projectRoot, effectiveArwDir,
 async function removeTrackedEntry(entry, context) {
   const fullPath = resolveInstalledPath(entry.relPath, context);
   if (!fullPath) return false;
+  // A matching hash does not confer ownership through a user-created redirect.
+  // Protect the file and every parent, just as the skill-copy path does.
+  for (let current = path.resolve(fullPath); ; current = path.dirname(current)) {
+    const stat = await fs.lstat(current).catch(() => null);
+    if (stat?.isSymbolicLink()) return false;
+    if (current === path.dirname(current)) break;
+  }
   if (!await fs.pathExists(fullPath)) return false;
   let contents;
   try {
@@ -829,7 +840,7 @@ async function removeEmptyDirsUpward(removedFile) {
 
 // ─── Kiro config writer ───────────────────────────────────────────────────────
 
-async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
+async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedMattPocock = false) {
   const kiroSteeringSrc = path.join(SRC_DIR, '.kiro', 'steering');
   const kiroAgentsSrc = path.join(SRC_DIR, '.kiro', 'agents');
   const entries = [];
@@ -847,8 +858,9 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
   // Kiro requires adapted paths and launcher commands, but the generic skill
   // tree is the source of truth. Adapt it as it is installed instead of
   // packaging a second copy under src/.kiro/skills.
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra, resolvedUnnamedPm };
   await copySkillTree({
+    manifestDir: isGlobal ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright'),
     skillsSrc: path.join(SRC_DIR, '.agents', 'skills'),
     skillsDest,
     flags,
@@ -882,6 +894,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
       if (!resolvedElectron && f === 'electron.json') return false;
       if (!resolvedTauri && f === 'tauri.json') return false;
       if (!resolvedStrands && f === 'strands.json') return false;
+      if (!resolvedMattPocock && /^matt-pocock(?:-|\.json$)/.test(f)) return false;
       if (!resolvedAwsInfra && (f === 'aws-infra.json' || f === 'arcwright-aws-infra.json')) return false;
       if (!resolvedUnnamedPm && (f === 'unnamed-pm.json' || f === 'arcwright-unnamed-pm.json')) return false;
       if (!resolvedUnnamedPm && f === 'unnamed-dev-mcp.json') return false;
@@ -907,6 +920,7 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
     if (!resolvedElectron) skipNotes.push('/electron');
     if (!resolvedTauri) skipNotes.push('/tauri');
     if (!resolvedStrands) skipNotes.push('/strands');
+    if (!resolvedMattPocock) skipNotes.push('/matt-pocock');
     if (!resolvedAwsInfra) skipNotes.push('/aws-infra');
     if (!resolvedUnnamedPm) skipNotes.push('/unnamed-pm');
     if (!resolvedUnnamedPm) skipNotes.push('/unnamed-dev-mcp');
@@ -937,82 +951,127 @@ async function writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, re
 
 // ─── Shared skill-copy helpers ───────────────────────────────────────────────
 
-function skillCopyFilter(flags) {
-  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm } = flags;
-  return (src) => {
-    if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
-    if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
-    if (!resolvedDotnet && (/[/\\]dotnet-[^/\\]+[/\\]?$/.test(src) || /[/\\]dotnet-[^/\\]+[/\\]/.test(src))) return false;
-    if (!resolvedElectron && (/[/\\]electron-[^/\\]+[/\\]?$/.test(src) || /[/\\]electron-[^/\\]+[/\\]/.test(src))) return false;
-    if (!resolvedTauri && (/[/\\]tauri-[^/\\]+[/\\]?$/.test(src) || /[/\\]tauri-[^/\\]+[/\\]/.test(src))) return false;
-    if (!resolvedStrands && (/[/\\]strands-[^/\\]+[/\\]?$/.test(src) || /[/\\]strands-[^/\\]+[/\\]/.test(src))) return false;
-    if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
-    if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
-    if (!resolvedUnnamedPm && (/[/\\]unnamed-dev-mcp[/\\]?$/.test(src) || /[/\\]unnamed-dev-mcp[/\\]/.test(src))) return false;
-    return true;
+const KIRO_SKILL_TEXT_EXTENSIONS = new Set(['.md', '.yaml', '.yml', '.json', '.xml', '.csv', '.txt', '.js', '.cjs', '.sh', '.conf', '.py']);
+
+function refreshAdaptedAliasGuards(pending, prefix) {
+  const relative = 'arcwright/catalog.json';
+  const item = pending.get(relative);
+  if (!item) return;
+  const catalog = JSON.parse(item.content.toString('utf8'));
+  if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.entries)) return;
+  let changed = false;
+  const refresh = (guard, key, file) => {
+    // Only translate a guard that authenticated the shipped source. Never
+    // derive it from installed files or bless an unreviewed package edit.
+    if (file && guard[key] === file.sourceHash && guard[key] !== file.hash) {
+      guard[key] = file.hash;
+      changed = true;
+    }
   };
-}
-
-function filterSkillFiles(files, flags) {
-  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm } = flags;
-  return files.filter(f => {
-    if (!resolvedTeams && /^team-/.test(f)) return false;
-    if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
-    if (!resolvedDotnet && /^dotnet-/.test(f)) return false;
-    if (!resolvedElectron && /^electron-/.test(f)) return false;
-    if (!resolvedTauri && /^tauri-/.test(f)) return false;
-    if (!resolvedStrands && /^strands-/.test(f)) return false;
-    if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
-    if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
-    if (!resolvedUnnamedPm && /^unnamed-dev-mcp\//.test(f)) return false;
-    return true;
-  });
-}
-
-const KIRO_SKILL_TEXT_EXTENSIONS = new Set(['.md', '.yaml', '.yml', '.json', '.xml', '.csv', '.txt', '.js', '.sh', '.conf', '.py']);
-
-function describeSkippedSkills(flags) {
-  const skipped = [];
-  if (!flags.resolvedTeams) skipped.push('team-*');
-  if (!flags.resolvedDockerCheck) skipped.push('docker-type-check');
-  if (!flags.resolvedDotnet) skipped.push('dotnet-*');
-  if (!flags.resolvedElectron) skipped.push('electron-*');
-  if (!flags.resolvedTauri) skipped.push('tauri-*');
-  if (!flags.resolvedStrands) skipped.push('strands-*');
-  if (!flags.resolvedAwsInfra) skipped.push('aws-serverless-cdk');
-  if (!flags.resolvedUnnamedPm) skipped.push('unnamed-pm-sync', 'unnamed-dev-mcp');
-  return skipped;
+  for (const entry of catalog.entries) {
+    const redirect = entry.redirect;
+    if (!redirect) continue;
+    if (entry.kind === 'command' && /^commands\/[a-z0-9-]+\.md$/.test(entry.path)) {
+      refresh(redirect, 'commandHash', pending.get(`arcwright/${entry.path}`));
+    }
+    for (const source of Array.isArray(redirect.sources) ? redirect.sources : []) {
+      if (typeof source.path === 'string' && source.path.startsWith(prefix)) {
+        refresh(source, 'hash', pending.get(source.path.slice(prefix.length)));
+      }
+    }
+  }
+  if (changed) {
+    const content = Buffer.from(JSON.stringify(catalog, null, 2) + '\n');
+    pending.set(relative, { content, hash: sha256(content) });
+  }
 }
 
 /**
  * Copy the selected generic skills, optionally transform text files for a
  * platform, and record exactly the bytes written in the install manifest.
  */
-async function copySkillTree({ skillsSrc, skillsDest, flags, entries, relPrefix, chalk, logLabel, transform }) {
+async function copySkillTree({ skillsSrc, skillsDest, flags, entries, relPrefix, chalk, logLabel, transform, manifestDir, ownershipPrefixes = [] }) {
   if (!await fs.pathExists(skillsSrc)) return [];
   if (path.resolve(skillsSrc) === path.resolve(skillsDest)) {
     console.log(chalk.gray('  ○ .agents/skills/ already the source (skipped copy)'));
     return [];
   }
 
-  await fs.ensureDir(skillsDest);
-  await fs.copy(skillsSrc, skillsDest, { overwrite: true, filter: skillCopyFilter(flags) });
   const allSkillFiles = await glob('**/*', { cwd: skillsSrc, nodir: true });
   const skillFiles = filterSkillFiles(allSkillFiles, flags);
-
+  const prefix = `${relPrefix.replace(/\\/g, '/').replace(/\/$/, '')}/`;
+  const previous = manifestDir ? await readFilesManifest(manifestDir) : [];
+  const acceptedPrefixes = [prefix, ...ownershipPrefixes.map(p => `${p.replace(/\\/g, '/').replace(/\/$/, '')}/`)];
+  const owned = new Map();
+  for (const entry of previous) {
+    const ownerPrefix = acceptedPrefixes.find(p => entry.relPath.startsWith(p));
+    if (ownerPrefix) owned.set(entry.relPath.slice(ownerPrefix.length), entry);
+  }
+  const pending = new Map();
+  const preserved = new Set();
+  const states = new Map();
+  // Refuse redirects through a linked directory or file, including a linked
+  // skills root. A linked bundle belongs to the user, not this updater.
+  const state = async (full) => {
+    if (states.has(full)) return states.get(full);
+    const parent = path.dirname(full);
+    const parentState = parent !== full ? await state(parent) : {};
+    if (parentState.blocked || parentState.hash) {
+      const result = { blocked: true }; states.set(full, result); return result;
+    }
+    const stat = await fs.lstat(full).catch(error => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    const result = !stat ? { missing: true } : stat.isSymbolicLink()
+      ? { blocked: true } : stat.isFile()
+        ? { hash: sha256(await fs.readFile(full)) } : stat.isDirectory()
+          ? { directory: true } : { blocked: true };
+    states.set(full, result);
+    return result;
+  };
+  const bundle = rel => rel.split('/')[0];
   for (const rel of skillFiles) {
     let content = await fs.readFile(path.join(skillsSrc, rel));
+    const sourceHash = sha256(content);
     if (transform && KIRO_SKILL_TEXT_EXTENSIONS.has(path.extname(rel).toLowerCase())) {
       content = Buffer.from(transform(content.toString('utf8')));
-      await fs.writeFile(path.join(skillsDest, rel), content);
     }
-    entries.push({ relPath: path.join(relPrefix, rel).replace(/\\/g, '/'), hash: sha256(content) });
+    pending.set(rel.replace(/\\/g, '/'), { content, hash: sha256(content), sourceHash });
+  }
+  if (transform) refreshAdaptedAliasGuards(pending, prefix);
+  const selectedBundles = new Set([...pending.keys()].map(bundle));
+  // Check old files too: a customized reference must protect its bundle even
+  // when the new release has removed that reference.
+  for (const rel of new Set([...pending.keys(), ...owned.keys()])) {
+    if (!isSafeManifestPath(rel) || !selectedBundles.has(bundle(rel))) continue;
+    const current = await state(path.join(skillsDest, rel));
+    if (current.missing) continue;
+    if (current.blocked || current.directory ||
+        (current.hash !== pending.get(rel)?.hash && current.hash !== owned.get(rel)?.hash)) {
+      preserved.add(bundle(rel));
+    }
+  }
+  for (const [rel, item] of pending) {
+    if (preserved.has(bundle(rel))) continue;
+    const target = path.join(skillsDest, rel);
+    if ((await state(target)).hash !== item.hash) {
+      await fs.ensureDir(path.dirname(target));
+      await fs.writeFile(target, item.content);
+    }
+    entries.push({ relPath: `${prefix}${rel}`, hash: item.hash });
+  }
+  // Retain the previous installer identity, never the customized bytes. Future
+  // updates and uninstall must continue to recognize the user's override.
+  for (const [rel, entry] of owned) {
+    if (preserved.has(bundle(rel))) entries.push({ relPath: `${prefix}${rel}`, hash: entry.hash });
   }
 
   const skipped = describeSkippedSkills(flags);
   const skippedCount = allSkillFiles.length - skillFiles.length;
   const note = skipped.length ? chalk.dim(` (skipped ${skippedCount} files: ${skipped.join(', ')})`) : '';
   console.log(chalk.green(`  ✓ ${logLabel} (${skillFiles.length} files)`) + note);
+  if (preserved.size) console.log(chalk.yellow(`  ○ Preserved customized or linked skill bundles: ${[...preserved].sort().join(', ')}`));
   return skillFiles;
 }
 
@@ -1025,9 +1084,9 @@ async function copySkillTree({ skillsSrc, skillsDest, flags, entries, relPrefix,
 // and return manifest entries for orphan-removal tracking.
 //
 // Returns Array<{relPath, hash}> for every file written.
-async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
+async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedMattPocock = false) {
   const entries = [];
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra, resolvedUnnamedPm };
 
   // ── AGENTS.md ── managed block only. Never added to manifest entries: like
   // claude-code's CLAUDE.md, this file can carry user content outside the
@@ -1054,11 +1113,13 @@ async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, pl
   // removal resolves them to the real $HOME/.agents/skills/ path instead of
   // colliding with claude-code's global skill location.
   await copySkillTree({
+    manifestDir: isGlobal ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright'),
     skillsSrc,
     skillsDest,
     flags,
     entries,
     relPrefix: isGlobal ? '.codex/skills' : '.agents/skills',
+    ownershipPrefixes: isGlobal ? ['.opencode/skills'] : [],
     chalk,
     logLabel: isGlobal ? '~/.agents/skills/' : '.agents/skills/',
   });
@@ -1092,9 +1153,9 @@ async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, pl
 // as Hermes skill-bundles, not just skills.
 //
 // Returns Array<{relPath, hash}> for every file written.
-async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
+async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedMattPocock = false) {
   const entries = [];
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra, resolvedUnnamedPm };
 
   // ── AGENTS.md ── project only (see rationale above for skipping global).
   if (!isGlobal) {
@@ -1112,6 +1173,7 @@ async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, p
     const skillsDest = resolveToolPath('hermes', GLOBAL_PATHS.hermes.skills, true, homes, platform);
 
     const skillFiles = await copySkillTree({
+      manifestDir: isGlobal ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright'),
       skillsSrc,
       skillsDest,
       flags,
@@ -1155,9 +1217,9 @@ async function writeHermesConfig(projectRoot, modules, chalk, isGlobal, homes, p
 // Code command files (.claude/commands/*.md → .opencode/commands/, verbatim).
 //
 // Returns Array<{relPath, hash}> for every file written.
-async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
+async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedMattPocock = false) {
   const entries = [];
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra, resolvedUnnamedPm };
 
   // ── AGENTS.md ── managed block only (not manifest-tracked, same rationale as Codex).
   const rulesPath = isGlobal
@@ -1179,11 +1241,13 @@ async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes,
   // removal resolves them to ~/.agents/skills without colliding with the
   // '.codex/skills' prefix (which points at the same real path).
   await copySkillTree({
+    manifestDir: isGlobal ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright'),
     skillsSrc,
     skillsDest,
     flags,
     entries,
     relPrefix: isGlobal ? '.opencode/skills' : '.agents/skills',
+    ownershipPrefixes: isGlobal ? ['.codex/skills'] : [],
     chalk,
     logLabel: isGlobal ? '~/.agents/skills/' : '.agents/skills/',
   });
@@ -1243,9 +1307,9 @@ async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes,
 // create-skill, etc.) are preserved across installs.
 //
 // Returns Array<{relPath, hash}> for every file written.
-async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
+async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedMattPocock = false) {
   const entries = [];
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra, resolvedUnnamedPm };
 
   // ── AGENTS.md ── managed block only (not manifest-tracked, same rationale as Codex).
   const rulesPath = isGlobal
@@ -1266,6 +1330,7 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
     ? resolveToolPath('grok', GLOBAL_PATHS.grok.skills, true, homes, platform)
     : path.join(projectRoot, '.agents', 'skills');
   await copySkillTree({
+    manifestDir: isGlobal ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright'),
     skillsSrc,
     skillsDest,
     flags,
@@ -1372,21 +1437,6 @@ function adaptCursorCommand(content) {
   return content
     .replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, '')
     .replace(/\$ARGUMENTS\b/g, "the user's command input");
-}
-
-function filterCommandNames(files, flags) {
-  const { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm } = flags;
-  return files.filter((f) => {
-    if (!resolvedTeams && f === 'team.md') return false;
-    if (!resolvedDockerCheck && f === 'docker-check.md') return false;
-    if (!resolvedDotnet && f === 'dotnet.md') return false;
-    if (!resolvedElectron && f === 'electron.md') return false;
-    if (!resolvedTauri && f === 'tauri.md') return false;
-    if (!resolvedStrands && f === 'strands.md') return false;
-    if (!resolvedAwsInfra && f === 'aws-infra.md') return false;
-    if (!resolvedUnnamedPm && (f === 'unnamed-pm.md' || f === 'unnamed-dev-mcp.md')) return false;
-    return true;
-  });
 }
 
 const UNNAMED_DEV_CONTEXT_HOOK = 'unnamed-dev-context.js';
@@ -1747,9 +1797,9 @@ async function removeCursorUnnamedDevHooks(projectRoot, isGlobal, homes, platfor
   return changed;
 }
 
-async function writeCursorConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false) {
+async function writeCursorConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedMattPocock = false) {
   const entries = [];
-  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedAwsInfra, resolvedUnnamedPm };
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra, resolvedUnnamedPm };
   const rule = buildCursorRule(modules, resolvedUnnamedPm);
 
   if (isGlobal) {
@@ -1807,8 +1857,8 @@ async function writeCursorConfig(projectRoot, modules, chalk, isGlobal, homes, p
  *
  * Modes:
  *   'full'        — ignore all Arcwright-installed dirs/files
- *   'skills'      — ignore only the configured output folder and .agents/skills/
- *   'output-only' — ignore only the configured output folder (recommended default)
+ *   'skills'      — ignore generated output, runtime runs, and installed skills
+ *   'output-only' — ignore generated output and runtime runs (recommended default)
  *   'none'        — no-op (caller skips this call)
  */
 async function updateGitignore(projectRoot, mode, chalk, outputFolder = '_arcwright-output') {
@@ -1833,10 +1883,11 @@ async function updateGitignore(projectRoot, mode, chalk, outputFolder = '_arcwri
       .map((f) => `.claude/commands/${f}`);
   } catch { /* package not built / commands absent — fall through with none */ }
 
-  // Personal customisation overlays. CLAUDE.md tells users .user.toml files are
+  // Personal customisation overlays. AGENTS.md tells users .user.toml files are
   // personal, but only `full` (via the whole `_arcwright/` dir) ever ignored
   // them, so the default install left them committable.
   const USER_OVERLAYS = '_arcwright/custom/*.user.toml';
+  const SKILL_RUNS = '_arcwright/_memory/skill-runs/';
 
   const normalizedOutputFolder = String(outputFolder || '_arcwright-output')
     .replace(/\\/g, '/')
@@ -1858,12 +1909,14 @@ async function updateGitignore(projectRoot, mode, chalk, outputFolder = '_arcwri
     ],
     'skills': [
       outputIgnore,
+      SKILL_RUNS,
       USER_OVERLAYS,
       '.agents/skills/',
       '.kiro/skills/',
     ],
     'output-only': [
       outputIgnore,
+      SKILL_RUNS,
       USER_OVERLAYS,
     ],
     'none': [],
@@ -1906,6 +1959,7 @@ async function install(opts) {
     electron = false,  // include curated electron-* skills and /electron command
     tauri = false,  // include curated tauri-* skills and /tauri command
     strands = false,  // include curated strands-* skills and /strands command
+    mattPocock,  // undefined preserves the installed optional pack; false explicitly removes it
     awsInfra = false,  // include aws-infra module + aws-serverless-cdk skill + /aws-infra command
     unnamedPm = false,  // include unnamed-pm module + unnamed-pm-sync skill + /unnamed-pm command
     gitignore = null,  // null | 'full' | 'skills' | 'output-only' | 'none'
@@ -2073,6 +2127,9 @@ async function install(opts) {
     }
     return strands === true;
   })();
+  let resolvedMattPocock = mattPocock === undefined && manifestFallback
+    ? existingManifest.mattPocock === true
+    : mattPocock === true;
   let resolvedAwsInfra = (() => {
     if (manifestFallback && awsInfra !== true && existingManifest.awsInfra !== undefined) {
       return existingManifest.awsInfra === true;
@@ -2211,6 +2268,13 @@ async function install(opts) {
     if (isCancel(strandsChoice)) { process.exit(0); }
     resolvedStrands = strandsChoice;
 
+    const mattPocockChoice = await confirm({
+      message: 'Install Matt Pocock skills? (stable engineering/productivity pack, namespaced matt-pocock-*)',
+      initialValue: resolvedMattPocock,
+    });
+    if (isCancel(mattPocockChoice)) { process.exit(0); }
+    resolvedMattPocock = mattPocockChoice;
+
     // AWS serverless infrastructure opt-in — aws-infra module + aws-serverless-cdk skill + /aws-infra
     const awsInfraChoice = await confirm({
       message: 'Install the AWS-Infra module? (AWS serverless architect agent + aws-serverless-cdk skill + /aws-infra — CDK, Lambda, DynamoDB, EventBridge knowledge)',
@@ -2246,8 +2310,8 @@ async function install(opts) {
       const gitignoreChoice = await select({
         message: 'How should Arcwright files be handled in git?',
         options: [
-          { value: 'output-only', label: 'Commit config + skills, ignore only _arcwright-output/ (recommended)' },
-          { value: 'skills',      label: 'Commit config, ignore _arcwright-output/ and .agents/skills/' },
+          { value: 'output-only', label: 'Commit config + skills, ignore generated output and runtime runs (recommended)' },
+          { value: 'skills',      label: 'Commit config, ignore generated output and installed skills' },
           { value: 'full',        label: 'Ignore everything Arcwright installed' },
           { value: 'none',        label: 'Do not modify .gitignore — I will handle it' },
         ],
@@ -2371,52 +2435,16 @@ async function install(opts) {
       : path.join(projectRoot, '.agents', 'skills');
     await fs.ensureDir(destSkills);
 
-    // Filter team-* skills if teams were declined; filter optional add-on skills if not opted in
-    const filter = (src) => {
-      if (!resolvedTeams && (/[/\\]team-[^/\\]+[/\\]?$/.test(src) || /[/\\]team-[^/\\]+[/\\]/.test(src))) return false;
-      if (!resolvedDockerCheck && (/[/\\]docker-type-check[/\\]?$/.test(src) || /[/\\]docker-type-check[/\\]/.test(src))) return false;
-      if (!resolvedDotnet && (/[/\\]dotnet-[^/\\]+[/\\]?$/.test(src) || /[/\\]dotnet-[^/\\]+[/\\]/.test(src))) return false;
-      if (!resolvedElectron && (/[/\\]electron-[^/\\]+[/\\]?$/.test(src) || /[/\\]electron-[^/\\]+[/\\]/.test(src))) return false;
-      if (!resolvedTauri && (/[/\\]tauri-[^/\\]+[/\\]?$/.test(src) || /[/\\]tauri-[^/\\]+[/\\]/.test(src))) return false;
-      if (!resolvedStrands && (/[/\\]strands-[^/\\]+[/\\]?$/.test(src) || /[/\\]strands-[^/\\]+[/\\]/.test(src))) return false;
-      if (!resolvedAwsInfra && (/[/\\]aws-serverless-cdk[/\\]?$/.test(src) || /[/\\]aws-serverless-cdk[/\\]/.test(src))) return false;
-      if (!resolvedUnnamedPm && (/[/\\]unnamed-pm-sync[/\\]?$/.test(src) || /[/\\]unnamed-pm-sync[/\\]/.test(src))) return false;
-      if (!resolvedUnnamedPm && (/[/\\]unnamed-dev-mcp[/\\]?$/.test(src) || /[/\\]unnamed-dev-mcp[/\\]/.test(src))) return false;
-      return true;
-    };
-
-    await fs.copy(pkgSkillsSrc, destSkills, { overwrite: true, filter });
-    const allSkillFiles = await glob('**/*', { cwd: pkgSkillsSrc, nodir: true });
-    const skillFiles = allSkillFiles.filter(f => {
-      if (!resolvedTeams && /^team-/.test(f)) return false;
-      if (!resolvedDockerCheck && /^docker-type-check\//.test(f)) return false;
-      if (!resolvedDotnet && /^dotnet-/.test(f)) return false;
-      if (!resolvedElectron && /^electron-/.test(f)) return false;
-      if (!resolvedTauri && /^tauri-/.test(f)) return false;
-      if (!resolvedStrands && /^strands-/.test(f)) return false;
-      if (!resolvedAwsInfra && /^aws-serverless-cdk\//.test(f)) return false;
-      if (!resolvedUnnamedPm && /^unnamed-pm-sync\//.test(f)) return false;
-      if (!resolvedUnnamedPm && /^unnamed-dev-mcp\//.test(f)) return false;
-      return true;
+    const skillFlags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet,
+      resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock,
+      resolvedAwsInfra, resolvedUnnamedPm };
+    const skillFiles = await copySkillTree({
+      skillsSrc: pkgSkillsSrc, skillsDest: destSkills, flags: skillFlags,
+      entries: newFileEntries, relPrefix: '.agents/skills', chalk,
+      logLabel: isGlobal ? '~/.claude/skills/' : '.agents/skills/',
+      manifestDir: effectiveArwDir,
     });
-    for (const rel of skillFiles) {
-      const content = await fs.readFile(path.join(pkgSkillsSrc, rel));
-      newFileEntries.push({ relPath: path.join('.agents/skills', rel).replace(/\\/g, '/'), hash: sha256(content) });
-    }
     installedCount += skillFiles.length;
-    const skippedCount = allSkillFiles.length - skillFiles.length;
-    const skipNotes = [];
-    if (!resolvedTeams) skipNotes.push('team-*');
-    if (!resolvedDockerCheck) skipNotes.push('docker-type-check');
-    if (!resolvedDotnet) skipNotes.push('dotnet-*');
-    if (!resolvedElectron) skipNotes.push('electron-*');
-    if (!resolvedTauri) skipNotes.push('tauri-*');
-    if (!resolvedStrands) skipNotes.push('strands-*');
-    if (!resolvedAwsInfra) skipNotes.push('aws-serverless-cdk');
-    if (!resolvedUnnamedPm) skipNotes.push('unnamed-pm-sync');
-    if (!resolvedUnnamedPm) skipNotes.push('unnamed-dev-mcp');
-    const teamNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skippedCount} files: ${skipNotes.join(', ')})`) : '';
-    console.log(chalk.green(`  ✓ .agents/skills/ (${skillFiles.length} files)`) + teamNote);
   }
 
   // ── Customization dir scaffold ──────────────────────────────────────────────
@@ -2492,7 +2520,7 @@ async function install(opts) {
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
     if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode' || tool === 'grok' || tool === 'cursor') continue; // handled separately below
-    const ideResult = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedOutputFolder);
+    const ideResult = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedOutputFolder);
     if (ideResult?.entries?.length > 0) {
       newFileEntries.push(...ideResult.entries);
     }
@@ -2503,7 +2531,7 @@ async function install(opts) {
 
   // ── Kiro integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('kiro')) {
-    const kiroEntries = await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    const kiroEntries = await writeKiroConfig(projectRoot, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (kiroEntries?.length > 0) {
       newFileEntries.push(...kiroEntries);
     }
@@ -2511,7 +2539,7 @@ async function install(opts) {
 
   // ── Codex integration ─────────────────────────────────────────────────────
   if (resolvedTools.includes('codex')) {
-    const codexEntries = await writeCodexConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    const codexEntries = await writeCodexConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (codexEntries && codexEntries.length > 0) {
       newFileEntries.push(...codexEntries);
     }
@@ -2519,7 +2547,7 @@ async function install(opts) {
 
   // ── Hermes integration ────────────────────────────────────────────────────
   if (resolvedTools.includes('hermes')) {
-    const hermesEntries = await writeHermesConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    const hermesEntries = await writeHermesConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (hermesEntries && hermesEntries.length > 0) {
       newFileEntries.push(...hermesEntries);
     }
@@ -2540,7 +2568,7 @@ async function install(opts) {
 
   // ── OpenCode integration ──────────────────────────────────────────────────
   if (resolvedTools.includes('opencode')) {
-    const openCodeEntries = await writeOpenCodeConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    const openCodeEntries = await writeOpenCodeConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (openCodeEntries && openCodeEntries.length > 0) {
       newFileEntries.push(...openCodeEntries);
     }
@@ -2548,7 +2576,7 @@ async function install(opts) {
 
   // ── Grok integration ──────────────────────────────────────────────────────
   if (resolvedTools.includes('grok')) {
-    const grokEntries = await writeGrokConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    const grokEntries = await writeGrokConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (grokEntries && grokEntries.length > 0) {
       newFileEntries.push(...grokEntries);
     }
@@ -2556,7 +2584,7 @@ async function install(opts) {
 
   // ── Cursor integration ───────────────────────────────────────────────────
   if (resolvedTools.includes('cursor')) {
-    const cursorEntries = await writeCursorConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands);
+    const cursorEntries = await writeCursorConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (cursorEntries && cursorEntries.length > 0) {
       newFileEntries.push(...cursorEntries);
     }
@@ -2639,6 +2667,7 @@ async function install(opts) {
     electron: resolvedElectron,
     tauri: resolvedTauri,
     strands: resolvedStrands,
+    mattPocock: resolvedMattPocock,
     awsInfra: resolvedAwsInfra,
     unnamedPm: resolvedUnnamedPm,
     tmux: resolvedTmux,
@@ -2798,7 +2827,7 @@ function buildModuleConfig(moduleName, userName, outputFolder) {
 
 // ─── IDE config writers ───────────────────────────────────────────────────────
 
-async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none', resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedOutputFolder = '_arcwright-output') {
+async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedHooks = 'none', resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedMattPocock = false, resolvedOutputFolder = '_arcwright-output') {
   const stubEntries = [];
   const managedSettings = [];
   const platformCfg = PLATFORMS[tool];
@@ -2807,69 +2836,8 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     return;
   }
 
-  const arcwrightEntry = buildArcwrightRulesEntry(modules, resolvedUnnamedPm);
-  const tmuxEntry = buildTmuxEntry();
-  const proactiveEntry = buildProactiveEntry();
-
-  // Write rules/context file
-  if (platformCfg.rulesFile) {
-    const rulesPath = isGlobal && GLOBAL_PATHS[tool]?.claudeMd
-      ? resolveToolPath(tool, GLOBAL_PATHS[tool].claudeMd, true, homes, platform)
-      : path.join(projectRoot, platformCfg.rulesFile);
-
-    await fs.ensureDir(path.dirname(rulesPath));
-
-    if (await fs.pathExists(rulesPath)) {
-      const existing = await fs.readFile(rulesPath, 'utf8');
-      let updated = existing;
-      let changed = false;
-
-      if (!existing.includes(platformCfg.rulesMarker)) {
-        updated += arcwrightEntry;
-        changed = true;
-      }
-      // Only add the orchestration entry for Claude Code. Treat either the new
-      // Herdr heading or the older tmux-opt-in heading as "already present" so an
-      // in-place update does not double-add the section.
-      if (tool === 'claude-code'
-          && !existing.includes('## Agent Spawning (in-process, Herdr pane opt-in)')
-          && !existing.includes('## Agent Spawning (in-process, tmux opt-in)')) {
-        updated += tmuxEntry;
-        changed = true;
-      }
-
-      if (changed) {
-        await fs.writeFile(rulesPath, updated, 'utf8');
-        console.log(chalk.green(`  ✓ ${platformCfg.rulesFile} updated`));
-      } else {
-        console.log(chalk.gray(`  ○ ${platformCfg.rulesFile} already up to date`));
-      }
-    } else {
-      const header = getFileHeader(tool);
-      const content = tool === 'claude-code'
-        ? `${header}${arcwrightEntry}${tmuxEntry}`
-        : `${header}${arcwrightEntry}`;
-      await fs.writeFile(rulesPath, content, 'utf8');
-      console.log(chalk.green(`  ✓ ${platformCfg.rulesFile} created`));
-    }
-  }
-
-  // Write root CLAUDE.md (claude-code only) — upserts managed Arcwright + tmux sections
   if (tool === 'claude-code') {
-    const rootClaudePath = isGlobal
-      ? resolveToolPath('claude-code', '.claude/CLAUDE.md', true, homes, platform)
-      : path.join(projectRoot, 'CLAUDE.md');
-    await migrateOldClaudeMd(rootClaudePath);
-    const arcwrightResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-agent-start -->',         '<!-- arcwright-agent-end -->',         arcwrightEntry);
-    const tmuxResult       = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-orchestration-start -->', '<!-- arcwright-orchestration-end -->', tmuxEntry);
-    const proactiveResult  = await upsertManagedBlock(rootClaudePath, '<!-- arcwright-proactive-start -->',     '<!-- arcwright-proactive-end -->',     proactiveEntry);
-    const anyChanged  = arcwrightResult !== 'noop' || tmuxResult !== 'noop' || proactiveResult !== 'noop';
-    if (anyChanged) {
-      console.log(chalk.green(`  ✓ ${isGlobal ? '~/.claude/CLAUDE.md' : 'CLAUDE.md'} updated (stale sections replaced)`));
-    } else {
-      console.log(chalk.gray(`  ○ ${isGlobal ? '~/.claude/CLAUDE.md' : 'CLAUDE.md'} already up to date`));
-    }
-
+    await writeClaudeInstructions(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedUnnamedPm);
   }
 
   // Create the configured output folder (output artifacts land here, project installs only)
@@ -2899,6 +2867,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         if (!resolvedElectron && f === 'electron.md') return false;
         if (!resolvedTauri && f === 'tauri.md') return false;
         if (!resolvedStrands && f === 'strands.md') return false;
+        if (!resolvedMattPocock && /^matt-pocock(?:-|\.md$)/.test(f)) return false;
         if (!resolvedAwsInfra && f === 'aws-infra.md') return false;
         if (!resolvedUnnamedPm && f === 'unnamed-pm.md') return false;
         if (!resolvedUnnamedPm && f === 'unnamed-dev-mcp.md') return false;
@@ -2921,6 +2890,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
         if (!resolvedElectron) skipNotes.push('/electron');
         if (!resolvedTauri) skipNotes.push('/tauri');
         if (!resolvedStrands) skipNotes.push('/strands');
+        if (!resolvedMattPocock) skipNotes.push('/matt-pocock');
         if (!resolvedAwsInfra) skipNotes.push('/aws-infra');
         if (!resolvedUnnamedPm) skipNotes.push('/unnamed-pm');
         const skipNote = skipNotes.length > 0 ? chalk.dim(` (skipped ${skipNotes.join(', ')})`) : '';
@@ -3051,7 +3021,7 @@ async function writeClaudeSettings(claudeDir, chalk, hooksMode = 'none', isGloba
 
   // Set Agent Teams env var if not already configured.
   // Load-bearing: this env var powers the SendMessage agent-reuse primitive
-  // used by the in-process orchestration (claude-subagent-protocol skill).
+  // used by the in-process orchestration (subagent-protocol skill).
   // Without it, kept-alive agents can't be re-engaged across turns.
   if (!settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS) {
     settings.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = '1';
@@ -3146,12 +3116,13 @@ const INSTALLER_OWNED_HOOKS = [
 const UNNAMED_MCP_HOOK_SERVER = process.env.ARCWRIGHT_UNNAMED_MCP_HOOK_SERVER || 'unnamed-development';
 // Stable substring of the SessionStart reminder written below. It carries no
 // filename, so it needs its own identifier; keep this in sync with the echo.
-const SESSION_START_SENTINEL = 'run the project-context scan';
+const SESSION_START_SENTINEL = "Arcwright: follow the project's AGENTS.md";
+const LEGACY_SESSION_START_SENTINEL = 'run the project-context scan';
 
 function isArcwrightHookEntry(h) {
   if (isUnnamedMcpContextHook(h)) return true;
   if (!h || typeof h.command !== 'string') return false;
-  if (h.command.includes(SESSION_START_SENTINEL)) return true;
+  if (h.command.includes(SESSION_START_SENTINEL) || h.command.includes(LEGACY_SESSION_START_SENTINEL)) return true;
   return (
     h.command.includes('arcwright-hooks') &&
     INSTALLER_OWNED_HOOKS.some((name) => h.command.includes(name))
@@ -3724,7 +3695,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
 
     // SessionStart context reminder — carries the marker so it's replaceable.
     const sessionEntries = [
-      { hooks: [cmd(`echo "Arcwright: run the project-context scan (arcwright-hooks) and load the project's CLAUDE.md / AGENTS.md if present."`)] },
+      { hooks: [cmd(`echo "${SESSION_START_SENTINEL}; use project-context only for missing task context."`)] },
       { hooks: [cmd(ref(DOMAIN_ROUTER_HOOK), 3)] },
     ];
     if (unnamedPm) {
@@ -3808,7 +3779,8 @@ function buildArcwrightRulesEntry(modules, unnamedPm = false) {
     'To use an agent, load its `.md` file and follow its activation instructions.',
     'Agent configs are in `_arcwright/{module}/config.yaml`.',
     'Skills are in `.agents/skills/` and `_arcwright/_memory/skills/`.',
-    'When this project uses the Unnamed Development MCP, load `.agents/skills/unnamed-dev-mcp/SKILL.md` before MCP work and keep tracker state synchronized.',
+    SKILL_POLICY,
+    'Use the Unnamed Development MCP only when the user explicitly requests it. Load `unnamed-dev-mcp` before that work; ordinary coding has no automatic tracker preflight, synchronization, or pending report.',
     'If Unnamed Development MCP is unavailable, paste the pending tracker payload in chat (project, work, intended status). Do not bury it only in `_arcwright-output/unnamed-pm-pending/`.',
     ...unnamedMcpEntry,
     '',
@@ -3824,92 +3796,86 @@ function buildArcwrightRulesEntry(modules, unnamedPm = false) {
 function buildTmuxEntry() {
   return [
     '',
-    '## Agent Spawning (in-process, Herdr pane opt-in)',
+    '## Agent orchestration',
     '',
-    'Default orchestration is **in-process** via the `Agent` tool + `SendMessage`',
-    'reuse. See `.agents/skills/claude-subagent-protocol/SKILL.md` for the full',
-    'protocol (Session Agent Registry, sonnet-first, permission-before-opus).',
+    'Delegate when the task or invoked workflow calls for it, following host policy and the user\'s chosen provider/model. Read `subagent-protocol` for task IDs, focused handoffs, concurrency, and verification. Use native tools for compatible same-provider agents and Arcwright Code/T3 delegation when required; each T3 review round is a fresh task.',
     '',
-    '`herdr` is **opt-in visibility only** — load `.agents/skills/herdr/SKILL.md`',
-    '("Watching agents in panes" section) only when the user has explicitly asked',
-    'for split-pane visibility AND `$HERDR_ENV` is set. Spawn with',
-    '`herdr agent start`, wait with `herdr wait agent-status`. The pane is just a',
-    'viewing surface; the in-process orchestration inside it is still governed by',
-    'the `claude-subagent-protocol` skill.',
-    '',
-    'The old `tmux-protocol` skill (AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling)',
-    'is retired. Do not reintroduce those signals.',
-    '',
-    'Required setting (load-bearing for `SendMessage` reuse):',
-    '`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json`.',
-    'The installer writes this automatically.',
+    'Herdr panes are optional visibility when the user requests them and `HERDR_ENV` is set. Read `herdr` for pane mechanics. Preserve the active host\'s privileges, approvals, and concurrency limits; no fixed model or extra agent is implied by skill selection.',
     '',
   ].join('\n');
 }
 
 function buildProactiveEntry() {
-  // Each skill directory contains a RULES.md sidecar (~300 tokens) alongside SKILL.md (~2500 tokens).
-  // Proactive loading reads RULES.md only; full SKILL.md is loaded when executing the procedure.
   return [
     '',
     '## Proactive Skill Invocation',
     '',
-    'When your work touches a domain covered by a skill, read its `RULES.md` sidecar for quick',
-    'context (~300 tokens — alongside SKILL.md in the same skill directory).',
-    'Load the full `SKILL.md` only when executing the skill as a formal procedure.',
-    'Do not ask the user before invoking — if the trigger is clear, act immediately.',
+    'Choose the most relevant installed skill from the host catalog without asking for routine selection. Read its entrypoint before executing the procedure, reuse it within the task, and open only needed references. An available `RULES.md` can supply quick context; not every skill has one.',
     '',
-    '| Situation | Skill |',
-    '|-----------|-------|',
-    '| Starting any Arcwright workflow (triage, team) | `project-context` |',
-    '| Bug, test failure, or unexpected behavior | `systematic-debugging` |',
-    '| Writing or reviewing TypeScript | `typescript-best-practices` |',
-    '| Writing or reviewing React | `react-expert` |',
-    '| Writing Python backend code | `python-backend` |',
-    '| Writing Next.js / App Router | `nextjs-app-router-patterns` |',
-    '| Security-sensitive code (auth, input, SQL, file ops) | `security-review` |',
-    '| Code quality / refactor review | `dry` |',
-    '| New task or ambiguous feature request | `triage` |',
-    '| Writing frontend / CSS / layout | `frontend-responsive-design-standards` |',
-    '| Redis, PostgreSQL, WebSocket implementation | `redis-best-practices` / `postgresql-optimization` / `websocket-engineer` |',
-    '| DynamoDB, AWS data persistence, CDK tables/indexes, or Strands database tools | `dynamodb-best-practices` |',
-    '| Amplify Gen 1/Gen 2, Amplify Hosting, `ampx`, `amplify.yml`, or Amplify-dependent UI/deployment performance | `amplify-best-practices` |',
-    '| CloudFront, CDN delivery, cache/origin request policies, OAC, signed content, WAF, or edge delivery performance | `cloudfront-best-practices` |',
-    '| S3 buckets, object storage, IAM/bucket policies, encryption, lifecycle, replication, uploads, or S3 performance/cost | `s3-best-practices` |',
-    '| Aurora PostgreSQL/MySQL, RDS Proxy, Aurora Serverless v2, readers/failover, Global Database, migrations, or database-backed performance | `aurora-db-best-practices` |',
-    '| SES, SNS, SMTP, email delivery, notifications, bounces/complaints, or messaging security/cost | `ses-sns-smtp-best-practices` |',
-    '| EventBridge buses, rules, Pipes, Scheduler, schemas, retries/DLQs, replay, or event-driven routing | `eventbridge-best-practices` |',
-    '| Cognito User Pools/Identity Pools, OAuth/OIDC, MFA/passkeys, federation, token handling, tenant auth, or Amplify Auth | `cognito-best-practices` |',
-    '| AWS Lambda handlers, event sources, cold starts, concurrency, retries/DLQs, VPC, IAM, or Lambda-backed UI/API performance | `lambda-best-practices` |',
-    '| Step Functions state machines, ASL, Standard/Express, service integrations, retries, callbacks, Map/Parallel, or workflow UX | `step-functions-best-practices` |',
+    'Use `test-quality` for test design/review, `systematic-debugging` for failures, and runner guidance such as `vitest` or `playwright-cli` when needed. Use `arcwright` for command/profile lookup on hosts without a native entrypoint. Other domains route from their installed descriptions; do not duplicate the catalog here.',
+    '',
+    'Automatic selection preserves task scope, host policy, and explicit authorization gates for external actions. Installing a pack does not activate its setup or grant publication/merge authority.',
     '',
   ].join('\n');
 }
 
 /**
- * Write / merge ~/.claude/CLAUDE.md (global) with Arcwright + tmux sections.
- * This file is loaded by Claude Code for every project automatically.
+ * Shared instructions are authored in AGENTS.md, including Claude-only installs.
+ * CLAUDE.md is a compatibility import unless explicitly retired in AGENTS.md.
+ * Existing unowned host instructions remain in place; only complete owned blocks
+ * are replaced. In particular, personal/global content is never copied to a repo.
  */
-async function writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, proactiveEntry, chalk) {
-  const globalClaudeDir = path.join(os.homedir(), '.claude');
-  const globalClaudePath = path.join(globalClaudeDir, 'CLAUDE.md');
+async function writeClaudeInstructions(projectRoot, modules, chalk, isGlobal, homes, platform, unnamedPm = false) {
+  const agentsPath = isGlobal
+    ? path.join(homes.linux, '.arcwright', 'AGENTS.md')
+    : path.join(projectRoot, 'AGENTS.md');
+  await migrateOldClaudeMd(agentsPath);
+  const result = await upsertManagedBlock(agentsPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, unnamedPm));
+  const label = isGlobal ? '~/.arcwright/AGENTS.md' : 'AGENTS.md';
+  console.log(result === 'noop' ? chalk.gray(`  ○ ${label} already up to date`) : chalk.green(`  ✓ ${label} updated`));
+  const importsRetired = (await fs.readFile(agentsPath, 'utf8')).split(/\r?\n/)
+    .some(line => line.trim() === '<!-- arcwright-claude-imports: retired -->');
 
-  await fs.ensureDir(globalClaudeDir);
+  const hostPaths = isGlobal
+    ? [resolveToolPath('claude-code', GLOBAL_PATHS['claude-code'].claudeMd, true, homes, platform)]
+    : [path.join(projectRoot, 'CLAUDE.md')];
+  // Preserve an existing nested entrypoint, but do not create a second one.
+  const nestedPath = path.join(projectRoot, '.claude', 'CLAUDE.md');
+  if (!isGlobal && await fs.pathExists(nestedPath)) hostPaths.push(nestedPath);
 
-  // Migrate: strip old markerless sections left by pre-1.0.21 installers
-  await migrateOldClaudeMd(globalClaudePath);
-
-  const arcwrightResult  = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-agent-start -->',         '<!-- arcwright-agent-end -->',         arcwrightEntry);
-  const tmuxResult       = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-orchestration-start -->', '<!-- arcwright-orchestration-end -->', tmuxEntry);
-  const proactiveResult  = await upsertManagedBlock(globalClaudePath, '<!-- arcwright-proactive-start -->',     '<!-- arcwright-proactive-end -->',     proactiveEntry);
-  const anyChanged = arcwrightResult !== 'noop' || tmuxResult !== 'noop' || proactiveResult !== 'noop';
-
-  if (arcwrightResult === 'created' || tmuxResult === 'created' || proactiveResult === 'created') {
-    console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) created'));
-  } else if (anyChanged) {
-    console.log(chalk.green('  ✓ ~/.claude/CLAUDE.md (global) updated (stale sections replaced)'));
-  } else {
-    console.log(chalk.gray('  ○ ~/.claude/CLAUDE.md (global) already up to date'));
+  for (const hostPath of hostPaths) {
+    const existing = await fs.pathExists(hostPath) ? await fs.readFile(hostPath, 'utf8') : '';
+    const importPath = path.relative(path.dirname(hostPath), agentsPath).replace(/\\/g, '/').replace(/ /g, '\\ ');
+    const block = `<!-- arcwright-instructions-start -->\n@${importPath}\n<!-- arcwright-instructions-end -->`;
+    let inserted = false;
+    let updated = existing;
+    // Replace the first owned block in place with the import and remove the
+    // others without normalizing or rewriting surrounding user content.
+    const patterns = [...MANAGED_MARKERS, ...DEPRECATED_MARKERS]
+      .filter(({ start }) => start.startsWith('<!--'))
+      .map(({ start, end }) => `${escapeRe(start)}[\\s\\S]*?${escapeRe(end)}`);
+    if (importsRetired) {
+      // Retirement removes only complete owned blocks. Preserve user content
+      // byte-for-byte; a missing or unowned host file is never created/rewritten.
+      const remaining = existing.replace(new RegExp(patterns.join('|'), 'g'), '');
+      if (remaining !== existing) {
+        if (remaining.trim()) await fs.writeFile(hostPath, remaining, 'utf8');
+        else await fs.remove(hostPath);
+        console.log(chalk.green(`  ✓ Retired Arcwright imports in ${hostPath}`));
+      }
+      continue;
+    }
+    updated = updated.replace(new RegExp(patterns.join('|'), 'g'), () => {
+      if (inserted) return '';
+      inserted = true;
+      return block;
+    });
+    if (!inserted) updated += `${updated ? (updated.endsWith('\n') ? '\n' : '\n\n') : ''}${block}\n`;
+    if (updated !== existing) {
+      await fs.ensureDir(path.dirname(hostPath));
+      await fs.writeFile(hostPath, updated, 'utf8');
+      console.log(chalk.green(`  ✓ ${isGlobal ? '~/.claude/CLAUDE.md' : path.relative(projectRoot, hostPath)} imports ${label}`));
+    }
   }
 }
 
@@ -3925,8 +3891,7 @@ async function writeGlobalClaudeMd(arcwrightEntry, tmuxEntry, proactiveEntry, ch
  */
 const MANAGED_MARKERS = [
   { name: 'arcwright-agent',         start: '<!-- arcwright-agent-start -->',         end: '<!-- arcwright-agent-end -->' },
-  { name: 'arcwright-orchestration', start: '<!-- arcwright-orchestration-start -->', end: '<!-- arcwright-orchestration-end -->' },
-  { name: 'arcwright-proactive',     start: '<!-- arcwright-proactive-start -->',     end: '<!-- arcwright-proactive-end -->' },
+  { name: 'arcwright-instructions',  start: '<!-- arcwright-instructions-start -->',  end: '<!-- arcwright-instructions-end -->' },
 ];
 
 /**
@@ -3937,6 +3902,8 @@ const MANAGED_MARKERS = [
  * helper used to remove by hand.
  */
 const DEPRECATED_MARKERS = [
+  { name: 'arcwright-orchestration', start: '<!-- arcwright-orchestration-start -->', end: '<!-- arcwright-orchestration-end -->' },
+  { name: 'arcwright-proactive',     start: '<!-- arcwright-proactive-start -->',     end: '<!-- arcwright-proactive-end -->' },
   { name: 'arcwright-tmux',         start: '<!-- arcwright-tmux-start -->',          end: '<!-- arcwright-tmux-end -->' },
   // Markerless pre-1.0.21 headings — `start` is the heading line, `end` is the
   // next heading marker we strip up to. cleanupManagedBlocks uses the same
@@ -4015,15 +3982,15 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
       const stub = [
         '---',
         `name: arcwright-${slug}`,
-        `description: ${description}`,
+        `description: ${JSON.stringify(description)}`,
         '---',
         '',
         `<agent-activation CRITICAL="TRUE">`,
-        `1. LOAD {project-root}/_arcwright/${mod}/agents/${subdir}${originalFilename}`,
-        '2. READ its entire contents',
-        '3. EXECUTE every critical_action in order',
-        '4. PRESENT the menu',
-        '5. WAIT for user input',
+        `1. Resolve {project-root}/_arcwright/${mod}/agents/${subdir}${originalFilename}, falling back to the installed global Arcwright module tree.`,
+        '2. Read the profile and shared agent runtime once per task.',
+        '3. Reuse the capability brief; load only relevant skills and references.',
+        '4. Execute the supplied task immediately; use the relevant workflow without a menu round trip.',
+        '5. Show a menu only when there is no actionable task or the user requests one.',
         '</agent-activation>',
         '',
       ].join('\n');
@@ -4046,8 +4013,8 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
 // ─── Uninstall ────────────────────────────────────────────────────────────────
 
 /**
- * Locations the installer can target for CLAUDE.md cleanup. Mirrors the
- * three write sites in writeIdeConfig + writeGlobalClaudeMd.
+ * Instruction locations the installer can target for managed-block cleanup.
+ * Includes native host entrypoints and the shared global Claude instructions.
  */
 function getClaudeMdLocations(projectRoot, isGlobal, platform, homes) {
   // Every instruction file Arcwright writes a managed block into. Used by
@@ -4061,6 +4028,7 @@ function getClaudeMdLocations(projectRoot, isGlobal, platform, homes) {
   if (isGlobal) {
     return [
       resolveToolPath('claude-code', GLOBAL_PATHS['claude-code'].claudeMd, true, homes, platform),
+      path.join(homes.linux, '.arcwright', 'AGENTS.md'),
       resolveToolPath('codex', GLOBAL_PATHS.codex.claudeMd, true, homes, platform),
       resolveToolPath('opencode', GLOBAL_PATHS.opencode.claudeMd, true, homes, platform),
       resolveToolPath('grok', GLOBAL_PATHS.grok.claudeMd, true, homes, platform),
@@ -4277,7 +4245,7 @@ async function uninstall(opts = {}) {
 
   console.log(chalk.bold(`\nUninstalling Arcwright (${isGlobal ? 'global' : 'project'}: ${projectRoot})\n`));
 
-  // 1. Strip managed + deprecated blocks from every CLAUDE.md location.
+  // 1. Strip managed rules/imports from every instruction entrypoint.
   const claudeMdLocations = getClaudeMdLocations(projectRoot, isGlobal, platform, homes);
   let mdStripped = 0;
   for (const md of claudeMdLocations) {
@@ -4287,7 +4255,7 @@ async function uninstall(opts = {}) {
       console.log(chalk.green(`  ✓ ${path.relative(projectRoot, md) || md} (Arcwright blocks stripped)`));
     }
   }
-  if (mdStripped === 0) console.log(chalk.gray('  ○ No CLAUDE.md blocks to strip'));
+  if (mdStripped === 0) console.log(chalk.gray('  ○ No instruction blocks to strip'));
 
   // 2. Strip the managed gitignore block (project installs only).
   if (!isGlobal) {
@@ -4357,8 +4325,20 @@ async function uninstall(opts = {}) {
         await removeTrackedEntry(entry, { isGlobal, projectRoot, effectiveArwDir: manifestDir, homes, platform });
       }
       if (await fs.pathExists(manifestDir)) {
-        await fs.remove(manifestDir);
-        console.log(chalk.green(`  ✓ ${manifestDir} (removed)`));
+        const sharedPath = path.join(manifestDir, 'AGENTS.md');
+        const hasUserInstructions = await fs.pathExists(sharedPath)
+          && (await fs.readFile(sharedPath, 'utf8')).trim().length > 0;
+        if (hasUserInstructions) {
+          // Its managed block was stripped above. Preserve remaining user rules
+          // when removing the rest of the global Arcwright installation.
+          for (const name of await fs.readdir(manifestDir)) {
+            if (name !== 'AGENTS.md') await fs.remove(path.join(manifestDir, name));
+          }
+          console.log(chalk.green(`  ✓ ${manifestDir} (assets removed; user AGENTS.md preserved)`));
+        } else {
+          await fs.remove(manifestDir);
+          console.log(chalk.green(`  ✓ ${manifestDir} (removed)`));
+        }
       }
     } else {
       // Project installs: only remove Arcwright-owned module dirs + the
@@ -4405,15 +4385,15 @@ module.exports = {
   // Internal helpers exported for unit testing (not part of the public CLI API).
   _internal: {
     sha256, escapeRe, detectBmad, getHomes, resolveToolPath,
-    readManifest, writeManifest, readFilesManifest, writeFilesManifest, removeEmptyDirsUpward,
+    readManifest, writeManifest, readFilesManifest, writeFilesManifest, removeEmptyDirsUpward, removeTrackedEntry,
     isSafeManifestPath, resolveWithin, isWithinRoot, preflightProjectManagedPaths,
     hasOnlyInstallableModules, projectOrigin,
     buildModuleConfig, getFileHeader, getClaudeMdLocations,
     updateGitignore, stripGitignoreBlock,
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
     writeClaudeSettings, stripInstallerSettingsKeys, removeArcwrightHookFiles,
-    buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry,
-    writeKiroConfig, writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig, writeCursorConfig,
+    buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry, writeClaudeInstructions,
+    writeKiroConfig, writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig, writeCursorConfig, copySkillTree,
     removeCursorUnnamedDevHooks,
     buildCursorRule, adaptCursorCommand, filterCommandNames,
     commandExists, ensureHermesCliInstalled, setupHermesModelSurface,

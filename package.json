@@ -4,6 +4,10 @@
   "private": true,
   "description": "Arcwright — AI agent workflow workshop",
   "scripts": {
-    "build": "node build/build.js"
+    "build": "node build/build.js",
+    "fleet:init": "node build/fleet-init.js",
+    "check:skill-sources": "node build/skill-sources.js --check",
+    "audit:context": "node build/invocation.js --audit",
+    "check:skill-efficiency": "node build/skill-efficiency.js --check"
   }
 }

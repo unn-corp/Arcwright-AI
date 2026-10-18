@@ -1,15 +1,8 @@
 ---
 name: pdflib-syntax-document
-description: >
-  Use when creating, loading, or saving PDFs with pdf-lib, or setting PDF metadata.
-  Prevents common mistakes: missing load options for encrypted PDFs, forgetting
-  saveAsBase64 for browser contexts, and metadata not persisting due to wrong setter order.
-  Covers PDFDocument.create(), load(), save(), metadata, attachments.
-  Keywords: PDFDocument, create, load, save, saveAsBase64, metadata, title,
-  author, encrypt, new PDF, open existing PDF, save PDF to file,
-  download PDF, set PDF properties.
+description: "Use pdf-lib document creation, loading, saving, metadata, and attachment APIs."
 license: MIT
-compatibility: "Designed for Claude Code. Requires pdf-lib 1.x with TypeScript/JavaScript."
+compatibility: "Requires pdf-lib 1.x with TypeScript/JavaScript."
 metadata:
   author: OpenAEC-Foundation
   version: "1.0"

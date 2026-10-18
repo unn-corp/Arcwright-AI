@@ -111,7 +111,7 @@ describe('writeOpenCodeConfig — project install', () => {
 
   it('skips team-* skills when teams are declined', async () => {
     const entries = await writeOpenCodeConfig(projectDir, ['awm'], chalk, false, homes(), platform, false);
-    expect(entries.some(e => e.relPath.includes('/team-'))).toBe(false);
+    expect(entries.some(e => /\/skills\/team-[^/]+\//.test(e.relPath))).toBe(false);
     expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'team-arch-dev'))).toBe(false);
     expect(fs.existsSync(path.join(projectDir, '.opencode', 'commands', 'team.md'))).toBe(false);
   });

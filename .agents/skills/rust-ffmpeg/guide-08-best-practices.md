@@ -1,0 +1,22 @@
+<!-- Conditional reference. The current SKILL.md and host policy take precedence. Paths are relative to this skill folder. -->
+
+## Best Practices
+
+- **Codec copy first**: use `-c copy` / stream copy only when no re-encoding is needed — 10x faster, zero quality loss
+- **Keyframe alignment**: for HLS/DASH segmentation use fixed-GOP codec opts (`g`/`keyint_min`/`sc_threshold`); for keyframes at known absolute times use `Output::set_force_key_frames("0,5,10.5")` — it is **not** an encoder AVOption, so `set_video_codec_opt` is silently ignored
+- **Error propagation**: return `Result<T, Box<dyn Error>>`, never panic in library code
+- **Resource cleanup**: rely on RAII — `FfmpegContext`/`Decoder`/`Encoder` drop automatically; don't add manual cleanup
+- **Hardware acceleration**: probe availability at runtime before enabling (`get_gpu_filter_backends()` for GPU filters); `opengl` is deprecated — use `wgpu` (see [hardware_acceleration.md](references/scenarios/hardware_acceleration.md))
+- **Built-in GPU effects before custom WGSL**: check the typed `wgpu_filter::effects` catalog before writing shaders (see [filters.md](references/ez_ffmpeg/filters.md))
+- **Prefer recipes for one-shot jobs**: `recipes::{thumbnail, sprite_sheet, animated_gif, HlsLadder}` bake in the correctness details (see [image_sequences.md](references/scenarios/image_sequences.md), [gif_creation.md](references/scenarios/gif_creation.md), [streaming_rtmp_hls.md](references/scenarios/streaming_rtmp_hls.md))
+- **Measure, don't scrape logs**: typed `analysis` API for black/silence/scene/crop/EBU R128 (see [detection_analysis.md](references/scenarios/detection_analysis.md))
+- **Frames in/out of memory**: `frame_export::{FrameExtractor, SampleExtractor}` for AI/CV/ASR ingest, `VideoWriter` for frame push — experimental, default build. Guard: the default conversion precision changed in 0.15 — byte-identical 0.14 output needs `.conversion_precision(ConversionPrecision::High)` (see [frame_io.md](references/ez_ffmpeg/frame_io.md))
+- **Encoded packets (PacketSink)**: strict tier is H.264 **libx264-only** + AAC, and backpressure **blocks by design** — a slow consumer stalls the encoders; drain concurrently, never only after `wait()` (see [packet_sink.md](references/ez_ffmpeg/packet_sink.md))
+- **Automatic CLI translation**: `from_cli_args`/`emit_rust_code` cover only 6 golden-tested shapes, and `from_cli_args` execution refuses any unverified runtime — **FFmpeg 7.1 only as of 0.16** (8.x refused even for verified shapes; `emit_rust_code` unaffected). Indexed per-stream options (`-c:v:0`) are permanently outside the subset — port them with `StreamMap` (see [cli_compat.md](references/ez_ffmpeg/cli_compat.md), fallback [cli_migration.md](references/ez_ffmpeg/cli_migration.md))
+- **Mixed stream lengths**: `Output::set_shortest(true)` (FFmpeg `-shortest` parity) ends the output when the shortest stream ends — without it, video + longer music keeps running to the longer stream
+- **Typed progress**: use `progress_handle()` snapshots, not hand-rolled FrameFilters. Guard: every metric is `Option` — `None` means unknowable (HLS/`null` muxers, packet-sink outputs), never fabricate zero; percentage needs your own total via `percent_of(total_us)` (see [advanced.md](references/ez_ffmpeg/advanced.md#progress-monitoring))
+- **Per-stream encoders**: same-type streams in one output need `StreamMap` per-map codecs (`-c:v:0` parity); per-map settings override per-type setters key by key, and copy×re-encode conflicts fail typed at `build()` (see [video.md](references/ez_ffmpeg/video.md#per-stream-encoder-selection-streammap))
+- **HDR→SDR needs tone mapping, not scaling**: naive `scale,format=yuv420p` yields washed-out gray; route on `StreamInfo::Video` `color_transfer` (PQ=16/HLG=18 — transfer, *not* primaries) and use the cookbook chains (see [modern_codecs.md](references/scenarios/modern_codecs.md))
+- **Graceful shutdown**: `stop()` flushes and returns `Result` (check it — output valid on `Ok`); `abort()` is the hard cancel with no output guarantee. The embedded RTMP server's `stop()` joins its threads — never call it from inside a logger (see [streaming.md](references/ez_ffmpeg/streaming.md))
+- **In-place frame edits**: call `make_frame_writable` before mutating frame data in a `FrameFilter` — decoder frames are refcounted and shared
+- **Testing**: prefer lavfi-generated media (`testsrc`/`sine`) over shipping binary fixtures where suitable (see [testing.md](references/scenarios/testing.md))

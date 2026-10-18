@@ -1,15 +1,6 @@
 ---
 name: strands-multi-agent-patterns
-description: >
-  Coordinating multiple Strands agents: agents-as-tools, Graph (deterministic DAG or
-  cyclic orchestration), Swarm (autonomous, model-driven handoff), and Workflow, plus
-  when to pick each and how they nest.
-  USE FOR: deciding between a deterministic pipeline and open-ended agent collaboration,
-  building a directed graph of agent nodes, letting agents hand off work to each other
-  dynamically, or combining these patterns.
-  DO NOT USE FOR: single-agent tool/hook/structured-output design (see
-  strands-agent-fundamentals), or where to run the resulting system (see
-  strands-aws-deployment-targets).
+description: "Design Strands agent collaboration or delegation when multiple agents are justified by the workload."
 ---
 
 # Strands Multi-Agent Patterns

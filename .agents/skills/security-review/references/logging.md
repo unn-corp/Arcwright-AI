@@ -394,8 +394,8 @@ def cleanup_old_logs():
 grep -rn "def login\|def authenticate" --include="*.py" | xargs -I {} grep -L "logger\|logging" {}
 
 # Sensitive data in logs
-grep -rn "logger.*password\|logging.*password\|log.*password" --include="*.py"
-grep -rn "logger.*token\|logger.*secret\|logger.*key" --include="*.py"
+grep -rl "logger.*password\|logging.*password\|log.*password" --include="*.py"
+grep -rl "logger.*token\|logger.*secret\|logger.*key" --include="*.py"
 
 # Unsanitized log input
 grep -rn "logger.*f\"\|logger.*%s.*%" --include="*.py"

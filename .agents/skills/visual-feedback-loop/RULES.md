@@ -14,7 +14,7 @@
 4. `playwright-cli resize 1440 900` → screenshot desktop (`vfl-iter-N-desktop.png`)
 5. `playwright-cli resize 390 844` → screenshot mobile (`vfl-iter-N-mobile.png`)
 6. `playwright-cli close`
-7. Read both screenshots with the Read tool (Claude is multimodal)
+7. Inspect both screenshots with the host's image-viewing tool
 8. Score: Layout / Colour / Typography / Components each /10
 9. All >=8/10 → DONE. Otherwise list precise fixes and apply them.
 10. Max 5 iterations. At cap: report scores + gaps, ask user to continue or accept.

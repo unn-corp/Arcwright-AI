@@ -1,16 +1,6 @@
 ---
 name: electron-app-lifecycle
-description: >
-  Drive the Electron main-process `app` global and its lifecycle correctly: ready/quit
-  sequencing, macOS vs Windows/Linux window semantics, the single-instance lock, deep
-  linking / custom protocol handlers, file associations, recent documents, and power
-  events.
-  USE FOR: structuring main.js startup and shutdown, handling window-all-closed vs
-  activate, adding a single-instance lock, registering a custom URL scheme and handling
-  the inbound deep link on every OS, wiring file-open associations, recent documents, or
-  powerMonitor.
-  DO NOT USE FOR: BrowserWindow security/webPreferences (see electron-security), IPC API
-  design between processes, or renderer/UI code.
+description: "Implement Electron startup, shutdown, single-instance handling, deep links, or OS lifecycle events. Excludes renderer layout, IPC contracts, and window security."
 ---
 
 # Electron App Lifecycle

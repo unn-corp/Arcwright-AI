@@ -1,140 +1,46 @@
 ---
 name: ci-gates
-description: Set up CI quality gates and the local hooks that mirror them. Installs tiered Claude Code hooks (advisory lint/format on every edit, blocking secret scan + advisory conventional-commit check at commit time) and scaffolds a fast-fail GitHub Actions workflow (format, lint, type-check, unit tests + 80/80/70 coverage, secret/dep/SAST security) plus branch-protection guidance. Node/TS (Vitest or Jest) + Python (Ruff/Pyright/pytest) + cross-ecosystem security. Installs globally or per-project. Use for "set up CI gates", "add quality gates", "wire pre-commit checks", "CI pipeline for this repo".
+description: Set up CI quality gates and matching local hooks for Node/TypeScript and Python. Use for CI pipelines, pre-commit checks, security scans, and branch protection; preserve project coverage requirements and choose new gates from the actual stack and risks.
 allowed-tools: Bash(*) Read Write Edit Glob Grep
 ---
 
-# Skill: ci-gates
+# CI quality gates and local feedback
 
-Stand up the standard quality-gate stack for a repo: the **local** Claude Code
-hooks that catch problems as you edit/commit, and the **CI** workflow that is the
-authoritative merge gate. The two stay in sync (a hook can be bypassed with
-`--no-verify`, so CI must re-run every gate).
+Set up repository checks and required CI gates for the actual stack. Local host
+hooks are optional adapters; they do not replace CI or grant merge/publication
+authority. Reuse existing checks, coverage requirements, and installer choices.
 
-> Layers on top of the installer's `--hooks safe|full` posture additively. It
-> does NOT touch `settings.json`'s existing Arcwright guard entries — it adds new
-> ones carrying the same `arcwright-hooks` marker, so re-runs replace cleanly.
+## Choose scope and checks
 
-## What it installs
+Honor the user's project/global scope and current decisions; a repository CI
+request does not authorize changing global host settings. Inspect package metadata,
+existing workflows and hooks, then add only the relevant missing gates. Use
+`test-quality` for tests and focused local execution. Keep outputs in an owned
+Arcwright run or host evidence storage; installed skill resources are read-only.
 
-**Local hooks** (tiered enforcement — lint warns, secrets block):
-- `gate-lint.js` — `PostToolUse(Write|Edit)`, **advisory**. Lints/format-checks
-  the single changed file (ESLint + Prettier for JS/TS, Ruff for Python),
-  surfaces findings to the model, never blocks. Fast (one file).
-- `gate-precommit.js` — `PreToolUse(Bash)` on `git commit`, **tiered**. Blocks
-  (exit 2) when a secret is staged (gitleaks, or a built-in high-confidence
-  fallback); warns when the commit subject is not Conventional Commits.
-- `gate-ci-verify.js` — `PostToolUse(Bash)` on `git push`, **tiered**. After a
-  push succeeds it polls GitHub Actions for that commit, waits for the workflow
-  runs to finish, and reports the verdict to the model — exit 2 if any CI gate
-  concluded failure (so the model fixes and re-pushes), exit 0 when all passed,
-  still running, or unknowable (no `gh`/auth/remote → skips cleanly). Closes the
-  loop: the local hooks mirror CI but can be bypassed, so this confirms the
-  authoritative remote gate actually went green. Tunables: `ARCWRIGHT_CI_VERIFY=0`
-  to disable, `ARCWRIGHT_CI_TIMEOUT_SECONDS` (default 180), `ARCWRIGHT_CI_POLL_SECONDS`
-  (max backoff between polls, default 10), `ARCWRIGHT_CI_REGISTER_SECONDS`
-  (default 30) — how long to wait for a run to *appear* before concluding this
-  branch triggers no workflow. That second cap matters: without it, pushing a
-  branch outside the workflow's `on: push` list blocks the turn for the full
-  `ARCWRIGHT_CI_TIMEOUT_SECONDS` just to report that nothing ran.
+The bundled CI template covers static checks, tests with project-configured
+coverage, optional Python, security/dependency scanning, SAST, and PR titles.
+Choose from the actual stack and risks; do not install every tool or impose a
+new arbitrary coverage quota. See [gate catalog](references/gate-catalog.md),
+[tooling](references/tooling.md), and [branch protection](references/branch-protection.md).
 
-**CI** (the real merge gate):
-- `.github/workflows/ci.yml` — fast-fail jobs: static (format/lint/type-check),
-  test (unit + 80/80/70 coverage), python (optional), security (gitleaks + trivy
-  + OSV-Scanner/OSV.dev), sast (semgrep), pr-title. OSV-Scanner matches the
-  artifact's committed lockfiles against OSV.dev and fails on a known vuln; fix
-  by bumping the dependency to the version it reports. See `references/tooling.md`.
-- The security scanners run as **native release binaries** (not their GitHub
-  Actions or `docker run -v`), and semgrep runs via **`docker cp`** into its
-  image — both deliberate, so the gates work on self-hosted DinD runners where
-  bind-mounts silently mount nothing. The template also carries a commented
-  public-registry override for repos behind a private npm mirror. Full rationale:
-  `references/self-hosted-runners.md` (the DinD trap) and `references/tooling.md`
-  (CI runner realities: gitleaks license, `.gitleaks.toml`, semgrep noise).
-- Config snippets for Vitest/Jest coverage thresholds and pytest `--cov-fail-under`.
+Resolve `SKILL_DIR` to the effective installed ci-gates directory before using its
+bundled templates. Preserve user workflows/settings and merge owned entries.
 
-See `references/gate-catalog.md` (the gate set + 3-layer model),
-`references/tooling.md` (per-ecosystem commands), and
-`references/branch-protection.md` (make the jobs required).
+## Optional local enforcement
 
-## Step 1 — Choose scope (global or project)
+Use the active host's documented hook/plugin interface or an existing Git/package
+check. Load `hookify` for a new adapter. The bundled `gate-lint.js`,
+`gate-precommit.js`, and `gate-ci-verify.js` templates use Claude-shaped event input;
+follow the [Claude adapter](references/claude-hooks.md) only for that host. On other
+hosts, map the same checks through their actual interface and verify the mapping,
+or report the unavailable automation and keep the CI gate. Never place Claude
+settings JSON into another host's configuration.
 
-Ask the user (or honor what they already said):
-
-- **Project** — hooks go in `./.claude/arcwright-hooks/`, wired into
-  `./.claude/settings.json` with `$CLAUDE_PROJECT_DIR`-relative paths (portable,
-  committed with the repo). CI + config files are written into the repo.
-- **Global** — hooks go in `~/.claude/arcwright-hooks/`, wired into
-  `~/.claude/settings.json` with absolute paths (apply in every project). The
-  CI workflow + coverage config are still per-repo, so for a global install ask
-  whether to also scaffold `ci.yml` into the current repo or skip it.
-
-Set `CLAUDE_DIR` accordingly: project → `./.claude`, global → `$HOME/.claude`.
-
-## Step 2 — Detect the stack
-
-```bash
-ls package.json 2>/dev/null && grep -El '"(vitest|jest)"' package.json
-ls pyproject.toml requirements.txt 2>/dev/null
-ls .github/workflows/ 2>/dev/null
-```
-
-Pick the matching gates: Node/TS always if `package.json`; Vitest vs Jest from
-deps; Python jobs only if `pyproject.toml`/`requirements.txt`. Security gates are
-language-agnostic — always include.
-
-## Step 3 — Install the hooks
-
-```bash
-# SKILL_DIR = the absolute path to THIS skill's directory. There is no $0 when a
-# skill runs, so resolve it yourself: it's the ci-gates dir under whichever
-# skills root applies (project ./.agents/skills/ci-gates or a global skills dir).
-SKILL_DIR="<abs path to .agents/skills/ci-gates>"
-DEST="$CLAUDE_DIR/arcwright-hooks"
-mkdir -p "$DEST"
-cp "$SKILL_DIR/templates/gate-lint.js" "$DEST/gate-lint.js"
-cp "$SKILL_DIR/templates/gate-precommit.js" "$DEST/gate-precommit.js"
-cp "$SKILL_DIR/templates/gate-ci-verify.js" "$DEST/gate-ci-verify.js"
-```
-
-Then merge entries into `$CLAUDE_DIR/settings.json` (create if absent). Use the
-**absolute** node path for a global install, the `$CLAUDE_PROJECT_DIR`-relative
-path for a project install. Match the existing Arcwright merge style: identify
-Arcwright entries by the `arcwright-hooks` substring in the command and replace
-in place (never duplicate, never clobber user hooks).
-
-Target shape (project install):
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      { "matcher": "Write|Edit",
-        "hooks": [{ "type": "command",
-          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/gate-lint.js\"" }] },
-      { "matcher": "Bash",
-        "hooks": [{ "type": "command",
-          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/gate-ci-verify.js\"" }] }
-    ],
-    "PreToolUse": [
-      { "matcher": "Bash",
-        "hooks": [{ "type": "command",
-          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/arcwright-hooks/gate-precommit.js\"" }] }
-    ]
-  }
-}
-```
-
-Global install: replace the command with `node "/home/<user>/.claude/arcwright-hooks/gate-lint.js"`
-(absolute), same for `gate-precommit.js` and `gate-ci-verify.js`.
-
-**Coexistence note:** the installer's `full` posture already adds a
-`PostToolUse(Write|Edit)` typecheck entry, and `safe` adds a `PreToolUse(Bash)`
-destructive guard and `PreToolUse(Write|Edit)` secret-file guard. Those are
-separate entries (different command/script) and run alongside these — append, do
-not replace them. `gate-precommit.js` (commit-time secret scan of the staged
-diff) complements `guard-write.js` (blocks writing a secret file in the first
-place); keep both.
+Store reusable project scripts under `_arcwright/core/arcwright-hooks/` and write
+only host registration into the host's required config path. Preserve existing
+Arcwright guards and custom hooks. Distinguish a pre-action block from post-action
+feedback; verify intended allow/failure behavior before claiming enforcement.
 
 ## Step 4 — Scaffold CI (skip on global-only if the user declined)
 
@@ -144,9 +50,12 @@ cp "$SKILL_DIR/templates/ci.yml" .github/workflows/ci.yml
 ```
 
 Trim jobs to the detected stack (drop `python` if no Python; pick the Vitest or
-Jest line in `test-node`). Add the coverage threshold to the project's test
-config per `references/tooling.md` (Vitest `coverage.thresholds`, Jest
-`coverageThreshold`, or pytest `--cov-fail-under=80` — all 80/80/70).
+Jest line in `test-node`). Preserve the repository's existing coverage requirements.
+Use the installed `test-quality` skill for meaningful tests and focused local runs.
+Coverage percentages do not prove useful assertions; do not introduce a blanket
+80/80/70 quota or write filler tests to reach one. When new thresholds are requested,
+establish a justified baseline and use the matching configuration examples in
+`references/tooling.md`; example numbers are not defaults for every project.
 
 **Runners (self-hosted-first):** the template targets **self-hosted** runners by
 default (`runs-on: [self-hosted, linux, x64]`), no GitHub-hosted fallback — a job

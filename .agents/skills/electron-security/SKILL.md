@@ -1,18 +1,6 @@
 ---
 name: electron-security
-description: >
-  Harden Electron apps against the renderer-as-attacker threat model: process model
-  (main/renderer/preload), the security baseline (contextIsolation, sandbox,
-  nodeIntegration off), CSP, navigation/window/openExternal guards, Fuses, and staying
-  current.
-  USE FOR: configuring BrowserWindow webPreferences securely, reviewing or auditing an
-  Electron app for security regressions, locking down navigation and window creation,
-  setting a Content Security Policy, flipping Electron Fuses, deciding what is safe to
-  expose from preload, embedding external/untrusted web content (WebContentsView vs
-  <webview>), gating device access (WebHID/Web Serial/WebUSB/Web Bluetooth), and verifying
-  the packaged bundle with ASAR integrity.
-  DO NOT USE FOR: web-only (non-Electron) CSP/XSS work, Node.js server hardening, or
-  IPC API design (see electron-ipc).
+description: "Harden Electron process boundaries, webPreferences, CSP, navigation, external links, preload exposure, Fuses, embedded content, and device permissions. Use for Electron-specific security reviews."
 ---
 
 # Electron Security

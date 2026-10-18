@@ -1,6 +1,6 @@
 ---
 name: storekit
-description: "Implement, review, or improve in-app purchases and subscriptions using StoreKit 2. Use when building paywalls with SubscriptionStoreView or ProductView, processing transactions with Product and Transaction APIs, verifying entitlements, handling purchase flows (consumable, non-consumable, auto-renewable), implementing offer codes or promotional/win-back/introductory offers, managing subscription status and renewal state, setting up StoreKit testing with configuration files, or integrating Family Sharing, Ask to Buy, refund handling, and billing retry logic."
+description: "Implement or debug StoreKit 2 purchases, subscriptions, entitlement state, transaction verification, restores, and paywalls. Apple Pay for physical goods uses passkit-wallet."
 ---
 
 # StoreKit 2 In-App Purchases and Subscriptions

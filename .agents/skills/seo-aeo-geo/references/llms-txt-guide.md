@@ -2,7 +2,11 @@
 
 `llms.txt` is a markdown file at the root of a domain (e.g., `example.com/llms.txt`) that helps AI systems understand what the site is, what it covers, and which URLs are most valuable.
 
-It is the AI-era equivalent of `robots.txt` plus a sitemap, written in plain language for language models.
+It is an optional documentation-discovery proposal for tools that choose to consume it. It does
+not grant permission, control crawler access, replace a sitemap, or demonstrate a ranking/citation
+benefit. Google requires neither llms.txt nor special AI markup. Use it when an intended consumer
+can benefit, and keep the owner's publication policy. [Proposal](https://llmstxt.org/),
+[Google eligibility](https://developers.google.com/search/docs/appearance/ai-features).
 
 This guide walks through how to write a useful one.
 
@@ -13,7 +17,7 @@ This guide walks through how to write a useful one.
 - Tell AI assistants what the site is and what it covers
 - Point AI to the most valuable URLs for citation
 - Provide structured context that helps AI summarize and cite the site accurately
-- Reduce the chance of AI hallucinating about your brand or content
+- Provide a curated entrypoint for a documented tool workflow; verify that the tool consumes it
 
 What it is NOT:
 
@@ -164,7 +168,7 @@ The good description names: what it is (guide library), what topic (home renovat
 - **URLs per section**: 3 to 10 is the sweet spot
 - **Total file length**: 500 to 2000 words for most sites
 
-A 50-word llms.txt is too thin to be useful. A 5000-word llms.txt buries the signal.
+These are optional editorial examples, not eligibility rules. A short file can be sufficient; size it to the intended consumer and avoid padding.
 
 ---
 
@@ -209,7 +213,7 @@ If you do publish it, link to it from llms.txt:
 - **Treating it as a sitemap.** Sitemap is for crawlers. llms.txt is for AI context.
 - **Stuffing it with thin content.** Every URL listed should be content you would proudly cite if a human asked.
 - **Forgetting to update it.** A 2-year-old llms.txt makes you look abandoned.
-- **Hosting it at a non-root path.** It belongs at `/llms.txt` (root of the domain), not `/docs/llms.txt`.
+- **Assuming a fixed discovery path.** Use the location the consumer documents. A root `/llms.txt` is conventional; a documentation subtree can use its own entrypoint.
 - **Returning HTML instead of plain text.** Serve as `text/markdown` or `text/plain`, not as a rendered HTML page.
 
 ---
@@ -218,10 +222,10 @@ If you do publish it, link to it from llms.txt:
 
 After publishing:
 
-- [ ] File is at `https://yourdomain.com/llms.txt` (root)
+- [ ] The intended consumer can discover the chosen URL (root `/llms.txt` is conventional)
 - [ ] File serves with content type `text/markdown` or `text/plain`
 - [ ] All linked URLs return 200
 - [ ] All linked URLs use the canonical URL form (no redirects)
-- [ ] File is referenced (or at least not blocked) in robots.txt
+- [ ] Access matches the owner's crawler policy; no non-standard robots directive is required
 - [ ] File renders cleanly in a plain text viewer
 - [ ] Description and section headings accurately describe the site

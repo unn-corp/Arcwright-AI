@@ -1,6 +1,6 @@
 ---
 name: eventkit-calendar
-description: "Create, read, and manage calendar events and reminders using EventKit and EventKitUI. Use when adding events to the user's calendar, creating reminders, setting recurrence rules, requesting calendar or reminders access, presenting event editors, choosing calendars, handling alarms, observing calendar changes, or working with EKEventStore, EKEvent, EKReminder, EKCalendar, EKRecurrenceRule, EKEventEditViewController, EKCalendarChooser, or EventKitUI views."
+description: "Read or change iOS calendar events and reminders with EventKit, or present system editors with EventKitUI. Use for access-level selection, recurrence, save scopes, and calendar change handling."
 ---
 
 # EventKit — Calendar & Reminders

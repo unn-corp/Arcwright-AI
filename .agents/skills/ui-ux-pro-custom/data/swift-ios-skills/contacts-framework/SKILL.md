@@ -1,6 +1,6 @@
 ---
 name: contacts-framework
-description: "Read, create, update, and pick contacts using the Contacts and ContactsUI frameworks. Use when fetching contact data, saving new contacts, wrapping CNContactPickerViewController in SwiftUI, handling contact permissions, or working with CNContactStore fetch and save requests."
+description: "Read, edit, or select iOS contacts with Contacts and ContactsUI. Use for authorization, scoped fetches, change handling, contact saves, and SwiftUI picker wrappers."
 ---
 
 # Contacts Framework

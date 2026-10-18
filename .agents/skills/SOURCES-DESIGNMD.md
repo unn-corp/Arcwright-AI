@@ -23,3 +23,7 @@ The format is at version `alpha` upstream and may add token categories or sectio
 refreshing, re-read `docs/spec.md` and the `examples/`, and re-run the token-schema and
 section-order lists against the current spec. The `@google/design.md` CLI surface (subcommand
 names, export formats) can change, verify against the current README before documenting flags.
+
+## Reviewed format revision
+
+Checked `6e5da5382f41edbba9d73b2c62f33f32e9971f15` (October 16, 2026), `docs/spec.md`: frontmatter and interleaved YAML blocks share one token tree, duplicate top-level keys are errors, and `omitted` records intentional section omissions. Arcwright retains its root canonicality, self-contained values, and copy preferences. This is an independently worded protocol; no upstream runtime or dependency is bundled.

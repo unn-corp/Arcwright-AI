@@ -13,7 +13,7 @@ Targeted optimization for the three Core Web Vitals using field data to identify
 
 ## Measure before optimizing
 
-When a runnable URL is available, read [the performance measurement workflow](../performance/references/MEASUREMENT.md). Prefer this sequence:
+When a runnable URL is available, read [the performance measurement workflow](references/MEASUREMENT.md). Prefer this sequence:
 
 1. Check page-level CrUX p75 data, with a clearly labeled origin fallback when page data is unavailable.
 2. Record a browser performance trace under stated conditions. With Chrome DevTools MCP, trace summaries can include CrUX alongside the observed lab metrics.
@@ -175,7 +175,7 @@ When field CLS is poor or a trace reports shifts, read [the CLS reference](refer
 
 Do not route performance through Chrome DevTools MCP's `lighthouse_audit`; that capability intentionally covers non-performance Lighthouse categories. Do not compare a single lab value directly with a field p75 as if they were equivalent samples.
 
-When adding or reviewing production collection, read [the first-party RUM reference](../performance/references/RUM.md). Prefer the `web-vitals` library because raw browser APIs do not by themselves implement every Core Web Vital's lifecycle and reporting rules.
+When adding or reviewing production collection, read [the first-party RUM reference](references/RUM.md). Prefer the `web-vitals` library because raw browser APIs do not by themselves implement every Core Web Vital's lifecycle and reporting rules.
 
 ---
 
@@ -225,4 +225,4 @@ startTransition(() => setExpensiveState(newValue));
 - [web.dev LCP](https://web.dev/articles/lcp)
 - [web.dev INP](https://web.dev/articles/inp)
 - [web.dev CLS](https://web.dev/articles/cls)
-- [Performance skill](../performance/SKILL.md)
+- [Measurement and repeatable verification](references/MEASUREMENT.md)

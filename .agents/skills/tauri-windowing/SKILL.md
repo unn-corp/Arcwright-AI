@@ -1,19 +1,6 @@
 ---
 name: tauri-windowing
-description: >
-  Create and manage native windows and UI chrome in Tauri v2 — WebviewWindow
-  (Rust WebviewWindowBuilder + JS WebviewWindow), multiple windows/multiwebview,
-  native menus (Menu/Submenu/MenuItem/PredefinedMenuItem), tray icons
-  (TrayIconBuilder), window customization (decorations false, transparency, custom
-  titlebar with data-tauri-drag-region), and the splashscreen pattern.
-  USE FOR: opening extra windows at runtime, building an application or context
-  menu, adding a system tray icon with a menu and click events, removing native
-  decorations and drawing a custom titlebar, hiding the main window behind a
-  splashscreen, and wiring the matching core:window / core:menu / core:tray
-  permissions.
-  DO NOT USE FOR: calling Rust from JS (see tauri-commands-ipc), Rust → frontend
-  events (see tauri-events), or the general permission model (see
-  tauri-capabilities).
+description: "Build Tauri v2 windows, native menus/tray, custom title bars, transparency, splashscreens, and related permissions. General capabilities, IPC, and events use their own skills."
 ---
 
 # Tauri v2 Windowing & Native UI

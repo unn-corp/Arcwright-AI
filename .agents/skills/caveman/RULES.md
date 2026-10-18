@@ -1,10 +1,8 @@
 # Caveman — Quick Rules
 
-> Load full `SKILL.md` when writing a substantial artifact. This sidecar is the fast ref.
+> Use for requested artifact compression; ordinary short answers need no extra style-skill read.
 
-Concise-output discipline for any written artifact. Cuts ~65% of tokens, keeps all
-technical substance. REQUIRED PRE-OUTPUT before writing specs/PRDs/briefs/reports/plans/
-decision-logs/LEARNINGS.
+Preserve technical substance while shortening prose. Follow the user's and host's readability requirements. Token savings are unmeasured; no fixed percentage is promised.
 
 ## Do
 - Drop articles, filler, pleasantries, hedging.

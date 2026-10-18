@@ -53,7 +53,7 @@ up the `safe` posture in `.claude/settings.json`:
   fork bombs, raw-disk writes, etc. *before* they run.
 - **Secret/key-file guard** (PreToolUse Write/Edit) — blocks writing AWS/GitHub/Slack tokens or
   private keys, and edits to `.env`/`.pem`.
-- **SessionStart context** — primes each session to run project-context and load the project's CLAUDE.md / AGENTS.md.
+- **SessionStart context** — points to the project's AGENTS.md; loads project-context only for missing task context.
 
 The guards are what make auto-accept safe to leave on. Three postures:
 
@@ -121,13 +121,26 @@ See the full team catalog below.
 | `/grill` | Adversarial pre-implementation design interrogation — locks the design before any code. |
 | `/tasks` | Decompose an epic/SPEC into task files with a dependency graph + conflict-free wave execution; optional GitHub Issues sync. |
 | `/pr-review` | Parallel 6-lens PR review with 0–100 confidence scoring and a ranked merge verdict. |
+| `/review-loop` | Ask which model to use, then find, fix, verify, and re-review substantive issues in bounded rounds. `/sol-loop` remains a compatibility alias. |
+| `/full-send` | Explicitly authorize implementation, verification, review, and a protected PR merge through Arcwright Code/T3 Code. |
+| `/full-stop` | Complete the same delivery checks, then leave an open PR ready for your merge. Never merges or enables automatic merging. |
 | `/code-graph` | Local symbol-dependency graph — query change blast radius without loading whole files. |
 | `/lsp` | Validate edits against `tsc`/`pyright` in a fix loop. |
 | `/commit`, `/commit-push-pr`, `/clean-gone` | Lightweight daily git trio (shows the message before committing). |
-| `/claude-md` | Audit CLAUDE.md, capture session learnings, prune stale lines. |
+| `/agent-instructions` | Audit or maintain shared AGENTS.md rules and required host imports. `/claude-md` remains a compatibility alias. |
 | `/correct-course` | Structured mid-task course-correction when a constraint or blocker invalidates the plan. |
 | `/caveman` | Concise-output mode — cut output tokens while keeping technical accuracy. |
 | `/explain-mode` | Verbose teaching dial — explain the "why" or leave learning checkpoints. |
+
+Review Loop uses the selected model through supported native or Arcwright Code/T3
+Code delegation. Full Send and Full Stop retain Arcwright Code/T3 Code PR
+registration, watching, and evidence operations. Codex invokes them as
+`$review-loop`, `$full-send`, and `$full-stop`. The delivery skills require an
+explicit request and use Review Loop for review and repair; an explicit reviewer
+choice is reused for that run.
+Their generated commits, PR content, comments, and handoffs contain no AI
+attribution or model credits. They do not authorize the separate Unnamed
+Development MCP.
 
 ---
 
@@ -230,6 +243,8 @@ WSL2 dual-home aware — terminal tools (Claude Code, Codex, Hermes, OpenCode) u
 | `--output-folder <path>` | `_arcwright-output` | Where Arcwright writes output artifacts |
 | `--no-teams` | teams included | Skip the 17 team-* skills and `/team` command |
 | `--docker-check` | not installed | Opt in to `/docker-check` and the `docker-type-check` skill |
+| `--matt-pocock` | not installed | Install the optional Matt Pocock skill pack and `/matt-pocock` router; retained on update |
+| `--no-matt-pocock` | omitted | Remove the optional pack on update, preserving modified files |
 | `--model-surface` | false | Install/configure Hermes CLI as the primary model surface through OmniRoute `agent-fallback` (grouped Claude/Codex subscriptions + free fallback). Selects Hermes automatically and installs the Hermes CLI if missing. |
 | `--omniroute-base-url <url>` | env or `http://omniroute:20128/v1` | OmniRoute OpenAI-compatible base URL for `--model-surface` |
 | `--omniroute-api-key <key>` | env | OmniRoute gateway API key for `--model-surface`; prefer `ARCWRIGHT_OMNIROUTE_API_KEY` or `OMNIROUTE_API_KEY` |
@@ -265,7 +280,7 @@ Global installs write to user-level config dirs instead of a project:
 | Target | Linux / macOS | Windows (WSL2) |
 |--------|---------------|----------------|
 | Core modules | `~/.arcwright/` | `~/.arcwright/` (WSL Linux home) |
-| Claude Code assets | `~/.claude/` | `~/.claude/` (WSL Linux home) |
+| Claude Code assets | `~/.claude/`; shared rules in `~/.arcwright/AGENTS.md` via import | same, WSL Linux home |
 | Codex assets | `~/.codex/AGENTS.md`, `~/.agents/skills/` | same, WSL Linux home |
 | Hermes assets | `~/.hermes/skills/`, `~/.hermes/skill-bundles/` | same, WSL Linux home |
 | OpenCode assets | `~/.config/opencode/AGENTS.md`, `~/.agents/skills/`, `~/.config/opencode/commands/` | same, WSL Linux home |
@@ -395,8 +410,43 @@ The build pipeline:
 
 Source of truth lives in `_arcwright/` (modules). `packages/agent-orchestration/src/` is wiped and regenerated on every build — never edit it directly.
 
+Workshop instructions live in [AGENTS.md](AGENTS.md). Root and nested workshop
+`CLAUDE.md` imports are retired; do not recreate them. The shared file records the
+retirement policy honored by the installer. See the [workshop guide](docs/workshop-guide.md#installer).
+
+To manage Arcwright Code and skills across connected devices from this checkout,
+run `npm run fleet:init`. Inventory, rollout records, artifacts, and recovery notes
+stay in Git-ignored `.fleet/`; routine updates need no repository commits. See
+[fleet setup and update standards](docs/fleet-management.md).
+
+### Locally maintained Matt Pocock skills
+
+Arcwright maintains local versions of 27 engineering and productivity skills adapted from [`mattpocock/skills`](https://github.com/mattpocock/skills), under `.agents/skills/matt-pocock*/`. These are ordinary editable source, with supporting resources, licenses, and provenance included. Builds and CI need no upstream checkout. The `matt-pocock-*` invocation names remain stable.
+
+Enable the optional pack with `--matt-pocock` during installation or update. Use `/matt-pocock` to choose a skill, or `$matt-pocock` in Codex. Source checkouts already contain the skills and command wrappers. See [setup, skill catalog, and maintenance procedure](docs/matt-pocock-skills.md).
+
+### Taste frontend skill
+
+The default library includes [Taste v2](.agents/skills/design-taste-frontend/SKILL.md) from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill). Use `$design-taste-frontend` in Codex or `/design-taste-frontend` in hosts with generated skill commands for landing pages, marketing sites, portfolios, and public product pages. It includes the direction libraries, imagery discovery, source checks, and a three-round visual critique loop, while preserving the project's `DESIGN.md` and preferring native Arcwright Code/T3 Code preview tools.
+
+Working files and standalone browser profiles stay under the active project's `_arcwright/_memory/skill-runs/taste-<run>/`; host-managed screenshots use conversation evidence storage. The helpers enforce project output boundaries. Source checks and drawing need Node 18+; the optional standalone browser inspector needs Node 22+ and Chrome, Edge, or Chromium. See the [source, license, and adaptation notes](.agents/skills/design-taste-frontend/UPSTREAM.md).
+
+### Context-efficient model invocation
+
+Skills use short entrypoints and conditional topic guides. Agent profiles accept a supplied task directly and share one runtime contract; menus are optional navigation. Native skill catalogs supply discovery instead of an additional full catalog in always-loaded Kiro steering.
+
+Models can select all installed skills, including the optional Matt Pocock pack. The portable [`arcwright` skill](.agents/skills/arcwright/SKILL.md) also resolves slash commands and specialist profiles for hosts without an equivalent native invocation surface. Its lookup returns a small set of matching installed routes. Optional packs remain opt-in, and invocation never grants extra authority for external actions.
+
+Run `npm run audit:context` for measured entrypoint sizes and invocation blockers. The build rejects disabled model invocation and incomplete agent profiles. See the [cleanup report](docs/research/context-efficiency-2026-10-17.md) for scope, measured savings, validation, and limits.
+
 ---
 
 ## License
 
 MIT
+
+## Keeping imported skills current
+
+The [upstream source record](docs/skill-sources.json) pins reviewed repositories and source files, licenses, local adaptations, and file hashes. The [October 2026 refresh](docs/research/upstream-skills-refresh-2026-10-17.md) records the changes and validation. Run `npm run check:skill-sources` to detect unrecorded local source drift; CI runs the same check before packaging. After reviewing an intentional edit, `node build/skill-sources.js --refresh-local` updates only local hashes. It does not fetch upstream, change source pins, or establish that an adapted file matches upstream. Review source revisions and upstream hashes separately when importing new material.
+
+Superpowers-derived skills keep their installed bundles read-only. Their generated notes, ledgers, review packages, logs, fixtures, and diagrams live under the active project’s `_arcwright/_memory/skill-runs/`; new skill drafts use `_arcwright/_memory/skills/`. The [runtime storage contract](.agents/skills/SOURCES-SUPERPOWERS.md) explains project selection and helper safeguards. Local runs are excluded from package builds.

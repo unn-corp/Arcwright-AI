@@ -1,12 +1,12 @@
 ---
 name: arcwright-agent-builder
-description: Agent Building Expert
+description: "Create, edit, and validate Arcwright agent definitions for the requested role and workflow."
 ---
 
 <agent-activation CRITICAL="TRUE">
-1. LOAD {project-root}/_arcwright/awb/agents/agent-builder.md
-2. READ its entire contents
-3. EXECUTE every critical_action in order
-4. PRESENT the menu
-5. WAIT for user input
+1. Resolve {project-root}/_arcwright/awb/agents/agent-builder.md, falling back to the installed global Arcwright module tree.
+2. Read the profile and shared agent runtime once per task.
+3. Reuse the capability brief; load only relevant skills and references.
+4. Execute the supplied task immediately; use the relevant workflow without a menu round trip.
+5. Show a menu only when there is no actionable task or the user requests one.
 </agent-activation>

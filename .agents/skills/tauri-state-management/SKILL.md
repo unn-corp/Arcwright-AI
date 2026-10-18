@@ -1,14 +1,6 @@
 ---
 name: tauri-state-management
-description: >
-  Share application state across Tauri v2 commands — registering state with
-  Manager::manage, accessing it via State<T> in commands, and using interior mutability
-  (Mutex) for state that changes at runtime.
-  USE FOR: holding a database pool, config, counters, caches, or any data multiple commands
-  must read/write; debugging "state not managed" panics or borrow/mutation errors on
-  shared state.
-  DO NOT USE FOR: passing one-off arguments to a command (see tauri-commands-ipc), or
-  pushing data to the frontend (see tauri-events).
+description: "Manage shared Rust state and frontend synchronization in Tauri, including locking and lifecycle concerns."
 ---
 
 # Tauri v2 State Management

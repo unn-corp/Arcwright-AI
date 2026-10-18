@@ -63,7 +63,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # Vitest reads coverage.thresholds from vite/vitest config (80/80/70).
+      # Vitest reads existing coverage.thresholds from vite/vitest config.
       # Jest equivalent: `npx jest --coverage` with coverageThreshold in config.
       - run: npx vitest run --coverage
 
@@ -81,7 +81,8 @@ jobs:
       - run: ruff format --check .
       - run: ruff check .
       - run: pyright
-      - run: pytest --cov --cov-fail-under=80
+      # Keep project-configured coverage requirements; agree new floors explicitly.
+      - run: pytest --cov
 
   # ── Gate 4+7: security — secret scan, dependency vuln + SAST ────────────────
   # Scanners run as NATIVE release binaries, not via their GitHub Actions or

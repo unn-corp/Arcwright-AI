@@ -1,5 +1,5 @@
 ---
-description: "Use when planning, implementing, deploying, debugging, or reviewing AWS Amplify Gen 2/Hosting applications, ampx commands, amplify.yml, amplify_outputs.json, Amplify Functions/Data/Auth/Storage, or a frontend whose bu..."
+description: "Build, debug, or review AWS Amplify Gen 2 and Hosting apps, including ampx, build configuration, runtime roles, and application performance."
 ---
 
 Load and run the `amplify-best-practices` skill (`.agents/skills/amplify-best-practices/SKILL.md`) against $ARGUMENTS. Follow the skill exactly.

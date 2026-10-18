@@ -2,6 +2,14 @@
 
 Reference: `androidx/navigation/navigation-compose/src/commonMain/kotlin/androidx/navigation/compose/`
 
+> **Compose Multiplatform readers:** Navigation 2 (the `NavHost` / `NavController`
+> API documented below) targets Android. Compose Multiplatform support for Nav 2
+> in `commonMain` is partial and historically lagged Android. For new
+> multiplatform projects (Android + iOS + Desktop + Web), prefer Navigation 3 —
+> see `navigation-migration.md` for the API differences and a decision guide.
+> The Nav 2 patterns in this file remain accurate for Android-only apps and for
+> understanding the migration target.
+
 ## Setup
 
 ### Basic NavHost and NavController
@@ -278,6 +286,35 @@ Scaffold(
     NavHost(navController, startDestination = Home()) {
         composable<Home> { HomeScreen() }
         composable<Profile> { ProfileScreen() }
+    }
+}
+```
+
+Executable smoke check for the bottom bar semantics:
+
+```kotlin verify
+// name: bottom-navigation-renders-tab-labels
+// repeat: 3
+// assert: text = "Home"
+// assert: text = "Profile"
+// assert: content-description = "Home tab"
+// assert: content-description = "Profile tab"
+// assert-not: text = "Settings"
+@Composable
+fun Subject() {
+    NavigationBar {
+        NavigationBarItem(
+            selected = true,
+            onClick = {},
+            icon = { Box(Modifier.semantics { contentDescription = "Home tab" }) },
+            label = { Text("Home") }
+        )
+        NavigationBarItem(
+            selected = false,
+            onClick = {},
+            icon = { Box(Modifier.semantics { contentDescription = "Profile tab" }) },
+            label = { Text("Profile") }
+        )
     }
 }
 ```

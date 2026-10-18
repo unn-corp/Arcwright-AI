@@ -5,11 +5,19 @@
 
 Patterns for subtitle extraction, embedding, and burning.
 
+## Table of Contents
+
+- [Related Scenarios](#related-scenarios)
+- [Quick Start](#quick-start)
+- [Decision Guide](#decision-guide)
+- [Common Patterns](#common-patterns)
+- [Advanced Topics](#advanced-topics)
+
 ## Related Scenarios
 
 | Scenario | Content |
 |----------|---------|
-| [transcoding.md](transcoding.md) | Video transcoding with subtitle streams |
+| [pipelines_multi_output.md](pipelines_multi_output.md) | Pipelines that carry subtitle streams (stream-copy while re-encoding video) |
 | [audio_extraction.md](audio_extraction.md) | Stream extraction patterns |
 
 ---
@@ -43,13 +51,13 @@ FfmpegCommand::new()
 **Native burn-in with `SubtitleFilter` (preferred, ez-ffmpeg)** — a pure-Rust
 renderer runs inside the frame pipeline, so this needs **no `--enable-libass`
 FFmpeg build flag, no system libass, and no temporary subtitle files**. It works
-with any FFmpeg build configuration in the supported 7.0–8.x range and accepts
+with any FFmpeg build configuration in the supported 7.1–8.x range and accepts
 in-memory subtitle content (e.g. ASR output).
 
 Enable the feature in `Cargo.toml`:
 ```toml
 [dependencies]
-ez-ffmpeg = { version = "0.13.1", features = ["subtitle"] }
+ez-ffmpeg = { version = "0.18.0", features = ["subtitle"] }
 ```
 
 ```rust

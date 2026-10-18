@@ -1,3 +1,7 @@
+---
+description: Migrate an existing BMAD installation to Arcwright, inspecting the migration plan and preserving project customizations.
+---
+
 # Arcwright Migration — bmad to arcwright
 
 Migrate this project from the old bmad naming convention to arcwright.

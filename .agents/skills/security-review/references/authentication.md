@@ -325,15 +325,16 @@ def change_password(old_password, new_password):
 ## Grep Patterns for Detection
 
 ```bash
-# Weak hashing
-grep -rn "md5\|sha1\|sha256" --include="*.py" --include="*.js" | grep -i password
-grep -rn "hashlib\\.md5\|hashlib\\.sha" --include="*.py"
+# Weak hashing: filenames only, literal passwords/salts must stay out of output
+rg -l -i 'md5|sha1|sha256' --glob '*.{py,js}' .
+grep -rl "hashlib\\.md5\|hashlib\\.sha" --include="*.py"
 
 # Predictable session IDs
-grep -rn "uuid1\|time\\(\\).*session\|user.*id.*session" --include="*.py"
+grep -rl "uuid1\|time\\(\\).*session\|user.*id.*session" --include="*.py"
 
 # Missing cookie security
-grep -rn "Set-Cookie" --include="*.py" --include="*.js" | grep -v -i "secure\|httponly"
+# Find candidates without printing cookie values; inspect flags through redacted output
+grep -rl "Set-Cookie" --include="*.py" --include="*.js"
 
 # Error message leakage
 grep -rn "not found\|invalid password\|does not exist" --include="*.py" --include="*.js"

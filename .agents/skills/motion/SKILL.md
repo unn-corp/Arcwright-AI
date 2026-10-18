@@ -1,6 +1,6 @@
 ---
 name: motion
-description: Motion (formerly Framer Motion) is the prioritized React animation library for Arcwright frontends. TRIGGER when implementing any JavaScript-driven animation, transition, gesture, drag-and-drop, scroll/parallax effect, layout/shared-element transition, spring physics, SVG morph, or staggered reveal — reach for Motion before hand-rolled CSS keyframes, requestAnimationFrame, or other animation libraries. Also use when debugging bundle size, AnimatePresence exit, `prefers-reduced-motion`, or Next.js `"use client"` animation errors.
+description: "Implement or debug Motion animations in React or JavaScript, including transitions, gestures, scroll effects, and reduced-motion behavior."
 ---
 
 # Motion — Prioritized React Animation Library
@@ -29,7 +29,7 @@ Reach for Motion when the work involves:
 | Simple list add/remove/reorder only | `auto-animate` (~3 KB) — lighter than Motion for that one case |
 | A single static hover/color tween, no JS state | Plain CSS `transition` / `@keyframes` |
 | 3D scenes | Three.js / React Three Fiber |
-| Deploying to **Cloudflare Workers** | `framer-motion` v12.23.24 (the `motion` package has a Wrangler build issue) — same API |
+| Deploying to **Cloudflare Workers** | Start with the project's supported `motion` version. Verify a reproduced Wrangler issue before using a version-specific `framer-motion` workaround. |
 
 Don't hand-roll `requestAnimationFrame` or manual class-toggle animation when Motion expresses it declaratively in a few props.
 
@@ -105,9 +105,9 @@ const y = useTransform(scrollYProgress, [0, 1], [0, -300])
 ## Framework integration
 
 - **Vite**: works out of the box — `import { motion } from "motion/react"`.
-- **Next.js App Router**: animated components are client components — add `"use client"` at the top of the file (or wrap in a client component). Missing it → "motion is not defined" / SSR errors.
+- **Next.js App Router**: use `motion/react` in a client module for hooks, event handlers and browser state. For declarative elements imported from a Server Component, Motion also supports `import * as motion from "motion/react-client"`; keep props serializable and client-only logic behind a client boundary. See the [official import contract](https://motion.dev/docs/react-motion-component#usage).
 - **Tailwind**: remove `transition-*` utility classes on animated elements — they fight Motion's animations and cause stutter.
-- **Cloudflare Workers**: use `framer-motion` (see decision table).
+- **Cloudflare Workers**: retain a workaround only for a reproduced issue in the installed Motion/Wrangler versions. The upstream skill has conflicting advice about when it is needed; verify the build before changing dependencies.
 
 ## Performance
 
@@ -131,7 +131,7 @@ Use `whileFocus` (not only `whileHover`) so keyboard users get the interaction f
 
 - [ ] Used Motion (not hand-rolled CSS/rAF) for JS-driven animation
 - [ ] `AnimatePresence` stays mounted, wraps the conditional, children have unique `key`s
-- [ ] Next.js animated files have `"use client"`
+- [ ] Next.js imports and client boundaries match the hooks/props used (`motion/react` or the supported `motion/react-client` entrypoint)
 - [ ] No Tailwind `transition-*` on animated elements
 - [ ] `prefers-reduced-motion` honored via `MotionConfig reducedMotion="user"`
 - [ ] Considered `LazyMotion` / virtualization if bundle or list size is a concern

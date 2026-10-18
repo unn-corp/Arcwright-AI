@@ -1,10 +1,11 @@
 ---
 name: agent-evaluation
-description: Evaluate an AI agent's behavior (output quality, tool-call trajectory, multi-turn interaction), not just its code. Use when building an eval suite for an agent, measuring agent quality/regressions, judging whether an agent's answers and tool use are correct, or when someone asks "how do I test my agent" or "is my agent good enough to ship". Distinct from QA/verifier (which check code correctness and integration wiring) and from unit tests (which check functions).
+description: "Evaluate agent outputs, tool use, recovery, and cost, including comparisons of skill revisions. Use for agent behavior rather than application unit tests."
 allowed-tools: Read, Grep, Glob, Bash, Write, Edit
-version: 1.0.0
-author: arcwright
-tags: [agents, evaluation, llm-as-judge, testing, quality]
+metadata:
+  version: 1.0.0
+  author: arcwright
+  tags: [agents, evaluation, llm-as-judge, testing, quality]
 ---
 
 # Agent Evaluation
@@ -41,6 +42,8 @@ Pick the loosest match that still catches real regressions; exact matching on a 
 4. **Analyze** - score with the methods above; for each failure do a root-cause pass (bad tool result the model trusted? missing tool? prompt gap? judge false-negative?). Fix the highest-frequency root cause first, then re-run.
 
 Convention: keep the eval suite in an `eval/` directory as a sibling of the agent it tests, so the tests version alongside the agent.
+
+For skill/workflow authoring or an upstream prompt update, read [skill comparisons](references/skill-comparisons.md) for baseline, variant, quality, and trigger cases. Reuse the current host's authorized native tools and models; no separate runner installation or model switch is implied.
 
 ## Failure detection and root cause
 

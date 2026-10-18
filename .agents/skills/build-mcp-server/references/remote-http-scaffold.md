@@ -108,7 +108,7 @@ if __name__ == "__main__":
     mcp.run(transport="http", host="0.0.0.0", port=3000)
 ```
 
-FastMCP derives the JSON schema from type hints and the docstring becomes the tool description. Keep docstrings terse and action-oriented — they land in Claude's context window verbatim.
+FastMCP derives the JSON schema from type hints and the docstring becomes the tool description. Keep docstrings terse and action-oriented — they land in the model's context window verbatim.
 
 ---
 

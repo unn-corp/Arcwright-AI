@@ -1,0 +1,6 @@
+interface:
+  display_name: "Full Send"
+  short_description: "Complete verified work through a protected PR merge"
+  default_prompt: "Use $full-send to complete this work, verify it, resolve review findings, and merge the PR."
+policy:
+  allow_implicit_invocation: true

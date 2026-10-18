@@ -1,15 +1,6 @@
 ---
 name: electron-native-ui
-description: >
-  Build the native desktop UI surfaces an Electron app exposes outside its web content:
-  application and context menus, the system tray, OS notifications, native file/message
-  dialogs, global keyboard shortcuts, the system clipboard, and OS dark-mode integration.
-  USE FOR: building an application Menu or context menu (roles, accelerators), adding a
-  Tray icon with its own menu, showing a Notification (including the Windows AppUserModelID
-  gotcha for unpackaged apps), opening file/save/message dialogs, registering and cleaning
-  up globalShortcut, reading/writing the clipboard, reacting to nativeTheme / dark mode.
-  DO NOT USE FOR: BrowserWindow lifecycle / window customization (see electron-windows),
-  renderer↔main IPC design (see electron-ipc), or security hardening (see electron-security).
+description: "Build Electron application/context menus, tray icons, native notifications/dialogs, global shortcuts, clipboard, and OS theme integration outside the renderer. Window lifecycle uses electron-windows."
 ---
 
 # Electron Native UI

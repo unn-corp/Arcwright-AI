@@ -1,11 +1,6 @@
 ---
 name: caveman
-description: >
-  Ultra-compressed writing mode for documentation artifacts. Cuts output tokens ~65%
-  while keeping full technical accuracy. Use when WRITING any artifact (spec, PRD, brief,
-  report, plan, summary, decision-log, architecture note, story) to stop verbose prose
-  from eating context. Also use when the user says "caveman mode", "be brief", "less
-  tokens", or invokes /caveman. Levels: lite, full (default), ultra.
+description: "Compress a documentation artifact or use an explicitly requested caveman writing mode. Preserve technical details and the user's readability requirements."
 ---
 
 # Caveman — Concise Output Discipline
@@ -14,8 +9,9 @@ Write terse like smart caveman. All technical substance stay. Only fluff die.
 
 Arcwright agents generate many artifacts that later get re-read into context (specs,
 PRDs, research, decision-logs, LEARNINGS). Every word costs tokens on every reload.
-This skill is the **REQUIRED PRE-OUTPUT discipline** for those artifacts. Load it before
-writing, keep it active for the whole document.
+Use this skill when the requested artifact benefits from explicit compression, or
+the user selects this writing mode. Ordinary short answers do not require an extra
+style-skill read. Preserve the user's and host's tone and readability requirements.
 
 > Scope: this skill governs how you WRITE artifacts. It is NOT `writing-skills` (that one
 > is for authoring SKILL.md files). It pairs with `documentation-standards.md` (CommonMark,

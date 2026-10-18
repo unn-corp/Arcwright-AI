@@ -1,14 +1,6 @@
 ---
 name: tauri-capabilities
-description: >
-  The Tauri v2 security model — permissions, capabilities, scopes, and the runtime ACL
-  that replace the v1 allowlist. Capability files in src-tauri/capabilities/ grant
-  permission identifiers to specific windows; missing grants cause silent failures.
-  USE FOR: granting a window access to a command or plugin API, debugging "not allowed
-  / forbidden" errors or commands that silently do nothing, scoping filesystem/shell/http
-  access, or understanding the v1 allowlist → v2 capability migration.
-  DO NOT USE FOR: CSP and the isolation pattern (see tauri-security), writing the commands
-  themselves (see tauri-commands-ipc), or adding a plugin (see tauri-plugins).
+description: "Configure or review Tauri capability scopes and plugin permissions for the intended windows and commands."
 ---
 
 # Tauri v2 Permissions & Capabilities

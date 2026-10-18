@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vite
 import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import installer from '../lib/installer.js';
 
 const { install, uninstall } = installer;
@@ -53,6 +53,72 @@ const baseOpts = (over = {}) => ({
 });
 
 describe('install() — fresh project install', () => {
+  it('keeps the Matt Pocock pack optional across every platform', async () => {
+    await install(baseOpts({ tools: 'claude-code,cursor,kiro,codex,hermes,opencode,grok' }));
+    for (const rel of [
+      '.agents/skills/matt-pocock/SKILL.md', '.kiro/skills/matt-pocock/SKILL.md',
+      '.claude/commands/matt-pocock.md', '.cursor/commands/matt-pocock.md',
+      '.opencode/commands/matt-pocock.md', '.grok/commands/matt-pocock.md',
+      '.kiro/agents/matt-pocock.json',
+      '.agents/skills/arcwright/commands/matt-pocock.md',
+      '.kiro/skills/arcwright/commands/matt-pocock.md',
+    ]) expect(fs.existsSync(path.join(projectDir, rel))).toBe(false);
+    expect(fs.existsSync(path.join(homeDir, '.hermes/skills/matt-pocock/SKILL.md'))).toBe(false);
+    expect((await readManifest(path.join(projectDir, '_arcwright'))).mattPocock).toBe(false);
+    const router = path.join(projectDir, '.agents/skills/arcwright/scripts/find-entrypoint.cjs');
+    const routes = JSON.parse(execFileSync(process.execPath, [router, '/debug'], { cwd: projectDir, encoding: 'utf8' }));
+    expect(routes[0]).toMatchObject({ name: 'debug', kind: 'command', path: 'commands/debug.md' });
+    for (const name of ['arcwright', 'full-send', 'full-stop', 'review-loop', 'sol-loop']) {
+      const agent = JSON.parse(fs.readFileSync(path.join(projectDir, `.kiro/agents/${name}.json`), 'utf8'));
+      expect(agent.tools).toContain('subagent');
+      expect(agent.includeMcpJson).toBe(true);
+    }
+  }, 60000);
+
+  it('installs and retains the namespaced pack, then removes only unchanged files when disabled', async () => {
+    const tools = 'claude-code,cursor,kiro,codex,hermes,opencode,grok';
+    await install(baseOpts({ tools, mattPocock: true }));
+    for (const rel of [
+      '.agents/skills/matt-pocock/SKILL.md', '.kiro/skills/matt-pocock/SKILL.md',
+      '.claude/commands/matt-pocock.md', '.cursor/commands/matt-pocock.md',
+      '.opencode/commands/matt-pocock.md', '.grok/commands/matt-pocock.md',
+      '.kiro/agents/matt-pocock.json', '.agents/skills/matt-pocock-tdd/LICENSE',
+      '.agents/skills/arcwright/commands/matt-pocock.md',
+      '.kiro/skills/arcwright/commands/matt-pocock.md',
+    ]) expect(fs.existsSync(path.join(projectDir, rel))).toBe(true);
+    expect(fs.readFileSync(path.join(projectDir, '.agents/skills/grill-me/SKILL.md'), 'utf8'))
+      .toBe(fs.readFileSync(path.join(SRC_DIR, '.agents/skills/grill-me/SKILL.md'), 'utf8'));
+    await install(baseOpts({ action: 'update', tools }));
+    expect((await readManifest(path.join(projectDir, '_arcwright'))).mattPocock).toBe(true);
+    const custom = path.join(projectDir, '.agents/skills/matt-pocock-tdd/SKILL.md');
+    fs.appendFileSync(custom, '\nUser customization\n');
+    await install(baseOpts({ action: 'update', tools, mattPocock: false }));
+    expect((await readManifest(path.join(projectDir, '_arcwright'))).mattPocock).toBe(false);
+    expect(fs.readFileSync(custom, 'utf8')).toContain('User customization');
+    expect(fs.existsSync(path.join(projectDir, '.agents/skills/matt-pocock/SKILL.md'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, '.kiro/agents/matt-pocock.json'))).toBe(false);
+    expect(fs.existsSync(path.join(homeDir, '.hermes/skills/matt-pocock/SKILL.md'))).toBe(false);
+  }, 60000);
+
+  it('installs the optional pack globally and removes it through the public CLI', async () => {
+    const bin = path.join(PKG_ROOT, 'bin/arcwright.js');
+    const run = (command, ...flags) => execFileSync(process.execPath, [
+      bin, command, '--global', '--yes', '--tools', 'claude-code,codex,hermes,kiro,opencode,grok,cursor',
+      '--directory', projectDir, '--hooks', 'none', ...flags,
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    run('install', '--matt-pocock');
+    for (const dir of ['.claude/skills', '.agents/skills', '.hermes/skills', '.kiro/skills']) {
+      expect(fs.existsSync(path.join(homeDir, dir, 'matt-pocock/SKILL.md'))).toBe(true);
+    }
+    run('update');
+    expect((await readManifest(path.join(homeDir, '.arcwright'))).mattPocock).toBe(true);
+    run('update', '--no-matt-pocock');
+    expect((await readManifest(path.join(homeDir, '.arcwright'))).mattPocock).toBe(false);
+    for (const dir of ['.claude/skills', '.agents/skills', '.hermes/skills', '.kiro/skills']) {
+      expect(fs.existsSync(path.join(homeDir, dir, 'matt-pocock/SKILL.md'))).toBe(false);
+    }
+  }, 60000);
+
   it('creates _arcwright, a manifest, and Claude Code assets', async () => {
     await install(baseOpts());
 
@@ -361,24 +427,101 @@ describe('install() — update / idempotency', () => {
     expect(fs.existsSync(path.join(projectDir, '.arcout'))).toBe(false);
   }, 120000);
 
-  it('repeated updates leave CLAUDE.md managed blocks intact (no marker loss or duplication)', async () => {
+  it('repeated updates keep shared rules in AGENTS.md and one stable Claude import', async () => {
     await install(baseOpts());
+    const agentsMd = path.join(projectDir, 'AGENTS.md');
     const claudeMd = path.join(projectDir, 'CLAUDE.md');
-    const first = await fs.readFile(claudeMd, 'utf8');
+    const first = await fs.readFile(agentsMd, 'utf8');
+    const firstImport = await fs.readFile(claudeMd, 'utf8');
+    expect(first).toContain('Use `subagent-protocol` as the shared delegation lifecycle');
+    expect(firstImport).toBe('<!-- arcwright-instructions-start -->\n@AGENTS.md\n<!-- arcwright-instructions-end -->\n');
+    expect(fs.existsSync(path.join(projectDir, '.claude', 'CLAUDE.md'))).toBe(false);
 
     await install(baseOpts({ action: 'update' }));
     await install(baseOpts({ action: 'update' }));
-    const third = await fs.readFile(claudeMd, 'utf8');
+    const third = await fs.readFile(agentsMd, 'utf8');
 
     expect(third).toBe(first);
+    expect(await fs.readFile(claudeMd, 'utf8')).toBe(firstImport);
     const count = (s, needle) => s.split(needle).length - 1;
     for (const marker of [
       '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->',
-      '<!-- arcwright-orchestration-start -->', '<!-- arcwright-orchestration-end -->',
-      '<!-- arcwright-proactive-start -->', '<!-- arcwright-proactive-end -->',
     ]) {
       expect(count(third, marker)).toBe(1);
     }
+  }, 120000);
+
+  it('honors explicit Claude import retirement across installation and update', async () => {
+    const policy = '# Project conventions\n\n<!-- arcwright-claude-imports: retired -->\nUse AGENTS.md only.\n';
+    const agentsMd = path.join(projectDir, 'AGENTS.md');
+    const rootClaude = path.join(projectDir, 'CLAUDE.md');
+    const nestedClaude = path.join(projectDir, '.claude', 'CLAUDE.md');
+    fs.writeFileSync(agentsMd, policy);
+    fs.outputFileSync(rootClaude, '<!-- arcwright-instructions-start -->\n@AGENTS.md\n<!-- arcwright-instructions-end -->\n');
+    fs.outputFileSync(nestedClaude, '<!-- arcwright-instructions-start -->\n@../AGENTS.md\n<!-- arcwright-instructions-end -->\n');
+
+    await install(baseOpts());
+    expect(fs.existsSync(rootClaude)).toBe(false);
+    expect(fs.existsSync(nestedClaude)).toBe(false);
+    const first = await fs.readFile(agentsMd, 'utf8');
+    expect(first).toContain(policy.trimEnd());
+    expect(first).toContain('Run focused tests first, then required checks');
+
+    await install(baseOpts({ action: 'update' }));
+    expect(fs.existsSync(rootClaude)).toBe(false);
+    expect(fs.existsSync(nestedClaude)).toBe(false);
+    expect(await fs.readFile(agentsMd, 'utf8')).toBe(first);
+  }, 60000);
+
+  it('preserves unowned host instructions when Claude imports are retired', async () => {
+    const prefix = '# Private host preference\n\nKeep this exact spacing.\n\n';
+    const suffix = '\n\n## Local note\nKeep this too.\n';
+    const imported = '<!-- arcwright-instructions-start -->\n@AGENTS.md\n<!-- arcwright-instructions-end -->';
+    const rootClaude = path.join(projectDir, 'CLAUDE.md');
+    const nestedClaude = path.join(projectDir, '.claude', 'CLAUDE.md');
+    const personal = '# Independent host instruction\nDo not move private content.\n';
+    fs.writeFileSync(path.join(projectDir, 'AGENTS.md'), '<!-- arcwright-claude-imports: retired -->\n');
+    fs.outputFileSync(rootClaude, prefix + imported + suffix);
+    fs.outputFileSync(nestedClaude, personal);
+
+    await install(baseOpts());
+    expect(await fs.readFile(rootClaude, 'utf8')).toBe(prefix + suffix);
+    expect(await fs.readFile(nestedClaude, 'utf8')).toBe(personal);
+    expect(await fs.readFile(path.join(projectDir, 'AGENTS.md'), 'utf8')).not.toContain('Private host preference');
+    expect(await fs.readFile(path.join(projectDir, 'AGENTS.md'), 'utf8')).not.toContain('Independent host instruction');
+  }, 60000);
+
+  it('migrates owned Claude rules without moving user content, and removes imports on uninstall', async () => {
+    const personal = '# Host preferences\n\nKeep this spacing.\n\n\n';
+    const owned = '<!-- arcwright-agent-start -->\nOld package rules\n<!-- arcwright-agent-end -->';
+    const legacy = '<!-- arcwright-orchestration-start -->\nOld model policy\n<!-- arcwright-orchestration-end -->';
+    const trailing = '\n\n## Local notes\nKeep these too.\n';
+    const rootClaude = path.join(projectDir, 'CLAUDE.md');
+    const nestedClaude = path.join(projectDir, '.claude', 'CLAUDE.md');
+    fs.outputFileSync(rootClaude, personal + owned + legacy + trailing);
+    fs.outputFileSync(nestedClaude, personal + owned + trailing);
+    fs.writeFileSync(path.join(projectDir, 'AGENTS.md'), '# Project conventions\nKeep this rule.\n');
+
+    await install(baseOpts());
+    const shared = await fs.readFile(path.join(projectDir, 'AGENTS.md'), 'utf8');
+    expect(shared).toContain('# Project conventions\nKeep this rule.');
+    expect(shared).toContain('Run focused tests first, then required checks');
+    expect(shared).not.toContain('Host preferences');
+    for (const [file, relative] of [[rootClaude, 'AGENTS.md'], [nestedClaude, '../AGENTS.md']]) {
+      const content = await fs.readFile(file, 'utf8');
+      const block = `<!-- arcwright-instructions-start -->\n@${relative}\n<!-- arcwright-instructions-end -->`;
+      expect(content).toBe(personal + block + trailing);
+      expect(await fs.realpath(path.resolve(path.dirname(file), relative))).toBe(await fs.realpath(path.join(projectDir, 'AGENTS.md')));
+    }
+
+    await uninstall({ directory: projectDir, yes: true });
+    for (const file of [rootClaude, nestedClaude]) {
+      const content = await fs.readFile(file, 'utf8');
+      expect(content).toContain('Host preferences');
+      expect(content).toContain('Keep these too.');
+      expect(content).not.toContain('@');
+    }
+    expect(await fs.readFile(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('Keep this rule.');
   }, 120000);
 });
 
@@ -418,12 +561,25 @@ describe('install() — global install', () => {
     expect(fs.existsSync(path.join(homeDir, '.claude'))).toBe(true);
   }, 60000);
 
-  it('writes the Claude rules file to the global ~/.claude dir, not the cwd project', async () => {
+  it('keeps global shared rules in ~/.arcwright/AGENTS.md and preserves personal Claude instructions', async () => {
+    const personal = '# Personal instructions\n\nPrivate local preference.\n';
+    fs.outputFileSync(path.join(homeDir, '.claude', 'CLAUDE.md'), personal);
+    fs.outputFileSync(path.join(homeDir, '.arcwright', 'AGENTS.md'), '# Shared preference\nKeep this convention.\n');
     await install(baseOpts({ global: true, directory: projectDir }));
-    expect(fs.existsSync(path.join(homeDir, '.claude', 'CLAUDE.md'))).toBe(true);
-    // Pre-fix, --global fell back to <cwd>/.claude/CLAUDE.md and littered the
-    // directory the user happened to run from.
+    const shared = await fs.readFile(path.join(homeDir, '.arcwright', 'AGENTS.md'), 'utf8');
+    expect(shared).toContain('## Skill selection and test effort');
+    expect(shared).toContain('Keep this convention.');
+    expect(shared).not.toContain('Private local preference.');
+    expect(await fs.readFile(path.join(homeDir, '.claude', 'CLAUDE.md'), 'utf8')).toBe(personal + '\n<!-- arcwright-instructions-start -->\n@../.arcwright/AGENTS.md\n<!-- arcwright-instructions-end -->\n');
     expect(fs.existsSync(path.join(projectDir, '.claude', 'CLAUDE.md'))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, 'AGENTS.md'))).toBe(false);
+
+    await uninstall({ global: true, directory: projectDir, yes: true });
+    const after = await fs.readFile(path.join(homeDir, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(after).toContain('Private local preference.');
+    expect(after).not.toContain('@../.arcwright/AGENTS.md');
+    expect(await fs.readFile(path.join(homeDir, '.arcwright', 'AGENTS.md'), 'utf8')).toContain('Keep this convention.');
+    expect(await readManifest(path.join(homeDir, '.arcwright'))).toBeNull();
   }, 60000);
 
   it('writes settings.json to every Claude config home, not just ~/.claude', async () => {

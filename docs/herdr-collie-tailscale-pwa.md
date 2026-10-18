@@ -2,9 +2,9 @@
 
 Collie is a Herdr plugin that puts a phone web app in front of your Herdr agent
 herd. You open a URL on your phone, see which agent is blocked, and reply with
-your phone keyboard, over a Tailscale tailnet. This guide covers installing it,
-wiring Tailscale Serve, and the security posture, based on the reference setup on
-this machine.
+your phone keyboard, over a Tailscale tailnet. This guide covers installation,
+Tailscale Serve, and the security posture. Resolve service paths and account
+identities from the host you are configuring.
 
 Upstream: https://github.com/AltanS/collie · Herdr: https://herdr.dev
 
@@ -40,10 +40,9 @@ user, keep it tailnet-only, and never `tailscale funnel` it.
 | Node.js (soft) | Only to print the URL from `tailscale status`. |
 | systemd --user (soft) | Supervises the bridge service; falls back to `nohup` without it. |
 
-On this machine Bun installs to `~/.bun/bin`. Because Herdr's server and the
-Collie service run under `systemd --user`, that PATH must be visible to them; the
-reference setup extends the Herdr server unit's `Environment=PATH` and symlinks
-`bun` into `~/.local/bin`.
+If Bun is installed under `~/.bun/bin`, include that directory in the service
+PATH. Services running under `systemd --user` may not inherit your shell PATH;
+inspect the installed units before applying the troubleshooting example below.
 
 ## Install
 
@@ -56,7 +55,7 @@ herdr plugin install AltanS/collie --yes
 # 2. Set the identity gate BEFORE starting, so only your tailnet login can drive agents
 CFG="$(herdr plugin config-dir herdr.collie)"
 printf 'COLLIE_TRUSTED_USER=%s\n' "you@example.com" > "$CFG/.env"
-# Find your value with: tailscale whois <your-tailnet-ip>  → User.Name (e.g. UNN-Devotek@github)
+# Find your value with: tailscale whois <your-tailnet-ip> → User.Name
 
 # 3. Start the bridge (systemd --user service "collie", or nohup fallback)
 herdr plugin action invoke start --plugin herdr.collie

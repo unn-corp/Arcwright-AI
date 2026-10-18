@@ -13,7 +13,7 @@
    review or push blocking — say so explicitly, don't imply real protection.
 3. Two dev/prod patterns exist in this org: same-account (stack-name split,
    `envName` prop) vs. separate-account-per-branch. Check the repo's own
-   CLAUDE.md/`bin/*.ts` before picking one — don't default blindly.
+   project instructions/`bin/*.ts` before picking one — don't default blindly.
 4. Same-account pattern: use **explicit stack lists per branch** in the deploy
    workflow, never `cdk deploy --all`, once `-dev` stacks exist.
 5. Adding `environment:` to a deploy job changes the OIDC `sub` claim to

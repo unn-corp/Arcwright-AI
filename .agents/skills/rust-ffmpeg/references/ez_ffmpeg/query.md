@@ -3,6 +3,20 @@
 **Detection Keywords**: get duration, media info, codec info, video properties, probe, file metadata, stream info
 **Aliases**: media query, video info, file info
 
+## Table of Contents
+
+- [Related Guides](#related-guides)
+- [Get Duration](#get-duration)
+- [Get Format](#get-format)
+- [Get Metadata](#get-metadata)
+- [Query Media Info](#query-media-info)
+- [List Available Codecs](#list-available-codecs)
+- [List Available Filters](#list-available-filters)
+- [List Capture Devices](#list-capture-devices)
+- [List Hardware Accelerators](#list-hardware-accelerators)
+- [Packet-Level Scanning](#packet-level-scanning)
+- [Probe with FFprobe (Alternative)](#probe-with-ffprobe-alternative)
+
 ## Related Guides
 
 | Guide | Content |
@@ -58,6 +72,22 @@ if let Some(StreamInfo::Video { width, height, fps, codec_name, bit_rate, .. }) 
 {
     println!("Video: {}x{} @ {:.2} fps", width, height, fps);
     println!("Codec: {}, Bitrate: {} bps", codec_name, bit_rate);
+}
+
+// HDR vs SDR detection (0.16): StreamInfo::Video carries the raw AVColor* values
+// as plain i32 — no ffmpeg_sys types needed. Route on the TRANSFER characteristic:
+// PQ (smpte2084 = 16) and HLG (arib-std-b67 = 18) mean HDR; BT.2020 primaries with
+// a BT.709 transfer is wide-gamut *SDR* (gamut-convert only — tone-mapping it
+// darkens the picture). See scenarios/modern_codecs.md for the HDR→SDR chains.
+if let Some(StreamInfo::Video { color_space, color_transfer, color_primaries, .. }) =
+    find_video_stream_info("video.mp4")?
+{
+    const AVCOL_TRC_SMPTE2084: i32 = 16;   // PQ (HDR10)
+    const AVCOL_TRC_ARIB_STD_B67: i32 = 18; // HLG
+    let is_hdr = color_transfer == AVCOL_TRC_SMPTE2084
+        || color_transfer == AVCOL_TRC_ARIB_STD_B67;
+    println!("space={} transfer={} primaries={} hdr={}",
+        color_space, color_transfer, color_primaries, is_hdr);
 }
 
 // Get audio stream information

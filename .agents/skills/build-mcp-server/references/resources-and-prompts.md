@@ -1,11 +1,11 @@
 # Resources & Prompts — the other two primitives
 
-MCP defines three server-side primitives. Tools are model-controlled (Claude decides when to call them). The other two are different:
+MCP defines three server-side primitives. Tools are model-controlled (the model decides when to call them). The other two are different:
 
 - **Resources** are application-controlled — the host decides what to pull into context
 - **Prompts** are user-controlled — surfaced as slash commands or menu items
 
-Most servers only need tools. Reach for these when the shape of your integration doesn't fit "Claude calls a function."
+Most servers only need tools. Reach for these when the shape of your integration doesn't fit "the model calls a function."
 
 ---
 
@@ -14,14 +14,14 @@ Most servers only need tools. Reach for these when the shape of your integration
 A resource is data identified by a URI. Unlike a tool, it's not *called* — it's *read*. The host browses available resources and decides which to load into context.
 
 **When a resource beats a tool:**
-- Large reference data (docs, schemas, configs) that Claude should be able to browse
+- Large reference data (docs, schemas, configs) that the model should be able to browse
 - Content that changes independently of conversation (log files, live data)
-- Anything where "Claude decides to fetch" is the wrong mental model
+- Anything where "the model decides to fetch" is the wrong mental model
 
 **When a tool is better:**
 - The operation has side effects
-- The result depends on parameters Claude chooses
-- You want Claude (not the host UI) to decide when to pull it in
+- The result depends on parameters the model chooses
+- You want the model (not the host UI) to decide when to pull it in
 
 ### Static resources
 
@@ -115,7 +115,7 @@ def summarize(text: str, max_words: str = "100") -> str:
 
 | You want to... | Use |
 |---|---|
-| Let Claude fetch something on demand, with parameters | **Tool** |
+| Let the model fetch something on demand, with parameters | **Tool** |
 | Expose browsable context (files, docs, schemas) | **Resource** |
 | Expose a dynamic family of things (`db://{table}`) | **Resource template** |
 | Give users a one-click workflow | **Prompt** |

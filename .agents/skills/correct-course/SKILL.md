@@ -1,6 +1,6 @@
 ---
 name: correct-course
-description: Use when a task is mid-flight and something invalidates the current plan — a discovered constraint, a changed requirement, a blocker, a failed verification, or new information. Clarifies the triggering issue, analyzes its impact across spec/plan/architecture, drafts before/after change proposals, classifies the scope (Minor/Moderate/Major), and routes to the right agent. A structured course-correction, not an ad-hoc pivot.
+description: "Revise an active plan when a changed requirement, discovered constraint, or failed verification materially changes the work."
 allowed-tools: Read, Grep, Glob, Write
 ---
 

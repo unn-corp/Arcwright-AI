@@ -1,5 +1,5 @@
 ---
-description: "Write skill and SOP instructions with explicit constraint strength (MUST / MUST NOT / SHOULD / MAY, RFC 2119 style) so an agent can tell a hard requirement from a suggestion. Use when authoring or reviewing a SKILL.md..."
+description: "Write or revise an agent SOP with explicit constraints, required outputs, and verification. Use when instructions are ambiguous or repeatedly missed."
 ---
 
 Load and run the `agent-sop-constraints` skill (`.agents/skills/agent-sop-constraints/SKILL.md`) against $ARGUMENTS. Follow the skill exactly.

@@ -88,7 +88,7 @@ describe('writeCodexConfig — project install', () => {
 
   it('skips team-* skills when teams are declined', async () => {
     const entries = await writeCodexConfig(projectDir, ['awm'], chalk, false, homes(), platform, false);
-    expect(entries.some(e => e.relPath.includes('/team-'))).toBe(false);
+    expect(entries.some(e => /\/skills\/team-[^/]+\//.test(e.relPath))).toBe(false);
     expect(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'team-arch-dev'))).toBe(false);
   });
 
@@ -110,10 +110,15 @@ describe('writeCodexConfig — project install', () => {
 
 describe('writeCodexConfig — global install', () => {
   it('writes ~/.codex/AGENTS.md and $HOME/.agents/skills (not ~/.codex/skills)', async () => {
+    const rules = path.join(homeDir, '.codex', 'AGENTS.md');
+    fs.outputFileSync(rules, '# Personal instructions\n\nKeep my project conventions.\n');
     const entries = await writeCodexConfig(projectDir, ['awm'], chalk, true, homes(), platform);
     expect(fs.existsSync(path.join(homeDir, '.codex', 'AGENTS.md'))).toBe(true);
     expect(fs.existsSync(path.join(homeDir, '.agents', 'skills'))).toBe(true);
     expect(fs.existsSync(path.join(homeDir, '.agents', 'skills', 'triage', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(homeDir, '.agents', 'skills', 'test-quality', 'SKILL.md'))).toBe(true);
+    expect(fs.readFileSync(rules, 'utf8')).toContain('# Personal instructions');
+    expect(fs.readFileSync(rules, 'utf8')).toContain('For writing or reviewing tests, load `test-quality`');
     expect(fs.existsSync(path.join(homeDir, '.codex', 'skills'))).toBe(false);
     expect(entries.length).toBeGreaterThan(0);
     for (const e of entries) {
@@ -263,7 +268,7 @@ describe('writeHermesConfig — global install', () => {
     const entries = await writeHermesConfig(projectDir, ['awm'], chalk, true, homes(), platform, false);
     expect(fs.existsSync(path.join(homeDir, '.hermes', 'skill-bundles'))).toBe(false);
     expect(entries.some(e => e.relPath.startsWith('.hermes/skill-bundles/'))).toBe(false);
-    expect(entries.some(e => e.relPath.includes('/team-'))).toBe(false);
+    expect(entries.some(e => /\/skills\/team-[^/]+\//.test(e.relPath))).toBe(false);
   });
 });
 

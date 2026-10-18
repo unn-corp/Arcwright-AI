@@ -1,7 +1,7 @@
 ---
 name: caveman-compress
 description: >
-  Retro-compress an existing verbose natural-language file (CLAUDE.md, memory files,
+  Retro-compress an existing verbose natural-language file (AGENTS.md, host instructions, memory files,
   specs, briefs, notes) into caveman format to save input tokens on every reload.
   Preserves all code, paths, URLs, IDs, and structure. Trigger: /caveman-compress FILEPATH
   or "compress this doc / memory file".
@@ -15,7 +15,7 @@ Apply the `caveman` skill's rules to a file that already exists, rather than to 
 ## When to use
 
 - A `.planning/`, `_arcwright-output/`, or memory file has grown verbose.
-- A CLAUDE.md / config-prose file reloads on every turn and is bloated.
+- An agent-instruction / config-prose file reloads on every turn and is bloated.
 - A spec/brief/report was written before caveman discipline and now wastes context.
 
 ## Process
