@@ -1,34 +1,14 @@
-# Commit Commands — Quick Rules
+# Commit commands: quick rules
 
-> Load full `SKILL.md` for conventional-commit rules and full procedure.
+Read `SKILL.md` for the selected operation.
 
-Three lean git operations. No tests/lint/typecheck — use `verify-and-ship` for quality gates.
-
-## Core Rules
-
-- NEVER commit without showing the message and getting confirmation
-- NEVER use `--no-verify` (no hook bypass)
-- NEVER amend a pushed commit
-- NEVER force push — if push is rejected, stop and report
-- `/clean-gone` only deletes local branches, never remotes
-
-## Conventional Commit Quick Ref
-
-`<type>(<scope>): <subject>` — imperative, lowercase, no period, ≤72 chars
-
-| Type | Use for |
-|------|---------|
-| `feat` | New capability |
-| `fix` | Bug fix |
-| `refactor` | Restructure, no behavior change |
-| `docs` | Docs only |
-| `chore` | Build, deps, config |
-| `test` | Tests |
-| `perf` | Performance |
-
-No `Co-Authored-By` or attribution footers.
-
-## When to Use vs verify-and-ship
-
-Use `commit-commands` for daily commits without quality checks.
-Use `verify-and-ship` before shipping (runs tests, lint, typecheck, updates changelog).
+- Honor existing commit/push/PR authority without repeated confirmation; show the
+  intended message before committing. Ask only for missing authority or scope.
+- Inspect and stage authorized changes; preserve unrelated work and ignored fleet records.
+- Run required repository checks; use `test-quality` to choose focused verification.
+- Use `<type>(<scope>): <subject>`, imperative, lowercase, at most 72 characters.
+- Use a message/body file for multiline text. No model/harness credits or coauthor trailers.
+- Keep hooks and branch protections. No published-history rewrite without explicit authority.
+- Push submodule commits before their parent pointers. Link worked-on PRs in Arcwright Code.
+- Prune selected merged local branches with `git branch -d`; unmerged or remote deletion
+  requires its own authorization.

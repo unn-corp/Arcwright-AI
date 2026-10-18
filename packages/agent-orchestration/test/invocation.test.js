@@ -6,9 +6,11 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import invocation from '../../../build/invocation.js';
 import efficiency from '../../../build/skill-efficiency.js';
+import hostCommands from '../../../build/host-commands.js';
 
 const { auditContext, buildInvocationCatalog, description, resolveAliases } = invocation;
 const { auditEfficiency, auditScopes, refreshBaseline } = efficiency;
+const { syncHostCommands } = hostCommands;
 const REPO = path.resolve(__dirname, '../../..');
 const temporary = [];
 const put = (root, file, content) => {
@@ -44,6 +46,52 @@ const aliasFixture = () => {
   return { ...f, alias, target };
 };
 afterEach(() => temporary.splice(0).forEach(root => fs.rmSync(root, { recursive: true, force: true })));
+
+describe('local host command adapters', () => {
+  it('generates both native adapters and updates or retires unchanged owned commands', () => {
+    const f = fixture();
+    syncHostCommands(f.root);
+    for (const host of ['.grok', '.opencode']) {
+      expect(fs.readFileSync(path.join(f.root, host, 'commands/debug.md'), 'utf8'))
+        .toBe('---\ndescription: Diagnose a failure\n---\nFollow the debugging procedure for $ARGUMENTS.\n');
+    }
+    put(f.root, '.claude/commands/debug.md', '---\ndescription: Updated debug route\n---\nInspect the reported error.\n');
+    fs.unlinkSync(path.join(f.root, '.claude/commands/dotnet.md'));
+    syncHostCommands(f.root);
+    for (const host of ['.grok', '.opencode']) {
+      expect(fs.readFileSync(path.join(f.root, host, 'commands/debug.md'), 'utf8')).toContain('Inspect the reported error.');
+      expect(fs.existsSync(path.join(f.root, host, 'commands/dotnet.md'))).toBe(false);
+    }
+    expect(syncHostCommands(f.root).every(result => result.written === 0 && result.removed === 0)).toBe(true);
+  });
+
+  it('preserves unowned collisions, edited adapters, and unrelated personal commands', () => {
+    const f = fixture();
+    put(f.root, '.grok/commands/debug.md', 'Personal debug procedure.\n');
+    put(f.root, '.opencode/commands/personal.md', 'Personal command.\n');
+    syncHostCommands(f.root);
+    put(f.root, '.opencode/commands/debug.md', 'Customized owned route.\n');
+    fs.unlinkSync(path.join(f.root, '.claude/commands/debug.md'));
+    syncHostCommands(f.root);
+    expect(fs.readFileSync(path.join(f.root, '.grok/commands/debug.md'), 'utf8')).toBe('Personal debug procedure.\n');
+    expect(fs.readFileSync(path.join(f.root, '.opencode/commands/debug.md'), 'utf8')).toBe('Customized owned route.\n');
+    expect(fs.readFileSync(path.join(f.root, '.opencode/commands/personal.md'), 'utf8')).toBe('Personal command.\n');
+  });
+
+  it('refuses redirected destinations and unsafe manifest paths without changing outside files', () => {
+    const f = fixture();
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-command-outside-'));
+    temporary.push(outside);
+    put(outside, 'sentinel.md', 'Outside data.\n');
+    fs.symlinkSync(outside, path.join(f.root, '.grok'), 'junction');
+    expect(() => syncHostCommands(f.root)).toThrow('Expected a local directory');
+    fs.unlinkSync(path.join(f.root, '.grok'));
+    put(f.root, '.grok/commands/.arcwright-generated.json', JSON.stringify({ schemaVersion: 1, files: { '../../sentinel.md': '0'.repeat(64) } }));
+    expect(() => syncHostCommands(f.root)).toThrow('Invalid command manifest');
+    expect(fs.readFileSync(path.join(outside, 'sentinel.md'), 'utf8')).toBe('Outside data.\n');
+    expect(fs.readdirSync(outside)).toEqual(['sentinel.md']);
+  });
+});
 
 describe('model invocation routes and context audit', () => {
   it('routes canonical skill names and legacy aliases to the same current procedure', () => {

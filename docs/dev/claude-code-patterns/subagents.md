@@ -301,11 +301,10 @@ Since v2.1.163: `Stop` and `SubagentStop` hooks receive `additionalContext` in t
 
 ## Related in Arcwright
 
-The in-process **Agent tool + SendMessage** is the spawn mechanism Arcwright uses.
-Arcwright captures each spawned agent's ID into a Session Agent Registry (role →
-agentId table) and re-engages the same agent via `SendMessage` for follow-up tasks
-instead of re-spawning — the kept-alive/reuse model. The full spec is in
-[`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md).
+Claude's native `Agent`/`SendMessage` API is one supported host adapter. The shared
+[subagent protocol](../../../.agents/skills/subagent-protocol/SKILL.md) owns live
+capability discovery, user-selected models, task identity, and reconciliation.
+Reuse native agents only where supported; app-owned review rounds use fresh tasks.
 
 **tmux subagent spawning (split-pane `claude --dangerously-skip-permissions '<task>'`
 launches) is retired** in favor of in-process dispatch. Herdr remains available as

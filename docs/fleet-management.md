@@ -127,13 +127,16 @@ against the destination's running home; use the documented `--base-dir` when
 targeting another home. Do not run it on the controller expecting it to update a
 remote device. Verify its current command help and capabilities before use.
 
-Native maintenance admission, activity checks, affected-home snapshots, recovery,
-and OS approvals remain mandatory for each device. Do not stop active agents,
-replace binaries manually to bypass a blocker, or invent another coordinator
-namespace. Preserve saved connections, work, channels, pins, and recovery assets.
-Use the allocated nightly identity and canonical menu/launcher rules. Android
-has its own installer approval and recovery path; desktop admission does not
-authorize or verify a phone installation.
+Follow the platform-specific [update and confirmation rules](../t3code/docs/user/updating.md#choose-the-device):
+desktop uses the confirmed Electron updater; managed servers and Android retain
+native maintenance admission and their own recovery/OS approvals. Desktop
+confirmation can stop owned backends, so an authorized fleet rollout does not
+substitute for the required exact-artifact interruption confirmation. Automatic
+updates never stop agents. Do not bypass a waiting check, replace binaries
+manually, or invent another coordinator namespace. Preserve affected-home snapshots
+where required, saved connections, work, channels, pins, and recovery assets.
+Use the allocated nightly identity and canonical menu/launcher rules. Verify each
+target independently; desktop confirmation does not authorize a phone installation.
 
 ## Updating Arcwright skills
 

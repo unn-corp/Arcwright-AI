@@ -17,6 +17,7 @@ function createFixture() {
     [path.join(REPO_ROOT, 'build', 'leak-patterns.js'), path.join(root, 'build', 'leak-patterns.js')],
     [path.join(REPO_ROOT, 'build', 'matt-pocock.js'), path.join(root, 'build', 'matt-pocock.js')],
     [path.join(REPO_ROOT, 'build', 'invocation.js'), path.join(root, 'build', 'invocation.js')],
+    [path.join(REPO_ROOT, 'build', 'host-commands.js'), path.join(root, 'build', 'host-commands.js')],
     [path.join(REPO_ROOT, '.agents/skills/arcwright/scripts/skill-metadata.cjs'), path.join(root, '.agents/skills/arcwright/scripts/skill-metadata.cjs')],
     [path.join(REPO_ROOT, 'packages', 'agent-orchestration', 'lib', 'skill-policy.js'), path.join(root, 'packages', 'agent-orchestration', 'lib', 'skill-policy.js')],
     [

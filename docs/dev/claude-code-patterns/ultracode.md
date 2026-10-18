@@ -167,9 +167,9 @@ banned — they would break the cache.)
 
 ## Relevance to Arcwright
 
-Ultracode is the native engine for the kind of fan-out Arcwright tracks and teams
-coordinate in-process (`Agent` tool + `SendMessage` reuse via the Session Agent
-Registry), with Herdr panes as an opt-in visibility layer:
+On a host that provides Ultracode, it can express a selected multi-stage workflow.
+The shapes below are conditional examples; Arcwright's shared protocol and user
+authorization still govern delegation. Herdr viewing is optional:
 
 | Arcwright pattern | Ultracode shape |
 |-------------------|-----------------|
@@ -177,19 +177,19 @@ Registry), with Herdr panes as an opt-in visibility layer:
 | Team fan-out (parallel specialists) | `parallel(thunks)` |
 | Review-gate loop (`arcwright-review-orchestrator`) | adversarial-verify + loop-until-dry |
 | RV / audit track | multi-modal sweep + completeness critic |
-| Opus orchestrates, Sonnet executes | `agent(prompt, { model: 'sonnet' })` per stage |
+| User-selected role models | Use supported per-stage model options only when the task authorizes them |
 
 A workflow run is a single well-scoped fan-out per turn — for multi-phase work, run
 several in sequence and read each result before deciding the next phase.
 
 ## Related in Arcwright
 
-The Arcwright workflow-router ([`triage`](../../../.agents/skills/triage/SKILL.md))
-recommends `ultracode` for multi-stage / large / unknown-size discovery work —
-see its §3 decision tree. For plain in-process work, use
-[`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md)
-(sonnet-first, permission-before-opus). For "keep working until X is true" tasks,
-prefer `/goal`.
+[Triage](../../../.agents/skills/triage/SKILL.md) can recommend this runtime
+only on a host that actually provides it. Follow the shared
+[subagent protocol](../../../.agents/skills/subagent-protocol/SKILL.md) for
+provider/model inheritance, permissions, and task lifecycle. Arcwright Code
+review rounds use fresh app-owned delegated tasks; this Claude-specific API does
+not override that rule. Goal workflows are conditional on the installed host.
 
 ---
 

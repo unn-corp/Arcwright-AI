@@ -125,8 +125,8 @@
     },
     ".agents/skills/commit-commands/SKILL.md": {
       "name": "commit-commands",
-      "entrypointBytes": 3903,
-      "descriptionBytes": 281
+      "entrypointBytes": 3358,
+      "descriptionBytes": 176
     },
     ".agents/skills/contract-review/SKILL.md": {
       "name": "contract-review",
@@ -685,7 +685,7 @@
     },
     ".agents/skills/renderdoc-gpu-debug/SKILL.md": {
       "name": "renderdoc-gpu-debug",
-      "entrypointBytes": 15124,
+      "entrypointBytes": 2609,
       "descriptionBytes": 202
     },
     ".agents/skills/review-loop/SKILL.md": {
@@ -1060,8 +1060,8 @@
     },
     ".agents/skills/triage/SKILL.md": {
       "name": "triage",
-      "entrypointBytes": 4140,
-      "descriptionBytes": 203
+      "entrypointBytes": 4105,
+      "descriptionBytes": 168
     },
     ".agents/skills/typescript-best-practices/SKILL.md": {
       "name": "typescript-best-practices",
@@ -1115,7 +1115,7 @@
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/callkit-voip/SKILL.md": {
       "name": "callkit-voip",
-      "entrypointBytes": 14427,
+      "entrypointBytes": 2107,
       "descriptionBytes": 187
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/cloudkit-sync/SKILL.md": {
@@ -1145,7 +1145,7 @@
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/core-nfc/SKILL.md": {
       "name": "core-nfc",
-      "entrypointBytes": 15027,
+      "entrypointBytes": 1888,
       "descriptionBytes": 191
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/coreml/SKILL.md": {
@@ -1165,7 +1165,7 @@
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/energykit/SKILL.md": {
       "name": "energykit",
-      "entrypointBytes": 14193,
+      "entrypointBytes": 2082,
       "descriptionBytes": 202
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/eventkit-calendar/SKILL.md": {
@@ -1195,7 +1195,7 @@
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/ios-networking/SKILL.md": {
       "name": "ios-networking",
-      "entrypointBytes": 14878,
+      "entrypointBytes": 2069,
       "descriptionBytes": 218
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/ios-security/SKILL.md": {
@@ -1255,7 +1255,7 @@
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/realitykit-ar/SKILL.md": {
       "name": "realitykit-ar",
-      "entrypointBytes": 14021,
+      "entrypointBytes": 2076,
       "descriptionBytes": 210
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/shareplay-activities/SKILL.md": {
@@ -1270,7 +1270,7 @@
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/storekit/SKILL.md": {
       "name": "storekit",
-      "entrypointBytes": 14529,
+      "entrypointBytes": 2836,
       "descriptionBytes": 174
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swift-charts/SKILL.md": {
@@ -1300,7 +1300,7 @@
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-animation/SKILL.md": {
       "name": "swiftui-animation",
-      "entrypointBytes": 15284,
+      "entrypointBytes": 2911,
       "descriptionBytes": 205
     },
     ".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/swiftui-gestures/SKILL.md": {

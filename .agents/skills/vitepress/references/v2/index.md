@@ -32,8 +32,8 @@ VitePress is a Static Site Generator (SSG) built on Vite and Vue 3. It takes Mar
 | Topic | Description | Reference |
 |-------|-------------|-----------|
 | Code Blocks | Syntax highlighting, line highlighting, diffs, focus | [features-code-blocks](references/features-code-blocks.md) |
-| Vue in Markdown | Components, script setup, directives, templating | [features-vue](references/features-vue.md) |
-| Data Loading | Build-time data loaders, createContentLoader | [features-data-loading](references/features-data-loading.md) |
+| Vue in Markdown | Components, script setup, directives, templating | [features-vue](../features-vue.md) |
+| Data Loading | Build-time data loaders, createContentLoader | [features-data-loading](../features-data-loading.md) |
 | Dynamic Routes | Generate pages from data, paths loader files | [features-dynamic-routes](references/features-dynamic-routes.md) |
 
 ## Theme
@@ -49,7 +49,7 @@ VitePress is a Static Site Generator (SSG) built on Vite and Vue 3. It takes Mar
 | Topic | Description | Reference |
 |-------|-------------|-----------|
 | Internationalization | Multi-language sites, locale configuration | [advanced-i18n](references/advanced-i18n.md) |
-| SSR Compatibility | Server-side rendering, ClientOnly, dynamic imports | [advanced-ssr](references/advanced-ssr.md) |
+| SSR Compatibility | Server-side rendering, ClientOnly, dynamic imports | [advanced-ssr](../advanced-ssr.md) |
 
 ## Recipes
 

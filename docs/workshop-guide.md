@@ -21,6 +21,7 @@ The npm organization is `@arcwright-ai`; the repository is
 | `_arcwright/_memory/` | Sidecar memory and skills |
 | `.agents/skills/` | Canonical skill library, including locally maintained imported skills |
 | `.claude/commands/` | Native command sources and generated skill wrappers; also routed through the neutral catalog |
+| `.grok/commands/`, `.opencode/commands/` | Git-ignored local adapters generated from canonical commands |
 | `packages/agent-orchestration/lib/`, `bin/` | Permanent installer and CLI source |
 | `packages/agent-orchestration/lib/templates/herdr/` | Shipped Herdr runtime assets; `herdrSetup.js` and `herdrAssets.js` integrate them |
 | `packages/agent-orchestration/src/` | Generated package output; never edit directly |
@@ -31,6 +32,12 @@ The npm organization is `@arcwright-ai`; the repository is
 For operating devices from this checkout, follow [fleet management](fleet-management.md).
 Run `npm run fleet:init` once to prepare local storage. Routine device updates use
 verified published artifacts without committing or changing the workshop's source.
+
+`npm run commands:sync` refreshes the workshop's Grok/OpenCode command adapters;
+the normal build also runs it. A local hash manifest updates or retires only owned,
+unchanged adapters and preserves custom files. Edit canonical `.claude/commands/`
+sources for shared changes. Fresh checkouts create the native adapters on first
+sync/build; installed projects continue to receive adapters through the installer.
 
 ## Build and publish
 

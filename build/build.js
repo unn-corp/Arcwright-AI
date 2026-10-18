@@ -102,6 +102,7 @@ const LEAK_SCAN_SKIP_EXTS = new Set([
  */
 const { LEAK_PATTERNS } = require('./leak-patterns');
 const { buildInvocationCatalog, verifyModelInvocation, loadSkillAliases } = require('./invocation');
+const { syncHostCommands } = require('./host-commands');
 
 /** Slash command files to ship. Shared by bundleKiroAgents() and bundleTrackCommands(). */
 const SHIPPED_COMMANDS = [
@@ -1310,5 +1311,11 @@ console.log(`  ✓  ${invocationCatalog.entries.length} command/agent/skill rout
 bundleLauncherTemplates();
 verifySkillReferences();
 verifyNoLeaks();
+
+if (sourceExists(path.join(PROJECT_ROOT, '.claude', 'commands'))) {
+  for (const result of syncHostCommands(PROJECT_ROOT)) {
+    console.log(`  ✓  ${result.host}: ${result.routes} local command routes; ${result.preserved.length} custom files preserved`);
+  }
+}
 
 console.log('✅  Build complete!');

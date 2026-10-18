@@ -1,110 +1,61 @@
 ---
 name: commit-commands
-description: >
-  Use when committing staged changes, creating a commit + PR in one step, or pruning
-  local branches whose remote is gone. Lighter than verify-and-ship (no tests/lint/typecheck).
-  NEVER auto-commits — always shows the message first. Triggers on /commit, /commit-push-pr,
-  /clean-gone.
+description: Commit authorized changes, push or open a PR when requested, and prune local branches whose upstream is gone. Preserve existing authorization, user work, and repository checks.
 allowed-tools: Bash
 ---
 
-# Commit Commands — Lightweight Daily Git Trio
+# Commit commands
 
-Three lean git operations. No test runs, no quality checks — those are `verify-and-ship`.
-**NEVER commit without showing the message and getting confirmation.**
+Use the requested Git operation and existing authorization. A request to commit,
+push, ship, or update a PR already authorizes its ordinary steps; do not ask for
+the same permission again. Show the intended commit message before committing.
+When authority or scope is missing, prepare the concrete diff/message first and
+ask only for the missing decision. These commands do not commission a release.
 
----
+## Commit
 
-## Conventional Commit Rules
+1. Inspect status, the staged diff, the requested scope, and applicable repository
+   instructions. Stage only authorized changes; preserve unrelated work and ignore
+   private fleet records. If nothing is staged or changed, report that result.
+2. Complete required repository checks. Use [test-quality](../test-quality/SKILL.md)
+   when deciding test effort; reuse current verification instead of repeating green
+   checks or imposing a new test/changelog requirement.
+3. Use `<type>(<scope>): <subject>`: imperative, lowercase, no final period, at most
+   72 characters. Scope is optional. Choose `feat`, `fix`, `refactor`, `docs`,
+   `style`, `test`, `chore`, `perf`, or `ci` from the change's purpose. A new file
+   alone does not imply `feat`. Explain material reasons in the body when needed;
+   use `!` and a `BREAKING CHANGE:` footer only for an actual breaking change.
+4. Show the message, then commit under existing authority. For multiline messages,
+   write the exact text with a file tool to host evidence or an ignored Arcwright
+   run directory, then pass that path to `git commit --file`. A single-line example:
 
-Format: `<type>(<scope>): <subject>`
-
-| Type | When |
-|------|------|
-| `feat` | New capability or user-visible behavior |
-| `fix` | Bug fix |
-| `refactor` | Code change with no behavior change |
-| `docs` | Documentation only |
-| `style` | Formatting, whitespace (no logic change) |
-| `test` | Adding or fixing tests |
-| `chore` | Build scripts, deps, config |
-| `perf` | Performance improvement |
-| `ci` | CI pipeline changes |
-
-Rules:
-- `<scope>` optional; use the module/area name in parentheses if helpful (e.g. `feat(installer): …`)
-- `<subject>` imperative, lowercase, no period, ≤72 chars
-- Body (optional): wrap at 72 chars, explain *why* not *what*, blank line after subject
-- Breaking change: append `!` after type/scope and add `BREAKING CHANGE:` footer
-- Do NOT add `Co-Authored-By` or any attribution footer
-
----
-
-## /commit — Staged Changes → Conventional Commit
-
-### Procedure
-
-1. Run `git diff --cached --stat` — if nothing staged, report "Nothing staged" and stop.
-2. Run `git diff --cached` to read the actual diff.
-3. Derive the commit type from the diff:
-   - New files → `feat` unless they're tests (`test`) or docs (`docs`)
-   - Bug fix pattern → `fix`
-   - Refactor (rename/extract, no new behavior) → `refactor`
-   - Config/build changes → `chore`
-4. Draft the subject: imperative, ≤72 chars, summarize the *intent* not the file list.
-5. If body is warranted (breaking change, complex rationale), draft it too.
-6. **Show the full commit message and ask for confirmation.**
-7. On confirmation (or `--yes`): `git commit -m "$(cat <<'EOF'\n<message>\nEOF\n)"`.
-8. Report the short SHA after commit.
-
----
-
-## /commit-push-pr — Commit + Push + Open PR
-
-### Procedure
-
-1. Run `/commit` steps 1–7. Stop if nothing staged or user rejects the message.
-2. After commit, push: `git push -u origin HEAD`.
-3. Check for existing PR: `gh pr view --json url 2>/dev/null`.
-   - If PR exists → show its URL, offer to update description.
-   - If no PR → create one with `gh pr create --fill`.
-     - `--fill` uses commits for title/body. Enhance if the description would be sparse.
-4. Show the PR URL.
-
----
-
-## /clean-gone — Prune Branches Whose Remote Is Gone
-
-### Procedure
-
-1. Fetch with prune: `git fetch --prune`.
-2. List branches with gone remotes:
-   ```bash
-   git branch -vv | grep ': gone]' | awk '{print $1}'
+   ```sh
+   git commit -m 'fix(installer): preserve customized skills on update'
    ```
-3. If none → report "No gone branches found."
-4. Show the list and ask for confirmation before deleting.
-5. On confirmation: `git branch -d <branch>` for each. Use `-D` only if `-d` fails and user confirms force-delete.
-6. Report deleted branches.
 
----
+5. Report the commit ID and observed checks. Keep model/harness credits,
+   generated-by notices, and coauthor trailers out of commits and PRs.
 
-## Constraints
+## Push and PR
 
-- NEVER run `git commit` without user seeing the message first.
-- NEVER use `--no-verify` — do not bypass hooks.
-- NEVER amend a commit that has already been pushed.
-- If `git push` is rejected (non-fast-forward), stop and report — do not force push.
-- `/clean-gone` only deletes local branches — never touches remotes.
+Push only when authorized; commit-only work ends after the commit. Inspect the
+remote branch first and preserve concurrent contributions. Reconcile a safe
+fast-forward, rebase, or merge according to repository convention; never force-push
+or rewrite published history without applicable explicit authority. Publish any
+new submodule commits before pushing parent pointers.
 
----
+Create or update a PR only when requested or authorized by the enclosing workflow.
+Reuse an existing PR. For multiline bodies, use a structured API or `gh pr create
+--body-file` with the exact text. In Arcwright Code/T3 Code, register every worked-on
+PR with `link_pull_request` and check `list_thread_pull_requests` before handoff.
 
-## Compared to verify-and-ship
+## Prune gone local branches
 
-| | `commit-commands` | `verify-and-ship` |
-|--|-------------------|--------------------|
-| Runs tests | No | Yes |
-| Runs lint/typecheck | No | Yes |
-| Updates changelog | No | Yes |
-| Creates PR | `/commit-push-pr` only | Yes (always) |
-| When to use | Fast daily commits | Pre-ship quality gate |
+For an authorized cleanup, fetch/prune remote-tracking refs, inspect local branches
+whose upstream is gone, and show the proposed list. Delete only selected merged
+local branches with `git branch -d`. A refusal for unmerged work requires a separate
+decision; do not substitute `-D`. Never delete a remote branch as part of this mode.
+
+Keep hooks enabled. Do not amend a pushed commit or bypass branch protections.
+If publication cannot proceed safely, preserve the local commit and report the
+concrete blocker. Preserve required copyright, license, and source notices.

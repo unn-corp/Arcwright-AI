@@ -20,6 +20,8 @@ t3.json
 /.claude/agents/
 /.claude/settings.json
 /.claude/skills/
+/.grok/commands/
+/.opencode/commands/
 /.kiro/
 /_arcwright/_config/
 /_arcwright/_memory/skill-runs/

@@ -37,7 +37,7 @@ project instructions here and follow the applicable instruction hierarchy.
   permissions, platform, and install scope; network visibility grants no authority.
   Reconcile routes to avoid updating the same installation twice.
 - Apply updates to a representative device first, then bounded batches. Preserve
-  channels, pins, customizations, active work, and native maintenance admission.
+  channels, pins, customizations, active work, and required platform update checks.
   Record and resume per-device outcomes; offline, blocked, or unverified devices
   remain pending. Use the app's supported recovery flow and retain recovery assets.
 

@@ -6,11 +6,13 @@ How Claude Code agents stay alive across tasks and how ended agents resume with 
 intact. Two categories: agents that are still **running**, and agents that **ended** but can
 pick up where they left off.
 
-Arcwright's default cross-task persistence is in-process (`Agent` tool + `SendMessage`
-reuse via the Session Agent Registry, see `claude-subagent-protocol`); Herdr panes are an
-opt-in visibility layer on top, not a persistence mechanism. The mechanisms below are the
-platform-level equivalents — they complement (not replace) that protocol. Cross-reference
-[orchestration.md](../orchestration.md) and [subagents.md](../subagents.md).
+On a compatible Claude host, native `Agent`/`SendMessage` reuse can preserve a
+specialist's context. Follow Arcwright's shared
+[subagent protocol](../../../.agents/skills/subagent-protocol/SKILL.md) for the actual
+host and user-selected provider/model. Arcwright Code review rounds require fresh
+delegated tasks. Herdr is optional visibility, not persistence. These conditional
+mechanisms complement that protocol; see [orchestration.md](orchestration.md)
+and [subagents.md](subagents.md).
 
 ---
 

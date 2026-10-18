@@ -2,7 +2,7 @@
 
 > AI-native agile workflow orchestration for Claude Code, Kiro, Cursor, and more coding agents.
 
-Arcwright installs a structured system of specialist AI agents, in-process subagent orchestration, and a 150+ skill library into any project. The orchestrator routes work through spec, research, UX, implementation, review, and QA — using **in-process `Agent` tool calls with `SendMessage` reuse** by default. Herdr pane visibility is opt-in for users who want to watch.
+Arcwright installs specialist agents, model-invocable skills, and workflows into projects across supported coding hosts. The orchestrator routes work through spec, research, UX, implementation, review, and QA using the available native or Arcwright Code task tools. Herdr pane visibility is opt-in.
 
 ---
 
@@ -83,23 +83,21 @@ Arcwright ships a `herdr` skill and managed defaults for [Herdr](https://herdr.d
 
 Arcwright ships native slash commands for Claude Code, Kiro, and Cursor. Cursor commands install to `.cursor/commands/`; Claude Code commands install to `.claude/commands/`.
 
-For new work, the recommended entry point is **`/triage <task description>`** — the workflow router (`.agents/skills/triage/SKILL.md`) reads the task and recommends an execution approach:
-
-- **Plain in-process agent(s)** — direct `Agent` tool spawn for focused, well-shaped work
-- **`ultracode` dynamic workflow** — Claude Code's multi-agent workflow runtime for comprehensive, multi-stage, or unknown-size work (`docs/dev/claude-code-patterns/ultracode.md`)
-- **`/goal` loop** — autonomous "keep working until this condition is true" loop for verification-check end states (`docs/dev/claude-code-patterns/orchestration.md`)
-
-`/triage` does not execute the work — it recommends an approach and the trigger to run it.
+Use **`/triage <task description>`** to select an approach from the installed
+capabilities: direct work, authorized specialists, a team preset, or a bounded
+review/goal workflow. A supplied task runs directly; use routing-only mode when
+you want a recommendation. Host-specific runtimes such as `ultracode` are optional
+and apply only where available. See [triage](.agents/skills/triage/SKILL.md).
 
 ### Agent Teams (`/team`)
 
-The `/team` command is an interactive team selector. It presents all 17 teams organized by category and asks you to pick one (or pass a code directly: `/team arch-dev`).
+Use `/team arch-dev` to select a preset directly; `/team` without a selection offers the 17-team picker.
 
-**Teams run in-process by default** — each teammate is spawned via the `Agent` tool and the orchestrator captures returned `agentId` values into a **Session Agent Registry** (role → agentId table). Subsequent tasks for the same role re-engage the existing agent via `SendMessage(to: agentId, ...)`, so context carries across turns instead of being rebuilt from scratch. See `.agents/skills/claude-subagent-protocol/SKILL.md` for the full protocol (canonical spawn pattern, sonnet-first default, permission-before-opus).
+Teams use the shared [subagent protocol](.agents/skills/subagent-protocol/SKILL.md). Inherit the user's provider/model choices, discover live capabilities, and use compatible native tasks or Arcwright Code delegation. Reuse native specialists only where supported; every Arcwright Code review round is a fresh delegated task.
 
-**Herdr pane visibility is opt-in.** When the user has explicitly asked to watch agents in split panes **and** `$HERDR_ENV` is set, load the `herdr` skill's "Watching agents in panes (opt-in)" section. The pane is a viewing surface — the in-process orchestration inside it is still governed by `claude-subagent-protocol`.
+**Herdr pane visibility is opt-in.** When the user asks to watch agents and Herdr is available, load the `herdr` skill's viewing guidance. The shared subagent protocol still owns delegation.
 
-Not sure which team to use? Run `/triage <task>` first — the **workflow router** recommends plain in-process agent(s), an `ultracode` dynamic workflow, or a `/goal` loop based on the task's shape (see `.agents/skills/triage/SKILL.md`).
+Use `/triage <task>` when the task needs help selecting a team or execution approach.
 
 See the full team catalog below.
 
@@ -107,7 +105,7 @@ See the full team catalog below.
 
 | Command | Purpose |
 |---------|---------|
-| `/triage` | Workflow router — given a task, recommends an execution approach: plain in-process agent(s), an `ultracode` dynamic workflow, or a `/goal` loop. Optional Herdr opt-in visibility for users who want to watch. |
+| `/triage` | Select an installed execution approach and run a supplied task, or return a recommendation in routing-only mode. |
 | `/herdr` | Loads the Herdr terminal-workspace reference (sessions, workspaces, tabs, panes, agent spawning, wait-on-status) for the [Herdr](https://herdr.dev) terminal manager. Herdr panes are a *viewing surface* for in-process orchestration, not the spawn mechanism. |
 | `/gsudo` | Loads the gsudo skill and runs a command with Windows elevated privileges. Works from WSL2, Git Bash, or native Windows. Takes `$ARGUMENTS` for the command to run. |
 | `/arcwright-migrate` | Migrates an existing bmad installation to arcwright naming. Runs a dry-run first, then applies the rename. See [Migrating from bmad](#migrating-from-bmad). |
@@ -166,9 +164,9 @@ Plus meta-agents for building new agents, workflows, and modules (Arcwright Buil
 
 17 pre-built team compositions. Use `/team <code>` or just `/team` for the picker.
 
-Each team runs **in-process by default** — the orchestrator spawns each role via the `Agent` tool, captures the returned `agentId` into a Session Agent Registry, and re-engages roles across tasks via `SendMessage`. Herdr split-pane visibility is opt-in; see the `herdr` skill's "Watching agents in panes" section.
+Teams share the provider-neutral [delegation lifecycle](.agents/skills/subagent-protocol/SKILL.md), with role order, review gates, and budgets defined by each preset. Native reuse and fresh app-owned review tasks follow the host's actual capabilities. Herdr viewing remains opt-in.
 
-Not sure which team matches your task? Run `/triage <task>` first — the workflow router recommends an approach (plain in-process, ultracode, `/goal`, or one of the 17 teams) based on the task's shape.
+Use `/triage <task>` when the task needs help selecting a team or execution approach.
 
 ### Development Teams
 
@@ -256,7 +254,7 @@ WSL2 dual-home aware — terminal tools (Claude Code, Codex, Hermes, OpenCode) u
 
 **TOML customization (3-layer overrides):** on install, `_arcwright/custom/` is scaffolded with a commented `example.toml`. Drop `<name>.toml` (team) and `<name>.user.toml` (personal) there to override shipped defaults. Resolution order **base < team < user**: scalars override; arrays with a `<key>__append = true` sibling accumulate; keyed arrays (`id`/`name`) match-and-patch. No files present = unchanged behavior. Gitignore your `*.user.toml`.
 
-The installer also writes `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` into `.claude/settings.json` — this flag is **load-bearing for `SendMessage` reuse** and the in-process kept-alive model described in `claude-subagent-protocol`. Don't remove it.
+For Claude installations, the installer configures `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` for native teammate support. This is a host adapter setting; it does not select models or change another host's delegation protocol.
 
 ### Gitignore Options
 
@@ -335,7 +333,7 @@ The managed defaults install Claude and Codex integrations, the standard plugin 
 
 New panes and tabs use `terminal.new_cwd = "follow"`. Give each space its own root with `herdr workspace create --cwd /path/to/project`; descendants inherit that directory unless `--cwd` is supplied explicitly. Agents are grouped by space with `ui.agent_panel_sort = "spaces"`. Herdr 0.7.1 cannot hide agents belonging to inactive spaces.
 
-**Herdr is a visibility tool, not a spawn mechanism** — the default Arcwright orchestration runs in-process via the `Agent` tool + `SendMessage` reuse (see the `claude-subagent-protocol` skill). You only need Herdr panes if you want to watch agents run.
+**Herdr provides optional visibility.** Arcwright delegates through the host's native or app-owned task tools under [subagent-protocol](.agents/skills/subagent-protocol/SKILL.md). Use panes only when the user requests a visible workspace.
 
 Use `/herdr` inside an agent conversation to load the command reference.
 
@@ -352,7 +350,7 @@ herdr pane run <role> '<follow-up>'
 herdr pane close <role>
 ```
 
-The pane is only a viewing surface — the spawned agent still runs in-process (`Agent` tool + `SendMessage`), governed by `claude-subagent-protocol`. Full command reference, including a tmux → Herdr mapping table for anyone migrating an old setup: `.agents/skills/herdr/SKILL.md`.
+The pane provides visibility; [subagent-protocol](.agents/skills/subagent-protocol/SKILL.md) still governs delegation. The [Herdr skill](.agents/skills/herdr/SKILL.md) retains the native command reference and migration mapping.
 
 **Watching agents from your phone:** the `collie` Herdr plugin puts a phone PWA in front of your agent herd over Tailscale, so you can reply to a blocked agent from your phone keyboard. It's remote shell access to your machine by design and not installed by default — full install, security posture, and teardown steps are in [`docs/herdr-collie-tailscale-pwa.md`](docs/herdr-collie-tailscale-pwa.md).
 

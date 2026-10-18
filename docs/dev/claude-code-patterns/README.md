@@ -60,32 +60,14 @@ and orchestration protocols can track the platform.
 
 ## Relevance to Arcwright
 
-These platform primitives are the native equivalents of patterns Arcwright currently
-implements with tmux panes and session files (`claude-subagent-protocol`,
-`tmux-protocol` skills, `.agents/orchestration/session-*.md`):
-
-| Arcwright pattern | Native Claude Code equivalent |
-|-------------------|-------------------------------|
-| Opus orchestrates, Sonnet executes | `model: sonnet` on specialist subagents / `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` |
-| Persistent specialist agents across tasks | `memory: project` frontmatter |
-| Keep a team alive across tasks | Pinned background sessions + `SendMessage` (experimental) |
-| Track/team pipelines | Dynamic workflows (`ultracode`) — see [ultracode.md](ultracode.md) |
-| Review-gate loops (`arcwright-review-orchestrator`) | `SubagentStop` + `additionalContext` + `continueOnBlock` |
-| Resume a finished agent | Transcript JSONL within 30 days |
-
-## Related in Arcwright
-
-The patterns on this page are the substrate Arcwright's skills are built on top of:
-
-- [`claude-subagent-protocol`](../../../.agents/skills/claude-subagent-protocol/SKILL.md) —
-  the in-process Agent tool + SendMessage-reuse protocol. Defines the Session Agent
-  Registry (role → agentId) that replaces the old tmux `session-state.md` pane table,
-  and enforces sonnet-first / permission-before-opus.
-- [`triage`](../../../.agents/skills/triage/SKILL.md) — the workflow-router. Given a task,
-  it picks plain in-process agents / an ultracode dynamic workflow / a `/goal` loop.
-- [`herdr`](../../../.agents/skills/herdr/SKILL.md) — pane / workspace / session reference
-  with one opt-in "Watching agents in panes" section. The old `tmux-protocol` skill
-  (AGENT_SIGNAL/PEER_SIGNAL/STATUS_CHECK polling) is retired.
+These pages are conditional Claude Code references, not Arcwright-wide
+orchestration defaults. The shared [subagent protocol](../../../.agents/skills/subagent-protocol/SKILL.md)
+owns task lifecycle, provider/model inheritance, discovery, and host adaptation.
+Use [triage](../../../.agents/skills/triage/SKILL.md) to select installed workflows.
+Claude's native `Agent` and `SendMessage` shapes apply only where supported;
+Arcwright Code delegated review rounds always use fresh tasks. No role implies
+a fixed model family. [Herdr](../../../.agents/skills/herdr/SKILL.md) provides
+optional viewing; retired tmux signal/polling protocols are not runtime guidance.
 
 > Sources are cited at the bottom of each document. A few items that could not be confirmed
 > from official docs are flagged inline as **unverified**. The Ultracode scripting API in
