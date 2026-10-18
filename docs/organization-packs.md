@@ -55,8 +55,12 @@ before moving the parent pin. Private CI that checks out another private reposit
 needs an explicitly scoped credential; the default workflow token is scoped to its
 own repository. See [actions/checkout](https://github.com/actions/checkout#checkout-multiple-repos-private).
 
-Removing the current payload does not remove historical copies from Git. Keep
-Arcwright private until a reviewed public-history transition also excludes the
-old skills, module, commands, internal guide, and contract tests across published
-branches/tags. Do not force-push rewritten history or change visibility as part of
-an ordinary update. Preserve the existing private history as a recovery reference.
+Public GitHub CI uses repository-local security checks and GitHub-hosted runners.
+It requires neither the private organization baseline nor private submodule access.
+
+Moving current files is insufficient to remove historical copies from Git.
+The public migration preserves the original repository privately and rewrites the
+published Git history, including private content embedded in shared files.
+See [repository history](repository-history.md) before using an older clone.
+Do not force-push rewritten history or change visibility as part of an ordinary
+update; these operations require explicit task authorization.

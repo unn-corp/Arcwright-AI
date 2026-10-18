@@ -1,16 +1,8 @@
 # Arcwright workshop — CI gates.
 # Monorepo: root build pipeline + website (Vite/React/TS) + npm packages.
 #
-# Security is the org baseline (unn-corp/.github security-baseline.yml): gitleaks,
-# OSV-Scanner, Opengrep, zizmor and actionlint. On pull requests it reports only
-# what the PR introduces; pushes, the weekly sweep and manual runs scan the whole
-# repo and its history. Exceptions belong in .gitleaksignore / osv-scanner.toml /
-# an inline `nosemgrep` with a reason, never in this workflow.
-#
-# Runners: the isolated self-hosted pool on the mothership VPS,
-# [self-hosted, linux, x64, unn-isolated]. Each job gets a fresh ephemeral runner
-# with its own DinD daemon, destroyed after the job. /tmp is mounted noexec there,
-# so anything a job downloads and runs belongs under $RUNNER_TEMP.
+# Public CI uses repository-local security checks and GitHub-hosted runners.
+# Fork contributions need neither organization credentials nor private submodules.
 name: ci
 
 on:
@@ -38,21 +30,208 @@ env:
 
 jobs:
   security:
-    uses: unn-corp/.github/.github/workflows/security-baseline.yml@0867b7467a28b27c8b22c2a36f79b1fa0435b38f # v2
-    with:
-      languages: javascript typescript python
-      # detect-child-process: the hook scripts and installers spawn processes by
-      # design (CLI tooling, not request handlers).
-      # detect-insecure-websocket: its only hits are ws:// examples in skill docs.
-      skip-rules: >-
-        javascript/lang/security/detect-child-process.yaml
-        javascript/lang/security/detect-insecure-websocket.yaml
+    name: Secrets, dependency, code, and workflow security
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Full history: gitleaks scans every commit on full runs, and PR runs
+          # need the base commit to diff against.
+          fetch-depth: 0
+
+      # Pull requests gate only on what the PR introduces; pre-existing findings
+      # do not block unrelated work. Pushes, schedules and manual runs scan the
+      # whole repo and history, so old findings still fail there.
+      # On pull_request, actions/checkout checks out GitHub's test merge commit:
+      # parent 1 is the base branch tip, parent 2 the PR head.
+      - name: Scan scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == pull_request ]] && git rev-parse --verify --quiet 'HEAD^2' >/dev/null; then
+            base=$(git rev-parse 'HEAD^1')
+            echo "base=$base" >> "$GITHUB_OUTPUT"
+            echo "Scope: changes introduced by this pull request (base ${base:0:12})"
+          elif [[ "$EVENT_NAME" == pull_request ]]; then
+            echo "::warning::HEAD is not a PR merge commit; scanning the whole repository and history."
+          else
+            echo "Scope: whole repository and history"
+          fi
+
+      # Release binaries pinned by version AND SHA-256. Bump both together, taking
+      # the digest from the publisher's checksum file or release asset digest.
+      - name: Install pinned scanners
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/bin" work="$RUNNER_TEMP/tool-downloads"
+          mkdir -p "$bin" "$work"
+          fetch() {
+            curl --proto '=https' --tlsv1.2 -sSfL --retry 3 -o "$3" "$1"
+            echo "$2  $3" | sha256sum --check --strict --quiet
+          }
+          # gitleaks 8.30.1 (MIT)
+          fetch https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb "$work/gitleaks.tgz"
+          tar -xzf "$work/gitleaks.tgz" -C "$bin" gitleaks
+          # OSV-Scanner 2.6.0 (Apache-2.0)
+          fetch https://github.com/google/osv-scanner/releases/download/v2.6.0/osv-scanner_linux_amd64 \
+            ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108 "$bin/osv-scanner"
+          # Opengrep 1.30.1 (LGPL-2.1)
+          fetch https://github.com/opengrep/opengrep/releases/download/v1.30.1/opengrep_manylinux_x86 \
+            d3195b9d8d5ae93179f6aa5f5daaba6a920a5a09d38c5d5ae5e60924050210c4 "$bin/opengrep"
+          # zizmor 1.30.1 (MIT). The GitHub release binary needs glibc >= 2.34,
+          # newer than the runner image; the official PyPI manylinux_2_28 wheel
+          # carries the same binary. A wheel is a zip, so extract without pip.
+          fetch https://files.pythonhosted.org/packages/63/55/1900b53d34dcebc207cf3ceb7957b3748e8bb40958f062e3853ab72f2395/zizmor-1.30.1-py3-none-manylinux_2_28_x86_64.whl \
+            eee12266b793cb87ad4a7e3af2e72404f8a63e3de5eb099b80bf7b1cfd232a8e "$work/zizmor.whl"
+          python3 -m zipfile -e "$work/zizmor.whl" "$work/zizmor"
+          cp "$work/zizmor/zizmor-1.30.1.data/scripts/zizmor" "$bin/zizmor"
+          # actionlint 1.7.12 (MIT)
+          fetch https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 "$work/actionlint.tgz"
+          tar -xzf "$work/actionlint.tgz" -C "$bin" actionlint
+          chmod +x "$bin"/*
+          echo "$bin" >> "$GITHUB_PATH"
+
+      # Baseline known historical findings by fingerprint in the repo's
+      # .gitleaksignore, and only after the value is confirmed a fixture or rotated.
+      # On PRs only the PR's own commits are scanned.
+      - name: Secret scan (gitleaks)
+        id: gitleaks
+        env:
+          BASE: ${{ steps.scope.outputs.base }}
+        # --verbose prints each finding (rule, file, commit, fingerprint); --redact
+        # replaces the secret value so it never reaches the log.
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ -n "$BASE" ]]; then args+=(--log-opts "$BASE..HEAD^2"); fi
+          gitleaks git --redact --verbose --no-banner --exit-code 1 "${args[@]}" .
+
+      # Every committed lockfile, checked against OSV.dev. Exceptions belong in
+      # an osv-scanner.toml next to the lockfile, with a reason and ignoreUntil.
+      # On PRs the base commit is scanned too, against the same live advisory
+      # data, and only vulnerabilities the base does not already have fail the
+      # PR: newly disclosed advisories in unchanged dependencies surface in the
+      # push and weekly scans instead of blocking unrelated PRs.
+      - name: Dependency vulnerabilities (OSV-Scanner)
+        id: osv
+        env:
+          BASE: ${{ steps.scope.outputs.base }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$BASE" ]]; then
+            exec osv-scanner scan source --recursive --allow-no-lockfiles .
+          fi
+          out="$RUNNER_TEMP/osv"
+          mkdir -p "$out"
+          git worktree add -q --detach "$out/base" "$BASE"
+          scan() { # exit 1 means vulnerabilities found; anything else non-zero is an error
+            local rc=0
+            osv-scanner scan source --recursive --allow-no-lockfiles --format json --output-file "$2" "$1" || rc=$?
+            if (( rc > 1 )); then echo "osv-scanner failed on $1 (exit $rc)" >&2; exit "$rc"; fi
+          }
+          scan . "$out/head.json"
+          scan "$out/base" "$out/base.json"
+          git worktree remove --force "$out/base"
+          python3 -I - "$PWD" "$out/head.json" "$out/base" "$out/base.json" <<'PY'
+          import json, os, sys
+
+          def load(root, path):
+              found = {}
+              for result in json.load(open(path)).get("results") or []:
+                  source = os.path.relpath(result["source"]["path"], root)
+                  for pkg in result.get("packages") or []:
+                      p = pkg["package"]
+                      key = (source, p.get("ecosystem", ""), p["name"])
+                      groups = pkg.get("groups") or [{"ids": [v["id"]]} for v in pkg.get("vulnerabilities") or []]
+                      for group in groups:
+                          found.setdefault(key, []).append((p.get("version", ""), set(group["ids"]) | set(group.get("aliases") or [])))
+              return found
+
+          head = load(sys.argv[1], sys.argv[2])
+          base = load(sys.argv[3], sys.argv[4])
+          new, existing = [], 0
+          for key, vulns in sorted(head.items()):
+              known = set().union(*(ids for _, ids in base.get(key, [])))
+              for version, ids in vulns:
+                  if ids & known:
+                      existing += 1
+                  else:
+                      new.append((*key, version, sorted(ids)))
+          if existing:
+              print(f"{existing} vulnerabilities already on the base branch; not blocking this PR (the push and weekly scans report them).")
+          if not new:
+              print("No new dependency vulnerabilities introduced by this PR.")
+              sys.exit(0)
+          print(f"{len(new)} dependency vulnerabilities introduced by this PR:")
+          for source, ecosystem, name, version, ids in new:
+              print(f"  {source}: {ecosystem} {name}@{version}: {', '.join(ids)}")
+          print("Fix by upgrading, or add an osv-scanner.toml exception with a reason and ignoreUntil.")
+          sys.exit(1)
+          PY
+
+      # On PRs, --baseline-commit reports only findings the base commit lacks.
+      - name: Static security analysis (Opengrep)
+        id: opengrep
+        env:
+          BASE: ${{ steps.scope.outputs.base }}
+          # semgrep/semgrep-rules, pinned. The Semgrep Rules License permits
+          # internal use on our own code; do not redistribute the rules.
+          RULES_SHA: a84ff9cc2453ca91d581380de4b8b3f272f6f4be
+          LANGUAGES: javascript typescript python
+          EXTRA_EXCLUDE: ''
+          SKIP_RULES: >-
+            javascript/lang/security/detect-child-process.yaml
+            javascript/lang/security/detect-insecure-websocket.yaml
+        run: |
+          set -euo pipefail
+          rules="$RUNNER_TEMP/semgrep-rules"
+          git init -q "$rules"
+          git -C "$rules" fetch -q --depth 1 https://github.com/semgrep/semgrep-rules.git "$RULES_SHA"
+          git -C "$rules" checkout -q FETCH_HEAD
+          for rule in $SKIP_RULES; do
+            [[ "$rule" =~ ^[a-z0-9_-]+(/[a-z0-9_.-]+)+\.ya?ml$ && "$rule" != *..* && -f "$rules/$rule" ]] \
+              || { echo "Unknown rule file: $rule" >&2; exit 1; }
+            echo "Skipping rule file: $rule"
+            rm "$rules/$rule"
+          done
+          args=()
+          for language in $LANGUAGES; do
+            [[ "$language" =~ ^[a-z]+$ && -d "$rules/$language" ]] || { echo "Unknown language: $language" >&2; exit 1; }
+            # Security rules only: drop correctness/best-practice/style rules,
+            # and `security/audit` rules, which semgrep marks as manual-review
+            # hints with high false-positive rates (excluded from its CI set).
+            find "$rules/$language" -name '*.yaml' \( ! -path '*/security/*' -o -path '*/audit/*' \) -delete
+            echo "$language: $(find "$rules/$language" -name '*.yaml' | wc -l) security rule files"
+            args+=(--config "$rules/$language")
+          done
+          for path in node_modules .next dist build vendor .venv $EXTRA_EXCLUDE; do
+            args+=(--exclude "$path")
+          done
+          if [[ -n "$BASE" ]]; then args+=(--baseline-commit "$BASE"); fi
+          opengrep scan --error --severity ERROR "${args[@]}" .
+
+      # zizmor and actionlint always check every workflow: both tools are pinned,
+      # so their results only change when a workflow does, and that PR is where
+      # the finding belongs.
+      - name: Workflow security (zizmor)
+        id: zizmor
+        run: zizmor --offline .github/workflows
+
+      - name: Workflow lint (actionlint)
+        id: actionlint
+        run: actionlint
 
   # Build verification — runs the workshop packager (includes the no-leak check).
   build-package:
     name: build (package)
     needs: security
-    runs-on: [self-hosted, linux, x64, unn-isolated]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,7 +248,7 @@ jobs:
   test-package:
     name: test (package)
     needs: security
-    runs-on: [self-hosted, linux, x64, unn-isolated]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
@@ -95,7 +274,7 @@ jobs:
   website:
     name: static (website)
     needs: security
-    runs-on: [self-hosted, linux, x64, unn-isolated]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
@@ -121,7 +300,7 @@ jobs:
   pr-title:
     name: pr title
     if: github.event_name == 'pull_request'
-    runs-on: [self-hosted, linux, x64, unn-isolated]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       pull-requests: read # the action reads the pull request's title
