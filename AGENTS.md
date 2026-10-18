@@ -21,12 +21,13 @@ For global installs: add `--global` to any command. Update a global install with
 
 <!-- arcwright-agent-end -->
 
-## Arcwright Code app delivery — explicit nightly publication only
+## Arcwright Code app delivery — scheduled releases and explicit manual builds
 
-Do not queue builds or publish nightlies unless the user explicitly asks to publish
-a nightly. Coding, cleanup, scans, fixes, commits, pushes, and general app updates
-do not commission a build. This user preference supersedes the former automatic
-nightly delivery default. When publication is explicitly requested, use the fork
+The user authorized scheduled nightly and stable publication in `unn-corp/t3code`
+on 2026-10-18. Preserve `FORK_RELEASES_ENABLED=true` and the configured schedules.
+Do not dispatch extra builds or publish manual nightlies unless explicitly requested.
+Coding, cleanup, scans, fixes, commits, pushes, and general app updates do not
+commission an extra build. When manual publication is requested, use the fork
 release pipeline from the tested, pinned commit on `main` and reuse a suitable
 release or existing run instead of commissioning duplicate builds.
 Follow the [delivery procedure](t3code/docs/operations/fork-releases.md#default-agent-delivery).
@@ -34,7 +35,7 @@ Follow the [delivery procedure](t3code/docs/operations/fork-releases.md#default-
 Honor explicit user choices such as source-only work, development/test builds,
 local-only packaging, a stable release, or a pinned version. Documentation, review,
 and unrelated app-development requests do not themselves commission an Arcwright
-release. Publication does not enable scheduled publishing or automatic updates.
+release. Publication does not change saved device update preferences.
 Installation still requires native maintenance admission; protect running chats,
 verify the installed app, and document the canonical menu replacement below.
 
