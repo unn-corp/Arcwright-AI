@@ -3,14 +3,14 @@ import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, execSync } from 'node:child_process';
-import installer from '../lib/installer.js';
+import installer, { publicInstaller } from './organization-fixture.js';
 
 const { install, uninstall } = installer;
 const { readManifest, writeManifest } = installer._internal;
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(PKG_ROOT, '..', '..');
-const SRC_DIR = path.join(PKG_ROOT, 'src');
+const SRC_DIR = installer.sourceDir;
 
 // install() reads from the built src/ (gitignored). Build it once if missing so
 // the suite is self-sufficient locally and in a fresh CI checkout.
@@ -53,6 +53,15 @@ const baseOpts = (over = {}) => ({
 });
 
 describe('install() — fresh project install', () => {
+  it('requires an explicit private source and preserves enabled private installs on public-only updates', async () => {
+    await expect(publicInstaller.install(baseOpts({ unnamedPm: true }))).rejects.toThrow('skills are private');
+    expect(fs.readdirSync(projectDir)).toEqual([]);
+    await install(baseOpts({ unnamedPm: true }));
+    const privateSkill = path.join(projectDir, '.agents/skills/unnamed-dev-mcp/SKILL.md');
+    const before = fs.readFileSync(privateSkill, 'utf8');
+    await expect(publicInstaller.install(baseOpts({ action: 'update' }))).rejects.toThrow('private Unnamed Development pack enabled');
+    expect(fs.readFileSync(privateSkill, 'utf8')).toBe(before);
+  });
   it('keeps the Matt Pocock pack optional across every platform', async () => {
     await install(baseOpts({ tools: 'claude-code,cursor,kiro,codex,hermes,opencode,grok' }));
     for (const rel of [

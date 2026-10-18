@@ -4,13 +4,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import yaml from 'yaml';
-import installer from '../lib/installer.js';
+import installer from './organization-fixture.js';
 
 const { writeCodexConfig, writeHermesConfig, sha256 } = installer._internal;
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(PKG_ROOT, '..', '..');
-const SRC_DIR = path.join(PKG_ROOT, 'src');
+const SRC_DIR = installer.sourceDir;
 
 // writeCodexConfig/writeHermesConfig read from the built src/ (gitignored).
 // Build it once if missing so the suite is self-sufficient locally and in a

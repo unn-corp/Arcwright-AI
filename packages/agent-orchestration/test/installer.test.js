@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
-import installer from '../lib/installer.js';
+import installer from './organization-fixture.js';
 
 const {
   sha256, escapeRe, detectBmad, getHomes, resolveToolPath,

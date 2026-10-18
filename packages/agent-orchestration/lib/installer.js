@@ -14,8 +14,16 @@ const { glob } = require('glob');
 const os = require('os');
 const { execSync } = require('child_process');
 
-const SRC_DIR = path.join(__dirname, '..', 'src');
-const { filterSkillFiles, filterCommandNames, describeSkippedSkills } = require(path.join(SRC_DIR, '.agents/skills/arcwright/scripts/skill-metadata.cjs'));
+const DEFAULT_SRC_DIR = path.join(__dirname, '..', 'src');
+
+// Explicit trusted bundles let optional organization packs reuse the installer
+// without modifying the installed package or sharing mutable source state.
+function createInstaller({ sourceDir = DEFAULT_SRC_DIR } = {}) {
+const SRC_DIR = path.resolve(sourceDir);
+const metadata = () => require(path.join(SRC_DIR, '.agents/skills/arcwright/scripts/skill-metadata.cjs'));
+const filterSkillFiles = (...args) => metadata().filterSkillFiles(...args);
+const filterCommandNames = (...args) => metadata().filterCommandNames(...args);
+const describeSkippedSkills = (...args) => metadata().describeSkippedSkills(...args);
 const { detectPlatform } = require('./platform');
 const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
 const { listClaudeProfileDirs } = require('./herdrAssets');
@@ -1945,6 +1953,10 @@ function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 // ─── Install ─────────────────────────────────────────────────────────────────
 
 async function install(opts) {
+  const hasOrganizationSource = await fs.pathExists(path.join(SRC_DIR, 'unnamed-pm'));
+  if (opts.unnamedPm && !hasOrganizationSource) {
+    throw new Error('Unnamed Development skills are private. Initialize vendor/unnamed-dev-skills and use its install command with this Arcwright checkout.');
+  }
   const {
     directory = process.cwd(),
     modules = 'awm,awb,core,_memory',
@@ -2007,6 +2019,9 @@ async function install(opts) {
 
   // ── Detect existing installation ──────────────────────────────────────────
   const existingManifest = await readManifest(arcwrightDir);
+  if (existingManifest?.unnamedPm && !hasOrganizationSource) {
+    throw new Error('This target has the private Unnamed Development pack enabled. Update it through vendor/unnamed-dev-skills so private files and preferences are preserved.');
+  }
   if (existingManifest?.platform) {
     platform = existingManifest.platform;
   }
@@ -2283,13 +2298,14 @@ async function install(opts) {
     if (isCancel(awsInfraChoice)) { process.exit(0); }
     resolvedAwsInfra = awsInfraChoice;
 
-    // Unnamed Development PM opt-in — unnamed-pm module + unnamed-pm-sync skill + /unnamed-pm
-    const unnamedPmChoice = await confirm({
-      message: 'Install the Unnamed-PM module? (PM-sync agent + unnamed-pm-sync skill + /unnamed-pm — keeps projects/milestones/issues in sync via the unnamed-development MCP)',
-      initialValue: existingManifest?.unnamedPm === true,
-    });
-    if (isCancel(unnamedPmChoice)) { process.exit(0); }
-    resolvedUnnamedPm = unnamedPmChoice;
+    if (hasOrganizationSource) {
+      const unnamedPmChoice = await confirm({
+        message: 'Install the private Unnamed Development integration?',
+        initialValue: resolvedUnnamedPm,
+      });
+      if (isCancel(unnamedPmChoice)) { process.exit(0); }
+      resolvedUnnamedPm = unnamedPmChoice;
+    }
 
     // tmux setup removed — Herdr replaces it (herdr.dev). No prompt.
 
@@ -3177,9 +3193,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
   const srcDir = path.join(__dirname, 'templates', 'hooks');
   const destDir = path.join(claudeDir, 'arcwright-hooks');
   const dynamodbSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'dynamodb-best-practices',
@@ -3187,9 +3201,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     DYNAMODB_CONTEXT_HOOK,
   );
   const amplifyContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'amplify-best-practices',
@@ -3197,9 +3209,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     AMPLIFY_CONTEXT_HOOK,
   );
   const amplifyReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'amplify-best-practices',
@@ -3207,9 +3217,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     AMPLIFY_REVIEW_HOOK,
   );
   const cloudfrontContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'cloudfront-best-practices',
@@ -3217,9 +3225,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     CLOUDFRONT_CONTEXT_HOOK,
   );
   const cloudfrontReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'cloudfront-best-practices',
@@ -3227,9 +3233,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     CLOUDFRONT_REVIEW_HOOK,
   );
   const s3ContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     's3-best-practices',
@@ -3237,9 +3241,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     S3_CONTEXT_HOOK,
   );
   const s3ReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     's3-best-practices',
@@ -3247,9 +3249,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     S3_REVIEW_HOOK,
   );
   const auroraContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'aurora-db-best-practices',
@@ -3257,9 +3257,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     AURORA_CONTEXT_HOOK,
   );
   const auroraReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'aurora-db-best-practices',
@@ -3267,9 +3265,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     AURORA_REVIEW_HOOK,
   );
   const sesSnsSmtpContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'ses-sns-smtp-best-practices',
@@ -3277,9 +3273,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     SES_SNS_SMTP_CONTEXT_HOOK,
   );
   const sesSnsSmtpReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'ses-sns-smtp-best-practices',
@@ -3287,9 +3281,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     SES_SNS_SMTP_REVIEW_HOOK,
   );
   const eventBridgeContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'eventbridge-best-practices',
@@ -3297,9 +3289,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     EVENTBRIDGE_CONTEXT_HOOK,
   );
   const eventBridgeReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'eventbridge-best-practices',
@@ -3307,9 +3297,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     EVENTBRIDGE_REVIEW_HOOK,
   );
   const cognitoContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'cognito-best-practices',
@@ -3317,9 +3305,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     COGNITO_CONTEXT_HOOK,
   );
   const cognitoReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'cognito-best-practices',
@@ -3327,9 +3313,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     COGNITO_REVIEW_HOOK,
   );
   const lambdaContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'lambda-best-practices',
@@ -3337,9 +3321,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     LAMBDA_CONTEXT_HOOK,
   );
   const lambdaReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'lambda-best-practices',
@@ -3347,9 +3329,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     LAMBDA_REVIEW_HOOK,
   );
   const stepFunctionsContextSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'step-functions-best-practices',
@@ -3357,9 +3337,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
     STEP_FUNCTIONS_CONTEXT_HOOK,
   );
   const stepFunctionsReviewSrc = path.join(
-    __dirname,
-    '..',
-    'src',
+    SRC_DIR,
     '.agents',
     'skills',
     'step-functions-best-practices',
@@ -3376,9 +3354,7 @@ async function seedArcwrightHooks(settings, claudeDir, mode, isGlobal, unnamedPm
   }
   if (unnamedPm) {
     const unnamedSrc = path.join(
-      __dirname,
-      '..',
-      'src',
+      SRC_DIR,
       '.agents',
       'skills',
       'unnamed-dev-mcp',
@@ -4378,7 +4354,7 @@ async function uninstall(opts = {}) {
   console.log(chalk.bold.green(`\n✓ Uninstalled.\n`));
 }
 
-module.exports = {
+return {
   install, status, uninstall,
   // Public helpers for CLI surfaces (platforms list, --tools help text).
   PLATFORMS, getSupportedToolIds, getToolPromptOptions, parseToolIds,
@@ -4400,3 +4376,6 @@ module.exports = {
     PLATFORMS, getSupportedToolIds, getToolPromptOptions, parseToolIds, hasOnlySupportedToolIds,
   },
 };
+}
+
+module.exports = { ...createInstaller(), createInstaller, sourceApiVersion: 1 };

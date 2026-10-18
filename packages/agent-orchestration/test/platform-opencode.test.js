@@ -3,13 +3,13 @@ import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
-import installer from '../lib/installer.js';
+import installer from './organization-fixture.js';
 
 const { writeOpenCodeConfig, sha256 } = installer._internal;
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(PKG_ROOT, '..', '..');
-const SRC_DIR = path.join(PKG_ROOT, 'src');
+const SRC_DIR = installer.sourceDir;
 
 // writeOpenCodeConfig reads from the built src/ (gitignored). Build it once if
 // missing so the suite is self-sufficient locally and in a fresh CI checkout —
@@ -67,8 +67,7 @@ describe('writeOpenCodeConfig — project install', () => {
     expect(fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')).toContain('once at session start');
     expect(fs.existsSync(path.join(projectDir, '.opencode', 'plugins', 'unnamed-dev-mcp.js'))).toBe(true);
     const plugin = fs.readFileSync(path.join(projectDir, '.opencode', 'plugins', 'unnamed-dev-mcp.js'), 'utf8');
-    expect(plugin).toContain('experimental.chat.system.transform');
-    expect(plugin).toContain('preflightInjected');
+    expect(plugin).toBe(fs.readFileSync(path.join(SRC_DIR, '.agents/skills/unnamed-dev-mcp/hooks/opencode-plugin.js'), 'utf8'));
   });
 
   it('preserves user content outside the managed block', async () => {

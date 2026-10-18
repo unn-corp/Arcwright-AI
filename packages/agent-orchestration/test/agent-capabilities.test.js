@@ -134,7 +134,7 @@ describe('agent capability source audits', () => {
 
   it('audits every real role, hint identity and shared discovery wiring', () => {
     const registry = JSON.parse(fs.readFileSync(path.join(ROUTER, 'agent-capabilities.json')));
-    expect(Object.keys(registry.roles)).toHaveLength(17);
+    expect(Object.keys(registry.roles)).toHaveLength(16);
     const f = sourceFixture();
     expect(invocation.auditAgentCapabilities(f.sourceRoot).issues).toEqual([]);
     put(f.sourceRoot, '_arcwright/awm/agents/new-role.md', 'Read agent-runtime.md');

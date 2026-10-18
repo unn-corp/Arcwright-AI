@@ -125,13 +125,13 @@ describe('model invocation routes and context audit', () => {
 
   it('retains every real profile and exposes all of them through the portable catalog', () => {
     const f = fixture();
-    for (const mod of ['core', 'awm', 'awb', 'aws-infra', 'unnamed-pm']) {
+    for (const mod of ['core', 'awm', 'awb', 'aws-infra']) {
       fs.cpSync(path.join(REPO, '_arcwright', mod, 'agents'), path.join(f.root, '_arcwright', mod, 'agents'), { recursive: true });
       fs.cpSync(path.join(REPO, '_arcwright', mod, 'resources/agent-menus'), path.join(f.root, '_arcwright', mod, 'resources/agent-menus'), { recursive: true });
     }
     const catalog = buildInvocationCatalog(f.root, { source: true });
     const agents = catalog.entries.filter(entry => entry.kind === 'agent');
-    expect(agents).toHaveLength(17);
+    expect(agents).toHaveLength(16);
     expect(agents.map(agent => agent.name)).toContain('arcwright-master');
     for (const agent of agents) {
       const text = fs.readFileSync(path.join(f.root, agent.path), 'utf8');

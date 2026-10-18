@@ -89,7 +89,8 @@ The finder can search catalog metadata without loading all skill procedures.
 
 The maintained registry is
 [agent-capabilities.json](../.agents/skills/arcwright/agent-capabilities.json).
-It covers all 17 profile slugs and selects additional hints by task:
+It covers all 16 core profile slugs and selects additional hints by task.
+An optional private organization pack adds its own capability entries during install:
 
 | Role | Starting guidance or relevant conditional hints |
 |---|---|
@@ -109,11 +110,10 @@ It covers all 17 profile slugs and selects additional hints by task:
 | `workflow-builder` | Procedure constraints, authoring, evaluation, dependencies |
 | `module-builder` | Skill authoring, agent/workflow constraints, evaluation |
 | `aws-infra` | Installed AWS/CDK guidance and relevant service/security checks |
-| `unnamed-pm` | Explicitly authorized Unnamed MCP procedure and synchronization |
 
 Selecting a role or hint preserves existing authorization. In particular,
-`unnamed-pm` suggestions do not authorize ordinary coding to access the Unnamed
-Development MCP. Security team presets use `review-orchestrator` with the security
+optional organization packs do not authorize ordinary coding to access a tracker.
+Security team presets use `review-orchestrator` with the security
 lens in the task, rather than an invented security profile.
 
 ## Resolution and local customizations

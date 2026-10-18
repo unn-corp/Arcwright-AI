@@ -3,13 +3,13 @@ import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
-import installer from '../lib/installer.js';
+import installer from './organization-fixture.js';
 import { adaptKiroContent } from '../lib/kiro-adapter.js';
 
 const { writeKiroConfig } = installer._internal;
 const PKG_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(PKG_ROOT, '..', '..');
-const SRC_DIR = path.join(PKG_ROOT, 'src');
+const SRC_DIR = installer.sourceDir;
 const chalk = new Proxy({}, { get: () => (s) => s });
 const platform = 'linux-native';
 

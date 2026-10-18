@@ -18,7 +18,7 @@ Configure MCP servers appropriate to your project. The examples below show a typ
 **NEVER block a workflow because an MCP tool is unavailable.** If a tool call fails or a server is offline:
 1. Continue the workflow without it
 2. Note the skipped step inline (e.g. "⚠️ RAG store skipped — project MCP not connected")
-3. **MUST paste the pending tracker payload in the chat reply** (project, work done, intended issue/status/SHA, next action). Queue the same text under `{output_folder}/unnamed-pm-pending/`. Do not omit the chat listing because a file was written. Once per user-facing reply is enough.
+3. For an explicitly requested tracker action that could not run, paste the pending payload in the chat reply (project, work done, intended issue/status/SHA, next action). Queue the same text under `{output_folder}/tracker-pending/`. Do not create tracker work for an ordinary coding task or omit the chat listing because a file was written. Once per user-facing reply is enough.
 
 ---
 

@@ -181,6 +181,14 @@ symlinkDescribe('build input symlink boundaries', () => {
 });
 
 describe('ordinary build inputs', () => {
+  it('rejects private organization skills copied into public source', () => {
+    withFixture((fixture) => {
+      const skill = path.join(fixture.root, '.agents/skills/unnamed-dev-mcp');
+      fs.mkdirSync(skill, { recursive: true });
+      fs.writeFileSync(path.join(skill, 'SKILL.md'), 'Synthetic private fixture\n');
+      expect(() => runBuild(fixture)).toThrow(/private organization source/);
+    });
+  });
   it('does not package local skill runs with the reusable memory module', () => {
     withFixture((fixture) => {
       const memory = path.join(fixture.root, '_arcwright', '_memory');

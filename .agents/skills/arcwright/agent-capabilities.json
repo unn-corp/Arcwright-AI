@@ -593,17 +593,6 @@
           ]
         }
       ]
-    },
-    "unnamed-pm": {
-      "profile": "_arcwright/unnamed-pm/agents/unnamed-pm.md",
-      "skills": [
-        {
-          "name": "unnamed-dev-mcp"
-        },
-        {
-          "name": "unnamed-pm-sync"
-        }
-      ]
     }
   }
 }

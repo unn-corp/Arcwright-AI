@@ -57,7 +57,7 @@ const PROJECT_ROOT_REAL = fs.realpathSync(PROJECT_ROOT);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GENERIC_MODULES = ['awb', 'awm', 'core', '_memory', 'aws-infra', 'unnamed-pm'];
+const GENERIC_MODULES = ['awb', 'awm', 'core', '_memory', 'aws-infra'];
 
 /** File path segments that trigger an unconditional skip. */
 const EXCLUDE_ALWAYS = [
@@ -132,8 +132,6 @@ const SHIPPED_COMMANDS = [
   /^tauri\.md$/,
   /^strands\.md$/,
   /^aws-infra\.md$/,
-  /^unnamed-pm\.md$/,
-  /^unnamed-dev-mcp\.md$/,
   /^react\.md$/,
   /^typescript\.md$/,
   /^nextjs\.md$/,
@@ -303,6 +301,14 @@ function adaptPromptForKiro(body) {
 // ─── Step 1: buildGenericPackage ─────────────────────────────────────────────
 
 function buildGenericPackage() {
+  for (const relative of [
+    '.agents/skills/unnamed-dev-mcp', '.agents/skills/unnamed-pm-sync',
+    '.agents/skills/ufl-extract', '_arcwright/unnamed-pm',
+  ]) {
+    if (sourceExists(path.join(PROJECT_ROOT, relative))) {
+      throw new Error(`Refusing private organization source in the public build: ${relative}. Use vendor/unnamed-dev-skills instead.`);
+    }
+  }
   console.log('📦  Building generic package → packages/agent-orchestration/src/');
 
   // Wipe and recreate src/. On reused CI workspaces (self-hosted runners) a

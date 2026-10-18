@@ -28,6 +28,7 @@ The npm organization is `@arcwright-ai`; the repository is
 | `packages/tmux-setup/lib/`, `bin/`, `src/tmux/` | Legacy standalone package sources |
 | `website/` | Vite + React + TypeScript site for arcwright.space |
 | `.fleet/` | Git-ignored device inventory, rollout records, artifacts, and recovery notes |
+| `vendor/unnamed-dev-skills/` | Optional private organization pack; excluded from public core builds |
 
 For operating devices from this checkout, follow [fleet management](fleet-management.md).
 Run `npm run fleet:init` once to prepare local storage. Routine device updates use
@@ -38,6 +39,13 @@ the normal build also runs it. A local hash manifest updates or retires only own
 unchanged adapters and preserves custom files. Edit canonical `.claude/commands/`
 sources for shared changes. Fresh checkouts create the native adapters on first
 sync/build; installed projects continue to receive adapters through the installer.
+
+The installer exposes `sourceApiVersion: 1` and `createInstaller({ sourceDir })`
+for an explicitly selected trusted bundle. The default API uses the public package
+source. Organization installers compose a private temporary source from that core
+plus their own payload and reuse the same install/update ownership rules. Never
+write an overlay into the installed public package or publish a composed private
+bundle. See [organization packs](organization-packs.md).
 
 ## Build and publish
 

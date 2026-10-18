@@ -16,6 +16,9 @@ project instructions here and follow the applicable instruction hierarchy.
   Collie are detached checkouts; use the local Herdr skill and Collie setup guide.
 - Keep Squidhub-specific overlays out of the generic package. This workshop is
   the single package publication source; publishing requires task authorization.
+- Organization procedures live in optional private `vendor/unnamed-dev-skills/`.
+  Keep them out of core sources and public bundles; follow
+  [organization-pack setup](docs/organization-packs.md) for authorized access/install.
 - Do not add AI/model attribution, generated-by notices, or coauthor trailers.
   Preserve required copyright, license, and source credits.
 

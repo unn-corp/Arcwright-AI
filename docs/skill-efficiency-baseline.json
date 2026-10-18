@@ -1068,11 +1068,6 @@
       "entrypointBytes": 9021,
       "descriptionBytes": 170
     },
-    ".agents/skills/ufl-extract/SKILL.md": {
-      "name": "ufl-extract",
-      "entrypointBytes": 1580,
-      "descriptionBytes": 258
-    },
     ".agents/skills/ui-ux-pro-custom/data/jetpack-compose-expert-skill/SKILL.md": {
       "name": "jetpack-compose",
       "entrypointBytes": 7138,
@@ -1362,16 +1357,6 @@
       "name": "ui-ux-pro-custom",
       "entrypointBytes": 4261,
       "descriptionBytes": 114
-    },
-    ".agents/skills/unnamed-dev-mcp/SKILL.md": {
-      "name": "unnamed-dev-mcp",
-      "entrypointBytes": 3961,
-      "descriptionBytes": 227
-    },
-    ".agents/skills/unnamed-pm-sync/SKILL.md": {
-      "name": "unnamed-pm-sync",
-      "entrypointBytes": 11421,
-      "descriptionBytes": 128
     },
     ".agents/skills/ux-audit/SKILL.md": {
       "name": "ux-audit",

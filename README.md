@@ -417,6 +417,11 @@ run `npm run fleet:init`. Inventory, rollout records, artifacts, and recovery no
 stay in Git-ignored `.fleet/`; routine updates need no repository commits. See
 [fleet setup and update standards](docs/fleet-management.md).
 
+Unnamed Development's MCP, PM, and UFL skills live in an optional private
+organization repository. Public core builds and installs require no access to it.
+See [organization packs](docs/organization-packs.md) for admin access, the pinned
+submodule, and the private install/update command.
+
 ### Locally maintained Matt Pocock skills
 
 Arcwright maintains local versions of 27 engineering and productivity skills adapted from [`mattpocock/skills`](https://github.com/mattpocock/skills), under `.agents/skills/matt-pocock*/`. These are ordinary editable source, with supporting resources, licenses, and provenance included. Builds and CI need no upstream checkout. The `matt-pocock-*` invocation names remain stable.
