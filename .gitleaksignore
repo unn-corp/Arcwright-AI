@@ -1,0 +1,17 @@
+# Verified SHA-256 file checksums in the skill provenance manifest, not secrets.
+# On 2026-10-18, all 13 values were recomputed from their referenced local files
+# or pinned upstream revisions and matched. See docs/skill-sources.json.
+# Scope exceptions to these historical findings; new findings remain actionable.
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:360
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:391
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:470
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:479
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:621
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:741
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:887
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:1089
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:1090
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:1099
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:1100
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:1130
+ea7965b8f560df3aa339a002d20c760544f1a921:docs/skill-sources.json:generic-api-key:1153
