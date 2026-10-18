@@ -94,7 +94,13 @@ async function sheet(frames, cols, cellW, cellH, path) {
   await helper.setViewport({ width: cols * cellW, height: rows * cellH, dsf: 1 });
   await helper.eval((a) => {
     document.body.style.cssText = `margin:0;background:#888;display:grid;grid-template-columns:repeat(${a.cols},${a.cellW}px)`;
-    document.body.innerHTML = a.frames.map((s) => `<img src="data:image/jpeg;base64,${s}" style="width:${a.cellW}px;height:${a.cellH}px;display:block;outline:1px solid #888">`).join('');
+    const images = a.frames.map((source) => {
+      const image = document.createElement('img');
+      image.src = `data:image/jpeg;base64,${source}`;
+      image.style.cssText = `width:${a.cellW}px;height:${a.cellH}px;display:block;outline:1px solid #888`;
+      return image;
+    });
+    document.body.replaceChildren(...images);
     return Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
   }, { frames, cols, cellW, cellH });
   await helper.screenshot({ path, quality: 76 });

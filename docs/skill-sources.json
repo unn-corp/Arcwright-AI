@@ -2487,7 +2487,7 @@
         ".agents/skills/design-taste-frontend/RULES.md": "326d27a442f5a61ba7fd2cdaccfaaac77278578d84110367a6b5a8f61fbaf641",
         ".agents/skills/design-taste-frontend/scripts/assets.mjs": "f6118d99f6163cb6c2528bc80ff51806d49767c51c84129796d64937fd02e8e3",
         ".agents/skills/design-taste-frontend/scripts/draw.mjs": "27ceb6f68b17892f84dc793fb96148c2b9bc1aa81b4388a558438b0f80a6aaca",
-        ".agents/skills/design-taste-frontend/scripts/inspect.mjs": "224680bd626f6470620e9581374d650e7242b747a4712fe32d62f17f694dbb14",
+        ".agents/skills/design-taste-frontend/scripts/inspect.mjs": "afb5b0342491815ffa24a7967530355ded5c9f7d2313855f542798e25ea12eca",
         ".agents/skills/design-taste-frontend/scripts/lib/cdp.mjs": "83111e6656f8e4f147a3ce7c7da602e7826cdf3245f53948424e97e4a7f2725d",
         ".agents/skills/design-taste-frontend/scripts/lib/probe.mjs": "5c5148893414ce7eeca4aaa0c476cf196cd8c22cfc514b737c2a614fac77fc1c",
         ".agents/skills/design-taste-frontend/scripts/lib/rules.mjs": "bf8a83119687826f132a31ae081f3e89b33d05451698e8093caa88745d4a2ec1",
