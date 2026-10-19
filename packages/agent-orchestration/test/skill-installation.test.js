@@ -209,6 +209,21 @@ describe('global account sharing', () => {
     expect(await sharingState.snapshot(root)).toEqual(before);
   });
 
+  it('ignores provider home variables that point outside the configured home', async () => {
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'arcw-outside-home-'));
+    try {
+      await put(outside, 'CLAUDE.md', '# Someone else\n');
+      await put(root, '.codex-work/config.toml', '');
+      const found = await accounts.discoverAccountEnvironments({ homeDir: root, codeHomes: noCodeHomes,
+        env: { CLAUDE_CONFIG_DIR: outside, CODEX_HOME: path.join(root, '.codex-work') } });
+      const paths = found.homes.map(home => home.path);
+      expect(paths).toContain(path.join(root, '.codex-work'));
+      expect(paths).not.toContain(outside);
+    } finally {
+      await fs.remove(outside);
+    }
+  });
+
   it('dry-run and cancellation write no files', async () => {
     const prefs = selection({ codex: { instructions: true, skills: true } });
     const before = await sharingState.snapshot(root);

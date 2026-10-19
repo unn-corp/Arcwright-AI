@@ -2,7 +2,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const crypto = require('crypto');
-const { PROVIDERS, slugValid, discoverAccountEnvironments, launcherContent } = require('./account-environments');
+const { PROVIDERS, slugValid, launcherContent } = require('./account-environments');
 const { snapshot, equal, safeParents, readState, applySharingPlan, planRestore, restoreSharing } = require('./sharing-state');
 const START = '<!-- arcwright-agent-start -->';
 const END = '<!-- arcwright-agent-end -->';
@@ -351,7 +351,7 @@ function formatSharingPlan(plan) {
     ...plan.operations.map(op => plan.restore ? `Restore ${op.path} from ${op.backup || 'absent preimage'}` : `${op.action} ${op.path}${op.target ? ` -> ${op.target}` : ''}; backup ${op.before.type === 'absent' ? '(new object)' : op.backup}; record ${op.record}`),
     ...(plan.detach?.operations || []).map(op => `Restore excluded ${op.path} from ${op.backup || 'absent preimage'}`),
     ...(plan.notices || []).map(line => `Notice: ${line}`),
-    ...[...plan.pending, ...(plan.detach?.pending || [])].map(line => `Pending: ${line}`),
+    ...[...new Set([...plan.pending, ...(plan.detach?.pending || [])])].map(line => `Pending: ${line}`),
   ];
 }
 async function applyGlobalSharing(plan, options = {}) {

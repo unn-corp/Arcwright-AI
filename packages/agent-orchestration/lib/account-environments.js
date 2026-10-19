@@ -28,7 +28,9 @@ async function discoverAccountEnvironments({ homeDir, env = process.env, codeHom
     if (spec.multiAccount !== false) {
       const re = new RegExp(`^\\${spec.dir}(?:${provider === 'claude' ? '-' : '[-_]'}).+`);
       candidates.push(...entries.filter(name => re.test(name) && !/(?:backup|archive|\.bak(?:$|[.-]))/i.test(name)).map(name => path.join(homeDir, name)));
-      if (env[spec.env]) candidates.push(path.resolve(env[spec.env]));
+      // Agent sessions export their own provider home; never follow one outside the configured home.
+      const declared = env[spec.env] ? path.resolve(env[spec.env]) : null;
+      if (declared && declared.startsWith(path.resolve(homeDir) + path.sep)) candidates.push(declared);
       candidates.push(...Object.keys(saved?.providers?.[provider]?.accounts || {}));
       if (provider === 'codex') for (const item of codeHomes.codex || []) candidates.push(item.sharedHome, item.shadowHome);
       if (provider === 'claude') for (const item of codeHomes.claude || []) candidates.push(item.home);
