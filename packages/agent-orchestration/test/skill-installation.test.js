@@ -245,8 +245,9 @@ describe('global account sharing', () => {
     await put(root, '.claude/skills/personal-guide/assets/example.txt', 'Asset');
     await put(root, '.claude/skills/conflict/SKILL.md', 'Claude version');
     await put(root, '.agents/skills/conflict/SKILL.md', 'Neutral version');
+    await put(root, '.grok/skills/notes/SKILL.md', 'Original procedure');
     const approvals = (await sharing.personalCandidates({ homeDir: root, discovery: await discover(root) })).filter(item => item.kind === 'skill');
-    const prefs = selection({ claude: { skills: true }, codex: { skills: true } });
+    const prefs = selection({ claude: { skills: true }, codex: { skills: true }, grok: { skills: true } });
     const plan = await makePlan(root, prefs, { personalApprovals: approvals });
     expect(plan.pending.join('\n')).toContain('same-name bundle');
     await sharing.applyGlobalSharing(plan);
@@ -259,9 +260,18 @@ describe('global account sharing', () => {
     const rerun = await makePlan(root, prefs);
     expect(rerun.operations).toHaveLength(0);
     expect(rerun.detach.operations).toHaveLength(0);
+    await sharing.applyGlobalSharing(rerun);
+    const grokCanonical = path.join(root, '.arcwright/skills/notes');
+    await put(grokCanonical, 'SKILL.md', 'Updated canonical procedure');
+    expect(await fs.readlink(path.join(root, '.grok/skills/notes'))).toBe(grokCanonical);
+    expect(await fs.readFile(path.join(root, '.grok/skills/notes/SKILL.md'), 'utf8')).toBe('Updated canonical procedure');
     const narrowed = await makePlan(root, selection({ claude: { skills: false }, codex: { skills: true } }));
     expect(narrowed.detach.operations.some(op => op.path === path.join(root, '.claude/skills/personal-guide'))).toBe(true);
+    expect(narrowed.detach.operations.some(op => op.path === path.join(root, '.grok/skills/notes'))).toBe(true);
     expect((await sharing.applyGlobalSharing(narrowed)).pending).toEqual([]);
+    expect((await fs.lstat(path.join(root, '.grok/skills/notes'))).isDirectory()).toBe(true);
+    expect(await fs.readFile(path.join(root, '.grok/skills/notes/SKILL.md'), 'utf8')).toBe('Original procedure');
+    expect(await fs.readFile(path.join(root, '.agents/skills/notes/SKILL.md'), 'utf8')).toBe('Updated canonical procedure');
     expect((await fs.lstat(path.join(root, '.claude/skills/personal-guide'))).isDirectory()).toBe(true);
     expect(await fs.readFile(path.join(root, '.claude/skills/personal-guide/assets/example.txt'), 'utf8')).toBe('Asset');
     expect(await fs.readlink(path.join(root, '.agents/skills/personal-guide'))).toBe(canonical);
@@ -497,17 +507,18 @@ describe('global sharing installer lifecycle', () => {
 
 describe('global sharing safety boundaries', () => {
   it('moves only approved sections out of an importing Claude host', async () => {
-    await put(root, '.claude/CLAUDE.md', '# Writing\nUse plain words.\n# Work\nRun checks.\n');
+    const original = '# Writing\nUse plain words.\n<!-- arcwright-instructions-start -->\n@../.arcwright/AGENTS.md\n<!-- arcwright-instructions-end -->\n# Work\nRun checks.\n';
+    await put(root, '.claude/CLAUDE.md', original);
     const approvals = (await sharing.personalCandidates({ homeDir: root, discovery: await discover(root) })).filter(item => item.kind === 'section' && item.heading === 'Writing');
     const plan = await makePlan(root, selection({ claude: { instructions: true } }), { personalApprovals: approvals });
     await sharing.applyGlobalSharing(plan);
     const host = await fs.readFile(path.join(root, '.claude/CLAUDE.md'), 'utf8');
     expect(host).not.toContain('Use plain words.');
     expect(host).toContain('# Work\nRun checks.');
-    expect(host).toContain('@../.arcwright/AGENTS.md');
+    expect(host.match(/@\.\.\/\.arcwright\/AGENTS\.md/g)).toHaveLength(1);
     expect(await fs.readFile(path.join(root, '.arcwright/AGENTS.md'), 'utf8')).toContain('# Writing\nUse plain words.');
     const rewrite = plan.operations.find(op => op.path === path.join(root, '.claude/CLAUDE.md'));
-    expect(await fs.readFile(rewrite.backup, 'utf8')).toBe('# Writing\nUse plain words.\n# Work\nRun checks.\n');
+    expect(await fs.readFile(rewrite.backup, 'utf8')).toBe(original);
   });
 
   it.each(['missing backup', 'changed backup', 'copy failure', 'replacement failure', 'receipt failure'])('keeps the current instruction link on restore %s after preview', async failure => {

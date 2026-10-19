@@ -7,9 +7,27 @@ const { snapshot, equal, safeParents, readState, applySharingPlan, planRestore, 
 const START = '<!-- arcwright-agent-start -->';
 const END = '<!-- arcwright-agent-end -->';
 const RETIRED = '<!-- arcwright-claude-imports: retired -->';
+const MANAGED_BLOCK = /<!-- arcwright-(?:agent|instructions|orchestration|proactive|tmux)-start -->[\s\S]*?<!-- arcwright-(?:agent|instructions|orchestration|proactive|tmux)-end -->/g;
 // Only complete, known installer blocks confer ownership.
 function personalText(text) {
-  return text.replace(/<!-- arcwright-(?:agent|instructions|orchestration|proactive|tmux)-start -->[\s\S]*?<!-- arcwright-(?:agent|instructions|orchestration|proactive|tmux)-end -->/g, '').trim();
+  return text.replace(MANAGED_BLOCK, '').trim();
+}
+function removePersonalSections(text, approved) {
+  const parts = text.split(new RegExp(`(${MANAGED_BLOCK.source})`, 'g'));
+  const personal = parts.filter((_, index) => index % 2 === 0).join('');
+  const ranges = approved.map(section => {
+    const start = personal.indexOf(section);
+    return [start, start + section.length];
+  }).filter(([start]) => start >= 0).sort((a, b) => b[0] - a[0]);
+  let offset = 0;
+  return parts.map((part, index) => {
+    if (index % 2) return part;
+    const start = offset;
+    offset += part.length;
+    // Remove reviewed personal spans, leaving managed blocks to the host's policy.
+    for (const [from, to] of ranges) part = part.slice(0, Math.max(0, from - start)) + part.slice(Math.max(0, to - start));
+    return part;
+  }).join('');
 }
 function sections(text) {
   const result = [];
@@ -278,7 +296,7 @@ async function buildSharingPlan({ homeDir, sharing, discovery, rules = '## Arcwr
         } else if ((await snapshot(file)).type === 'absent' || (await snapshot(file)).type === 'file') {
           let text = planned.get(file)?.content ?? await fs.readFile(file, 'utf8').catch(() => '');
           if (approvedHosts.has(file)) text = '';
-          else for (const section of adoptedSections.get(file) || []) text = text.replace(section, '');
+          else if (adoptedSections.has(file)) text = removePersonalSections(text, adoptedSections.get(file));
           text = text.replace(/<!-- arcwright-(?:agent|instructions)-start -->[\s\S]*?<!-- arcwright-(?:agent|instructions)-end -->/g, '');
           const relative = path.relative(home.path, canonical).replace(/ /g, '\\ ');
           await add({ action: 'write', path: file, requires: [canonical], content: `${text.trimEnd()}${text.trim() ? '\n\n' : ''}<!-- arcwright-instructions-start -->\n@${relative}\n<!-- arcwright-instructions-end -->\n` });
@@ -313,13 +331,15 @@ async function buildSharingPlan({ homeDir, sharing, discovery, rules = '## Arcwr
   if (active.some(home => choiceFor(sharing, home).skills && home.provider !== 'claude')) plan.notices.push(`Codex, Grok and OpenCode discover ~/.agents/skills together. Provider exclusions do not isolate that shared loader. Affected homes: ${discovery.homes.filter(home => ['codex', 'grok', 'opencode'].includes(home.provider)).map(home => home.path).join(', ')}`);
   // Partial selection changes detach only previous owned operations no longer desired.
   const keepPaths = new Set(plan.operations.map(op => op.path));
+  const adoptedSources = new Map(state.operations.filter(record => record.action === 'adopt' && record.canonical).map(record => [record.source, record.path]));
   for (const record of state.operations) {
     if (record.canonical) continue;
     if ([...blockedShared].some(root => record.path === root || record.path.startsWith(root + path.sep))) keepPaths.add(record.path);
     if (active.some(home => {
       const choice = choiceFor(sharing, home), spec = PROVIDERS[home.provider];
       return record.path === home.path || (choice.instructions && record.path === path.join(home.path, spec.instructions))
-        || (choice.skills && (record.path === path.join(home.path, 'skills') || record.path.startsWith(path.join(homeDir, home.provider === 'claude' ? '.claude' : '.agents', 'skills') + path.sep)))
+        || (choice.skills && (record.path === path.join(home.path, 'skills') || record.path.startsWith(path.join(homeDir, home.provider === 'claude' ? '.claude' : '.agents', 'skills') + path.sep)
+          || (record.action === 'link' && adoptedSources.get(record.path) === record.target && path.dirname(record.path) === path.join(home.path, 'skills'))))
         || (!home.main && record.path === path.join(homeDir, '.local', 'bin', `${spec.command}-${sharing.providers?.[home.provider]?.accounts?.[home.path]?.name || home.label}`));
     })) keepPaths.add(record.path);
   }
