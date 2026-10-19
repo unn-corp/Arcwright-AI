@@ -1,0 +1,55 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  npm_config_registry: https://registry.npmjs.org/
+  NPM_CONFIG_USERCONFIG: /dev/null
+
+jobs:
+  release:
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          package-manager-cache: false
+      - name: Use the runner's executable temporary directory
+        run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Require a matching version tag
+        run: |
+          version=$(node -p "require('./packages/agent-orchestration/package.json').version")
+          test "$GITHUB_REF" = "refs/tags/v$version"
+      - run: npm ci --no-audit --no-fund
+        working-directory: packages/agent-orchestration
+      - run: node build/skill-sources.js --check
+      - run: node build/skill-efficiency.js --check
+      - run: node build/build.js
+      - run: npm run test:coverage
+        working-directory: packages/agent-orchestration
+      - run: npm run release:build
+      - run: npm run release:verify
+      - name: Publish verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=(--latest)
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags=(--prerelease --latest=false); fi
+          gh release create "$GITHUB_REF_NAME" dist/arcwright-*.tar.gz dist/arcwright.cjs dist/release.json dist/SHA256SUMS \
+            --verify-tag --title "Arcwright $GITHUB_REF_NAME" --generate-notes "${flags[@]}"

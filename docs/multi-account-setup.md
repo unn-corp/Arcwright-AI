@@ -51,9 +51,9 @@ then **symlink** the shareable pieces into the other config dirs.
 ### 1. Install Arcwright globally (once, as the default account)
 
 ```bash
-npx @arcwright-ai/agent-orchestration --global
+arcwright --global
 # or to update an existing install:
-npx @arcwright-ai/agent-orchestration update --global
+arcwright update --global
 ```
 
 This populates `~/.claude/{skills,commands,agents,CLAUDE.md}` and `~/.arcwright/`.
@@ -236,7 +236,7 @@ reference.
 Because the assets are symlinked, **update once** as the default account:
 
 ```bash
-npx @arcwright-ai/agent-orchestration update --global
+arcwright update --global
 ```
 
 All linked accounts see the new skills/commands/agents immediately. Do **not** run the

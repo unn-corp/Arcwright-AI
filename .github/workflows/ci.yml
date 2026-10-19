@@ -260,14 +260,18 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
-          # No npm cache: this package's package-lock.json is gitignored by repo
-          # convention (.gitignore: packages/*/package-lock.json), so it isn't in
-          # the CI checkout. Use `npm install` (not `npm ci`) for the same reason.
-      - run: npm install --no-audit --no-fund
+          cache: npm
+          cache-dependency-path: packages/agent-orchestration/package-lock.json
+      - run: npm ci --no-audit --no-fund
       - run: npm run test:coverage
         env:
           # Tests write stub executables under os.tmpdir() and run them; /tmp is
           # noexec on the isolated pool.
+          TMPDIR: ${{ runner.temp }}
+
+      - run: node ../../build/release.js
+      - run: node ../../build/verify-release.cjs
+        env:
           TMPDIR: ${{ runner.temp }}
 
   # Website static gates: lint + type-check + production build.

@@ -9,7 +9,7 @@ Arcwright installs specialist agents, model-invocable skills, and workflows into
 ## Table of Contents
 
 - [Quick Start](#quick-start)
-- [Packages](#packages)
+- [Releases](#releases)
 - [Slash Commands](#slash-commands)
   - [Agent Teams (`/team`)](#agent-teams-team)
   - [Utility Commands](#utility-commands)
@@ -26,8 +26,15 @@ Arcwright installs specialist agents, model-invocable skills, and workflows into
 ## Quick Start
 
 ```bash
-npx @arcwright-ai/agent-orchestration
+curl -fsSLO https://github.com/unn-corp/Arcwright-AI/releases/latest/download/arcwright.cjs
+node arcwright.cjs --tools claude-code,codex
 ```
+
+Requires Node.js 20+ and `tar` on Linux, macOS, or WSL2. The launcher downloads a
+public GitHub Release, verifies its SHA-256 digest, and installs the `arcwright`
+command in `~/.local/bin`. Add that directory to your `PATH` if necessary. The
+runtime includes its dependencies; installation needs neither npm nor a GitHub
+token. Subsequent commands use `arcwright`, including `arcwright update`.
 
 During install you'll be asked **how autonomous Arcwright agents should run**. The default is
 **Autonomous (recommended)** — agents apply edits without stopping to ask, while safety hooks
@@ -69,11 +76,22 @@ catalog and recipes: [`docs/hooks-guide.md`](docs/hooks-guide.md).
 
 ---
 
-## Packages
+## Releases
 
-| Package | Description | Install |
-|---------|-------------|---------|
-| `@arcwright-ai/agent-orchestration` | Agents, skills, workflows, IDE configs, slash commands | `npx @arcwright-ai/agent-orchestration` |
+Download versioned archives, the launcher, and `SHA256SUMS` from
+[GitHub Releases](https://github.com/unn-corp/Arcwright-AI/releases).
+
+The npm packages `@arcwright-ai/agent-orchestration` and `@arcwright-ai/tmux-setup`
+are retired. Existing installations keep their manifests and configuration. To
+migrate, download the launcher above and run `node arcwright.cjs update --yes`
+(add `--global` for a global installation). Your host selection, optional packs,
+configuration, and personal files are preserved. Herdr replaces the old tmux package.
+
+Use `arcwright --release 1.2.4 update` to select a specific release. For an
+offline install, download the launcher, archive, and `release.json` from the same
+release into one folder, then run
+`node arcwright.cjs --archive ./arcwright-1.2.4.tar.gz --tools codex,claude-code --yes`.
+`--channel next` tracks published prereleases; stable remains the default.
 
 Arcwright ships a `herdr` skill and managed defaults for [Herdr](https://herdr.dev), a terminal workspace manager built for AI coding agents. You install Herdr itself; Arcwright configures it when detected. See [Herdr Setup](#herdr-setup) below.
 
@@ -218,10 +236,10 @@ Claude Code, Kiro (IDE + CLI), Cursor (IDE + Agent CLI), Codex, Hermes, OpenCode
 
 ```bash
 # Install for specific IDEs
-npx @arcwright-ai/agent-orchestration --tools claude-code,kiro,cursor
+arcwright --tools claude-code,kiro,cursor
 
 # Global install (applies to all projects via ~/ config dirs)
-npx @arcwright-ai/agent-orchestration --global
+arcwright --global
 ```
 
 Cross-platform: Windows (WSL2), Linux, macOS.
@@ -289,7 +307,7 @@ Global installs write to user-level config dirs instead of a project:
 **Updating a global install:**
 
 ```bash
-npx @arcwright-ai/agent-orchestration update --global
+arcwright update --global
 ```
 
 The updater reads the global manifest at `~/.arcwright/_config/manifest.yaml`, applies changes for new versions, removes orphaned files from prior versions, and preserves:
@@ -367,8 +385,8 @@ If your project was set up with the old `bmad` framework (directories like `_bma
 Or via CLI:
 
 ```bash
-npx @arcwright-ai/agent-orchestration migrate --dry-run   # preview
-npx @arcwright-ai/agent-orchestration migrate             # apply
+arcwright migrate --dry-run   # preview
+arcwright migrate             # apply
 ```
 
 **What it renames:**
@@ -394,9 +412,17 @@ The slash command guides the AI through a 7-step verification pass after the ren
 
 ```bash
 node build/build.js
-
-cd packages/agent-orchestration && npm publish --access public
+npm --prefix packages/agent-orchestration ci
+npm --prefix packages/agent-orchestration run test:coverage
+npm run release:build
+npm run release:verify
 ```
+
+The release build creates `dist/arcwright-VERSION.tar.gz`, `arcwright.cjs`,
+`release.json`, and `SHA256SUMS`. Source packages are private to prevent npm
+publication. Authorized version tags (`vVERSION`) run the isolated self-hosted
+release workflow, validate the artifact, and publish it to GitHub Releases. See
+[release and npm retirement procedure](docs/releases.md).
 
 The build pipeline:
 

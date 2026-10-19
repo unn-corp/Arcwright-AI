@@ -8,11 +8,11 @@ function GithubIcon({ size = 14, className = '' }: { size?: number; className?: 
   );
 }
 
-const NPM_PACKAGES = [
+const RELEASES = [
   {
-    name: '@arcwright-ai/agent-orchestration',
+    name: 'Arcwright releases',
     description: 'Agents, skills, workflows, IDE configs',
-    url: 'https://www.npmjs.com/package/@arcwright-ai/agent-orchestration',
+    url: 'https://github.com/unn-corp/Arcwright-AI/releases',
   },
 ];
 
@@ -29,11 +29,11 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* npm packages */}
+          {/* Releases */}
           <div>
-            <h4 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">Packages</h4>
+            <h4 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">Releases</h4>
             <div className="space-y-3">
-              {NPM_PACKAGES.map(pkg => (
+              {RELEASES.map(pkg => (
                 <a
                   key={pkg.name}
                   href={pkg.url}

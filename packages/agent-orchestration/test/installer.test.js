@@ -792,7 +792,7 @@ describe('rules-entry builders', () => {
     const out = buildArcwrightRulesEntry(['awm', 'core']);
     expect(out).toMatch(/## Arcwright/);
     expect(out).toMatch(/awm, core/);
-    expect(out).toMatch(/npx @arcwright-ai\/agent-orchestration/);
+    expect(out).toContain('`arcwright update`');
     expect(out).toMatch(/pending tracker payload/);
     expect(out).toContain('For writing or reviewing tests, load `test-quality`');
     expect(out).toContain('Run focused tests first, then required checks');

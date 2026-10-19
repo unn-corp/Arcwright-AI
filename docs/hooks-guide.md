@@ -149,9 +149,9 @@ gitignore choice). The default is **safe (autonomous)** — `--yes` and non-inte
 get it automatically. Set it explicitly to skip the prompt:
 
 ```bash
-npx @arcwright-ai/agent-orchestration --hooks safe   # autonomous + guards (default)
-npx @arcwright-ai/agent-orchestration --hooks full   # + tsc/pyright typecheck on edits
-npx @arcwright-ai/agent-orchestration --hooks none   # conservative: ask-first, no hooks
+arcwright --hooks safe   # autonomous + guards (default)
+arcwright --hooks full   # + tsc/pyright typecheck on edits
+arcwright --hooks none   # conservative: ask-first, no hooks
 ```
 
 `safe` and `full` also seed read-only domain routers for DynamoDB, Amplify, CloudFront,

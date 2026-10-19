@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import YAML from 'yaml';
 import packBuilder from '../../../build/matt-pocock.js';
 
@@ -152,16 +151,5 @@ describe('Arcwright local engineering and productivity pack', () => {
     expect(() => createPack(root)).toThrow('missing from the skill-pack catalog');
   });
 
-  it('ships local source and resources in the npm payload without upstream Git history', () => {
-    const json = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
-      cwd: path.join(REPO_ROOT, 'packages/agent-orchestration'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
-    }));
-    const pkg = (Array.isArray(json) ? json : Object.values(json)).find(entry => entry.name === '@arcwright-ai/agent-orchestration');
-    const paths = pkg.files.map(file => file.path);
-    expect(paths).toContain('src/.agents/skills/matt-pocock/SOURCE.json');
-    expect(paths).toContain('src/.agents/skills/matt-pocock-triage/AGENT-BRIEF.md');
-    expect(paths).toContain('src/.agents/skills/matt-pocock-tdd/LICENSE');
-    expect(paths).toContain('src/.claude/commands/matt-pocock.md');
-    expect(paths.some(rel => /vendor\/|\.git\/|\.local-install/.test(rel))).toBe(false);
-  }, 15000);
+
 });

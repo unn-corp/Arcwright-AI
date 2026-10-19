@@ -36,7 +36,7 @@ export default function IDEStrip() {
           <div className="flex items-center gap-0 bg-bg border border-surface-light overflow-hidden">
             <div className="px-4 py-3 flex-1 overflow-x-auto">
               <code className="font-mono text-sm text-foreground whitespace-nowrap">
-                npx @arcwright-ai/agent-orchestration{' '}
+                arcwright{' '}
                 <span className="text-accent-blue">--tools claude-code,kiro,cursor</span>
               </code>
             </div>

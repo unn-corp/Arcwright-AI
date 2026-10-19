@@ -74,6 +74,12 @@ describe('migrate — dry run', () => {
 });
 
 describe('migrate — apply', () => {
+  it('moves legacy npm installation commands to the release command', () => {
+    seedBmadProject();
+    fs.writeFileSync(path.join(dir, 'CLAUDE.md'), 'Run npx @devo-bmad-custom/agent-orchestration update --global.\n');
+    migrate(dir, false);
+    expect(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8')).toBe('Run arcwright update --global.\n');
+  });
   it('migrates command-only BMAD artifacts', () => {
     const commands = path.join(dir, '.claude', 'commands');
     fs.mkdirSync(commands, { recursive: true });

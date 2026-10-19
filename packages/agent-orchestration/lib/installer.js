@@ -51,7 +51,7 @@ async function setupWslAudio(platform, chalk) {
   const END   = '# ─── End Arcwright WSL audio ───';
   const block = [
     START,
-    '# Auto-added by @arcwright-ai/agent-orchestration. Routes PulseAudio to the',
+    '# Configured by Arcwright. Routes PulseAudio to the',
     '# WSLg socket so Claude Code /voice can access the Windows microphone.',
     'export PULSE_SERVER=unix:/mnt/wslg/PulseServer',
     END,
@@ -2054,7 +2054,7 @@ async function install(opts) {
 
   // Restore channel from manifest on --yes updates (so re-runs preserve the chosen channel).
   let resolvedChannelFinal = resolvedChannel;
-  if (manifestFallback && resolvedChannel === 'stable' && existingManifest.channel) {
+  if (manifestFallback && !opts.channelExplicit && resolvedChannel === 'stable' && existingManifest.channel) {
     resolvedChannelFinal = existingManifest.channel;
   }
   // Restore hooks mode from manifest on --yes updates (so re-runs preserve choice).
@@ -2081,8 +2081,11 @@ async function install(opts) {
       console.error(chalk.red(`\n  ✗ ${err.message}\n`));
       process.exit(1);
     }
-    if (isGlobal && manifestFallback && parsed.join(',') === 'claude-code' && hasOnlySupportedToolIds(existingManifest.tools)) {
-      // CLI default — prefer manifest value
+    const omittedTools = opts.toolsExplicit === false
+      || (opts.toolsExplicit === undefined && isGlobal && parsed.join(',') === 'claude-code');
+    if (manifestFallback && omittedTools && hasOnlySupportedToolIds(existingManifest.tools)) {
+      // Preserve either scope's host selection when the CLI flag was omitted.
+      // The legacy source API retains its previous global-default behavior.
       return existingManifest.tools;
     }
     return parsed.length ? parsed : ['claude-code'];
@@ -2790,7 +2793,7 @@ async function status(opts) {
 
   if (!await fs.pathExists(arcwrightDir)) {
     console.log(chalk.yellow('Arcwright is not installed in this project.'));
-    console.log('Run: npx @arcwright-ai/agent-orchestration');
+    console.log('Run: arcwright');
     return;
   }
 
@@ -3760,11 +3763,11 @@ function buildArcwrightRulesEntry(modules, unnamedPm = false) {
     'If Unnamed Development MCP is unavailable, paste the pending tracker payload in chat (project, work, intended status). Do not bury it only in `_arcwright-output/unnamed-pm-pending/`.',
     ...unnamedMcpEntry,
     '',
-    'To update Arcwright: `npx @arcwright-ai/agent-orchestration update`',
+    'To update Arcwright: `arcwright update`',
     'To toggle agent teams: add `--no-teams` or run update again and choose differently at the prompt.',
     'To enable Docker type-check: add `--docker-check`.',
     'To modify gitignore behavior on next update: add `--gitignore full|skills|output-only|none`.',
-    'For global installs: add `--global` to any command. Update a global install with `npx @arcwright-ai/agent-orchestration update --global`.',
+    'For global installs: add `--global` to any command. Update a global install with `arcwright update --global`.',
     '',
   ].join('\n');
 }

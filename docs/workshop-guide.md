@@ -8,8 +8,8 @@ instructions in `AGENTS.md`; do not recreate those imports.
 
 ## Sources and output
 
-This workspace builds `@arcwright-ai/agent-orchestration` for multiple agent hosts.
-The npm organization is `@arcwright-ai`; the repository is
+This workspace builds standalone Arcwright GitHub Releases for multiple agent hosts.
+The retired npm organization is `@arcwright-ai`; the repository is
 [unn-corp/Arcwright-AI](https://github.com/unn-corp/Arcwright-AI).
 `@arcwright-ai/tmux-setup` is a deprecated standalone package, replaced by Herdr.
 
@@ -59,10 +59,12 @@ The workshop is the only publication source. Squidhub keeps unpublished local
 overlays (personas, MCP templates, and related project content) on top of the
 installed package. Keep these out of the distributable.
 
-For an explicitly authorized package release, build and validate the package,
-then run `npm publish --access public` from `packages/agent-orchestration/` using
-the existing npm organization and authentication. Use private credential entry
-for missing authentication. Ordinary source work does not authorize publishing.
+For an explicitly authorized release, run `npm run release:build`, the required
+package gates, and `npm run release:verify`. Publish the versioned archive,
+launcher, metadata, and checksums through the `vVERSION` GitHub Release workflow.
+The runtime includes pinned production dependencies. Both legacy source packages
+are private and npm publishing is retired. See [releases](releases.md) for
+migration checks and npm deprecation. Ordinary source work does not authorize publishing.
 
 ## Website
 

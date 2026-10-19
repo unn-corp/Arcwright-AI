@@ -9,7 +9,7 @@ The primary surface is **optional and off by default**. Enable it with:
 
 ```bash
 ARCWRIGHT_OMNIROUTE_API_KEY=<gateway-key> \
-  npx @arcwright-ai/agent-orchestration --model-surface --global --yes
+  arcwright --model-surface --global --yes
 ```
 
 The older direct-provider shell functions are enabled separately with `--model-launchers`.
@@ -212,11 +212,10 @@ edit them with your real keys).
 
 ### 2. Launcher script
 
-The script ships in the package. Manual install:
+The script ships in the release runtime. Install it through the managed command:
 
 ```bash
-cp "$(npm root -g)/@arcwright-ai/agent-orchestration/launchers/claude-or.sh" \
-   ~/.config/openrouter/claude-or.sh
+arcwright --model-launchers --global --yes
 ```
 
 (The script lives under `~/.config/openrouter/` because it self-references that path; it is

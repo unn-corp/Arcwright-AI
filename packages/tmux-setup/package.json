@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "@arcwright-ai/tmux-setup",
   "version": "1.1.19",
   "description": "DEPRECATED: Arcwright moved to Herdr (herdr.dev) for terminal-workspace agent orchestration. Use the herdr skill / /herdr command. This tmux package is no longer maintained.",

@@ -23,7 +23,7 @@ program
 
 program
   .command('install', { isDefault: true })
-  .description('Install Arcwright into the current project (default command — runs on `npx @arcwright-ai/agent-orchestration`)')
+  .description('Install Arcwright into the current project (default command: `arcwright`)')
   .option('-d, --directory <path>', 'Target project root', process.cwd())
   .option('-m, --modules <ids>', 'Modules to install (comma-separated: awm,awb,core,_memory)', 'awm,awb,core,_memory')
   .option('--tools <ids>', `IDE integrations to configure (comma-separated). Supported: ${SUPPORTED_TOOLS}`, 'claude-code')
@@ -59,38 +59,41 @@ program
   .addHelpText('after', `
 Examples:
   # Interactive install — prompts for your name, detects existing installation
-  npx @arcwright-ai/agent-orchestration
+  arcwright
 
   # Non-interactive, install everything
-  npx @arcwright-ai/agent-orchestration --yes
+  arcwright --yes
 
   # Install without agent teams
-  npx @arcwright-ai/agent-orchestration --no-teams --yes
+  arcwright --no-teams --yes
 
   # Install with specific IDEs
-  npx @arcwright-ai/agent-orchestration --tools claude-code,kiro --yes
+  arcwright --tools claude-code,kiro --yes
 
   # Install for Grok (xAI CLI / Grok Build)
-  npx @arcwright-ai/agent-orchestration --tools grok --yes
-  npx @arcwright-ai/agent-orchestration --tools grok --global --yes
+  arcwright --tools grok --yes
+  arcwright --tools grok --global --yes
 
   # Install into a specific directory
-  npx @arcwright-ai/agent-orchestration --directory /path/to/project --yes
+  arcwright --directory /path/to/project --yes
 
   # Global install (applies to all projects)
-  npx @arcwright-ai/agent-orchestration --global --yes
+  arcwright --global --yes
 
   # Primary model surface: Hermes CLI → OmniRoute agent-fallback
-  ARCWRIGHT_OMNIROUTE_API_KEY=... npx @arcwright-ai/agent-orchestration --tools codex --model-surface --global --yes
+  ARCWRIGHT_OMNIROUTE_API_KEY=... arcwright --tools codex --model-surface --global --yes
 
   # Install with gitignore mode set (skips the gitignore prompt)
-  npx @arcwright-ai/agent-orchestration --yes --gitignore output-only
-  npx @arcwright-ai/agent-orchestration --yes --gitignore full
-  npx @arcwright-ai/agent-orchestration --yes --gitignore none
+  arcwright --yes --gitignore output-only
+  arcwright --yes --gitignore full
+  arcwright --yes --gitignore none
 `)
-  .action(async (opts) => {
+  .action(async (opts, command) => {
     const { install } = require('./installer');
-    await install(opts);
+    await install({ ...opts,
+      toolsExplicit: command.getOptionValueSource('tools') === 'cli',
+      channelExplicit: command.getOptionValueSource('channel') === 'cli',
+    });
   });
 
 // ─── update ───────────────────────────────────────────────────────────────────
@@ -132,20 +135,23 @@ program
   .addHelpText('after', `
 Examples:
   # Interactive update — shows installed version, preserves your name
-  npx @arcwright-ai/agent-orchestration update
+  arcwright update
 
   # Non-interactive update
-  npx @arcwright-ai/agent-orchestration update --yes
+  arcwright update --yes
 
   # Update and add Kiro support
-  npx @arcwright-ai/agent-orchestration update --tools claude-code,kiro --yes
+  arcwright update --tools claude-code,kiro --yes
 
   # Update with explicit gitignore mode
-  npx @arcwright-ai/agent-orchestration update --yes --gitignore skills
+  arcwright update --yes --gitignore skills
 `)
-  .action(async (opts) => {
+  .action(async (opts, command) => {
     const { install } = require('./installer');
-    await install({ ...opts, action: 'update' });
+    await install({ ...opts, action: 'update',
+      toolsExplicit: command.getOptionValueSource('tools') === 'cli',
+      channelExplicit: command.getOptionValueSource('channel') === 'cli',
+    });
   });
 
 // ─── uninstall ────────────────────────────────────────────────────────────────
@@ -159,13 +165,13 @@ program
   .addHelpText('after', `
 Examples:
   # Interactive uninstall from current project (prompts to remove installed files)
-  npx @arcwright-ai/agent-orchestration uninstall
+  arcwright uninstall
 
   # Non-interactive, remove everything
-  npx @arcwright-ai/agent-orchestration uninstall --yes
+  arcwright uninstall --yes
 
   # Global uninstall
-  npx @arcwright-ai/agent-orchestration uninstall --global --yes
+  arcwright uninstall --global --yes
 `)
   .action(async (opts) => {
     const { uninstall } = require('./installer');
@@ -205,7 +211,7 @@ program
     for (const row of rows) {
       console.log('  ' + row.map((cell, i) => cell.padEnd(widths[i])).join('   '));
     }
-    console.log(`\nPass multiple platforms with --tools:\n  npx @arcwright-ai/agent-orchestration --tools ${getSupportedToolIds().join(',')}\n`);
+    console.log(`\nPass multiple platforms with --tools:\n  arcwright --tools ${getSupportedToolIds().join(',')}\n`);
   });
 
 // ─── Herdr ──────────────────────────────────────────────────────────────────
@@ -242,13 +248,13 @@ program
   .addHelpText('after', `
 Examples:
   # Preview what would change
-  npx @arcwright-ai/agent-orchestration migrate --dry-run
+  arcwright migrate --dry-run
 
   # Apply the migration
-  npx @arcwright-ai/agent-orchestration migrate
+  arcwright migrate
 
   # Migrate a specific project
-  npx @arcwright-ai/agent-orchestration migrate --directory /path/to/project
+  arcwright migrate --directory /path/to/project
 `)
   .action(async (opts) => {
     const { migrate } = require('./migrate');

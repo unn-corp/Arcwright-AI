@@ -146,7 +146,7 @@ avoid changing project source. Run on the destination device, replacing `VERSION
 with the verified exact package version:
 
 ```sh
-npx @arcwright-ai/agent-orchestration@VERSION update --global
+arcwright --release VERSION update --global
 ```
 
 For an explicitly selected project install, use `update --directory` with that

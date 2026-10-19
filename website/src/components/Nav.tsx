@@ -103,14 +103,14 @@ export default function Nav() {
               )}
             </a>
             <a
-              href="https://www.npmjs.com/package/@arcwright-ai/agent-orchestration"
+              href="https://github.com/unn-corp/Arcwright-AI/releases"
               target="_blank"
               rel="noopener noreferrer"
               className="hidden min-h-11 items-center gap-1.5 border border-surface-light bg-surface px-2.5 py-1.5 text-xs font-mono text-muted transition-all duration-200 hover:bg-surface-light hover:text-foreground sm:flex cursor-pointer"
-              aria-label="View on npm"
+              aria-label="View releases"
             >
               <Package size={12} />
-              npm
+              Releases
               <ExternalLink size={10} />
             </a>
           </div>

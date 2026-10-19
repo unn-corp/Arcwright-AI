@@ -125,6 +125,7 @@ const CONTENT_REPLACEMENTS = [
   { pattern: /@devo-bmad-custom\/agent-orchestration/g,    replacement: '@arcwright-ai/agent-orchestration' },
   { pattern: /devo-bmad-custom-agent-orchestration/g,      replacement: '@arcwright-ai/agent-orchestration' },
   { pattern: /devo-bmad-custom-tmux/g,                     replacement: '@arcwright-ai/tmux-setup' },
+  { pattern: /npx\s+@arcwright-ai\/agent-orchestration\b/g, replacement: 'arcwright' },
   // Generic bmad → arcwright (last, most general — lowercase only to avoid false positives)
   { pattern: /bmad-master/g,          replacement: 'arcwright-master' },
 ];

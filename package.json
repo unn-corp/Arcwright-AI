@@ -5,6 +5,8 @@
   "description": "Arcwright — AI agent workflow workshop",
   "scripts": {
     "build": "node build/build.js",
+    "release:build": "node build/release.js",
+    "release:verify": "node build/verify-release.cjs",
     "fleet:init": "node build/fleet-init.js",
     "commands:sync": "node build/host-commands.js",
     "check:skill-sources": "node build/skill-sources.js --check",

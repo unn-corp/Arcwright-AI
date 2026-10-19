@@ -8,7 +8,7 @@ project instructions here and follow the applicable instruction hierarchy.
 
 ## Workspace rules
 
-- This is the source workshop for `@arcwright-ai/agent-orchestration`. Edit
+- This is the source workshop for Arcwright GitHub Releases. The npm packages are retired. Edit
   `_arcwright/`, `.agents/skills/`, `build/`, and package `lib/` or `bin/` sources.
   Never edit generated `packages/agent-orchestration/src/`; builds replace it.
 - Matt Pocock skills and their wrappers are local Arcwright-maintained source.
@@ -94,11 +94,11 @@ Reuse the nearest suitable test and fixtures. Add the smallest tests that detect
 Use the Unnamed Development MCP only when the user explicitly requests it. Load `unnamed-dev-mcp` before that work; ordinary coding has no automatic tracker preflight, synchronization, or pending report.
 If Unnamed Development MCP is unavailable, paste the pending tracker payload in chat (project, work, intended status). Do not bury it only in `_arcwright-output/unnamed-pm-pending/`.
 
-To update Arcwright: `npx @arcwright-ai/agent-orchestration update`
+To update Arcwright: `arcwright update`
 To toggle agent teams: add `--no-teams` or run update again and choose differently at the prompt.
 To enable Docker type-check: add `--docker-check`.
 To modify gitignore behavior on next update: add `--gitignore full|skills|output-only|none`.
-For global installs: add `--global` to any command. Update a global install with `npx @arcwright-ai/agent-orchestration update --global`.
+For global installs: add `--global` to any command. Update a global install with `arcwright update --global`.
 
 <!-- arcwright-agent-end -->
 

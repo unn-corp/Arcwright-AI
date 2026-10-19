@@ -9,7 +9,7 @@ function GithubIcon({ size = 16, className = '' }: { size?: number; className?: 
   );
 }
 
-const INSTALL_CMD = 'npx @arcwright-ai/agent-orchestration';
+const INSTALL_CMD = 'curl -fsSLO https://github.com/unn-corp/Arcwright-AI/releases/latest/download/arcwright.cjs && node arcwright.cjs';
 
 export default function Hero() {
   const [copied, setCopied] = useState(false);
@@ -96,12 +96,12 @@ export default function Hero() {
             View on GitHub
           </a>
           <a
-            href="https://www.npmjs.com/package/@arcwright-ai/agent-orchestration"
+            href="https://github.com/unn-corp/Arcwright-AI/releases/latest"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-11 items-center gap-2 border border-surface-light bg-surface px-5 py-2.5 font-sans text-sm font-medium text-foreground transition-colors duration-200 hover:bg-surface-light cursor-pointer"
           >
-            npm package
+            Download release
             <ArrowRight size={14} />
           </a>
         </div>

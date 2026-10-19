@@ -1,9 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import YAML from 'yaml';
 
 const binPath = fileURLToPath(new URL('../bin/arcwright.js', import.meta.url));
 const libPath = fileURLToPath(new URL('../lib', import.meta.url));
@@ -16,6 +17,23 @@ afterEach(() => {
 });
 
 describe('public CLI wrapper', () => {
+  it('preserves omitted project hosts and honors explicit Claude-only and stable selections', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-cli-'));
+    tempDirs.push(dir);
+    const isolatedHome = path.join(dir, 'home');
+    fs.mkdirSync(isolatedHome);
+    const run = (command, ...flags) => execFileSync(process.execPath, [
+      binPath, command, '--yes', '--directory', dir, '--hooks', 'none', ...flags,
+    ], { cwd: dir, env: { ...process.env, HOME: isolatedHome }, stdio: 'pipe' });
+    const manifest = () => YAML.parse(fs.readFileSync(path.join(dir, '_arcwright/_config/manifest.yaml'), 'utf8'));
+    run('install', '--tools', 'codex,claude-code', '--channel', 'next');
+    run('update');
+    expect(manifest().tools).toEqual(['codex', 'claude-code']);
+    expect(manifest().channel).toBe('next');
+    run('update', '--tools', 'claude-code', '--channel', 'stable');
+    expect(manifest().tools).toEqual(['claude-code']);
+    expect(manifest().channel).toBe('stable');
+  }, 60000);
   it('passes migrate --dry-run through as a top-level command', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-cli-'));
     tempDirs.push(dir);
@@ -34,7 +52,7 @@ describe('public CLI wrapper', () => {
     expect(fs.existsSync(path.join(dir, '_arcwright'))).toBe(false);
   });
 
-  it('passes migrate through the npx-specific execution path', () => {
+  it('runs migrate from a relocated runtime', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-cli-'));
     tempDirs.push(dir);
     fs.mkdirSync(path.join(dir, '_bmad'));
@@ -58,7 +76,7 @@ describe('public CLI wrapper', () => {
     expect(fs.existsSync(path.join(dir, '_arcwright'))).toBe(false);
   });
 
-  it('passes literal npx arguments without re-evaluating shell syntax', () => {
+  it('passes literal arguments without re-evaluating shell syntax', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-cli-'));
     tempDirs.push(dir);
     const fixtureRoot = path.join(dir, '_npx', 'package');

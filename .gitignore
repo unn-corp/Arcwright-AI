@@ -29,6 +29,7 @@ t3.json
 /.agents/skills/arcwright/commands/
 /_arcwright-output/
 packages/*/package-lock.json
+!packages/agent-orchestration/package-lock.json
 
 # Screenshot artifacts and playwright session files
 *.png

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.4
+
+- Distribute standalone runtimes through GitHub Releases with a SHA-256-verified
+  Node launcher and bundled production dependencies.
+- Migrate existing npm-created project/global installations while preserving
+  configuration, host selections, optional packs, and personal skills/settings.
+- Preserve project host selections on unattended updates and honor explicit
+  Claude-only and stable-channel selections.
+- Retire npm publication for both legacy packages and document their replacements.
+- Verify release artifacts in isolated Codex and Claude homes/projects, including
+  upgrades from the published npm baseline.
+
 ## 1.2.3
 
 ### Added
