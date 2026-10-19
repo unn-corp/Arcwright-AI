@@ -53,7 +53,10 @@ launchers are never replaced. Add `~/.local/bin` to PATH yourself if necessary.
 The walkthrough offers a separate provider sign-in for every enrolled account after
 setup. It shows the exact home and command and offers now or later. Headless Codex
 and Grok use device authentication. Sign-in never runs under `--yes`, never copies
-credentials, and never runs logout or a live model verification call.
+credentials, and never runs logout or a live model verification call. Before a Codex
+sign-in, an existing `auth.json` is set aside, because starting `codex login` would
+otherwise revoke a session that copies in other homes or on other devices share. It
+is deleted after a successful sign-in and restored if the sign-in fails.
 
 ## Unattended selection
 

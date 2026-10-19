@@ -179,9 +179,12 @@ configuration, and memory database. The shadow home keeps its own `auth.json`,
   authenticated.
 - To find copies without exposing secrets, compare each home's account email,
   `last_refresh`, and a short hash of the refresh token across devices. A hash
-  that matches on two devices is a copy. Fix it by signing in again on one
-  device, which overwrites the file. Do not run `codex logout` on a copy: logout
-  revokes the session, and that also signs out the other device.
+  that matches on two devices is a copy. Keep the login on one device. On the
+  other, move `auth.json` out of the home first, then sign in. Starting
+  `codex login` clears the home's current login and revokes its session, and
+  `codex logout` does the same, so either one run over a copy signs out every
+  device that shares it. A device sign-in that times out still leaves the home
+  signed out, so start it only when the person approving it is ready.
 - `codex login status` only reads the local file. To confirm a login works, run a
   short `codex exec` prompt in that home. A login past its refresh interval
   refreshes during the check, so test a copy only after the other device has its

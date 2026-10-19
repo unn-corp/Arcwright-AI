@@ -171,7 +171,7 @@ function runCodexHomeHealth({ homeDir, codeHomes, policy = {}, dryRun = false,
 function formatCodexHomeHealth(result) {
   const lines = [];
   for (const group of result.duplicates) {
-    lines.push(`These homes contain the same Codex refresh credential: ${group.labels.join(', ')} (fingerprint ${group.fingerprint}). Sign in separately in each affected home with CODEX_HOME=<home> codex login. Do not copy auth.json or run codex logout.`);
+    lines.push(`These homes contain the same Codex refresh credential: ${group.labels.join(', ')} (fingerprint ${group.fingerprint}). Keep it in one home. In each other home, move auth.json out of the home first, then sign in with CODEX_HOME=<home> codex login. Signing in or out over a copy revokes the session for every home that shares it. Do not copy auth.json.`);
   }
   for (const home of result.homes) {
     if (home.auth === 'symlink') lines.push(`${home.label}: auth.json is a link to another home. Sign in separately in this home.`);

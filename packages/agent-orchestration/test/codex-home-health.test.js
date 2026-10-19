@@ -170,7 +170,7 @@ describe('local copied-login inspection', () => {
     expect(result.homes.map(home => home.auth)).toEqual(['shared-copy', 'shared-copy', 'shared-copy', 'private']);
     expect(fs.readFileSync(path.join(b, 'auth.json'))).toEqual(originalAuth);
     const lines = formatCodexHomeHealth(result);
-    expect(lines[0]).toBe('These homes contain the same Codex refresh credential: .codex-a, .codex-b, .codex-c (fingerprint ba7816bf8f01). Sign in separately in each affected home with CODEX_HOME=<home> codex login. Do not copy auth.json or run codex logout.');
+    expect(lines[0]).toBe('These homes contain the same Codex refresh credential: .codex-a, .codex-b, .codex-c (fingerprint ba7816bf8f01). Keep it in one home. In each other home, move auth.json out of the home first, then sign in with CODEX_HOME=<home> codex login. Signing in or out over a copy revokes the session for every home that shares it. Do not copy auth.json.');
     const output = JSON.stringify({ result, lines });
     for (const privateText of ['abc', 'private-metadata', 'private-access-token', 'different-refresh-token',
       'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad']) {

@@ -124,7 +124,21 @@ async function signInWalkthrough({ sharing, discovery }, { yes = false, dryRun =
     const now = await prompts.select({ message: `Sign in to ${home.provider} at ${home.path}?`, options: [{ value: 'later', label: 'Later' }, { value: 'now', label: 'Sign in now' }] });
     if (prompts.isCancel(now)) return;
     if (now === 'now') {
+      // Starting `codex login` clears the home's current login and can revoke its session.
+      // A copied or linked auth.json shares that session with other homes or devices.
+      const authFile = home.provider === 'codex' ? path.join(home.path, 'auth.json') : null;
+      const current = authFile && await fs.lstat(authFile).catch(() => null);
+      const aside = current && (current.isFile() || current.isSymbolicLink()) ? `${authFile}.before-sign-in-${Date.now()}` : null;
+      if (aside) {
+        await fs.move(authFile, aside);
+        log(`${home.path}: existing login set aside so this sign-in cannot revoke a session other homes share`);
+      }
       const result = run(login.command, login.args, { stdio: 'inherit', env: { ...env, ...login.env } });
+      if (aside) {
+        if (result.status === 0) await fs.remove(aside);
+        else if (!await fs.pathExists(authFile)) await fs.move(aside, authFile);
+        else log(`${home.path}: previous login kept at ${aside}`);
+      }
       log(result.status === 0 ? `${home.path}: sign-in command completed` : `${home.path}: sign-in pending`);
     } else log(`${home.path}: sign-in pending`);
   }

@@ -624,6 +624,33 @@ describe('global sharing safety boundaries', () => {
     expect(accounts.loginCommand('grok', '/tmp/account', false).display).toBe("GROK_HOME='/tmp/account' grok login --oauth");
   });
 
+  it('sets an existing Codex login aside before signing in, restoring it only when sign-in fails', async () => {
+    const home = path.join(root, '.codex-work');
+    await put(home, 'config.toml', '');
+    const prefs = selection({ codex: { instructions: true, skills: true, accounts: { [home]: { instructions: true, skills: true } } } });
+    const prepared = { sharing: prefs, discovery: await discover(root) };
+    const prompts = { select: async () => 'now', isCancel: () => false };
+    const signIn = status => async () => {
+      await put(home, 'auth.json', 'old login');
+      const seen = [];
+      await accountPrompts.signInWalkthrough(prepared, { prompts, env: { DISPLAY: ':0' }, log: () => {}, run: (_command, _args, options) => {
+        if (options.env.CODEX_HOME !== home) return { status: 0 };
+        seen.push(fs.existsSync(path.join(home, 'auth.json')));
+        if (status === 0) fs.writeFileSync(path.join(home, 'auth.json'), 'new login');
+        return { status };
+      } });
+      return { seen, leftovers: (await fs.readdir(home)).filter(name => name.startsWith('auth.json.')) };
+    };
+    const succeeded = await signIn(0)();
+    expect(succeeded.seen).toEqual([false]);
+    expect(await fs.readFile(path.join(home, 'auth.json'), 'utf8')).toBe('new login');
+    expect(succeeded.leftovers).toEqual([]);
+    const failed = await signIn(1)();
+    expect(failed.seen).toEqual([false]);
+    expect(await fs.readFile(path.join(home, 'auth.json'), 'utf8')).toBe('old login');
+    expect(failed.leftovers).toEqual([]);
+  });
+
   it('keeps saved health options when custom JSON changes only content enrollment', async () => {
     const saved = { ...selection({ codex: { instructions: true } }), codexSelfHeal: true, credentialCopyCheck: 'local' };
     const next = await sharing.resolveSharingPreferences({ saved, discovery: await discover(root), options: { yes: true, sharing: 'custom', sharingConfig: '{"providers":{"claude":{"skills":true}}}' } });
