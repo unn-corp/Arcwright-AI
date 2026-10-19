@@ -28,7 +28,7 @@ env:
 jobs:
   plan:
     if: github.repository == 'unn-corp/Arcwright-AI'
-    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated]
     timeout-minutes: 10
     outputs:
       skip: ${{ steps.plan.outputs.skip }}
@@ -57,7 +57,7 @@ jobs:
   release:
     needs: plan
     if: needs.plan.outputs.skip == 'false'
-    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated]
     timeout-minutes: 30
     permissions:
       contents: write

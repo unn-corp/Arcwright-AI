@@ -62,11 +62,11 @@ project instructions here and follow the applicable instruction hierarchy.
 
 ## Build and integration references
 
-- Every GitHub Actions job in this repository uses the organization's isolated
-  self-hosted runners, including public-repository CI. Require `self-hosted`,
-  `unn`, `unn-isolated`, and `t3-ci`, plus the native OS and architecture. Never
-  switch to GitHub-hosted or Blacksmith runners as a fallback. Preserve ephemeral
-  workers and explicitly selected repository access.
+- Every GitHub Actions job uses organization self-hosted runners. Require
+  `self-hosted`, `unn`, `unn-isolated`, and native Linux architecture labels.
+  Use the shared Mothership Linux pool; dedicated `t3-ci` workers are retired.
+  Never switch to GitHub-hosted or Blacksmith runners as a fallback. Preserve
+  ephemeral Linux workers and unsupported-platform guards.
 
 - `node build/build.js` builds the package and checks bundled references/leaks.
 - For package behavior changes, run focused tests, then required package gates
