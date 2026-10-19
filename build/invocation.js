@@ -230,7 +230,7 @@ function auditAgentCapabilities(root, { requireRegistry = false } = {}) {
   const teamFiles = filesBelow(path.join(root, '.agents', 'skills')).filter(file =>
     /^team-/.test(path.basename(path.dirname(file))) && /^(SKILL|RULES)\.md$/.test(path.basename(file)));
   const protocolFiles = filesBelow(path.join(root, '.agents', 'skills', 'subagent-protocol')).filter(file => file.endsWith('.md'));
-  const callerFiles = ['herdr', 'task-manager', 'triage', 'skill-scout', 'subagent-driven-development', 'pr-review-panel', 'review-loop', 'sol-loop',
+  const callerFiles = ['task-manager', 'triage', 'skill-scout', 'subagent-driven-development', 'pr-review-panel', 'review-loop',
     'agent-instructions', 'hookify', 'browser-use', 'react-expert', 'ci-gates', 'build-mcp-server']
     .flatMap(name => ['SKILL.md', 'RULES.md'].map(file => path.join(root, '.agents', 'skills', name, file)))
     .concat(['triage', 'tasks', 'skill-scout'].map(name => path.join(root, '.claude', 'commands', `${name}.md`)))

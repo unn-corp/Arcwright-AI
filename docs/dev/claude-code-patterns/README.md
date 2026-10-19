@@ -19,7 +19,7 @@ and orchestration protocols can track the platform.
 > for the unified in-process + SendMessage-reuse method. The bespoke `tracks` and the old
 > `tmux-protocol` skill have been retired (native-orchestration migration, shipped
 > 2026-06-11); Herdr now provides **opt-in visibility only** — see
-> [`herdr`](../../../.agents/skills/herdr/SKILL.md).
+> [Herdr documentation](https://herdr.dev).
 > The [`triage`](../../../.agents/skills/triage/SKILL.md) skill is repurposed as the
 > workflow-router that picks the right primitive (in-process agent / ultracode workflow /
 > `/goal` loop) for each task.
@@ -66,8 +66,8 @@ owns task lifecycle, provider/model inheritance, discovery, and host adaptation.
 Use [triage](../../../.agents/skills/triage/SKILL.md) to select installed workflows.
 Claude's native `Agent` and `SendMessage` shapes apply only where supported;
 Arcwright Code delegated review rounds always use fresh tasks. No role implies
-a fixed model family. [Herdr](../../../.agents/skills/herdr/SKILL.md) provides
-optional viewing; retired tmux signal/polling protocols are not runtime guidance.
+a fixed model family. Herdr provides optional viewing; see its
+[documentation](https://herdr.dev). Retired tmux signal/polling protocols are not runtime guidance.
 
 > Sources are cited at the bottom of each document. A few items that could not be confirmed
 > from official docs are flagged inline as **unverified**. The Ultracode scripting API in

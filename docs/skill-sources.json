@@ -2496,6 +2496,101 @@
         ".agents/skills/design-taste-frontend/SKILL.md": "bd8e0fafa9debe9f13256eac936a414bec5939b0e107ac090669eccd938dfd76",
         ".agents/skills/design-taste-frontend/UPSTREAM.md": "e19df4222bd5c2951348d5eeb877b12a9f5590b2adf69aba50a7c1e2fd01f891"
       }
+    },
+    {
+      "id": "caveman",
+      "repository": "https://github.com/JuliusBrussee/caveman",
+      "revision": "d262ab3882952a59312ff3537cd86d894523c5ab",
+      "version": "4.0.1",
+      "sourcePaths": [
+        "skills/caveman/SKILL.md",
+        "skills/caveman-compress/SKILL.md",
+        "LICENSE",
+        "LICENSE-MIT",
+        "NOTICE"
+      ],
+      "license": "Apache-2.0; retained earlier MIT notices",
+      "status": "adapted",
+      "adaptations": "Answer-first clarity and exact payload/negation preservation. Explicit activation and local lite/full/ultra names. Native-host prose compression with backups outside loader trees; no subprocess provider, hooks, proxy, or service.",
+      "localRoots": [
+        ".agents/skills/caveman",
+        ".agents/skills/caveman-compress"
+      ],
+      "upstreamFiles": {
+        "skills/caveman/SKILL.md": "415d43518f2b1a9498c15a445d4657117b129ee5e81b19454ce348439cc6672b",
+        "skills/caveman-compress/SKILL.md": "dd5388f085316f9f6a8b34ad906441023033596f8ac1d63b81fb20e8d3f50283",
+        "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "LICENSE-MIT": "5eb826cd03151bcc7cce3f80d40e87733237fedfc6c36d6908aca5fd650a0bdb",
+        "NOTICE": "20112dc6e62e91da4f03c29fd10cfa41743a9c526389fdf1396c3649c18216fc"
+      },
+      "localFiles": {
+        ".agents/skills/caveman-compress/LICENSE-MIT": "5eb826cd03151bcc7cce3f80d40e87733237fedfc6c36d6908aca5fd650a0bdb",
+        ".agents/skills/caveman-compress/NOTICE": "20112dc6e62e91da4f03c29fd10cfa41743a9c526389fdf1396c3649c18216fc",
+        ".agents/skills/caveman-compress/SKILL.md": "6f4b739e4666d8baa1cac200d1cf5b8b8c598486ddcee8749e522932652ad77c",
+        ".agents/skills/caveman-compress/UPSTREAM-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        ".agents/skills/caveman-compress/UPSTREAM.md": "ee31c8bdcc9ccfa3dbf29909da6aaa8f2f30ffb7535e7b84d63896c73493054b",
+        ".agents/skills/caveman/LICENSE-MIT": "5eb826cd03151bcc7cce3f80d40e87733237fedfc6c36d6908aca5fd650a0bdb",
+        ".agents/skills/caveman/NOTICE": "20112dc6e62e91da4f03c29fd10cfa41743a9c526389fdf1396c3649c18216fc",
+        ".agents/skills/caveman/RULES.md": "46a1f33f363ad81dce2cb250cf8204e376eb88a5236fcfe0cee79dc0bae78859",
+        ".agents/skills/caveman/SKILL.md": "518826ecf131cb0887c408a2a6b0e173cca21c3f575f7f373ec33c06e614c01d",
+        ".agents/skills/caveman/UPSTREAM-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        ".agents/skills/caveman/UPSTREAM.md": "7cdd2658e0013e862dd4c55b926176e287100778da8de30da948d85bc4f4ae14"
+      }
+    },
+    {
+      "id": "ponytail",
+      "repository": "https://github.com/DietrichGebert/ponytail",
+      "revision": "16352ac229eb08a9598dcae48fe9f2b342567d86",
+      "version": "5.3.2",
+      "sourcePaths": [
+        "skills/ponytail/SKILL.md",
+        "skills/ponytail-audit/SKILL.md",
+        "skills/ponytail-debt/SKILL.md",
+        "skills/ponytail-gain/SKILL.md",
+        "skills/ponytail-help/SKILL.md",
+        "skills/ponytail-review/SKILL.md",
+        "LICENSE"
+      ],
+      "license": "MIT",
+      "status": "adapted",
+      "adaptations": "All six skills adapted to Arcwright host invocation, explicit activation, authorization, and proportionate tests. No plugin hooks, status band, automatic default activation, or subagent injection. Benchmark figures are attributed upstream claims.",
+      "localRoots": [
+        ".agents/skills/ponytail",
+        ".agents/skills/ponytail-audit",
+        ".agents/skills/ponytail-debt",
+        ".agents/skills/ponytail-gain",
+        ".agents/skills/ponytail-help",
+        ".agents/skills/ponytail-review"
+      ],
+      "upstreamFiles": {
+        "skills/ponytail/SKILL.md": "9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509",
+        "skills/ponytail-audit/SKILL.md": "2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28",
+        "skills/ponytail-debt/SKILL.md": "b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f",
+        "skills/ponytail-gain/SKILL.md": "231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090",
+        "skills/ponytail-help/SKILL.md": "86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9",
+        "skills/ponytail-review/SKILL.md": "33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e",
+        "LICENSE": "fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab"
+      },
+      "localFiles": {
+        ".agents/skills/ponytail-audit/LICENSE": "fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab",
+        ".agents/skills/ponytail-audit/SKILL.md": "86af76ca93ea0dfa9ba8c52f35e42aef9a61f43807b866fb7fa9879bce4b1465",
+        ".agents/skills/ponytail-audit/UPSTREAM.md": "36af455b7f84b7e37c43725c134757fa52313273f49681535767d085acefbd31",
+        ".agents/skills/ponytail-debt/LICENSE": "fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab",
+        ".agents/skills/ponytail-debt/SKILL.md": "6f34f60cd70a2b590b435dd3b42f878bc869bff02c59a56aa283c8882921fbe5",
+        ".agents/skills/ponytail-debt/UPSTREAM.md": "bd55782d1cda123d2c5977aba0a42c8708900a2e10301bcaafd62b7006f00997",
+        ".agents/skills/ponytail-gain/LICENSE": "fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab",
+        ".agents/skills/ponytail-gain/SKILL.md": "3f6489a43226ea178dcc5b6ffad34f06fcebd34f5f1f0807d6b7acb27c464a8f",
+        ".agents/skills/ponytail-gain/UPSTREAM.md": "47957a369df9da94f5db271a0cc7f30a5324465987baaacc5ec50e18ba1ccf6d",
+        ".agents/skills/ponytail-help/LICENSE": "fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab",
+        ".agents/skills/ponytail-help/SKILL.md": "df2d23dd0a5570409f8bba79707080e03195f9b6cd032dc501e7774dcfacbf47",
+        ".agents/skills/ponytail-help/UPSTREAM.md": "5f8536fa4e1b6916e8fb8d2cea26e697c4577d51103cbe6617778b2400e04803",
+        ".agents/skills/ponytail-review/LICENSE": "fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab",
+        ".agents/skills/ponytail-review/SKILL.md": "606f8a9c6165244e65428d91200f39bc0eae390b202eb994f7c96160f8f29e55",
+        ".agents/skills/ponytail-review/UPSTREAM.md": "27ea4610afaa91c2f253665b3418b9dc5559eea7fb9a878098a1825123f14753",
+        ".agents/skills/ponytail/LICENSE": "fb1bc6909ac3ef82d5c22106e32ef682b0cff66788fa915fb9b53b15c9d2f3ab",
+        ".agents/skills/ponytail/SKILL.md": "ced8763c28387d2de76dd220d4aaa17e2885abb4cd643b66d107244d9fd1fd21",
+        ".agents/skills/ponytail/UPSTREAM.md": "bcff585941b3d71430779227476c432f423dd29246ba1552177bd0a3c059eebb"
+      }
     }
   ],
   "excludedSources": [

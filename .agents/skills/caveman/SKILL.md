@@ -1,80 +1,74 @@
 ---
 name: caveman
-description: "Compress a documentation artifact or use an explicitly requested caveman writing mode. Preserve technical details and the user's readability requirements."
+description: "Use an explicitly requested concise writing mode or compress a prose artifact. Answer first, remove filler, and preserve every fact, technical detail, and readability requirement."
 ---
 
-# Caveman — Concise Output Discipline
+# Caveman
 
-Write terse like smart caveman. All technical substance stay. Only fluff die.
+Answer first. Remove filler. Keep every fact. Clarity beats compression.
+Adapted from Caveman 4.0.1; see [source and license notes](UPSTREAM.md).
 
-Arcwright agents generate many artifacts that later get re-read into context (specs,
-PRDs, research, decision-logs, LEARNINGS). Every word costs tokens on every reload.
-Use this skill when the requested artifact benefits from explicit compression, or
-the user selects this writing mode. Ordinary short answers do not require an extra
-style-skill read. Preserve the user's and host's tone and readability requirements.
+Use when the user selects this mode or requests a compressed artifact. Ordinary
+short replies need no extra style-skill read. Installing or reading this skill for
+maintenance does not activate a mode. Host instructions and user readability,
+language, and reporting requirements govern the output.
 
-> Scope: this skill governs how you WRITE artifacts. It is NOT `writing-skills` (that one
-> is for authoring SKILL.md files). It pairs with `documentation-standards.md` (CommonMark,
-> no time estimates) — caveman sets concision, documentation-standards sets structure.
+## Scope and persistence
 
-## Persistence
+An explicitly selected chat mode persists for the session until "normal mode",
+"stop caveman", or `/caveman off`. Artifact compression applies only to the
+requested artifact. `/caveman status` reports the mode actually used; it does not
+activate one. Without host state, report that the mode is not tracked; never infer
+activation from an installed skill or configured default.
 
-Active for the entire artifact once invoked. No filler drift mid-document. Default level
-**full**. Switch with `/caveman lite|full|ultra` or a note in the task.
+`/caveman lite|full|ultra` selects intensity; default **full**. These are local
+Arcwright levels, with no dependency on upstream's separate mode skills.
 
-## Rules
+| Level | Behavior |
+| --- | --- |
+| lite | Remove ceremony and filler. Keep full sentences and articles. |
+| full | Use short words and clear fragments where they read in one pass. |
+| ultra | Use the shortest unambiguous phrasing for explicitly requested scratch notes. No invented abbreviations. |
 
-Drop: articles (a/an/the), filler (just/really/basically/actually/simply/essentially),
-pleasantries (sure/certainly/happy to/I'd recommend), hedging (it might be worth/you could
-consider). Fragments OK. Short synonyms (big not extensive, fix not "implement a solution
-for", use not utilize). "in order to" → "to". "make sure to" → "ensure".
+## Writing rules
+
+- Lead with the answer, then its reason and needed next step.
+- Remove greetings, pleasantries, filler, repetitive recaps, and empty closers.
+  Preserve uncertainty when it changes the meaning or confidence of a claim.
+- Prefer "fix", "use", and "to" over longer equivalents. Standard technical
+  acronyms are fine; invented shorthand usually costs clarity.
+- Omit articles only when the sentence still reads in one pass. Prefer one idea
+  per sentence, active verbs, and pronouns with clear referents.
+- Preserve every negation, condition, exception, requirement, number, and unit.
+  Never drop "not", "never", "no", "only", or "except" to shorten a sentence.
+- Follow the user's language. Quoted text does not select the reply language.
+- Do not perform a persona, add mode prefixes, or provide duplicate versions.
+  If plain wording is shorter or clearer, use it.
+- Follow the host's required progress updates, questions, and final format.
+  A style mode does not suppress required communication.
 
 Pattern: `[thing] [action] [reason]. [next step].`
 
-- Not: "Sure! The issue you're experiencing is likely caused by the authentication
-  middleware, which appears to be checking token expiry incorrectly."
-- Yes: "Bug in auth middleware. Token expiry check uses `<` not `<=`. Fix:"
+Example: "Auth middleware uses `<` instead of `<=` for token expiry. Fix:"
 
-## Preserve EXACTLY (never compress)
+## Preserve exactly
 
-- Code blocks (fenced + indented), inline `code`
-- File paths, commands, URLs/links, env vars
-- Technical terms, API/function names, proper nouns
-- Dates, version numbers, numeric values, error strings (quote exact)
-- Requirement IDs, decision IDs (FR-001, D-01, SC-001), capability IDs
-- Markdown structure: headings, list nesting, table structure, frontmatter
+Code blocks, inline code, commands, paths, URLs, links, environment variables,
+API names, technical terms, proper nouns, dates, versions, numeric values, units,
+quoted errors, and requirement/decision/capability IDs stay intact. Keep Markdown
+headings, list hierarchy, tables, and frontmatter. Existing code and comments are
+payload; a writing mode does not authorize editing them.
 
-## Intensity
+## Use full sentences when needed
 
-| Level | What changes |
-|-------|------|
-| **lite** | No filler/hedging. Keep articles + full sentences. Professional but tight. Use for user-facing docs (README, public guides). |
-| **full** | Drop articles, fragments OK, short synonyms. Default for internal artifacts (specs, PRDs, research, plans, decision-logs). |
-| **ultra** | Abbreviate prose words (DB/auth/config/req/impl), arrows for causality (X → Y), one word when one word enough. Code/API/error strings never abbreviated. Use for scratch notes + LEARNINGS. |
+Use plain prose for user questions, confusing sequences, security explanations,
+consequential decisions, or a user who is confused. Preserve the session's existing
+authorization; compression creates no additional approval requirement.
 
-Example — "Why does the component re-render?"
-- lite: "The component re-renders because a new object reference is created each render. Wrap it in `useMemo`."
-- full: "New object ref each render → re-render. Wrap in `useMemo`."
-- ultra: "Inline obj prop → new ref → re-render. `useMemo`."
+Write persisted code, comments, commits, PRs, issues, external messages, and shared
+documentation in their required style. Compress a persisted prose artifact only
+when the task explicitly calls for it; use [caveman-compress](../caveman-compress/SKILL.md)
+for an existing file. No fixed token or cost savings are promised.
 
-## Auto-Clarity (drop caveman, write normal)
-
-Switch back to clear full language when:
-- Security warnings or risk callouts
-- Irreversible / destructive action confirmations
-- Multi-step sequences where fragment order or omitted conjunctions risk misread
-- Compression itself creates ambiguity (e.g. "migrate table drop column backup first" —
-  order unclear without articles/conjunctions)
-- User asks to clarify or repeats a question
-
-Handle the critical part completely in clear language, then resume caveman.
-
-## Boundaries
-
-- Code, commit messages, PR descriptions: follow their own conventions (commits stay
-  conventional-commit format; code comments stay readable).
-- "stop caveman" / "normal mode": revert for the rest of the turn.
-- Never sacrifice a load-bearing fact to save a token. Concise ≠ incomplete.
-
-See `RULES.md` for the quick checklist. See `caveman-compress` to retro-compress an
-existing verbose artifact or memory file.
+Before sending, check that every fact and qualifier survived, technical payloads
+are exact, and no sentence has two plausible meanings.

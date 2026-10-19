@@ -7,10 +7,9 @@ config are no longer shipped or maintained.
 
 For pane-based agent visibility (opt-in, not the default orchestration mechanism), use:
 
-- `.agents/skills/herdr/SKILL.md` — the Herdr command reference (sessions, workspaces,
-  tabs, panes, agent spawning, wait-on-status, the plugin catalog, and a tmux → Herdr
-  mapping table for anyone migrating a setup like the one this file used to document)
-- `/herdr` — loads that reference as a slash command
+- [Herdr documentation](https://herdr.dev) for current terminal workspace commands.
+- `arcwright herdr` for opt-in runtime configuration. The bundled Herdr skill and
+  `/herdr` chat command are retired.
 - `docs/herdr-collie-tailscale-pwa.md` (workshop repo root) — the `collie` plugin,
   which puts a phone PWA in front of your agent herd over Tailscale
 

@@ -107,9 +107,9 @@ const { syncHostCommands } = require('./host-commands');
 /** Slash command files to ship. Shared by bundleKiroAgents() and bundleTrackCommands(). */
 const SHIPPED_COMMANDS = [
   /^arcwright-migrate\.md$/,
-  /^herdr\.md$/,
   /^edge-case-hunter\.md$/,
   /^gsudo\.md$/,
+  /^ponytail(?:-(?:review|audit|debt|gain|help))?\.md$/,
   /^team\.md$/,
   /^dry\.md$/,
   /^dry-loop\.md$/,
@@ -575,8 +575,8 @@ risk, or explicit requirements. Budget exhaustion is incomplete, not approval.
 Keep installed bundles read-only. Put working artifacts in the active project's
 _arcwright/_memory/skill-runs/<workflow>-<run>/, or host-managed evidence storage.
 
-Herdr visibility is optional when requested and its environment is available.
-Use the installed herdr procedure without duplicating the underlying task.
+Host pane visibility is optional when requested and supported.
+Use the host's viewing tools without duplicating the underlying task.
 Kiro subagent/DAG fields apply only when exposed by that host. Optional runtime
 names and old provider-specific examples do not override current host policy.
 `;
@@ -641,7 +641,6 @@ function bundleKiroAgents() {
     'aws-infra':          ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code', 'web_fetch'],
     'unnamed-pm':         ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'unnamed-dev-mcp':    ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
-    'herdr':              ['fs_read', 'fs_write', 'execute_bash'],
     'edge-case-hunter':   ['fs_read', 'execute_bash', 'grep', 'glob'],
     'gsudo':              ['execute_bash'],
     // Coding / best-practice skill commands
@@ -660,6 +659,7 @@ function bundleKiroAgents() {
     'secure':             ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'debug':              ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'clean-code':         ['fs_read', 'fs_write', 'grep', 'glob', 'code'],
+    'ponytail':           ['fs_read', 'fs_write', 'execute_bash', 'grep', 'glob', 'code'],
     'caveman':            ['fs_read', 'fs_write', 'grep', 'glob'],
     'correct-course':     ['fs_read', 'fs_write', 'grep', 'glob', 'code'],
     'hookify':            ['fs_read', 'fs_write', 'execute_bash'],
@@ -695,7 +695,7 @@ function bundleKiroAgents() {
 
   /** Kiro CLI addendum appended to team/team-style agent prompts. */
   // Default is the in-process `subagent` tool (DAG pipeline with `stages` and
-  // `depends_on`). Herdr panes are opt-in visibility only — see the `herdr` skill.
+  // `depends_on`). Host panes are opt-in visibility only.
   const KIRO_ORCHESTRATION_ADDENDUM = `
 
 ## Kiro delegation adapter
@@ -713,9 +713,8 @@ and create a fresh delegated task per review round with prior findings. Do not
 substitute a top-level thread or childThreadId messaging. Use host completion
 and status tools, actual concurrency limits, and proportionate verification.
 
-Visible panes require explicit user preference and an available Herdr runtime.
-Load the installed herdr skill for that adapter; preserve the same task ownership
-and required sign-offs. Omit unavailable optional viewing surfaces.
+Visible panes require explicit user preference and supported host viewing tools.
+Preserve the same task ownership and required sign-offs. Omit unavailable optional viewing surfaces.
 `;
 
   let generated = 0;
@@ -964,7 +963,7 @@ function bundleTrackCommands() {
     return;
   }
 
-  // Bundle all slash commands: arcwright-migrate, herdr, gsudo, and utility commands
+  // Bundle all slash commands: arcwright-migrate, gsudo, and utility commands
   // (track commands removed in stage 1; the function name is kept for continuity)
   const cmdFiles = readSourceDirectory(commandsSrc)
     .filter(f => SHIPPED_COMMANDS.some(re => re.test(f)))
@@ -1275,7 +1274,7 @@ function bundleSkillCommands() {
     const maintainedCommand = sourceExists(commandSource) ? readSourceText(commandSource) : null;
     let desc = metadataDescription(maintainedCommand || skillMd, `Run the ${skill} skill.`);
     if (desc.length > 220) desc = desc.slice(0, 217) + '...';
-    const needsDelegation = /^(arcwright|full-send|full-stop|review-loop|sol-loop|subagent-protocol|subagent-driven-development|pr-review-panel|agent-evaluation|agent-red-teaming|task-manager)$/.test(skill)
+    const needsDelegation = /^(arcwright|full-send|full-stop|review-loop|subagent-protocol|subagent-driven-development|pr-review-panel|agent-evaluation|agent-red-teaming|task-manager)$/.test(skill)
       || /^allowed-tools:.*\b(?:Agent|Task|SendMessage)\b/m.test(skillMd);
 
     if (!existingCmd.has(skill)) {

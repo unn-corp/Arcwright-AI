@@ -2,14 +2,6 @@
 	path = t3code
 	url = https://github.com/unn-corp/t3code.git
 	branch = main
-[submodule "ungate"]
-	path = ungate
-	url = https://github.com/unn-corp/ungate.git
-	branch = main
-[submodule "hermes-agent"]
-	path = hermes-agent
-	url = https://github.com/unn-corp/hermes-agent.git
-	branch = main
 [submodule "vendor/unnamed-dev-skills"]
 	path = vendor/unnamed-dev-skills
 	url = https://github.com/unn-corp/unnamed-dev-skills.git

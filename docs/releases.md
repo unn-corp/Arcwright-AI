@@ -72,14 +72,53 @@ node build/verify-release.cjs dist /tmp/arcwright-npm-baseline/node_modules/@arc
 Use an isolated path appropriate for your environment. The verifier never installs
 into the source workshop or the real home directory.
 
-## Publish and retire npm
+## Scheduled publication
+
+The release workflow follows the T3 fork's cadence on `main`:
+
+| Channel | Schedule (UTC) | Selection |
+| --- | --- | --- |
+| Nightly (`next`) | Daily at 07:23 | Publish the current main commit only when it has not already been released |
+| Stable | Sunday at 08:23 | Promote the newest eligible nightly that has been published for at least 24 hours |
+
+Both jobs require `[self-hosted, linux, x64, unn, unn-isolated, t3-ci]`.
+They use the organization's isolated workers, never hosted-runner fallbacks.
+GitHub schedules run from the default branch and may start late during load;
+see [scheduled workflow behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+The planner pins the source commit before the build. Nightlies use
+`MAJOR.MINOR.PATCH-nightly.YYYYMMDD.RUN`, where `RUN` is the workflow run number.
+The next patch follows the latest stable version, while a higher source package
+version can declare a new minor or major series. The builder aligns the packaged
+runtime and lockfile to that identity without making daily version commits.
+
+Weekly stable builds use the mature nightly's exact source commit and core
+version, record its tag as `promotedFrom`, and repeat the package and installation
+checks. Candidates outside main, older than the current stable's history, or with
+no newer version are ineligible. An unchanged main or no eligible stable candidate
+produces a successful skip, not a duplicate release.
+
+Every publication runs source/provenance checks, package coverage gates, and
+isolated Codex/Claude install and repeat-update verification. Assets are uploaded
+to a draft, downloaded and checked against `SHA256SUMS`, then published. Nightlies
+are prereleases and never move GitHub's stable `latest` pointer. Stable installs
+remain stable; `--channel next` opts into nightlies. Schedules publish packages,
+not unattended fleet updates.
+
+For an authorized manual nightly or stable promotion, dispatch `release.yml` on
+`main` and select `nightly` or `stable`. A failed draft can be retried only for the
+same pinned source; published assets are never overwritten. The tag-based flow
+below remains available for explicit initial stable releases and versioned releases
+outside the weekly schedule.
+
+## Manual publication and npm retirement
 
 Publishing requires task authorization. Align the runtime version and lockfile,
 commit the reviewed source, and push a matching `vVERSION` tag. The release
 workflow uses the organization's isolated self-hosted runners, runs the required
 package gates and artifact verification, and publishes the four release assets.
 The publishing runner needs the GitHub CLI (`gh`); its workflow token supplies
-repository-scoped release access.
+repository-scoped release access. No npm publishing credentials are required.
 Prerelease versions must be published as GitHub prereleases. Manual publication
 must run the same checks, associate the release tag with its exact source commit,
 and include all four assets.

@@ -1,60 +1,48 @@
 ---
 name: caveman-compress
-description: >
-  Retro-compress an existing verbose natural-language file (AGENTS.md, host instructions, memory files,
-  specs, briefs, notes) into caveman format to save input tokens on every reload.
-  Preserves all code, paths, URLs, IDs, and structure. Trigger: /caveman-compress FILEPATH
-  or "compress this doc / memory file".
+description: "Compress an explicitly named prose file while preserving code, structure, facts, and negations. Keep a recoverable backup outside instruction and skill loader folders. Use for /caveman-compress FILEPATH or a request to compress a document."
 ---
 
 # Caveman Compress
 
-Compress an existing prose-heavy file into caveman-speak to cut input tokens on reload.
-Apply the `caveman` skill's rules to a file that already exists, rather than to new output.
-
-## When to use
-
-- A `.planning/`, `_arcwright-output/`, or memory file has grown verbose.
-- An agent-instruction / config-prose file reloads on every turn and is bloated.
-- A spec/brief/report was written before caveman discipline and now wastes context.
+Compress an existing prose artifact using [caveman](../caveman/SKILL.md).
+Adapted from Caveman 4.0.1; see [source and license notes](UPSTREAM.md).
+Use the active host's normal file tools and model. This adaptation does not run
+upstream's subprocess compression scripts or configure an additional provider.
 
 ## Process
 
-1. Read the target file.
-2. Save a human-readable backup as `<filename>.original.md` (skip if `.original.md`
-   already exists — never compress a backup).
-3. Rewrite prose using `caveman` rules (default level **full**).
-4. Write the compressed version over the original. Report before/after rough token delta.
-
-## Compress
-
-- Remove: articles, filler (just/really/basically/actually/simply/essentially/generally),
-  pleasantries, hedging (it might be worth / you could consider), connective fluff
-  (however/furthermore/additionally), redundant phrasing (in order to → to).
-- Short synonyms; fragments OK; drop "you should / make sure to / remember to".
-- Merge bullets that say the same thing. Keep one example where several show one pattern.
-
-## Preserve EXACTLY (read-only regions)
-
-Code blocks (fenced + indented), inline `code`, URLs/links, file paths, commands,
-technical/proper nouns, dates, versions, numbers, env vars, requirement/decision IDs.
-Keep all headings (exact text), list nesting, numbering, table structure, frontmatter.
-
-If unsure whether something is code or prose → leave unchanged.
+1. Resolve the explicit target path and the requested scope. If raw text was
+   supplied instead of a file, use the current text request without overwriting
+   an inferred file; ask for a path only if a file rewrite is required.
+2. Reject secret-bearing files such as `.env`, credentials, secrets, `.netrc`,
+   private keys, and authentication stores before reading them. Use the session's
+   existing data-handling rules for ordinary prose.
+3. Read the target and check applicable instructions. Save an exact backup outside
+   all skill and instruction loader trees before editing. Use host-managed evidence
+   storage when available; otherwise use `$XDG_DATA_HOME/caveman-compress/backups/`
+   (default `~/.local/share/caveman-compress/backups/`) or
+   `%LOCALAPPDATA%\caveman-compress\backups\` on Windows. Use a unique run directory
+   and record the original absolute path. Never overwrite an earlier backup.
+4. Draft the compressed prose at full intensity. Preserve technical payloads,
+   code, meaning, facts, conditions, negations, IDs, and Markdown structure exactly.
+   Never insert commentary about the request into the saved artifact.
+5. Compare the draft with the backup. Check read-only regions byte for byte and
+   verify that requirements, qualifiers, numbers, sequence, and exceptions survived.
+   If validation fails, repair the draft or leave the source untouched.
+6. Replace the target only after those checks pass. Report the backup path and
+   measured before/after bytes or words. Label estimates; do not claim exact token
+   or cost savings without measurements from the actual tokenizer or provider.
 
 ## Boundaries
 
-- ONLY compress prose files: `.md`, `.txt`, extensionless.
-- NEVER modify: `.py`, `.js`, `.ts`, `.json`, `.yaml/.yml`, `.toml`, `.env`, `.lock`,
-  `.css`, `.html`, `.xml`, `.sql`, `.sh`.
-- Mixed prose+code file: compress prose only, treat code as read-only.
-- Never compress `*.original.md` backups.
-
-## Pattern
-
-Original:
-> You should always make sure to run the test suite before pushing changes to the main
-> branch. This is important because it helps catch bugs early and prevents broken builds.
-
-Compressed:
-> Run tests before push to main. Catch bugs early, prevent broken prod deploys.
+- Compress only prose files: `.md`, `.txt`, `.typ`, `.typst`, `.tex`, or explicitly
+  identified extensionless prose. Leave embedded syntax and markup unchanged.
+- Never rewrite source code, scripts, JSON, YAML, TOML, `.env`, lockfiles, CSS,
+  HTML, XML, SQL, or binary files using this procedure.
+- Code blocks, inline code, paths, commands, URLs, links, environment variables,
+  API names, dates, versions, units, IDs, and quoted errors are read-only regions.
+- Keep heading text, list nesting, numbering, table structure, and frontmatter.
+- Never compress `*.original.md`, backup directories, or the backup from this run.
+- If prose versus syntax is ambiguous, leave it unchanged.
+- Do not rewrite unrelated files or activate a session-wide writing mode.

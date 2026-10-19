@@ -1,6 +1,8 @@
 node_modules/
 packages/*/src/
-# Retired submodule checkouts may remain locally; skills are maintained in .agents/skills/.
+# Detached application and retired skill-source checkouts may remain locally.
+/ungate/
+/hermes-agent/
 /herdr/
 /collie/
 /vendor/mattpocock-skills/

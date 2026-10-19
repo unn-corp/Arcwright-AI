@@ -75,13 +75,13 @@
     },
     ".agents/skills/caveman/SKILL.md": {
       "name": "caveman",
-      "entrypointBytes": 4007,
-      "descriptionBytes": 154
+      "entrypointBytes": 3817,
+      "descriptionBytes": 179
     },
     ".agents/skills/caveman-compress/SKILL.md": {
       "name": "caveman-compress",
-      "entrypointBytes": 2554,
-      "descriptionBytes": 308
+      "entrypointBytes": 3025,
+      "descriptionBytes": 239
     },
     ".agents/skills/ci-gates/SKILL.md": {
       "name": "ci-gates",
@@ -332,11 +332,6 @@
       "name": "gsudo",
       "entrypointBytes": 2158,
       "descriptionBytes": 119
-    },
-    ".agents/skills/herdr/SKILL.md": {
-      "name": "herdr",
-      "entrypointBytes": 11211,
-      "descriptionBytes": 229
     },
     ".agents/skills/hookify/SKILL.md": {
       "name": "hookify",
@@ -633,6 +628,36 @@
       "entrypointBytes": 4177,
       "descriptionBytes": 77
     },
+    ".agents/skills/ponytail/SKILL.md": {
+      "name": "ponytail",
+      "entrypointBytes": 3724,
+      "descriptionBytes": 370
+    },
+    ".agents/skills/ponytail-audit/SKILL.md": {
+      "name": "ponytail-audit",
+      "entrypointBytes": 5640,
+      "descriptionBytes": 346
+    },
+    ".agents/skills/ponytail-debt/SKILL.md": {
+      "name": "ponytail-debt",
+      "entrypointBytes": 1811,
+      "descriptionBytes": 201
+    },
+    ".agents/skills/ponytail-gain/SKILL.md": {
+      "name": "ponytail-gain",
+      "entrypointBytes": 2413,
+      "descriptionBytes": 160
+    },
+    ".agents/skills/ponytail-help/SKILL.md": {
+      "name": "ponytail-help",
+      "entrypointBytes": 2228,
+      "descriptionBytes": 141
+    },
+    ".agents/skills/ponytail-review/SKILL.md": {
+      "name": "ponytail-review",
+      "entrypointBytes": 5366,
+      "descriptionBytes": 370
+    },
     ".agents/skills/postgresql-optimization/SKILL.md": {
       "name": "postgresql-optimization",
       "entrypointBytes": 11229,
@@ -833,11 +858,6 @@
       "entrypointBytes": 10404,
       "descriptionBytes": 196
     },
-    ".agents/skills/sol-loop/SKILL.md": {
-      "name": "sol-loop",
-      "entrypointBytes": 251,
-      "descriptionBytes": 116
-    },
     ".agents/skills/spec-kernel/SKILL.md": {
       "name": "spec-kernel",
       "entrypointBytes": 5395,
@@ -890,7 +910,7 @@
     },
     ".agents/skills/subagent-protocol/SKILL.md": {
       "name": "subagent-protocol",
-      "entrypointBytes": 6556,
+      "entrypointBytes": 6525,
       "descriptionBytes": 159
     },
     ".agents/skills/systematic-debugging/SKILL.md": {
@@ -1060,7 +1080,7 @@
     },
     ".agents/skills/triage/SKILL.md": {
       "name": "triage",
-      "entrypointBytes": 4105,
+      "entrypointBytes": 4011,
       "descriptionBytes": 168
     },
     ".agents/skills/typescript-best-practices/SKILL.md": {

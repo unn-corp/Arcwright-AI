@@ -54,8 +54,8 @@ commands. Recommend them only where actually available. Do not force Sonnet/Opus
 model-upgrade approvals or a Claude-only `Agent` tool on other hosts. Honor model
 and authorization rules from the current session.
 
-Herdr is optional visibility, not the spawn substrate. Load `herdr` only after an
-explicit pane/watch request and when its runtime is available. Do not start a
+Host pane visibility is optional. Use it only after an explicit pane/watch
+request and when supported viewing tools are available. Do not start a
 visibility service or post legacy pane completion signals for ordinary work.
 
 ## Recommendation and completion
@@ -71,4 +71,3 @@ request, finish after the recommendation instead of silently launching it.
   for a genuine routing choice.
 - [Orchestration protocol](../subagent-protocol/SKILL.md) when executing
   authorized delegation, not merely choosing a workflow.
-- [Herdr visibility](../herdr/SKILL.md) for an explicit supported pane request.

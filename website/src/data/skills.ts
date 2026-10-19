@@ -165,13 +165,13 @@ export const skills: Skill[] = [
     description: 'Windows privilege escalation for WSL2: run commands with elevated permissions.',
     category: 'devops',
   },
-  {
-    name: 'herdr',
-    slug: 'herdr',
-    description: 'Herdr terminal workspace reference: sessions, workspaces, tabs, panes, agent spawning, wait-on-status, and the plugin catalog. Includes one optional section on watching in-process agents in panes.',
-    category: 'devops',
-  },
   // Quality / Debug
+  {
+    name: 'Ponytail',
+    slug: 'ponytail',
+    description: 'The smallest complete change, with focused checks and clear explanations. Includes review, audit, debt, help, and upstream benchmark skills.',
+    category: 'quality',
+  },
   {
     name: 'Review Loop',
     slug: 'review-loop',
@@ -260,7 +260,7 @@ export const skills: Skill[] = [
   {
     name: 'Caveman',
     slug: 'caveman',
-    description: 'Concise-output discipline: write artifacts tersely, cut about 65% of tokens, and keep all technical substance. Required pre-output for every doc-writing agent.',
+    description: 'Requested concise writing modes and prose compression that preserve facts, technical details, negations, and readability.',
     category: 'workflow',
   },
   {

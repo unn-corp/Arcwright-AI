@@ -13,7 +13,10 @@ project instructions here and follow the applicable instruction hierarchy.
   Never edit generated `packages/agent-orchestration/src/`; builds replace it.
 - Matt Pocock skills and their wrappers are local Arcwright-maintained source.
   Preserve stable invocation names and third-party licenses/provenance. Herdr and
-  Collie are detached checkouts; use the local Herdr skill and Collie setup guide.
+  Collie are detached checkouts; their application setup is separate from skills.
+- Skill maintenance applies to both this source package and local global installs
+  by default. Preserve user customizations and profile links; fleet rollouts remain
+  separate unless requested.
 - Keep Squidhub-specific overlays out of the generic package. This workshop is
   the single package publication source; publishing requires task authorization.
 - Organization procedures live in optional private `vendor/unnamed-dev-skills/`.

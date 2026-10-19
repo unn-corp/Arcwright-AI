@@ -123,9 +123,8 @@ copyright, license, and source notices.
 
 ## Optional host surfaces
 
-Pane visibility is opt-in. If the user explicitly requests it, `$HERDR_ENV` is
-set, and the installed [Herdr skill](../../herdr/SKILL.md) and runtime are available, follow its
-`herdr agent start` / `herdr wait agent-status` procedure. Panes are an optional
+Pane visibility is opt-in. If explicitly requested, inspect the active host's
+available viewing tools and their supported procedure. Panes are an optional
 viewing/execution surface; use one authoritative task and completion channel,
 not a duplicate agent performing the same work. Keep recipe dependencies,
 ownership, capabilities, and sign-off gates unchanged.

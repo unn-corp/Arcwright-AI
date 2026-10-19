@@ -377,7 +377,7 @@ const FILES_MANIFEST_FILE = '_config/files-manifest.csv';
 const PLATFORMS = {
   'claude-code': {
     label: 'Claude Code',
-    hint: 'agents, AGENTS.md + Claude import, settings.json, herdr skill',
+    hint: 'agents, AGENTS.md + Claude import, settings.json, shared skills',
     summary: '.claude/agents/',
     agentDir: '.claude/agents',
     skillsDir: null,
@@ -3779,7 +3779,7 @@ function buildTmuxEntry() {
     '',
     'Delegate when the task or invoked workflow calls for it, following host policy and the user\'s chosen provider/model. Read `subagent-protocol` for task IDs, focused handoffs, concurrency, and verification. Use native tools for compatible same-provider agents and Arcwright Code/T3 delegation when required; each T3 review round is a fresh task.',
     '',
-    'Herdr panes are optional visibility when the user requests them and `HERDR_ENV` is set. Read `herdr` for pane mechanics. Preserve the active host\'s privileges, approvals, and concurrency limits; no fixed model or extra agent is implied by skill selection.',
+    'Host panes are optional visibility when the user requests them and supported viewing tools are available. Preserve the active host\'s privileges, approvals, and concurrency limits; no fixed model or extra agent is implied by skill selection.',
     '',
   ].join('\n');
 }

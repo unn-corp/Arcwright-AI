@@ -226,7 +226,7 @@ directly, no wrapper script needed). `herdr agent start ... --env KEY=VALUE -- <
 spawns `claude` inside that session with the account's `CLAUDE_CONFIG_DIR` passed
 explicitly, which is what guarantees the right account even if the Herdr **server**
 already has a stale value cached from an earlier session — the second `herdr --session`
-call then attaches you to watch it. See the `herdr` skill for the full command
+call then attaches you to watch it. See [Herdr documentation](https://herdr.dev) for the full command
 reference.
 
 ---

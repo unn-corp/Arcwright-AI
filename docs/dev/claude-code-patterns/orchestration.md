@@ -317,7 +317,7 @@ each spawned agent's ID into a role→agentId table, and re-engages the same age
 
 For task-level routing (decide "is this an in-process task, a workflow, or a `/goal`?"),
 use the workflow-router [`triage`](../../../.agents/skills/triage/SKILL.md). Herdr is
-opt-in visibility only — see [`herdr`](../../../.agents/skills/herdr/SKILL.md).
+opt-in visibility only — see [Herdr documentation](https://herdr.dev).
 
 ---
 

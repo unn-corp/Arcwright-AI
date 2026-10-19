@@ -2,7 +2,7 @@
 
 > AI-native agile workflow orchestration for Claude Code, Kiro, Cursor, and more coding agents.
 
-Arcwright installs specialist agents, model-invocable skills, and workflows into projects across supported coding hosts. The orchestrator routes work through spec, research, UX, implementation, review, and QA using the available native or Arcwright Code task tools. Herdr pane visibility is opt-in.
+Arcwright installs specialist agents, model-invocable skills, and workflows into projects across supported coding hosts. The orchestrator routes work through spec, research, UX, implementation, review, and QA using the available native or Arcwright Code task tools. Host pane visibility is opt-in.
 
 ---
 
@@ -87,13 +87,17 @@ migrate, download the launcher above and run `node arcwright.cjs update --yes`
 (add `--global` for a global installation). Your host selection, optional packs,
 configuration, and personal files are preserved. Herdr replaces the old tmux package.
 
-Use `arcwright --release 1.2.4 update` to select a specific release. For an
+Use `arcwright --release 1.2.5 update` to select a specific release. For an
 offline install, download the launcher, archive, and `release.json` from the same
 release into one folder, then run
-`node arcwright.cjs --archive ./arcwright-1.2.4.tar.gz --tools codex,claude-code --yes`.
+`node arcwright.cjs --archive ./arcwright-1.2.5.tar.gz --tools codex,claude-code --yes`.
 `--channel next` tracks published prereleases; stable remains the default.
 
-Arcwright ships a `herdr` skill and managed defaults for [Herdr](https://herdr.dev), a terminal workspace manager built for AI coding agents. You install Herdr itself; Arcwright configures it when detected. See [Herdr Setup](#herdr-setup) below.
+Changed commits on `main` publish nightlies daily at 07:23 UTC. Weekly stable
+releases promote an eligible nightly on Sundays at 08:23 UTC, after at least
+24 hours. Both use isolated self-hosted runners and verified GitHub Release assets.
+
+Arcwright provides opt-in managed defaults for [Herdr](https://herdr.dev), a terminal workspace manager built for AI coding agents. You install Herdr itself; Arcwright configures it when detected. See [Herdr Setup](#herdr-setup) below.
 
 ---
 
@@ -113,7 +117,7 @@ Use `/team arch-dev` to select a preset directly; `/team` without a selection of
 
 Teams use the shared [subagent protocol](.agents/skills/subagent-protocol/SKILL.md). Inherit the user's provider/model choices, discover live capabilities, and use compatible native tasks or Arcwright Code delegation. Reuse native specialists only where supported; every Arcwright Code review round is a fresh delegated task.
 
-**Herdr pane visibility is opt-in.** When the user asks to watch agents and Herdr is available, load the `herdr` skill's viewing guidance. The shared subagent protocol still owns delegation.
+**Host pane visibility is opt-in.** Use supported viewing tools when requested. The shared subagent protocol owns delegation.
 
 Use `/triage <task>` when the task needs help selecting a team or execution approach.
 
@@ -124,7 +128,6 @@ See the full team catalog below.
 | Command | Purpose |
 |---------|---------|
 | `/triage` | Select an installed execution approach and run a supplied task, or return a recommendation in routing-only mode. |
-| `/herdr` | Loads the Herdr terminal-workspace reference (sessions, workspaces, tabs, panes, agent spawning, wait-on-status) for the [Herdr](https://herdr.dev) terminal manager. Herdr panes are a *viewing surface* for in-process orchestration, not the spawn mechanism. |
 | `/gsudo` | Loads the gsudo skill and runs a command with Windows elevated privileges. Works from WSL2, Git Bash, or native Windows. Takes `$ARGUMENTS` for the command to run. |
 | `/arcwright-migrate` | Migrates an existing bmad installation to arcwright naming. Runs a dry-run first, then applies the rename. See [Migrating from bmad](#migrating-from-bmad). |
 
@@ -137,7 +140,8 @@ See the full team catalog below.
 | `/grill` | Adversarial pre-implementation design interrogation — locks the design before any code. |
 | `/tasks` | Decompose an epic/SPEC into task files with a dependency graph + conflict-free wave execution; optional GitHub Issues sync. |
 | `/pr-review` | Parallel 6-lens PR review with 0–100 confidence scoring and a ranked merge verdict. |
-| `/review-loop` | Ask which model to use, then find, fix, verify, and re-review substantive issues in bounded rounds. `/sol-loop` remains a compatibility alias. |
+| `/review-loop` | Ask which model to use, then find, fix, verify, and re-review substantive issues in bounded rounds. |
+| `/ponytail` | Use the smallest complete solution. Includes `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-help`, and `/ponytail-gain`. |
 | `/full-send` | Explicitly authorize implementation, verification, review, and a protected PR merge through Arcwright Code/T3 Code. |
 | `/full-stop` | Complete the same delivery checks, then leave an open PR ready for your merge. Never merges or enables automatic merging. |
 | `/code-graph` | Local symbol-dependency graph — query change blast radius without loading whole files. |
@@ -341,7 +345,7 @@ paid Claude/Codex subscription capacity with free-model fallback. Operational de
 
 ## Herdr Setup
 
-Arcwright ships a `herdr` skill and configures an existing [Herdr](https://herdr.dev) installation. Herdr remains a standalone app that you install from [herdr.dev](https://herdr.dev). Run the setup again at any time with:
+Arcwright can configure an existing [Herdr](https://herdr.dev) installation. Herdr remains a standalone app that you install from [herdr.dev](https://herdr.dev). Run the setup again at any time with:
 
 ```bash
 arcwright herdr
@@ -353,22 +357,9 @@ New panes and tabs use `terminal.new_cwd = "follow"`. Give each space its own ro
 
 **Herdr provides optional visibility.** Arcwright delegates through the host's native or app-owned task tools under [subagent-protocol](.agents/skills/subagent-protocol/SKILL.md). Use panes only when the user requests a visible workspace.
 
-Use `/herdr` inside an agent conversation to load the command reference.
-
-Loads the Herdr quick reference: pane splits/focus/resize, `herdr pane run`/`herdr pane read`, `herdr wait agent-status`/`herdr wait output`, named sessions (`herdr --session <name>`), workspaces, tabs, worktrees, and the plugin catalog.
-
-**Spawning a visible agent (opt-in):**
-
-```bash
-herdr agent start <role> --split right -- \
-  claude --dangerously-skip-permissions '<task>'
-
-herdr wait agent-status <role> --status blocked --timeout 600000
-herdr pane run <role> '<follow-up>'
-herdr pane close <role>
-```
-
-The pane provides visibility; [subagent-protocol](.agents/skills/subagent-protocol/SKILL.md) still governs delegation. The [Herdr skill](.agents/skills/herdr/SKILL.md) retains the native command reference and migration mapping.
+The bundled Herdr skill and `/herdr` chat command have been retired. Runtime setup
+through `arcwright herdr` remains available. For current terminal commands, use
+[Herdr documentation](https://herdr.dev).
 
 **Watching agents from your phone:** the `collie` Herdr plugin puts a phone PWA in front of your agent herd over Tailscale, so you can reply to a blocked agent from your phone keyboard. It's remote shell access to your machine by design and not installed by default — full install, security posture, and teardown steps are in [`docs/herdr-collie-tailscale-pwa.md`](docs/herdr-collie-tailscale-pwa.md).
 
@@ -420,8 +411,8 @@ npm run release:verify
 
 The release build creates `dist/arcwright-VERSION.tar.gz`, `arcwright.cjs`,
 `release.json`, and `SHA256SUMS`. Source packages are private to prevent npm
-publication. Authorized version tags (`vVERSION`) run the isolated self-hosted
-release workflow, validate the artifact, and publish it to GitHub Releases. See
+publication. Scheduled nightlies, weekly stable promotions, and authorized version
+tags (`vVERSION`) run the isolated self-hosted release workflow. See
 [release and npm retirement procedure](docs/releases.md).
 
 The build pipeline:

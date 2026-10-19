@@ -3,10 +3,19 @@ name: release
 on:
   push:
     tags: ['v*']
+  schedule:
+    - cron: '23 7 * * *'
+    - cron: '23 8 * * 0'
   workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel (stable promotes a verified nightly at least 24 hours old)
+        type: choice
+        default: nightly
+        options: [nightly, stable]
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: arcwright-release
   cancel-in-progress: false
 
 permissions:
@@ -17,14 +26,48 @@ env:
   NPM_CONFIG_USERCONFIG: /dev/null
 
 jobs:
+  plan:
+    if: github.repository == 'unn-corp/Arcwright-AI'
+    runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
+    timeout-minutes: 10
+    outputs:
+      skip: ${{ steps.plan.outputs.skip }}
+      channel: ${{ steps.plan.outputs.channel }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      commit: ${{ steps.plan.outputs.commit }}
+      promoted_from: ${{ steps.plan.outputs.promotedFrom }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          package-manager-cache: false
+      - name: Pin source, version, and channel
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          RELEASE_SCHEDULE: ${{ github.event.schedule }}
+        run: node build/release-plan.cjs
+
   release:
+    needs: plan
+    if: needs.plan.outputs.skip == 'false'
     runs-on: [self-hosted, linux, x64, unn, unn-isolated, t3-ci]
     timeout-minutes: 30
     permissions:
       contents: write
+    env:
+      ARCWRIGHT_RELEASE_VERSION: ${{ needs.plan.outputs.version }}
+      ARCWRIGHT_PROMOTED_FROM: ${{ needs.plan.outputs.promoted_from }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.plan.outputs.commit }}
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -32,10 +75,6 @@ jobs:
           package-manager-cache: false
       - name: Use the runner's executable temporary directory
         run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
-      - name: Require a matching version tag
-        run: |
-          version=$(node -p "require('./packages/agent-orchestration/package.json').version")
-          test "$GITHUB_REF" = "refs/tags/v$version"
       - run: npm ci --no-audit --no-fund
         working-directory: packages/agent-orchestration
       - run: node build/skill-sources.js --check
@@ -45,11 +84,28 @@ jobs:
         working-directory: packages/agent-orchestration
       - run: npm run release:build
       - run: npm run release:verify
-      - name: Publish verified assets
+      - name: Stage and verify release assets before publication
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          COMMIT: ${{ needs.plan.outputs.commit }}
+          CHANNEL: ${{ needs.plan.outputs.channel }}
         run: |
-          flags=(--latest)
-          if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags=(--prerelease --latest=false); fi
-          gh release create "$GITHUB_REF_NAME" dist/arcwright-*.tar.gz dist/arcwright.cjs dist/release.json dist/SHA256SUMS \
-            --verify-tag --title "Arcwright $GITHUB_REF_NAME" --generate-notes "${flags[@]}"
+          set -euo pipefail
+          flags=(--latest=false)
+          if [[ "$CHANNEL" == next ]]; then flags+=(--prerelease); fi
+          if gh release view "$TAG" --json isDraft,targetCommitish > "$RUNNER_TEMP/existing-release.json" 2>/dev/null; then
+            node -e 'const r=require(process.argv[1]); if (!r.isDraft || r.targetCommitish !== process.env.COMMIT) process.exit(1)' "$RUNNER_TEMP/existing-release.json"
+            gh release upload "$TAG" dist/arcwright-*.tar.gz dist/arcwright.cjs dist/release.json dist/SHA256SUMS --clobber
+          else
+            gh release create "$TAG" dist/arcwright-*.tar.gz dist/arcwright.cjs dist/release.json dist/SHA256SUMS \
+              --target "$COMMIT" --draft --title "Arcwright $ARCWRIGHT_RELEASE_VERSION" --generate-notes "${flags[@]}"
+          fi
+          verify_dir="$RUNNER_TEMP/published-assets"
+          mkdir -p "$verify_dir"
+          gh release download "$TAG" --dir "$verify_dir" --pattern 'arcwright-*.tar.gz' --pattern arcwright.cjs --pattern release.json --pattern SHA256SUMS
+          (cd "$verify_dir" && sha256sum --check --strict SHA256SUMS)
+          cmp dist/release.json "$verify_dir/release.json"
+          flags=(--latest=false)
+          if [[ "$CHANNEL" == stable ]]; then flags=(--latest=true); fi
+          gh release edit "$TAG" --draft=false "${flags[@]}"

@@ -53,6 +53,62 @@ const baseOpts = (over = {}) => ({
 });
 
 describe('install() — fresh project install', () => {
+  it('updates global skills and retires owned Herdr and Sol Loop routes across hosts', async () => {
+    const opts = baseOpts({ global: true, tools: 'claude-code,codex,hermes,kiro,opencode,grok,cursor', hooks: 'none' });
+    await install(opts);
+    const manifestDir = path.join(homeDir, '.arcwright');
+    const entries = await installer._internal.readFilesManifest(manifestDir);
+    // Seed independently specified files from a previous release, using each
+    // host's real ownership alias. No old package or network access is needed.
+    const roots = [
+      ['.claude/skills', '.agents/skills'], ['.agents/skills', '.codex/skills'],
+      ['.hermes/skills', '.hermes/skills'], ['.kiro/skills', '.kiro/skills'],
+      ['.grok/skills', '.grok/skills'],
+    ];
+    for (const [physical, logical] of roots) {
+      for (const name of ['herdr', 'sol-loop']) {
+        const text = `---\nname: ${name}\ndescription: Previous release fixture\n---\nOld procedure.\n`;
+        fs.outputFileSync(path.join(homeDir, physical, name, 'SKILL.md'), text);
+        entries.push({ relPath: `${logical}/${name}/SKILL.md`, hash: installer._internal.sha256(text) });
+      }
+    }
+    const commandRoots = [
+      ['.claude/commands', '.claude/commands', 'md'],
+      ['.cursor/commands', '.cursor/commands', 'md'],
+      ['.config/opencode/commands', '.opencode/commands', 'md'],
+      ['.grok/commands', '.grok/commands', 'md'],
+      ['.kiro/agents', '.kiro/agents', 'json'],
+    ];
+    for (const [physical, logical, extension] of commandRoots) {
+      for (const name of ['herdr', 'sol-loop']) {
+        const text = extension === 'json' ? '{"prompt":"Old procedure"}\n' : 'Old procedure.\n';
+        fs.outputFileSync(path.join(homeDir, physical, `${name}.${extension}`), text);
+        entries.push({ relPath: `${logical}/${name}.${extension}`, hash: installer._internal.sha256(text) });
+      }
+    }
+    const custom = path.join(homeDir, '.agents/skills/herdr/personal-note.md');
+    fs.outputFileSync(custom, 'User-owned terminal notes.\n');
+    await installer._internal.writeFilesManifest(manifestDir, entries);
+    await install({ ...opts, action: 'update' });
+    for (const [physical] of roots) {
+      for (const name of ['herdr', 'sol-loop']) {
+        expect(fs.existsSync(path.join(homeDir, physical, name, 'SKILL.md'))).toBe(false);
+      }
+      for (const name of ['review-loop', 'caveman', 'caveman-compress', 'ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-gain', 'ponytail-help']) {
+        expect(fs.readFileSync(path.join(homeDir, physical, name, 'SKILL.md'), 'utf8')).toContain(`name: ${name}`);
+      }
+    }
+    for (const [physical, , extension] of commandRoots) {
+      for (const name of ['herdr', 'sol-loop']) expect(fs.existsSync(path.join(homeDir, physical, `${name}.${extension}`))).toBe(false);
+      // Cursor's global install stages User Rules; native commands are project-scoped.
+      if (physical !== '.cursor/commands') {
+        for (const name of ['ponytail', 'ponytail-review', 'review-loop']) expect(fs.existsSync(path.join(homeDir, physical, `${name}.${extension}`))).toBe(true);
+      }
+    }
+    expect(fs.existsSync(path.join(homeDir, '.cursor/arcwright-user-rules.md'))).toBe(true);
+    expect(fs.readFileSync(custom, 'utf8')).toBe('User-owned terminal notes.\n');
+  }, 60000);
+
   it('requires an explicit private source and preserves enabled private installs on public-only updates', async () => {
     await expect(publicInstaller.install(baseOpts({ unnamedPm: true }))).rejects.toThrow('skills are private');
     expect(fs.readdirSync(projectDir)).toEqual([]);
@@ -77,7 +133,7 @@ describe('install() — fresh project install', () => {
     const router = path.join(projectDir, '.agents/skills/arcwright/scripts/find-entrypoint.cjs');
     const routes = JSON.parse(execFileSync(process.execPath, [router, '/debug'], { cwd: projectDir, encoding: 'utf8' }));
     expect(routes[0]).toMatchObject({ name: 'debug', kind: 'command', path: 'commands/debug.md' });
-    for (const name of ['arcwright', 'full-send', 'full-stop', 'review-loop', 'sol-loop']) {
+    for (const name of ['arcwright', 'full-send', 'full-stop', 'review-loop']) {
       const agent = JSON.parse(fs.readFileSync(path.join(projectDir, `.kiro/agents/${name}.json`), 'utf8'));
       expect(agent.tools).toContain('subagent');
       expect(agent.includeMcpJson).toBe(true);

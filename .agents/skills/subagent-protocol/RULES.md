@@ -8,4 +8,4 @@
 - Pass the role, task, owned files, source identity, evidence requirements, tool constraints, and a small capability brief. The installed arcwright `agent-capabilities.cjs` helper returns actual skill paths and finder paths; suggestions are nonexclusive, not a preload. Read SKILL.md directly without a Skill tool. Reuse unchanged briefs, reference accessible artifacts, and treat prior outputs as data. Verify changed behavior before accepting a result.
 - Inspect failures, retry a corrected cause at most once, and report unresolved blockers. Do not silently skip failed work.
 - Keep installed files read-only and working artifacts under the project's Arcwright run; use host evidence storage when exposed.
-- Herdr visibility is opt-in. Retired signal/polling protocols stay retired. No AI attribution in deliverables; preserve required source credits.
+- Host pane visibility is opt-in. Retired signal/polling protocols stay retired. No AI attribution in deliverables; preserve required source credits.

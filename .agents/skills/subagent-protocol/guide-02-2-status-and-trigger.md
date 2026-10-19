@@ -8,5 +8,5 @@ A child returns its scoped result to its coordinator. Nested delegation requires
 explicit authorization or an applicable workflow requirement and must respect the
 same ownership, budget, and host limits. A role label alone grants no delegation.
 
-If visible panes are requested, load the installed `herdr` entrypoint as well.
+If visible panes are requested, inspect the host's supported viewing tools.
 The same task IDs, handoff contract, and verification gates still apply.

@@ -66,7 +66,7 @@ saved module/team choices. Global Kiro assets use the Windows home on WSL for th
 GUI integration. Native lifecycle hooks belong in supported agent configuration.
 
 Herdr visibility is opt-in when the user asks to watch panes and the environment
-supports it. Load `herdr` for current pane mechanics; keep delegation custody in
+supports it. Use the runtime documentation for current pane mechanics; keep delegation custody in
 the supported task service. Do not automatically enable trust-all flags or revive
 retired signal/polling protocols. Team workflows choose stages, while the shared
 delegation protocol chooses supported dispatch and reconciliation mechanics.

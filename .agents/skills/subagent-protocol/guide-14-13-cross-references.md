@@ -8,7 +8,6 @@ Select these only when the current task needs them:
   reuse already supplied context rather than rescanning before every stage.
 - [Shared team procedure](references/team-execution.md): dispatch, ownership,
   evidence, and gates for team presets.
-- [Herdr](../herdr/SKILL.md): optional visible panes requested by the user.
 - [Test quality](../test-quality/SKILL.md): useful focused verification.
 
 Profiles share `_arcwright/core/resources/agent-runtime.md` in the installed

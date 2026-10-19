@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.5
+
+- Publish changed main commits as daily GitHub nightlies and promote mature nightlies to stable weekly, using isolated self-hosted runners and verified draft assets.
+- Install Ponytail 5.3.2's six skills and refresh Caveman from 4.0.1 with retained licenses and pinned provenance.
+- Use Review Loop as the canonical folder and command; retire the Sol Loop compatibility bundle and Herdr skill routes.
+- Remove the Ungate and Hermes application submodules while preserving the T3 fork submodule.
+
 ## 1.2.4
 
 - Distribute standalone runtimes through GitHub Releases with a SHA-256-verified

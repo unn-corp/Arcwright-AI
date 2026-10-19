@@ -96,7 +96,7 @@ describe('local host command adapters', () => {
 describe('model invocation routes and context audit', () => {
   it('routes canonical skill names and legacy aliases to the same current procedure', () => {
     const f = fixture();
-    for (const [legacy, canonical] of [['claude-subagent-protocol', 'subagent-protocol'], ['claude-md-management', 'agent-instructions'], ['sol-loop', 'review-loop']]) {
+    for (const [legacy, canonical] of [['claude-subagent-protocol', 'subagent-protocol'], ['claude-md-management', 'agent-instructions']]) {
       for (const name of [canonical, legacy]) {
         const run = spawnSync(process.execPath, [path.join(REPO, '.agents/skills/arcwright/scripts/find-entrypoint.cjs'), name], { cwd: REPO, encoding: 'utf8' });
         expect(run.status, run.stderr).toBe(0);

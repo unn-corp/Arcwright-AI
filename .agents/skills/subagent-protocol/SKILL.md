@@ -52,8 +52,8 @@ and review gates, not competing dispatch rules.
 
 Keep installed skills read-only and working artifacts under
 `_arcwright/_memory/skill-runs/orchestration-<run>/`; host evidence storage takes
-precedence for captures and temporary review evidence. Use Herdr only when the user
-asks for visible panes; it is an optional viewing surface. Do not add AI attribution
+precedence for captures and temporary review evidence. Use supported host viewing
+surfaces only when requested. Do not add AI attribution
 or revive retired signal/polling protocols. Task selection does not confer authority
 for external messages, publishing, merging, production changes, or destructive work.
 

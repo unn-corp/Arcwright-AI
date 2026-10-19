@@ -1,17 +1,6 @@
-# /triage — Workflow Router
-
-Use the `triage` skill (workflow-router) to recommend an execution approach
-for the user's task: plain in-process agent(s), an `ultracode` dynamic
-workflow, a `/goal` loop, or (opt-in) a herdr-visible run. Output a
-recommendation + the exact trigger + a one-sentence rationale. The router
-does not start the work — you do.
-
-## Steps
-
-1. Load `.agents/skills/triage/SKILL.md` (full heuristic and output format).
-2. Run `project-context` first; the recommendation depends on the project.
-3. Parse `the user's command input` as the task. If empty, ask the user for one.
-4. Apply the decision tree; if ambiguous, ask **one** clarifying question.
-5. Output the structured recommendation (Runtime / Trigger / Rationale /
-   Model / Next step). Do **not** start the workflow — the user runs the
-   trigger. Default `sonnet`; never silently recommend `opus`.
+Load and follow the installed `triage` skill (`.agents/skills/triage/SKILL.md`)
+for the user's command input, using the active project's copy before a global fallback. Read
+only relevant references and execute the supplied task within existing authority.
+Preserve the host's provider/model choice and actual tools. Discovery or planning
+alone does not authorize installation, external synchronization, publishing, or
+new delegated work. Ask only for consequential missing information.

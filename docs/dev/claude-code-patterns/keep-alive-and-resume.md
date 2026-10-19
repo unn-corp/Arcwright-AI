@@ -214,7 +214,7 @@ Arcwright layers two complementary reuse mechanisms on top of these primitives:
   exception (it runs as the session itself).
 
 tmux-based session files (`.agents/orchestration/session-*.md`) are retired; see
-[`herdr`](../../../.agents/skills/herdr/SKILL.md) for the current opt-in visibility model.
+[Herdr documentation](https://herdr.dev) for the current opt-in visibility model.
 
 ---
 

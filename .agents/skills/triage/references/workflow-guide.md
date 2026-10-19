@@ -14,7 +14,7 @@ Historical track scores and universal Sonnet/Opus defaults are retired.
 | Find deprecated calls | Targeted `rg`, inspect matching contexts, then change only if requested | Discovery itself does not require a subagent |
 | Make a project pass its required checks | Work iteratively using actual failures and focused reruns | Create a persistent goal only on an explicit goal request |
 | Review a security boundary | Relevant security skill; independent review if requested/useful and authorized | A review does not deploy, mutate production or require a premium model |
-| Watch independent agent lanes | Supported native/Herdr visibility | User opt-in; panes do not own or spawn the child tasks |
+| Watch independent agent lanes | Supported host visibility | User opt-in; panes do not own or spawn the child tasks |
 
 For a recommendation-only request, respond with the approach, a supported action
 and why. For already-requested implementation, continue within existing permission
@@ -40,8 +40,8 @@ rather than asking the user to send the same request as a special trigger phrase
 - **Scheduling:** a recurring task is persistent work, separate from an iterative
   implementation. Use the host scheduler only when requested; a CLI `/loop` or
   `/schedule` from another host is not a portable fallback.
-- **Herdr:** load the installed Herdr guide after an explicit watch/pane request,
-  verify its runtime and preserve native task ownership. Do not create panes for
+- **Host panes:** inspect supported viewing tools after an explicit watch/pane
+  request and preserve native task ownership. Do not create panes for
   ordinary work or use pane text as task-state synchronization.
 
 ## Bounded execution

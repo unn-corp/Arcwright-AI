@@ -308,8 +308,7 @@ Reuse native agents only where supported; app-owned review rounds use fresh task
 
 **tmux subagent spawning (split-pane `claude --dangerously-skip-permissions '<task>'`
 launches) is retired** in favor of in-process dispatch. Herdr remains available as
-opt-in visibility only — see [`herdr`](../../../.agents/skills/herdr/SKILL.md), section
-"Watching agents in panes".
+opt-in visibility only; see [Herdr documentation](https://herdr.dev).
 
 For task-level routing (which subagent / workflow / `/goal` to use), use the
 workflow-router [`triage`](../../../.agents/skills/triage/SKILL.md).

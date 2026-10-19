@@ -12,10 +12,6 @@
     "claude-md-management": {
       "target": "agent-instructions",
       "bodyHash": "aba2346c4f08ccabd6cd201b7728f1f35eb4c5ac3e8fe1c42cf1f7894f323097"
-    },
-    "sol-loop": {
-      "target": "review-loop",
-      "bodyHash": "967daabce78a521f09031069c54189121e351844e4b3c4011ce65db76c13111a"
     }
   }
 }

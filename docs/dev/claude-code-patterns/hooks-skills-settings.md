@@ -517,7 +517,7 @@ in-process orchestration at runtime:
   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and `fallbackModel`.
 - [`triage`](../../../.agents/skills/triage/SKILL.md) — workflow-router. Picks the right
   primitive per task; consults effort + model settings before recommending one.
-- [`herdr`](../../../.agents/skills/herdr/SKILL.md) — opt-in pane visibility only;
+- [Herdr documentation](https://herdr.dev) — opt-in pane visibility only;
   its session and profile hooks observe the same workflow without becoming its
   spawn mechanism.
 
