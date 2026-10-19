@@ -63,26 +63,29 @@ function hasHerdrHook(group) {
  *
  * The default ~/.claude is always included, even if it does not exist yet.
  */
-async function listClaudeProfileDirs(homeDir = os.homedir(), { sharing, codeHomes } = {}) {
+async function listClaudeProfileDirs(homeDir = os.homedir(), { codeHomes, managedSettings = [] } = {}) {
   const entries = await fs.readdir(homeDir, { withFileTypes: true }).catch(() => []);
   const profileDirs = entries
     .filter((entry) => entry.isDirectory() && /^\.claude(?:-.+)?$/.test(entry.name) && !/backup|archive|\.bak(?:$|[.-])/i.test(entry.name))
     .map((entry) => path.join(homeDir, entry.name));
   const defaultProfile = path.join(homeDir, '.claude');
   if (!profileDirs.includes(defaultProfile)) profileDirs.unshift(defaultProfile);
+  // Uninstall also follows its recorded settings targets, even if discovery's
+  // profile naming rules have changed since installation.
+  for (const entry of Array.isArray(managedSettings) ? managedSettings : []) {
+    if (typeof entry?.path !== 'string' || (!entry.hooks && !entry.defaultMode)) continue;
+    const profile = path.resolve(homeDir, entry.path);
+    const relative = path.relative(path.resolve(homeDir), profile);
+    if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) continue;
+    if (!profileDirs.includes(profile)) profileDirs.push(profile);
+  }
   const identity = async file => fs.realpath(file).catch(() => path.resolve(file));
   const shadows = new Set(await Promise.all((codeHomes?.codex || []).map(item => item.shadowHome).filter(Boolean).map(identity)));
   const safeProfiles = [];
   for (const profileDir of profileDirs) if (!shadows.has(await identity(profileDir))) safeProfiles.push(profileDir);
-  if (!sharing) return safeProfiles;
-  if (codeHomes?.status === 'unreadable') return [];
-  // Enrollment never grants permission to alter excluded accounts' private settings.
-  const { choiceFor } = require('./global-sharing');
-  return safeProfiles.filter(profileDir => {
-    if ((codeHomes?.codex || []).some(item => item.shadowHome === profileDir)) return false;
-    const choice = choiceFor(sharing, { provider: 'claude', path: profileDir, main: profileDir === defaultProfile });
-    return choice.instructions || choice.skills;
-  });
+  // Private settings/hooks retain their established profile lifecycle independently
+  // of instructions and personal-skill enrollment. Only verified shadows are excluded.
+  return safeProfiles;
 }
 
 async function installProfileHook(profileDir, hookPath) {

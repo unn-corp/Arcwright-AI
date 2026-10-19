@@ -193,6 +193,7 @@ async function buildSharingPlan({ homeDir, sharing, discovery, rules = '## Arcwr
       : `${canonicalText}${canonicalText ? '\n\n' : ''}${block}\n`;
   }
   const adoptedFiles = new Set();
+  const adoptedSections = new Map();
   const adoptedSkills = [];
   if (!unattended) for (const approval of personalApprovals) {
     if (approval.kind === 'section') {
@@ -203,6 +204,8 @@ async function buildSharingPlan({ homeDir, sharing, discovery, rules = '## Arcwr
       if (!selected) { plan.pending.push(`${approval.path}: section changed since review`); continue; }
       if (!sharedText.includes(selected.text)) sharedText += `\n${selected.text}\n`;
       adoptedFiles.add(approval.path);
+      if (!adoptedSections.has(approval.path)) adoptedSections.set(approval.path, []);
+      adoptedSections.get(approval.path).push(selected.text);
     } else if (approval.kind === 'skill') {
       if ([...blockedShared].some(root => approval.path.startsWith(root + path.sep))) { plan.pending.push(`${approval.path}: source sharing group is pending; bundle retained`); continue; }
       if (!active.some(home => choiceFor(sharing, home).skills)) continue;
@@ -235,7 +238,7 @@ async function buildSharingPlan({ homeDir, sharing, discovery, rules = '## Arcwr
   for (const file of adoptedFiles) {
     const all = sections(await fs.readFile(file, 'utf8'));
     if (all.every(section => personalApprovals.some(approval => approval.path === file && approval.hash === section.hash))) approvedHosts.add(file);
-    else {
+    else if (!active.some(home => home.provider === 'claude' && home.main && file === path.join(home.path, PROVIDERS.claude.instructions) && !sharedText.includes(RETIRED))) {
       plan.pending.push(`${file}: remaining personal sections prevent a shared host link; reviewed sections copied to canonical, original host retained`);
     }
   }
@@ -275,6 +278,7 @@ async function buildSharingPlan({ homeDir, sharing, discovery, rules = '## Arcwr
         } else if ((await snapshot(file)).type === 'absent' || (await snapshot(file)).type === 'file') {
           let text = planned.get(file)?.content ?? await fs.readFile(file, 'utf8').catch(() => '');
           if (approvedHosts.has(file)) text = '';
+          else for (const section of adoptedSections.get(file) || []) text = text.replace(section, '');
           text = text.replace(/<!-- arcwright-(?:agent|instructions)-start -->[\s\S]*?<!-- arcwright-(?:agent|instructions)-end -->/g, '');
           const relative = path.relative(home.path, canonical).replace(/ /g, '\\ ');
           await add({ action: 'write', path: file, requires: [canonical], content: `${text.trimEnd()}${text.trim() ? '\n\n' : ''}<!-- arcwright-instructions-start -->\n@${relative}\n<!-- arcwright-instructions-end -->\n` });
@@ -312,7 +316,6 @@ async function buildSharingPlan({ homeDir, sharing, discovery, rules = '## Arcwr
   for (const record of state.operations) {
     if (record.canonical) continue;
     if ([...blockedShared].some(root => record.path === root || record.path.startsWith(root + path.sep))) keepPaths.add(record.path);
-    if (record.action === 'link' && record.target?.startsWith(store + path.sep) && active.some(home => choiceFor(sharing, home).skills)) keepPaths.add(record.path);
     if (active.some(home => {
       const choice = choiceFor(sharing, home), spec = PROVIDERS[home.provider];
       return record.path === home.path || (choice.instructions && record.path === path.join(home.path, spec.instructions))
@@ -335,7 +338,8 @@ async function applyGlobalSharing(plan, options = {}) {
   if (plan.restore) return restoreSharing(plan, options);
   // Rebuild after detach because restoration updates receipts.
   if (!options.dryRun && plan.detach?.operations.length) {
-    await restoreSharing(plan.detach);
+    const detached = await restoreSharing(plan.detach);
+    plan.pending.push(...detached.pending);
     plan.state = await readState(plan.homeDir);
   }
   return applySharingPlan(plan, options);

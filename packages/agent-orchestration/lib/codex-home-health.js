@@ -136,13 +136,13 @@ function runCodexHomeHealth({ homeDir, codeHomes, policy = {}, dryRun = false,
   const owned = new Set((codeHomes?.codex || []).map(home => home.shadowHome && realpathOrNull(home.shadowHome)).filter(Boolean));
   const groups = new Map();
   const homes = discoverCodexHomes({ homeDir }).map(home => {
-    const managedBy = owned.has(realpathOrNull(home.path)) ? 'arcwright-code' : 'standalone';
+    const managedBy = codeHomes?.status === 'unreadable' ? 'unknown' : owned.has(realpathOrNull(home.path)) ? 'arcwright-code' : 'standalone';
     const options = { managedBy, selfHeal: policy.selfHeal === true, dryRun, backupRoot, platform };
     const auth = policy.copiedLoginCheck === 'local'
       ? inspectAuth(path.join(home.path, 'auth.json')) : { status: 'not-checked' };
     const result = { ...home, managedBy,
-      daemon: checkDaemon(path.join(home.path, DAEMON_ENTRIES.daemon), options),
-      control: checkDaemon(path.join(home.path, DAEMON_ENTRIES.control), options),
+      daemon: managedBy === 'unknown' ? 'pending-ownership' : checkDaemon(path.join(home.path, DAEMON_ENTRIES.daemon), options),
+      control: managedBy === 'unknown' ? 'pending-ownership' : checkDaemon(path.join(home.path, DAEMON_ENTRIES.control), options),
       auth: auth.status };
     if (auth.digest) {
       if (!groups.has(auth.digest)) groups.set(auth.digest, []);
@@ -159,7 +159,7 @@ function runCodexHomeHealth({ homeDir, codeHomes, policy = {}, dryRun = false,
   groups.clear();
   const counts = { repaired: 0, wouldRepair: 0, unchanged: 0, pending: 0, conflicted: 0, notChecked: 0 };
   const countFor = { ok: 'unchanged', absent: 'unchanged', repaired: 'repaired',
-    'would-repair': 'wouldRepair', 'pending-arcwright-code': 'pending', conflict: 'conflicted' };
+    'would-repair': 'wouldRepair', 'pending-arcwright-code': 'pending', 'pending-ownership': 'pending', conflict: 'conflicted' };
   for (const home of homes) {
     counts[countFor[home.daemon]] += 1;
     counts[countFor[home.control]] += 1;
@@ -176,6 +176,7 @@ function formatCodexHomeHealth(result) {
   for (const home of result.homes) {
     if (home.auth === 'symlink') lines.push(`${home.label}: auth.json is a link to another home. Sign in separately in this home.`);
     const statuses = new Set([home.daemon, home.control]);
+    if (statuses.has('pending-ownership')) lines.push(`${home.label}: Arcwright Code ownership is unknown because settings are unreadable; daemon health pending, no change made.`);
     if (statuses.has('repaired')) lines.push(`${home.label}: Codex daemon state is now account-local.`);
     if (statuses.has('would-repair')) lines.push(`${home.label}: would make Codex daemon state account-local (dry run).`);
     if (statuses.has('pending-arcwright-code')) lines.push(`${home.label}: Arcwright Code links this home's daemon state. Install an Arcwright Code build with per-account daemon state; no change made.`);

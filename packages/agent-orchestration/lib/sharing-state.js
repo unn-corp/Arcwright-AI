@@ -166,13 +166,51 @@ async function restoreSharing(plan, { dryRun = false } = {}) {
       if (!await safeParents(record.path) || !equal(await operationSnapshot(record), record.applied)) {
         pending.push(`${record.path}: later user changes preserved`); continue;
       }
-      // Do not recursively remove account homes that acquired private state.
-      await fs.remove(record.path);
-      if (record.backup) await fs.copy(record.backup, record.path, { dereference: false, preserveTimestamps: true });
-      record.restored = true;
-      await fs.writeJson(record.record, record, { spaces: 2, mode: 0o600 });
-      await saveState(plan.homeDir, plan.state);
-      applied++;
+      const staged = `${record.path}.arcwright-restore-${crypto.randomBytes(8).toString('hex')}`;
+      const displaced = `${staged}.previous`;
+      let replaced = false;
+      let moved = false;
+      let retainRecovery = false;
+      try {
+        // Prepare and verify the backup again at apply time, before touching
+        // the active object. A preview cannot guarantee the backup still exists.
+        if (!await safeParents(record.record)) throw new Error('Unsafe receipt parent');
+        if (record.backup) {
+          const root = path.join(plan.homeDir, '.arcwright', 'backups', 'sharing') + path.sep;
+          if (!path.resolve(record.backup).startsWith(root) || !await safeParents(record.backup)
+            || !equal(await snapshot(record.backup), record.before)) throw new Error('Backup missing or changed');
+          await fs.copy(record.backup, staged, { dereference: false, preserveTimestamps: true, overwrite: false, errorOnExist: true });
+          if (!equal(await snapshot(staged), record.before)) throw new Error('Staged backup changed');
+        } else if (record.before.type !== 'absent') throw new Error('Backup missing');
+        if (!await safeParents(record.path) || !equal(await operationSnapshot(record), record.applied)) throw new Error('Destination changed');
+        if (record.applied.type !== 'absent') {
+          // Replace files/links atomically while retaining a recovery copy.
+          // Directory replacement needs displacement and rollback on failure.
+          if (record.applied.type === 'directory' || record.before.type === 'directory' || !record.backup) {
+            await fs.rename(record.path, displaced);
+            moved = true;
+          } else await fs.copy(record.path, displaced, { dereference: false, preserveTimestamps: true });
+        }
+        if (record.backup) await fs.rename(staged, record.path);
+        replaced = true;
+        record.restored = true;
+        await fs.writeJson(record.record, record, { spaces: 2, mode: 0o600 });
+        await saveState(plan.homeDir, plan.state);
+        applied++;
+      } catch {
+        delete record.restored;
+        if (replaced || moved) {
+          try {
+            if (moved && replaced) await fs.remove(record.path);
+            if (record.applied.type !== 'absent') await fs.rename(displaced, record.path);
+            else await fs.remove(record.path);
+          } catch { retainRecovery = true; }
+        }
+        pending.push(`${record.path}: backup preparation or replacement failed; restore pending${retainRecovery ? `; recovery retained at ${displaced}` : ''}`);
+      } finally {
+        await fs.remove(staged);
+        if (!retainRecovery) await fs.remove(displaced);
+      }
     }
   } finally { await fs.close(fd); await fs.remove(lock); }
   return { applied, pending };
