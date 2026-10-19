@@ -14,6 +14,18 @@ ARCWRIGHT_OMNIROUTE_API_KEY=<gateway-key> \
 
 The older direct-provider shell functions are enabled separately with `--model-launchers`.
 
+## Account launchers and shared content
+
+`arcwright accounts configure --global` creates separately signed-in Claude, Codex
+and Grok homes on Linux and WSL. Owned account launchers such as `codex-work` select
+only the provider home and preserve arguments and exit status. They do not change
+shell startup files or copy credentials. Choose all, some, or none for shared
+instructions and personal skills; use `--sharing none` to restore owned changes.
+Arcwright Code shadow links stay owned by Code. See
+[global sharing and accounts](../global-sharing.md) for preview, backups, selection
+JSON and coexistence limits. Hermes and Cursor sharing are outside this version.
+
+
 ---
 
 ## Preferred Global CLI Agent: Hermes Through OmniRoute

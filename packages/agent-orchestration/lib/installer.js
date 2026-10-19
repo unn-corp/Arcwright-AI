@@ -30,6 +30,8 @@ const { listClaudeProfileDirs } = require('./herdrAssets');
 const { loadCustomization } = require('./customization');
 const { adaptKiroContent } = require('./kiro-adapter');
 const { SKILL_POLICY } = require('./skill-policy');
+const { prepareGlobalSharing, runGlobalSharing, signInWalkthrough } = require('./account-prompts');
+const { planRestore, restoreSharing } = require('./sharing-state');
 const { detectBmad: detectBmadArtifacts } = require('./migrate');
 
 // ─── WSL audio setup (Claude Code /voice) ────────────────────────────────────
@@ -801,6 +803,14 @@ function resolveInstalledPath(relPath, { isGlobal, projectRoot, effectiveArwDir,
 async function removeTrackedEntry(entry, context) {
   const fullPath = resolveInstalledPath(entry.relPath, context);
   if (!fullPath) return false;
+  if (context.isGlobal) {
+    if (context.homes.sharingDiscovery?.homes.some(home => home.shadow && [home.path, home.realPath].some(root => root && (fullPath === root || fullPath.startsWith(root + path.sep))))) return false;
+    const canonicalRoot = path.join(context.homes.linux, '.arcwright');
+    const protectedRoots = ['skills', 'backups'].map(name => path.join(canonicalRoot, name));
+    if (fullPath === path.join(canonicalRoot, 'AGENTS.md')
+      || fullPath === path.join(canonicalRoot, '_config', 'sharing-state.json')
+      || protectedRoots.some(root => fullPath === root || fullPath.startsWith(root + path.sep))) return false;
+  }
   // A matching hash does not confer ownership through a user-created redirect.
   // Protect the file and every parent, just as the skill-copy path does.
   for (let current = path.resolve(fullPath); ; current = path.dirname(current)) {
@@ -1104,9 +1114,11 @@ async function writeCodexConfig(projectRoot, modules, chalk, isGlobal, homes, pl
     ? resolveToolPath('codex', GLOBAL_PATHS.codex.claudeMd, true, homes, platform)
     : path.join(projectRoot, 'AGENTS.md');
   const label = isGlobal ? '~/.codex/AGENTS.md' : 'AGENTS.md';
-  await migrateOldClaudeMd(rulesPath);
-  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
-  if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
+  const sharingOwnsRules = isGlobal && homes.sharingInstructionPaths?.has(rulesPath);
+  if (!sharingOwnsRules) await migrateOldClaudeMd(rulesPath);
+  const result = sharingOwnsRules ? 'skipped' : await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
+  if (result === 'skipped') console.log(chalk.gray(`  ○ ${label} skipped (sharing planner owns this path)`));
+  else if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
   else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
   else console.log(chalk.gray(`  ○ ${label} already up to date`));
 
@@ -1234,9 +1246,11 @@ async function writeOpenCodeConfig(projectRoot, modules, chalk, isGlobal, homes,
     ? resolveToolPath('opencode', GLOBAL_PATHS.opencode.claudeMd, true, homes, platform)
     : path.join(projectRoot, 'AGENTS.md');
   const label = isGlobal ? '~/.config/opencode/AGENTS.md' : 'AGENTS.md';
-  await migrateOldClaudeMd(rulesPath);
-  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
-  if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
+  const sharingOwnsRules = isGlobal && homes.sharingInstructionPaths?.has(rulesPath);
+  if (!sharingOwnsRules) await migrateOldClaudeMd(rulesPath);
+  const result = sharingOwnsRules ? 'skipped' : await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
+  if (result === 'skipped') console.log(chalk.gray(`  ○ ${label} skipped (sharing planner owns this path)`));
+  else if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
   else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
   else console.log(chalk.gray(`  ○ ${label} already up to date`));
 
@@ -1324,9 +1338,11 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
     ? resolveToolPath('grok', GLOBAL_PATHS.grok.claudeMd, true, homes, platform)
     : path.join(projectRoot, 'AGENTS.md');
   const label = isGlobal ? '~/.grok/AGENTS.md' : 'AGENTS.md';
-  await migrateOldClaudeMd(rulesPath);
-  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
-  if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
+  const sharingOwnsRules = isGlobal && homes.sharingInstructionPaths?.has(rulesPath);
+  if (!sharingOwnsRules) await migrateOldClaudeMd(rulesPath);
+  const result = sharingOwnsRules ? 'skipped' : await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
+  if (result === 'skipped') console.log(chalk.gray(`  ○ ${label} skipped (sharing planner owns this path)`));
+  else if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
   else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
   else console.log(chalk.gray(`  ○ ${label} already up to date`));
 
@@ -2010,7 +2026,7 @@ async function install(opts) {
   platform = detectPlatform();
 
   // Resolve homes for cross-platform path resolution
-  const homes = getHomes(platform);
+  const homes = { ...(opts.homes || getHomes(platform)) };
 
   // Determine arcwrightDir — project or global
   const arcwrightDir = isGlobal
@@ -2026,11 +2042,20 @@ async function install(opts) {
     platform = existingManifest.platform;
   }
   const isUpdate = action === 'update' || (action === 'install' && existingManifest != null);
+  if (!isGlobal && ['sharing', 'sharingConfig', 'codexSelfHeal', 'credentialCopyCheck'].some(key => opts[key] !== undefined)) {
+    throw new Error('Sharing and account health options require --global');
+  }
+  // Validate explicit flags before any installer work or interactive prompts.
+  const { resolveSharingPreferences } = require('./global-sharing');
+  if (isGlobal) await resolveSharingPreferences({ saved: existingManifest?.sharing, options: opts, discovery: { homes: [] } });
+  let preparedSharing;
+  let sharingWasOffered = existingManifest?.sharing?.offered;
+
 
   // ── bmad detection + migration (project installs only) ────────────────────
   // Detect a legacy bmad install, confirm, and migrate (before installing
   // Arcwright files). Returns { migratedAt } only when a migration ran.
-  const manifestExtras = await runBmadMigrationIfNeeded({
+  const manifestExtras = opts.dryRun ? {} : await runBmadMigrationIfNeeded({
     migrateBmad, yes, isGlobal, projectRoot, existingManifest, chalk,
   });
 
@@ -2040,7 +2065,7 @@ async function install(opts) {
   // Resolve tools/teams/dockerCheck — for --yes updates, fall back to manifest values
   // when CLI flags were not explicitly provided (Commander sets defaults that are
   // indistinguishable from explicit flags, so we use manifest when value == default).
-  const manifestFallback = yes && isUpdate && existingManifest;
+  const manifestFallback = (yes || opts.dryRun) && isUpdate && existingManifest;
 
   // Commander leaves this null when --output-folder was omitted. Preserve the
   // installed value on updates; a supplied value is an explicit change.
@@ -2161,7 +2186,7 @@ async function install(opts) {
     return unnamedPm === true;
   })();
 
-  if (!yes) {
+  if (!yes && !opts.dryRun) {
     const { intro, text, multiselect, select, confirm, outro, isCancel, cancel } = require('@clack/prompts');
     intro(chalk.bold.cyan(`Arcwright — ${isUpdate ? 'Update' : 'Install'}`));
 
@@ -2382,11 +2407,46 @@ async function install(opts) {
     resolvedTools = [...resolvedTools, 'hermes'];
   }
 
-  if (!isGlobal) {
+  if (!isGlobal && !opts.dryRun) {
     await preflightProjectManagedPaths(projectRoot, resolvedOutputFolder);
   }
 
   const selectedModules = resolvedModules;
+  if (isGlobal && (opts.platform || process.platform) === 'win32') {
+    console.log('Native Windows sharing and account setup: not yet supported; sharing skipped.');
+  } else if (isGlobal) {
+    // Scope may have changed in the existing installer prompts. Read sharing from the final scope.
+    const sharingRoot = path.join(homes.linux, '.arcwright');
+    const globalManifest = await readManifest(sharingRoot);
+    sharingWasOffered = globalManifest?.sharing?.offered;
+    const context = { isGlobal, projectRoot, effectiveArwDir: sharingRoot, homes, platform };
+    const managedPaths = (await readFilesManifest(sharingRoot)).map(entry => resolveInstalledPath(entry.relPath, context)).filter(Boolean);
+    preparedSharing = await prepareGlobalSharing({ homeDir: homes.linux, saved: globalManifest?.sharing,
+      options: opts, codeHomes: opts.codeHomes, env: opts.env, rules: buildArcwrightRulesEntry(selectedModules, resolvedUnnamedPm), managedPaths, prompts: opts.prompts, platform: opts.platform });
+    if (preparedSharing.cancelled) return { cancelled: true };
+    // Protect only this run's restore/pending paths, before restore marks receipts.
+    const restorePlan = preparedSharing.plan.restore ? preparedSharing.plan : preparedSharing.plan.detach;
+    const restorePaths = new Set(restorePlan?.operations.map(operation => operation.path));
+    for (const operation of restorePlan?.state.operations || []) {
+      if (!operation.restored && restorePlan.pending.some(reason => reason.startsWith(`${operation.path}:`))) restorePaths.add(operation.path);
+    }
+    await runGlobalSharing(preparedSharing, opts);
+    homes.sharing = preparedSharing.sharing;
+    homes.sharingDiscovery = preparedSharing.discovery;
+    homes.codeShadowTools = new Set(preparedSharing.discovery.homes.filter(home => home.main && home.shadow)
+      .map(home => home.provider === 'claude' ? 'claude-code' : home.provider));
+    // The sharing planner owns enrolled instruction writes, including pending conflicts.
+    homes.sharingInstructionPaths = new Set(preparedSharing.discovery.homes.filter(home =>
+      require('./global-sharing').choiceFor(preparedSharing.sharing, home).instructions
+    ).map(home => path.join(home.path, require('./account-environments').PROVIDERS[home.provider].instructions)));
+    for (const file of restorePaths) homes.sharingInstructionPaths.add(file);
+  }
+
+
+  if (opts.dryRun) {
+    console.log(`Dry run: ${action} package assets at ${isGlobal ? path.join(homes.linux, '.arcwright') : arcwrightDir}; tools ${resolvedTools.join(',')}. No files written.`);
+    return { sharing: preparedSharing?.sharing, plan: preparedSharing?.plan, dryRun: true };
+  }
 
   console.log(`\n${chalk.bold.blue('Arcwright')} ${isUpdate ? 'Update' : 'Install'}`);
   console.log(`  Target:   ${chalk.cyan(isGlobal ? '~/.arcwright (global)' : projectRoot)}`);
@@ -2448,7 +2508,7 @@ async function install(opts) {
 
   // ── Skills ────────────────────────────────────────────────────────────────
   const pkgSkillsSrc = path.join(SRC_DIR, '.agents', 'skills');
-  if (await fs.pathExists(pkgSkillsSrc)) {
+  if (await fs.pathExists(pkgSkillsSrc) && !(isGlobal && homes.codeShadowTools?.has('claude-code'))) {
     const destSkills = isGlobal
       ? resolveToolPath('claude-code', '.claude/skills', true, homes, platform)
       : path.join(projectRoot, '.agents', 'skills');
@@ -2557,7 +2617,7 @@ async function install(opts) {
   }
 
   // ── Codex integration ─────────────────────────────────────────────────────
-  if (resolvedTools.includes('codex')) {
+  if (resolvedTools.includes('codex') && !(isGlobal && homes.codeShadowTools?.has('codex'))) {
     const codexEntries = await writeCodexConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (codexEntries && codexEntries.length > 0) {
       newFileEntries.push(...codexEntries);
@@ -2586,7 +2646,7 @@ async function install(opts) {
   }
 
   // ── OpenCode integration ──────────────────────────────────────────────────
-  if (resolvedTools.includes('opencode')) {
+  if (resolvedTools.includes('opencode') && !(isGlobal && homes.codeShadowTools?.has('opencode'))) {
     const openCodeEntries = await writeOpenCodeConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (openCodeEntries && openCodeEntries.length > 0) {
       newFileEntries.push(...openCodeEntries);
@@ -2594,7 +2654,7 @@ async function install(opts) {
   }
 
   // ── Grok integration ──────────────────────────────────────────────────────
-  if (resolvedTools.includes('grok')) {
+  if (resolvedTools.includes('grok') && !(isGlobal && homes.codeShadowTools?.has('grok'))) {
     const grokEntries = await writeGrokConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (grokEntries && grokEntries.length > 0) {
       newFileEntries.push(...grokEntries);
@@ -2700,6 +2760,7 @@ async function install(opts) {
     managedSettings,
     gitignore: isGlobal ? null : resolvedGitignore,
     global: isGlobal,
+    ...(isGlobal && preparedSharing?.sharing ? { sharing: preparedSharing.sharing } : {}),
     // Preserve existing migratedAt if present; add new one if migration ran this session
     ...(existingManifest?.migratedAt ? { migratedAt: existingManifest.migratedAt } : {}),
     ...manifestExtras,
@@ -2710,6 +2771,7 @@ async function install(opts) {
     : effectiveArwDir;
   await writeManifest(manifestDir, manifest);
   await writeFilesManifest(manifestDir, newFileEntries);
+  if (isGlobal && preparedSharing && (opts.sharing !== undefined || !sharingWasOffered && !yes)) await signInWalkthrough(preparedSharing, opts);
 
   console.log(`\n${chalk.bold.green('✓ Done!')} ${installedCount} files ${isUpdate ? 'updated' : 'installed'}.`);
   if (isGlobal) {
@@ -2850,13 +2912,16 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
   const stubEntries = [];
   const managedSettings = [];
   const platformCfg = PLATFORMS[tool];
+  if (isGlobal && homes.codeShadowTools?.has(tool)) return { entries: [], managedSettings: [] };
   if (!platformCfg) {
     console.log(chalk.yellow(`  ⚠ Unknown IDE platform: ${tool}`));
     return;
   }
 
   if (tool === 'claude-code') {
-    await writeClaudeInstructions(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedUnnamedPm);
+    if (isGlobal && homes.sharingInstructionPaths?.has(path.join(homes.linux, '.claude', 'CLAUDE.md'))) {
+      console.log(chalk.gray('  ○ ~/.claude/CLAUDE.md skipped (sharing planner owns this path)'));
+    } else await writeClaudeInstructions(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedUnnamedPm);
   }
 
   // Create the configured output folder (output artifacts land here, project installs only)
@@ -2935,7 +3000,7 @@ async function writeIdeConfig(tool, projectRoot, modules, chalk, isGlobal, homes
     };
     if (isGlobal) {
       const defaultProfile = resolveToolPath('claude-code', '.claude', true, homes, platform);
-      const profileDirs = await listClaudeProfileDirs(path.dirname(defaultProfile));
+      const profileDirs = await listClaudeProfileDirs(path.dirname(defaultProfile), { codeHomes: homes.sharingDiscovery?.codeHomes });
       for (const profileDir of profileDirs) {
         const ownership = await writeClaudeSettings(profileDir, chalk, resolvedHooks, true, resolvedUnnamedPm, null);
         recordSettingsOwnership(profileDir, ownership);
@@ -3823,6 +3888,10 @@ async function writeClaudeInstructions(projectRoot, modules, chalk, isGlobal, ho
   if (!isGlobal && await fs.pathExists(nestedPath)) hostPaths.push(nestedPath);
 
   for (const hostPath of hostPaths) {
+    if (isGlobal && homes.sharingInstructionPaths?.has(hostPath)) {
+      console.log(chalk.gray(`  ○ ${hostPath} skipped (sharing planner owns this path)`));
+      continue;
+    }
     const existing = await fs.pathExists(hostPath) ? await fs.readFile(hostPath, 'utf8') : '';
     const importPath = path.relative(path.dirname(hostPath), agentsPath).replace(/\\/g, '/').replace(/ /g, '\\ ');
     const block = `<!-- arcwright-instructions-start -->\n@${importPath}\n<!-- arcwright-instructions-end -->`;
@@ -4209,7 +4278,7 @@ async function uninstall(opts = {}) {
   const projectRoot = path.resolve(opts.directory || process.cwd());
   const chalk = (await import('chalk')).default;
   const platform = detectPlatform();
-  const homes = getHomes(platform);
+  const homes = { ...(opts.homes || getHomes(platform)) };
   const manifestDir = isGlobal
     ? path.join(homes.linux, '.arcwright')
     : path.join(projectRoot, '_arcwright');
@@ -4221,6 +4290,17 @@ async function uninstall(opts = {}) {
     await preflightProjectManagedPaths(projectRoot, manifest.outputFolder);
   }
   const trackedEntries = await readFilesManifest(manifestDir);
+  const sharingRecords = isGlobal ? await require('./sharing-state').readState(homes.linux) : null;
+  if (isGlobal) {
+    homes.sharingDiscovery = await require('./account-environments').discoverAccountEnvironments({ homeDir: homes.linux, env: opts.env, codeHomes: opts.codeHomes, saved: manifest?.sharing });
+  }
+  const sharingProtectedPaths = new Set(sharingRecords?.operations.map(operation => operation.path) || []);
+  if (isGlobal && sharingRecords.operations.length && yes) {
+    const restore = require('./global-sharing').protectCodeRestores(await planRestore({ homeDir: homes.linux, state: sharingRecords }), homes.sharingDiscovery);
+    const result = await restoreSharing(restore);
+    for (const reason of result.pending) console.log(`Pending: ${reason}`);
+  }
+
 
   console.log(chalk.bold(`\nUninstalling Arcwright (${isGlobal ? 'global' : 'project'}: ${projectRoot})\n`));
 
@@ -4228,6 +4308,7 @@ async function uninstall(opts = {}) {
   const claudeMdLocations = getClaudeMdLocations(projectRoot, isGlobal, platform, homes);
   let mdStripped = 0;
   for (const md of claudeMdLocations) {
+    if (isGlobal && (sharingProtectedPaths.has(md) || homes.sharingDiscovery.homes.some(home => home.shadow && md.startsWith(home.path + path.sep)))) continue;
     const removed = await cleanupManagedBlocks(md, [...MANAGED_MARKERS, ...DEPRECATED_MARKERS]);
     if (removed) {
       mdStripped++;
@@ -4248,7 +4329,7 @@ async function uninstall(opts = {}) {
   // default ~/.claude directory. Hook groups are removed by ownership markers,
   // so user and third-party hooks in the same settings file remain intact.
   const settingsDirs = isGlobal
-    ? await listClaudeProfileDirs(homes.linux)
+    ? await listClaudeProfileDirs(homes.linux, { codeHomes: homes.sharingDiscovery?.codeHomes, managedSettings: manifest?.managedSettings })
     : [path.join(projectRoot, '.claude')];
   const managedSettings = Array.isArray(manifest?.managedSettings) ? manifest.managedSettings : [];
   const settingsBase = isGlobal ? homes.linux : projectRoot;
@@ -4304,16 +4385,17 @@ async function uninstall(opts = {}) {
         await removeTrackedEntry(entry, { isGlobal, projectRoot, effectiveArwDir: manifestDir, homes, platform });
       }
       if (await fs.pathExists(manifestDir)) {
-        const sharedPath = path.join(manifestDir, 'AGENTS.md');
-        const hasUserInstructions = await fs.pathExists(sharedPath)
-          && (await fs.readFile(sharedPath, 'utf8')).trim().length > 0;
-        if (hasUserInstructions) {
-          // Its managed block was stripped above. Preserve remaining user rules
-          // when removing the rest of the global Arcwright installation.
+        // Canonical personal content, backup receipts and later edits survive uninstall.
+        const shared = path.join(manifestDir, 'AGENTS.md');
+        const hasUserInstructions = await fs.pathExists(shared) && (await fs.readFile(shared, 'utf8')).trim().length > 0;
+        const recoveryData = sharingRecords.operations.length > 0 || await fs.pathExists(path.join(manifestDir, 'backups'));
+        const personalSkills = await fs.pathExists(path.join(manifestDir, 'skills'));
+        if (hasUserInstructions || recoveryData || personalSkills) {
+          const keep = new Set(['AGENTS.md', 'skills', 'backups', ...(recoveryData ? ['_config'] : [])]);
           for (const name of await fs.readdir(manifestDir)) {
-            if (name !== 'AGENTS.md') await fs.remove(path.join(manifestDir, name));
+            if (!keep.has(name)) await fs.remove(path.join(manifestDir, name));
           }
-          console.log(chalk.green(`  ✓ ${manifestDir} (assets removed; user AGENTS.md preserved)`));
+          console.log(chalk.green(`  ✓ ${manifestDir} (assets removed; canonical content and recovery records preserved)`));
         } else {
           await fs.remove(manifestDir);
           console.log(chalk.green(`  ✓ ${manifestDir} (removed)`));
@@ -4365,7 +4447,7 @@ return {
   _internal: {
     sha256, escapeRe, detectBmad, getHomes, resolveToolPath,
     readManifest, writeManifest, readFilesManifest, writeFilesManifest, removeEmptyDirsUpward, removeTrackedEntry,
-    isSafeManifestPath, resolveWithin, isWithinRoot, preflightProjectManagedPaths,
+    isSafeManifestPath, resolveWithin, isWithinRoot, resolveInstalledPath, preflightProjectManagedPaths,
     hasOnlyInstallableModules, projectOrigin,
     buildModuleConfig, getFileHeader, getClaudeMdLocations,
     updateGitignore, stripGitignoreBlock,

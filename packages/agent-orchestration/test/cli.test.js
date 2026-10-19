@@ -115,3 +115,32 @@ describe('public CLI wrapper', () => {
     expect(fs.existsSync(path.join(dir, '_arcwright'))).toBe(true);
   });
 });
+
+describe('account sharing CLI', () => {
+  const run = (home, ...args) => spawnSync(process.execPath, [binPath, ...args], {
+    cwd: home, env: { ...process.env, HOME: home, CODEX_HOME: '', CLAUDE_CONFIG_DIR: '', GROK_HOME: '' }, encoding: 'utf8', timeout: 10000,
+  });
+  it('exposes account status and previews global enrollment without creating files', () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-cli-sharing-'));
+    tempDirs.push(home);
+    const status = run(home, 'accounts', 'status', '--global', '--json');
+    expect(status.status).toBe(0);
+    expect(JSON.parse(status.stdout).sharing).toBe(null);
+    const preview = run(home, 'update', '--global', '--yes', '--sharing', 'all', '--dry-run');
+    expect(preview.status).toBe(0);
+    expect(preview.stdout).toContain('.arcwright/AGENTS.md');
+    expect(preview.stdout).toContain('No files written');
+    expect(fs.readdirSync(home)).toEqual([]);
+  });
+  it('rejects contradictory options before creating installer state', () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-cli-sharing-'));
+    tempDirs.push(home);
+    const result = run(home, 'install', '--global', '--yes', '--sharing', 'none', '--codex-self-heal', 'on');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('contradicts');
+    expect(fs.readdirSync(home)).toEqual([]);
+    const custom = run(home, 'install', '--global', '--yes', '--sharing', 'custom');
+    expect(custom.status).not.toBe(0);
+    expect(custom.stderr).toContain('--sharing-config');
+  });
+});

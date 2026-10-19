@@ -31,6 +31,11 @@ program
   .option('--output-folder <path>', 'Output folder for Arcwright artifacts (preserves the installed value when omitted)', null)
   .option('-y, --yes', 'Skip interactive prompts and accept all defaults', false)
   .option('-g, --global', 'Install to global config dirs (~/.claude/, ~/.kiro/, etc.)')
+  .option('--sharing <mode>', 'Global sharing: all | custom | none (omitted preserves selection)')
+  .option('--sharing-config <json>', 'JSON selection for unattended --sharing custom')
+  .option('--codex-self-heal <mode>', 'Global Codex home health: on | off')
+  .option('--credential-copy-check <mode>', 'Local copied-login check: local | off')
+  .option('--dry-run', 'Preview without writing files')
   .option('--no-teams', 'Skip agent team skills and /team command (saves 17 team-* skills)')
   .option('--docker-check', 'Install /docker-check and docker-type-check skill (runs tsc inside Docker dev container)')
   .option('--dotnet', 'Install curated .NET skills (dotnet-* — P/Invoke, AOT, MSBuild, local SDK) + /dotnet command, vendored from dotnet/skills (MIT)')
@@ -107,6 +112,11 @@ program
   .option('--output-folder <path>', 'Output folder for Arcwright artifacts (preserves the installed value when omitted)', null)
   .option('-y, --yes', 'Skip interactive prompts', false)
   .option('-g, --global', 'Update global config dirs (~/.claude/, ~/.kiro/, etc.)')
+  .option('--sharing <mode>', 'Global sharing: all | custom | none (omitted preserves selection)')
+  .option('--sharing-config <json>', 'JSON selection for unattended --sharing custom')
+  .option('--codex-self-heal <mode>', 'Global Codex home health: on | off')
+  .option('--credential-copy-check <mode>', 'Local copied-login check: local | off')
+  .option('--dry-run', 'Preview without writing files')
   .option('--no-teams', 'Skip agent team skills and /team command')
   .option('--docker-check', 'Install /docker-check and docker-type-check skill')
   .option('--dotnet', 'Install curated .NET skills (dotnet-*) + /dotnet command')
@@ -265,5 +275,16 @@ Examples:
       process.exitCode = 1;
     }
   });
+
+
+const accounts = program.command('accounts').description('Configure shared global instructions, personal skills and account homes');
+accounts.command('configure')
+  .requiredOption('-g, --global', 'Configure global accounts')
+  .option('--dry-run', 'Preview without writing files')
+  .action(async opts => { await require('./account-prompts').configureAccounts(opts); });
+accounts.command('status')
+  .requiredOption('-g, --global', 'Show global accounts')
+  .option('--json', 'Print structured status')
+  .action(async opts => { await require('./account-prompts').accountsStatus(opts); });
 
 program.parse();
