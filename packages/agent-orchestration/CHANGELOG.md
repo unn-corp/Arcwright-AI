@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Add opt-in global instructions and personal skill sharing with all/custom/none
+  selection, per-account preferences, path previews, private backups and guarded
+  restore. Existing installations and unattended personal content stay unchanged.
+- Add Linux/WSL account discovery, owned launchers and separate sign-in walkthroughs
+  for Claude, Codex and Grok; preserve Arcwright Code shadow ownership and private
+  account state. OpenCode supports content sharing without multi-account setup.
+- Wire saved Codex health policies into every global install/update through the
+  companion health and Code settings modules, with marked integration placeholders.
+
 ## 1.2.5
 
 - Publish changed main commits as daily GitHub nightlies and promote mature nightlies to stable weekly, using isolated self-hosted runners and verified draft assets.

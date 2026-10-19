@@ -24,6 +24,8 @@ const path = require('path');
  * @returns {Promise<'created'|'updated'|'noop'|'appended'>}
  */
 async function upsertManagedBlock(filePath, startMarker, endMarker, content) {
+  // Host links are integration pointers. Never write a provider block through one.
+  if ((await fs.lstat(filePath).catch(() => null))?.isSymbolicLink()) return 'noop';
   await fs.ensureDir(path.dirname(filePath));
   const block = `${startMarker}\n${content}\n${endMarker}`;
 
@@ -88,6 +90,7 @@ function markerBlockRanges(text) {
 }
 
 async function cleanupManagedBlocks(filePath, markerPairs) {
+  if ((await fs.lstat(filePath).catch(() => null))?.isSymbolicLink()) return false;
   if (!await fs.pathExists(filePath)) return false;
   if (!markerPairs || markerPairs.length === 0) return false;
 

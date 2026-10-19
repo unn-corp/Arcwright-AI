@@ -63,14 +63,26 @@ function hasHerdrHook(group) {
  *
  * The default ~/.claude is always included, even if it does not exist yet.
  */
-async function listClaudeProfileDirs(homeDir = os.homedir()) {
+async function listClaudeProfileDirs(homeDir = os.homedir(), { sharing, codeHomes } = {}) {
   const entries = await fs.readdir(homeDir, { withFileTypes: true }).catch(() => []);
   const profileDirs = entries
-    .filter((entry) => entry.isDirectory() && /^\.claude(?:-.+)?$/.test(entry.name))
+    .filter((entry) => entry.isDirectory() && /^\.claude(?:-.+)?$/.test(entry.name) && !/backup|archive|\.bak(?:$|[.-])/i.test(entry.name))
     .map((entry) => path.join(homeDir, entry.name));
   const defaultProfile = path.join(homeDir, '.claude');
   if (!profileDirs.includes(defaultProfile)) profileDirs.unshift(defaultProfile);
-  return profileDirs;
+  const identity = async file => fs.realpath(file).catch(() => path.resolve(file));
+  const shadows = new Set(await Promise.all((codeHomes?.codex || []).map(item => item.shadowHome).filter(Boolean).map(identity)));
+  const safeProfiles = [];
+  for (const profileDir of profileDirs) if (!shadows.has(await identity(profileDir))) safeProfiles.push(profileDir);
+  if (!sharing) return safeProfiles;
+  if (codeHomes?.status === 'unreadable') return [];
+  // Enrollment never grants permission to alter excluded accounts' private settings.
+  const { choiceFor } = require('./global-sharing');
+  return safeProfiles.filter(profileDir => {
+    if ((codeHomes?.codex || []).some(item => item.shadowHome === profileDir)) return false;
+    const choice = choiceFor(sharing, { provider: 'claude', path: profileDir, main: profileDir === defaultProfile });
+    return choice.instructions || choice.skills;
+  });
 }
 
 async function installProfileHook(profileDir, hookPath) {
