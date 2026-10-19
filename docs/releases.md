@@ -83,6 +83,8 @@ The release workflow follows the T3 fork's cadence on `main`:
 
 Both jobs require `[self-hosted, linux, x64, unn, unn-isolated, t3-ci]`.
 They use the organization's isolated workers, never hosted-runner fallbacks.
+Publication runs serialize in one queue; a later run does not cancel a pending
+publisher during a service delay.
 GitHub schedules run from the default branch and may start late during load;
 see [scheduled workflow behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 

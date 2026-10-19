@@ -19,6 +19,9 @@ project instructions here and follow the applicable instruction hierarchy.
   separate unless requested.
 - Keep Squidhub-specific overlays out of the generic package. This workshop is
   the single package publication source; publishing requires task authorization.
+- Daily changed-source nightlies and weekly stable publication are authorized.
+  Preserve the schedules in `.github/workflows/release.yml`. Routine edits do not
+  commission extra manual releases; fleet updates preserve saved channels and pins.
 - Organization procedures live in optional private `vendor/unnamed-dev-skills/`.
   Keep them out of core sources and public bundles; follow
   [organization-pack setup](docs/organization-packs.md) for authorized access/install.

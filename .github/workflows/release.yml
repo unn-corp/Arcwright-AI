@@ -17,6 +17,7 @@ on:
 concurrency:
   group: arcwright-release
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
