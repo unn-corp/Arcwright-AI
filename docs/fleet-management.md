@@ -163,6 +163,46 @@ For recovery, retain the prior version and affected managed files/preferences;
 use the supported installer or reviewed owned-file restore without deleting
 unrelated skills or importing another machine's credentials.
 
+## Codex accounts on devices
+
+Arcwright Code can run several Codex accounts from one Codex home. Each extra
+account gets a shadow home that links the shared skills, plugins, sessions,
+configuration, and memory database. The shadow home keeps its own `auth.json`,
+`models_cache.json`, and Codex background server state (`app-server-daemon` and
+`app-server-control`).
+
+- Sign in to each account separately on each device and in each home:
+  `CODEX_HOME=<home> codex login`, adding `--device-auth` on a headless host.
+  Never copy `auth.json` between devices or homes. Codex refresh tokens are
+  single-use, so once one copy refreshes, the others fail with "refresh token
+  was already used". Arcwright Code then shows that provider as not
+  authenticated.
+- To find copies without exposing secrets, compare each home's account email,
+  `last_refresh`, and a short hash of the refresh token across devices. A hash
+  that matches on two devices is a copy. Fix it by signing in again on one
+  device, which overwrites the file. Do not run `codex logout` on a copy: logout
+  revokes the session, and that also signs out the other device.
+- `codex login status` only reads the local file. To confirm a login works, run a
+  short `codex exec` prompt in that home. A login past its refresh interval
+  refreshes during the check, so test a copy only after the other device has its
+  own sign-in.
+- Codex 0.163 and later refuse a symlinked daemon directory ("socket directory
+  path exists and is not a directory"), and a shared directory would also attach
+  one account to another account's server. Arcwright Code builds without the
+  per-account daemon change link these directories into shadow homes. To repair
+  a shadow home, remove only the symlink (never its target, which belongs to the
+  shared home's running server) and create an empty owner-only directory. An
+  older build links it again when the next Codex session starts, so the repair
+  holds only until the device runs a fixed build. Arcwright Code's own providers
+  talk to Codex over stdio and are not affected; the Codex CLI is.
+  `arcwright update --global --codex-self-heal on` saves this repair for every
+  later global install and update, for homes Arcwright Code does not manage;
+  `--credential-copy-check local` also reports logins copied between homes on
+  that device.
+- When you inspect a device, record its Codex version, each `~/.codex*` home,
+  the `shadowHomePath` values in Arcwright Code's `settings.json`, whether the
+  daemon entries are symlinks, and the outcome of each login check.
+
 ## Recovery and retention
 
 For an app failure, use its recorded native recovery flow. Do not restore a data

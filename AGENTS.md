@@ -45,6 +45,11 @@ project instructions here and follow the applicable instruction hierarchy.
   Connect, Tailscale, or configured remote tools. Verify live identity,
   permissions, platform, and install scope; network visibility grants no authority.
   Reconcile routes to avoid updating the same installation twice.
+- Codex accounts: sign in on each device and in each home; never copy `auth.json`
+  (refresh tokens are single-use, so copies sign each other out) and never run
+  `codex logout` on a copy. Shadow homes share skills, sessions, config, and
+  memory but keep `auth.json` and `app-server-daemon`/`app-server-control` per
+  account. See [Codex accounts on devices](docs/fleet-management.md#codex-accounts-on-devices).
 - Apply updates to a representative device first, then bounded batches. Preserve
   channels, pins, customizations, active work, and required platform update checks.
   Record and resume per-device outcomes; offline, blocked, or unverified devices
