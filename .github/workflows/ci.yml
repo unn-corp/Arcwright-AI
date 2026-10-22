@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22.23.4'
       - run: node build/build.js
 
   # Unit tests + coverage gate (agent-orchestration package, Vitest 80/80/70).
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22.23.4'
           # No npm cache: this package's package-lock.json is gitignored by repo
           # convention (.gitignore: packages/*/package-lock.json), so it isn't in
           # the CI checkout. Use `npm install` (not `npm ci`) for the same reason.
@@ -72,7 +72,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22.23.4'
           cache: npm
           cache-dependency-path: website/package-lock.json
       - run: npm ci
