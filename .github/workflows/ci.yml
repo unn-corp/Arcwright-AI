@@ -126,11 +126,9 @@ jobs:
           set -euo pipefail
           SCAN_DIR=$(mktemp -d "$RUNNER_TEMP/arcwright-gitleaks.XXXXXX")
           trap 'rm -rf "$SCAN_DIR"' EXIT
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
-            -o "$SCAN_DIR/gitleaks.tar.gz"
-          echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  '"$SCAN_DIR/gitleaks.tar.gz" | sha256sum -c -
-          tar -xzf "$SCAN_DIR/gitleaks.tar.gz" -C "$SCAN_DIR" gitleaks
+          bash .github/security-scanner.sh gitleaks "$SCAN_DIR"
           "$SCAN_DIR/gitleaks" version | grep -Fx '8.30.1'
+          python3 -I -S .github/test-gitleaks.py "$SCAN_DIR/gitleaks"
           "$SCAN_DIR/gitleaks" detect --source="$GITHUB_WORKSPACE" \
             --config="$GITHUB_WORKSPACE/.gitleaks.toml" \
             --redact --no-banner --exit-code=1 -v
@@ -142,11 +140,8 @@ jobs:
           set -euo pipefail
           SCAN_DIR=$(mktemp -d "$RUNNER_TEMP/arcwright-trivy.XXXXXX")
           trap 'rm -rf "$SCAN_DIR"' EXIT
-          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz \
-            -o "$SCAN_DIR/trivy.tar.gz"
-          echo '0510e71e2fd39bf863856d499c8dc19feb4e7336546394c502a8f5cc7ab27460  '"$SCAN_DIR/trivy.tar.gz" | sha256sum -c -
-          tar -xzf "$SCAN_DIR/trivy.tar.gz" -C "$SCAN_DIR" trivy
-          "$SCAN_DIR/trivy" --version | grep -Fx 'Version: 0.71.2'
+          bash .github/security-scanner.sh trivy "$SCAN_DIR"
+          "$SCAN_DIR/trivy" --version | grep -Fx 'Version: 0.76.1'
           "$SCAN_DIR/trivy" fs --scanners vuln,secret --severity HIGH,CRITICAL \
             --exit-code 1 --no-progress "$GITHUB_WORKSPACE"
       - name: Dependency vulnerabilities (OSV-Scanner / OSV.dev)
@@ -155,11 +150,8 @@ jobs:
           set -euo pipefail
           SCAN_DIR=$(mktemp -d "$RUNNER_TEMP/arcwright-osv.XXXXXX")
           trap 'rm -rf "$SCAN_DIR"' EXIT
-          curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 \
-            -o "$SCAN_DIR/osv-scanner"
-          echo '15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0  '"$SCAN_DIR/osv-scanner" | sha256sum -c -
-          chmod u+x "$SCAN_DIR/osv-scanner"
-          "$SCAN_DIR/osv-scanner" --version | grep -Fx 'osv-scanner version: 2.4.0'
+          bash .github/security-scanner.sh osv-scanner "$SCAN_DIR"
+          "$SCAN_DIR/osv-scanner" --version | grep -Fx 'osv-scanner version: 2.7.0'
           "$SCAN_DIR/osv-scanner" scan source --recursive "$GITHUB_WORKSPACE"
 
       - name: Remove scanner trust files
