@@ -21,6 +21,9 @@ export GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org GOPRIVATE= GONOSU
 export CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v1 GOMAXPROCS=2 GOFLAGS=
 "$GOROOT/bin/go" version | grep -Fx 'go version go1.27.3 linux/amd64'
 
+# Only this private cache is writable, so the caller's EXIT trap can remove
+# downloaded modules as the runner user. go.sum/sumdb verification is unchanged.
+
 case "$SCANNER" in
   gitleaks)
     # Same reviewed 8.30.1 source/rules and upstream gore2regex release tag.
@@ -28,7 +31,7 @@ case "$SCANNER" in
       "$SCAN_DIR/source.tar.gz" 6b2638a733b85619dc80bdf28e84e4fed7e526a761ab5c148fbf67695aea2115
     mkdir "$SCAN_DIR/source"
     tar --no-same-owner -xzf "$SCAN_DIR/source.tar.gz" --strip-components=1 -C "$SCAN_DIR/source"
-    (cd "$SCAN_DIR/source" && "$GOROOT/bin/go" build -p=2 -mod=readonly -trimpath -buildvcs=false \
+    (cd "$SCAN_DIR/source" && "$GOROOT/bin/go" build -p=2 -mod=readonly -modcacherw -trimpath -buildvcs=false \
       -tags=gore2regex -ldflags='-s -w -X=github.com/zricethezav/gitleaks/v8/version.Version=8.30.1' \
       -o "$SCAN_DIR/gitleaks" .)
     ;;
@@ -38,7 +41,7 @@ case "$SCANNER" in
       "$SCAN_DIR/source.tar.gz" 31be5bf5420939c0b9f3051a4eed24360c4346dda7ce6d962a9459cb0567c32f
     mkdir "$SCAN_DIR/source"
     tar --no-same-owner -xzf "$SCAN_DIR/source.tar.gz" --strip-components=1 -C "$SCAN_DIR/source"
-    (cd "$SCAN_DIR/source" && "$GOROOT/bin/go" build -p=2 -mod=readonly -trimpath -buildvcs=false \
+    (cd "$SCAN_DIR/source" && "$GOROOT/bin/go" build -p=2 -mod=readonly -modcacherw -trimpath -buildvcs=false \
       -ldflags='-s -w -X github.com/google/osv-scanner/v2/internal/version.OSVVersion=2.7.0' \
       -o "$SCAN_DIR/osv-scanner" ./cmd/osv-scanner/)
     ;;
