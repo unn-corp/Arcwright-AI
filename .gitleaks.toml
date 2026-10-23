@@ -4,7 +4,7 @@
 [extend]
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "RFC 6455 'Sec-WebSocket-Key/Accept' values are example handshake headers in the websocket-engineer skill docs (and their historical copies), not real secrets."
 paths = [
   '''websocket-engineer/references/protocol\.md''',
@@ -12,3 +12,36 @@ paths = [
 regexes = [
   '''Sec-WebSocket-(Key|Accept):\s*\S+''',
 ]
+
+# C16: verified historical nonsecrets. Exact content plus exact path are
+# required; generic-api-key and every other default rule remain enabled.
+
+[[allowlists]]
+description = "SHA256 content digests in the historical pinned skill-source manifest; bytes verified against local/pinned upstream files."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^docs/skill-sources\.json$''']
+regexTarget = "line"
+regexes = [
+  '''(?m)^        "\.agents/skills/build\-mcp\-server/references/auth\.md": "e28ace47198ecbf1661fc548c2ba8e92c0e333841e0a0d50b43c69febc7894dd",$''',
+  '''(?m)^        "\.agents/skills/nextjs\-seo/references/metadata\-api\.md": "dbdaff615e4233b149dbfee410a79bfa581a158535514e25694e24059b6976f4",$''',
+  '''(?m)^        "\.agents/skills/ui\-ux\-pro\-custom/data/swift\-ios\-skills/authentication/references/keychain\-biometric\.md": "b839288ab3f9ed020db3bfc709e4bbce4401c6cf71b0340ce6cc64351e8137b1",$''',
+  '''(?m)^        "\.agents/skills/ui\-ux\-pro\-custom/scripts/tests/fixtures/catalogs/google\-api\.json": "22d8dc81a7d6827b7e8b64b53e7d184210fb9759e8e294e0d5133c81cc460176",$''',
+  '''(?m)^        "\.agents/skills/vite/references/core\-plugin\-api\.md": "879d8fa47b76250f0eaed501754f98db4af9d13b56c9c26c42e8118658c3501f",$''',
+  '''(?m)^        "\.agents/skills/vite/references/environment\-api\.md": "3685282c3d95c3ded6c2f550135b615d441e2c914a5b3189af8c0eac608e9d2c",$''',
+  '''(?m)^        "\.agents/skills/vitest/references/core\-test\-api\.md": "0529b5cffcdf08fed41e84fa7cb94c1e47eb102a659621b4c81dbea129678ff7",$''',
+  '''(?m)^        "plugins/mcp\-server\-dev/skills/build\-mcp\-server/references/auth\.md": "83869c9c5ff0aee69ad88589e88c3a6888a7cc4a7843e9ea85185e11ac369e0f",$''',
+  '''(?m)^        "skills/nextjs\-seo/references/metadata\-api\.md": "dbdaff615e4233b149dbfee410a79bfa581a158535514e25694e24059b6976f4",$''',
+  '''(?m)^        "skills/vite/references/core\-plugin\-api\.md": "879d8fa47b76250f0eaed501754f98db4af9d13b56c9c26c42e8118658c3501f",$''',
+  '''(?m)^        "skills/vite/references/environment\-api\.md": "3685282c3d95c3ded6c2f550135b615d441e2c914a5b3189af8c0eac608e9d2c",$''',
+  '''(?m)^        "skills/vitest/references/core\-test\-api\.md": "0529b5cffcdf08fed41e84fa7cb94c1e47eb102a659621b4c81dbea129678ff7",$''',
+  '''(?m)^        "src/ui\-ux\-pro\-max/scripts/tests/fixtures/catalogs/google\-api\.json": "22d8dc81a7d6827b7e8b64b53e7d184210fb9759e8e294e0d5133c81cc460176",$''',
+]
+
+[[allowlists]]
+description = "Aurora review severity prose; the detector spans credentials, followed by the words destructive/replacement."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^\.agents/skills/aurora-db-best-practices/(SKILL\.md|guide-13-review-output\.md)$''']
+regexTarget = "secret"
+regexes = ['''^destructive/replacement$''']

@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22.23.4'
       - run: node build/build.js
 
   # Unit tests + coverage gate (agent-orchestration package, Vitest 80/80/70).
@@ -54,11 +54,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          # No npm cache: this package's package-lock.json is gitignored by repo
-          # convention (.gitignore: packages/*/package-lock.json), so it isn't in
-          # the CI checkout. Use `npm install` (not `npm ci`) for the same reason.
-      - run: npm install --no-audit --no-fund
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: packages/agent-orchestration/package-lock.json
+      - run: npm ci --no-audit --no-fund
       - run: npm run test:coverage
 
   # Website static gates: lint + type-check + production build.
@@ -72,7 +71,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22.23.4'
           cache: npm
           cache-dependency-path: website/package-lock.json
       - run: npm ci
@@ -100,14 +99,37 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Select scanner trust store
+        # Read the reviewed CA bundle as data; do not install Python packages
+        # or change the runner's trust. Go also reads SSL_CERT_DIR.
+        run: |
+          set -euo pipefail
+          TRUST_DIR=$(mktemp -d "$RUNNER_TEMP/arcwright-trust.XXXXXX")
+          trap 'rm -rf "$TRUST_DIR"' ERR
+          mkdir "$TRUST_DIR/empty"
+          curl --proto '=https' --tlsv1.2 -sSfL \
+            https://files.pythonhosted.org/packages/c4/51/29046e48f693c54e5b7412216d447a1d8362c9653148d98c02cdf65fa733/certifi-2026.10.19-py3-none-any.whl \
+            -o "$TRUST_DIR/certifi.whl"
+          echo '42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b  '"$TRUST_DIR/certifi.whl" | sha256sum -c -
+          python3 -I -S - "$TRUST_DIR/certifi.whl" "$TRUST_DIR/cacert.pem" <<'PYTHON'
+          import pathlib, sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as wheel:
+              pathlib.Path(sys.argv[2]).write_bytes(wheel.read('certifi/cacert.pem'))
+          PYTHON
+          printf 'ARCWRIGHT_SCANNER_TRUST_DIR=%s\nSSL_CERT_FILE=%s/cacert.pem\nSSL_CERT_DIR=%s/empty\nCURL_CA_BUNDLE=%s/cacert.pem\n' \
+            "$TRUST_DIR" "$TRUST_DIR" "$TRUST_DIR" "$TRUST_DIR" >> "$GITHUB_ENV"
       - name: Secret scan (gitleaks)
         # gitleaks CLI (MIT, free). The gitleaks-action wrapper requires a paid
         # GITLEAKS_LICENSE on private repos; the binary does not. fetch-depth:0
         # gives it full history. .gitleaks.toml allowlists doc false-positives.
         run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
-            | tar -xz -C /tmp gitleaks
-          /tmp/gitleaks detect --source="$GITHUB_WORKSPACE" \
+          set -euo pipefail
+          SCAN_DIR=$(mktemp -d "$RUNNER_TEMP/arcwright-gitleaks.XXXXXX")
+          trap 'rm -rf "$SCAN_DIR"' EXIT
+          bash .github/security-scanner.sh gitleaks "$SCAN_DIR"
+          "$SCAN_DIR/gitleaks" version | grep -Fx '8.30.1'
+          python3 -I -S .github/test-gitleaks.py "$SCAN_DIR/gitleaks"
+          "$SCAN_DIR/gitleaks" detect --source="$GITHUB_WORKSPACE" \
             --config="$GITHUB_WORKSPACE/.gitleaks.toml" \
             --redact --no-banner --exit-code=1 -v
       - name: Dependency + vuln scan (trivy)
@@ -115,16 +137,29 @@ jobs:
         # the workspace mounted, which hits the same DinD-mount trap; run the
         # binary natively instead.
         run: |
-          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.71.2/trivy_0.71.2_Linux-64bit.tar.gz \
-            | tar -xz -C /tmp trivy
-          /tmp/trivy fs --scanners vuln,secret --severity HIGH,CRITICAL \
+          set -euo pipefail
+          SCAN_DIR=$(mktemp -d "$RUNNER_TEMP/arcwright-trivy.XXXXXX")
+          trap 'rm -rf "$SCAN_DIR"' EXIT
+          bash .github/security-scanner.sh trivy "$SCAN_DIR"
+          "$SCAN_DIR/trivy" --version | grep -Fx 'Version: 0.76.1'
+          "$SCAN_DIR/trivy" fs --scanners vuln,secret --severity HIGH,CRITICAL \
             --exit-code 1 --no-progress "$GITHUB_WORKSPACE"
       - name: Dependency vulnerabilities (OSV-Scanner / OSV.dev)
         # Scans every committed lockfile against OSV.dev; fails on findings.
         run: |
-          curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 \
-            -o /tmp/osv-scanner && chmod +x /tmp/osv-scanner
-          /tmp/osv-scanner scan source --recursive "$GITHUB_WORKSPACE"
+          set -euo pipefail
+          SCAN_DIR=$(mktemp -d "$RUNNER_TEMP/arcwright-osv.XXXXXX")
+          trap 'rm -rf "$SCAN_DIR"' EXIT
+          bash .github/security-scanner.sh osv-scanner "$SCAN_DIR"
+          "$SCAN_DIR/osv-scanner" --version | grep -Fx 'osv-scanner version: 2.7.0'
+          "$SCAN_DIR/osv-scanner" scan source --recursive "$GITHUB_WORKSPACE"
+
+      - name: Remove scanner trust files
+        if: always()
+        run: |
+          if [ -n "${ARCWRIGHT_SCANNER_TRUST_DIR:-}" ]; then
+            rm -rf -- "$ARCWRIGHT_SCANNER_TRUST_DIR"
+          fi
 
   # SAST (semgrep) — HARD gate. The semgrep image ships `semgrep-core` (which
   # won't pip-install reliably on the bare runner). A `container:` job can't be
@@ -149,13 +184,18 @@ jobs:
         # secrets, injection) fail the gate.
         run: |
           set -euo pipefail
-          CID=$(docker create semgrep/semgrep:1.168.0 \
+          # A job-local image patches scanner trust/musl and critical Python
+          # dependencies without changing Semgrep's version or scan policy.
+          IMAGE_TAG="arcwright-semgrep:${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          trap 'docker image rm "$IMAGE_TAG" >/dev/null 2>&1 || true' EXIT
+          docker build -f .github/semgrep.Dockerfile -t "$IMAGE_TAG" .github
+          CID=$(docker create "$IMAGE_TAG" \
             semgrep scan --config auto --severity ERROR --error \
               --exclude-rule javascript.lang.security.detect-child-process.detect-child-process \
               --exclude-rule javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket \
               --exclude-rule dockerfile.security.missing-user.missing-user \
               /src)
-          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true' EXIT
+          trap 'docker rm -f "$CID" >/dev/null 2>&1 || true; docker image rm "$IMAGE_TAG" >/dev/null 2>&1 || true' EXIT
           docker cp "$GITHUB_WORKSPACE/." "$CID:/src"
           docker start -a "$CID"
 
