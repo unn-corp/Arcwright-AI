@@ -1,0 +1,34 @@
+{
+  "provenance_commit": "50006a007c187536bc57cc7bf37ac4e8f78f71ba",
+  "manifest_lines": [
+    360,
+    391,
+    470,
+    479,
+    621,
+    741,
+    887,
+    1089,
+    1090,
+    1099,
+    1100,
+    1130,
+    1153
+  ],
+  "checksums": [
+    "        \"plugins/mcp-server-dev/skills/build-mcp-server/references/auth.md\": \"83869c9c5ff0aee69ad88589e88c3a6888a7cc4a7843e9ea85185e11ac369e0f\",",
+    "        \".agents/skills/build-mcp-server/references/auth.md\": \"e28ace47198ecbf1661fc548c2ba8e92c0e333841e0a0d50b43c69febc7894dd\",",
+    "        \"skills/nextjs-seo/references/metadata-api.md\": \"dbdaff615e4233b149dbfee410a79bfa581a158535514e25694e24059b6976f4\",",
+    "        \".agents/skills/nextjs-seo/references/metadata-api.md\": \"dbdaff615e4233b149dbfee410a79bfa581a158535514e25694e24059b6976f4\",",
+    "        \"src/ui-ux-pro-max/scripts/tests/fixtures/catalogs/google-api.json\": \"22d8dc81a7d6827b7e8b64b53e7d184210fb9759e8e294e0d5133c81cc460176\",",
+    "        \".agents/skills/ui-ux-pro-custom/scripts/tests/fixtures/catalogs/google-api.json\": \"22d8dc81a7d6827b7e8b64b53e7d184210fb9759e8e294e0d5133c81cc460176\",",
+    "        \".agents/skills/ui-ux-pro-custom/data/swift-ios-skills/authentication/references/keychain-biometric.md\": \"b839288ab3f9ed020db3bfc709e4bbce4401c6cf71b0340ce6cc64351e8137b1\",",
+    "        \"skills/vite/references/core-plugin-api.md\": \"879d8fa47b76250f0eaed501754f98db4af9d13b56c9c26c42e8118658c3501f\",",
+    "        \"skills/vite/references/environment-api.md\": \"3685282c3d95c3ded6c2f550135b615d441e2c914a5b3189af8c0eac608e9d2c\",",
+    "        \".agents/skills/vite/references/core-plugin-api.md\": \"879d8fa47b76250f0eaed501754f98db4af9d13b56c9c26c42e8118658c3501f\",",
+    "        \".agents/skills/vite/references/environment-api.md\": \"3685282c3d95c3ded6c2f550135b615d441e2c914a5b3189af8c0eac608e9d2c\",",
+    "        \"skills/vitest/references/core-test-api.md\": \"0529b5cffcdf08fed41e84fa7cb94c1e47eb102a659621b4c81dbea129678ff7\",",
+    "        \".agents/skills/vitest/references/core-test-api.md\": \"0529b5cffcdf08fed41e84fa7cb94c1e47eb102a659621b4c81dbea129678ff7\","
+  ],
+  "prose": "- **Blocker:** proven cross-tenant data exposure or a runtime path that bypasses the\n  tenant boundary, public exposure with an exploitable path, plaintext credentials,\n  destructive/replacement change without a recovery path, or a migration/upgrade\n  that has not proven compatibility and restore/rollback."
+}

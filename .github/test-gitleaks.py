@@ -11,22 +11,13 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 SCANNER = str(Path(sys.argv[1]).resolve())
 CONFIG = str(Path(sys.argv[2]).resolve()) if len(sys.argv) > 2 else str(ROOT / '.gitleaks.toml')
-COMMIT = '50006a007c187536bc57cc7bf37ac4e8f78f71ba'
-
-
-def historical(path):
-    return subprocess.check_output(
-        ['git', 'show', COMMIT + ':' + path], cwd=ROOT,
-        env={**os.environ, 'GIT_NO_LAZY_FETCH': '1'}, text=True,
-    ).splitlines()
-
-
-# Independent fixtures from the original evidence, not from the allowlist.
+# Independent public fixtures from the original historical evidence, retained
+# locally so deleting an unrelated remote branch cannot break this regression.
+fixtures = json.loads((ROOT / '.github/gitleaks-fixtures.json').read_text())
 manifest = 'docs/skill-sources.json'
-lines = historical(manifest)
-checksums = [lines[n - 1] for n in (360, 391, 470, 479, 621, 741, 887, 1089, 1090, 1099, 1100, 1130, 1153)]
+checksums = fixtures['checksums']
 aurora = '.agents/skills/aurora-db-best-practices/'
-prose = '\n'.join(historical(aurora + 'guide-13-review-output.md')[20:24])
+prose = fixtures['prose']
 benign = {manifest: '\n'.join(checksums), aurora + 'SKILL.md': prose, aurora + 'guide-13-review-output.md': prose}
 
 
