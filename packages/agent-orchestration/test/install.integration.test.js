@@ -20,15 +20,14 @@ beforeAll(() => {
   }
 }, 120000);
 
-let projectDir, homeDir, savedHome;
+let projectDir, homeDir;
 
 beforeEach(() => {
   projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-proj-'));
   homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arcw-home-'));
-  // Redirect every home-directed write (global CLAUDE.md, ~/.arcwright, shell rc)
-  // into a throwaway HOME so the real environment is never touched.
-  savedHome = process.env.HOME;
-  process.env.HOME = homeDir;
+  // Keep installer home paths in the fixture without changing process HOME
+  // or the environment inherited by child processes.
+  vi.spyOn(os, 'homedir').mockReturnValue(homeDir);
   // install() is very chatty; silence stdout to keep test output readable.
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -36,7 +35,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  if (savedHome === undefined) delete process.env.HOME; else process.env.HOME = savedHome;
   fs.rmSync(projectDir, { recursive: true, force: true });
   fs.rmSync(homeDir, { recursive: true, force: true });
 });

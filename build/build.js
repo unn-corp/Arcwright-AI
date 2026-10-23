@@ -124,7 +124,8 @@ const SHIPPED_COMMANDS = [
   /^tauri\.md$/,
   /^strands\.md$/,
   /^aws-infra\.md$/,
-  /^unnamed-pm\.md$/,
+  // The optional unnamed-pm module/command is absent from this source tree.
+  // Do not register a launcher for a command that is not shipped.
   /^react\.md$/,
   /^typescript\.md$/,
   /^nextjs\.md$/,
