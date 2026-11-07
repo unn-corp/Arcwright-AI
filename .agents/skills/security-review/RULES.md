@@ -19,3 +19,5 @@
 - Flagging `requests.get(settings.API_URL)` as SSRF
 - Flagging Django `{{ var }}` as XSS without checking for `|safe` or `mark_safe`
 - About to report a theoretical/best-practice issue as a vulnerability
+
+- Missing conditional language/infrastructure guidance leaves affected coverage INCOMPLETE and blocks dependent sign-off. Name the path/check; no automatic fetch or substitute, global pass or cloud authority.

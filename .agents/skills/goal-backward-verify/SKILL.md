@@ -6,15 +6,8 @@ allowed-tools: Read, Grep, Glob, Bash
 
 # Goal-Backward Verification
 
-Start from the **stated goals/capabilities**, not the code. For each goal, walk
-forward through 4 levels of evidence. A goal only PASSES when it clears every
-level it needs. This catches the failure mode where code "exists" but is a stub,
-never imported, or fed hardcoded data.
-
-## Iron Law
-
-> **A capability is not delivered until real data flows through wired, substantive code.**
-> File-exists is not done. Code-written is not done. Imported-but-mocked is not done.
+Start from stated goals. Verify existence, substance, application wiring and real
+data flow in order. Code presence alone does not establish delivery.
 
 ## Inputs
 
@@ -47,27 +40,29 @@ Every level result MUST cite evidence:
 1. **Enumerate goals.** Number each stated goal/capability G1, G2, …
 2. **Per goal, run L1→L4.** Stop at first FAIL; mark remaining levels `—` (not reached).
 3. **Verdict per goal:** PASS only if every required level passed.
-4. **Overall verdict:** PASS only if every goal passed. Otherwise FAIL with the blocking goals listed.
+4. **Overall verdict:** PASS only if every goal passed. Otherwise report FAIL or INCOMPLETE with the blocking goals listed.
 5. **Emit the report** (below). Keep it terse.
 
 ## Output — VERIFICATION report (terse)
 
-> **REQUIRED PRE-OUTPUT:** If this skill instructs an agent to WRITE the report to
-> a file, invoke `caveman` first (concise-output discipline). Inline returns need no file.
+Persist the required verification evidence when the task or workflow requires a report.
+Writing a report does not select a writing mode. Load Caveman only when the user
+explicitly selects that mode or requests artifact compression; preserve all evidence,
+conditions and the required report format. If writing guidance is unavailable, record
+the limitation and still return or persist the complete readable report through the
+supported evidence route.
 
 ```
 VERIFICATION — <target>
-Overall: PASS | FAIL (blocking: G2, G5)
+Overall: PASS | FAIL | INCOMPLETE (list blockers)
 
-G1 <goal> ............ PASS
-  L1 exists      ✓ src/foo.ts
-  L2 substantive ✓ foo.ts:12-48 real parse logic
-  L3 wired       ✓ imported app.ts:9
-  L4 real data   ✓ reads req.body, traced app.ts:30
+G1 <goal>: PASS | FAIL | INCOMPLETE
+  L1 exists: result + artifact citation
+  L2 substantive: result + implementation citation
+  L3 wired: result + import/registration citation
+  L4 real data: result + runtime/data-source evidence
+  Stop at the first failure; unavailable proof is INCOMPLETE.
 
-G2 <goal> ............ FAIL @L4
-  L1 ✓ src/bar.ts  L2 ✓ bar.ts:5  L3 ✓ index.ts:4
-  L4 ✗ returns hardcoded MOCK_USER (bar.ts:22) — no DB call
 ```
 
 Use `✓`/`✗`/`—`. One line of evidence per level. No prose padding.

@@ -16,6 +16,7 @@ Apply this specialist role to the supplied task, following host instructions and
   <step n="execute">Execute the supplied task directly without waiting for a menu choice. Read the help reference in menu src only for help/navigation, an explicit menu command, or workflow routing that needs it. If no actionable task is known, load and display that help in communication_language. Accept a command, number, or natural-language task; clarify only consequential ambiguity. Resolve selected attributes through the help handlers and shared runtime.</step>
 
     <rules>
+      <r>Own business/domain framing and stakeholder needs. Request Research for primary-source investigation; preserve its dated evidence and uncertainty rather than treating business inference as a verified external fact.</r>
       <r>Use the requested communication language and persona style, subject to user and host instructions.</r>
       <r>LOOP HANDLING: For requested [AL] or [PL], reuse the supplied loop budget and corresponding review task. Ask for a budget only when the selected workflow needs one and none is available. Generate the requested report; host evidence and output rules apply.</r>
       <r>Write concise artifacts with the technical substance the task requires.</r>

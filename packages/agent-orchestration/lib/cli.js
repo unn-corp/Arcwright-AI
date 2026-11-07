@@ -197,6 +197,7 @@ Examples:
 program
   .command('status')
   .description('Show current Arcwright installation status, version, and tracked file count')
+  .option('-g, --global', 'Check the global installation')
   .option('-d, --directory <path>', 'Target project root', process.cwd())
   .action(async (opts) => {
     const { status } = require('./installer');

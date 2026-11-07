@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const REPO = path.resolve(__dirname, '../../..');
 const ROUTER = path.join(REPO, '.agents/skills/arcwright');
 const { capabilityBrief, parseArgs } = require(path.join(ROUTER, 'scripts/agent-capabilities.cjs'));
-const { createResolver } = require(path.join(ROUTER, 'scripts/find-entrypoint.cjs'));
+const { createResolver, findEntrypoints } = require(path.join(ROUTER, 'scripts/find-entrypoint.cjs'));
 const temporary = [];
 const put = (root, file, text) => {
   const target = path.join(root, file);
@@ -56,6 +56,15 @@ const fixture = () => {
 afterEach(() => temporary.splice(0).forEach(root => fs.rmSync(root, { recursive: true, force: true })));
 
 describe('portable agent capability briefs', () => {
+  it('reports unavailable catalog discovery while preserving direct known-profile resolution', () => {
+    const f = fixture();
+    fs.rmSync(path.join(f.skillRoot, 'catalog.json'));
+    const resolver = f.resolver();
+    expect(resolver.catalogAvailable).toBe(false);
+    expect(() => findEntrypoints(resolver, '--list')).toThrow('catalog discovery unavailable');
+    expect(capabilityBrief({ role: 'qa', resolver }).profilePath).toBe(path.join(f.home, '.arcwright/awm/agents/qa.md'));
+  });
+
   it('uses a customized project skill before global fallback and returns direct readable entrypoints', () => {
     const f = fixture();
     const override = path.join(f.project, '.agents/skills/test-quality/SKILL.md');
@@ -134,7 +143,11 @@ describe('agent capability source audits', () => {
 
   it('audits every real role, hint identity and shared discovery wiring', () => {
     const registry = JSON.parse(fs.readFileSync(path.join(ROUTER, 'agent-capabilities.json')));
-    expect(Object.keys(registry.roles)).toHaveLength(16);
+    expect(Object.keys(registry.roles)).toHaveLength(18);
+    expect(registry.roles.security.profile).toBe('_arcwright/awm/agents/security.md');
+    expect(registry.roles.research.skills).toEqual([]);
+    expect(registry.roles.verifier.profile).toBe('_arcwright/awm/agents/verifier.md');
+    expect(registry.roles.verifier.skills).toEqual(registry.roles['review-orchestrator'].skills);
     const f = sourceFixture();
     expect(invocation.auditAgentCapabilities(f.sourceRoot).issues).toEqual([]);
     put(f.sourceRoot, '_arcwright/awm/agents/new-role.md', 'Read agent-runtime.md');

@@ -13,7 +13,7 @@ Execute the [shared team procedure](../subagent-protocol/references/team-executi
 | --- | --- | --- |
 | Architect | `architect` (`arcwright-architect`) | Read-only structure/integration audit |
 | UX | `ux-designer` (`arcwright-ux-designer`) | Read-only accessibility, interaction, visual/token audit |
-| Security | `review-orchestrator` (`arcwright-review-orchestrator`), security lens | Read-only vulnerability audit and final sign-off |
+| Security | `security` (`arcwright-security`) | Read-only vulnerability audit and final sign-off |
 | Dev | `dev` (`arcwright-dev`) | Remediation source changes |
 
 ## Stages

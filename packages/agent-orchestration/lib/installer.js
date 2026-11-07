@@ -28,6 +28,7 @@ const { detectPlatform } = require('./platform');
 const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
 const { listClaudeProfileDirs } = require('./herdrAssets');
 const { loadCustomization } = require('./customization');
+const { prepareRoleUpdate, assertRoleUpdateComplete } = require('./role-update');
 const { adaptKiroContent } = require('./kiro-adapter');
 const { SKILL_POLICY } = require('./skill-policy');
 const { prepareGlobalSharing, runGlobalSharing, signInWalkthrough } = require('./account-prompts');
@@ -607,7 +608,13 @@ async function readManifest(arcwrightDir) {
 async function writeManifest(arcwrightDir, manifest) {
   const p = path.join(arcwrightDir, MANIFEST_FILE);
   await fs.ensureDir(path.dirname(p));
-  await fs.writeFile(p, yaml.stringify(manifest), 'utf8');
+  const temporary = `${p}.${crypto.randomUUID()}.next`;
+  try {
+    await fs.writeFile(temporary, yaml.stringify(manifest), { encoding: 'utf8', flag: 'wx' });
+    await fs.rename(temporary, p);
+  } finally {
+    await fs.remove(temporary);
+  }
 }
 
 async function readFilesManifest(arcwrightDir) {
@@ -1008,7 +1015,7 @@ function refreshAdaptedAliasGuards(pending, prefix) {
  * Copy the selected generic skills, optionally transform text files for a
  * platform, and record exactly the bytes written in the install manifest.
  */
-async function copySkillTree({ skillsSrc, skillsDest, flags, entries, relPrefix, chalk, logLabel, transform, manifestDir, ownershipPrefixes = [] }) {
+async function copySkillTree({ skillsSrc, skillsDest, flags, entries, relPrefix, chalk, logLabel, transform, manifestDir, ownershipPrefixes = [], preview = false }) {
   if (!await fs.pathExists(skillsSrc)) return [];
   if (path.resolve(skillsSrc) === path.resolve(skillsDest)) {
     console.log(chalk.gray('  ○ .agents/skills/ already the source (skipped copy)'));
@@ -1062,13 +1069,17 @@ async function copySkillTree({ skillsSrc, skillsDest, flags, entries, relPrefix,
   // Check old files too: a customized reference must protect its bundle even
   // when the new release has removed that reference.
   for (const rel of new Set([...pending.keys(), ...owned.keys()])) {
-    if (!isSafeManifestPath(rel) || !selectedBundles.has(bundle(rel))) continue;
+    if (!isSafeManifestPath(rel) || !selectedBundles.has(bundle(rel)) || (preview && bundle(rel) !== 'arcwright')) continue;
     const current = await state(path.join(skillsDest, rel));
     if (current.missing) continue;
     if (current.blocked || current.directory ||
         (current.hash !== pending.get(rel)?.hash && current.hash !== owned.get(rel)?.hash)) {
       preserved.add(bundle(rel));
     }
+  }
+  if (preview) {
+    if (preserved.has('arcwright')) throw new Error(`Role update incomplete: preserved customized discovery bundle at ${skillsDest}`);
+    return skillFiles;
   }
   for (const [rel, item] of pending) {
     if (preserved.has(bundle(rel))) continue;
@@ -1966,6 +1977,82 @@ async function updateGitignore(projectRoot, mode, chalk, outputFolder = '_arcwri
 
 function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
+// Resolve role assets using the same source and host paths as their writers.
+async function preflightRoles({ modules, tools, projectRoot, isGlobal, homes, platform, flags }) {
+  const root = isGlobal ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright');
+  const context = { isGlobal, projectRoot, effectiveArwDir: root, homes, platform };
+  const owned = new Map((await readFilesManifest(root)).map(entry => [resolveInstalledPath(entry.relPath, context), entry.hash]));
+  const candidates = new Map();
+  const add = (full, content) => candidates.set(path.resolve(full), { full: path.resolve(full), content: Buffer.from(content) });
+  const nativeModules = [...new Set(['awm', 'awb', ...modules])];
+  const nativeRoles = new Set();
+  for (const mod of nativeModules) {
+    for (const rel of await glob('agents/**/*.md', { cwd: path.join(SRC_DIR, mod), nodir: true })) {
+      nativeRoles.add(path.basename(rel, '.md'));
+    }
+  }
+  for (const mod of modules) {
+    const source = path.join(SRC_DIR, mod);
+    if (!await fs.pathExists(source)) continue;
+    const files = await glob('{agents/**/*.md,resources/agent-menus/**/*.md}', { cwd: source, nodir: true });
+    for (const rel of files) {
+      add(path.join(root, mod, rel), await fs.readFile(path.join(source, rel)));
+    }
+  }
+  for (const rel of ['agent-runtime.md', 'delivery-workflow.md']) {
+    const source = path.join(SRC_DIR, 'core/resources', rel);
+    if (await fs.pathExists(source)) add(path.join(root, 'core/resources', rel), await fs.readFile(source));
+  }
+  const target = (tool, rel) => isGlobal ? resolveToolPath(tool, rel, true, homes, platform) : path.join(projectRoot, rel);
+  for (const tool of tools) {
+    if (isGlobal && homes.codeShadowTools?.has(tool)) continue;
+    const skillRoots = {
+      'claude-code': ['.agents/skills', isGlobal ? '.claude/skills' : '.agents/skills'],
+      codex: [isGlobal ? '.codex/skills' : '.agents/skills', '.agents/skills'],
+      opencode: [isGlobal ? '.opencode/skills' : '.agents/skills', '.agents/skills'],
+      grok: [isGlobal ? '.grok/skills' : '.agents/skills', isGlobal ? '.grok/skills' : '.agents/skills'],
+      kiro: ['.kiro/skills', '.kiro/skills'],
+      hermes: isGlobal ? ['.hermes/skills', '.hermes/skills'] : null,
+    };
+    if (skillRoots[tool]) {
+      const [relPrefix, relative] = skillRoots[tool];
+      await copySkillTree({ skillsSrc: path.join(SRC_DIR, '.agents/skills'), skillsDest: target(tool, relative),
+        flags, entries: [], relPrefix, manifestDir: root, preview: true,
+        ownershipPrefixes: isGlobal && ['codex', 'opencode'].includes(tool) ? ['.codex/skills', '.opencode/skills'] : [],
+        ...(tool === 'kiro' ? { transform: adaptKiroContent } : {}) });
+    }
+    if (['claude-code', 'grok'].includes(tool)) {
+      const prefix = tool === 'grok' ? '.grok/agents' : '.claude/agents';
+      const stubs = await writeClaudeAgentStubs(SRC_DIR, target(tool, prefix), { green: value => value }, tool === 'grok' ? nativeModules : modules, { preview: true, relPrefix: prefix });
+      for (const stub of stubs) add(stub.full, stub.content);
+    }
+    const prefix = { 'claude-code': '.claude/commands', grok: '.grok/commands', opencode: '.config/opencode/commands', cursor: '.cursor/commands' }[tool];
+    if (prefix && !(tool === 'cursor' && isGlobal)) {
+      const source = path.join(SRC_DIR, '.claude/commands');
+      if (await fs.pathExists(source)) {
+        const names = filterCommandNames((await fs.readdir(source)).filter(name => name.endsWith('.md')), flags);
+        for (const name of names) {
+          const text = await fs.readFile(path.join(source, name), 'utf8');
+          if (!/_arcwright\/[a-z-]+\/agents\//.test(text)) continue;
+          const destination = tool === 'opencode' && !isGlobal ? path.join(projectRoot, '.opencode/commands', name) : path.join(target(tool, prefix), name);
+          add(destination, tool === 'cursor' ? adaptCursorCommand(text) : text);
+        }
+      }
+    }
+    if (tool === 'kiro') {
+      for (const rel of await glob('**/*', { cwd: path.join(SRC_DIR, '.kiro/steering'), nodir: true })) {
+        add(path.join(target(tool, '.kiro/steering'), rel), await fs.readFile(path.join(SRC_DIR, '.kiro/steering', rel)));
+      }
+      for (const slug of nativeRoles) {
+        const name = `arcwright-${slug}.json`;
+        const source = path.join(SRC_DIR, '.kiro/agents', name);
+        if (await fs.pathExists(source)) add(path.join(target(tool, '.kiro/agents'), name), await fs.readFile(source));
+      }
+    }
+  }
+  return prepareRoleUpdate({ candidates: [...candidates.values()], owned, root });
+}
+
 // ─── Install ─────────────────────────────────────────────────────────────────
 
 async function install(opts) {
@@ -2463,6 +2550,15 @@ async function install(opts) {
   if (resolvedAwsInfra) modulesToInstall.add('aws-infra');
   if (resolvedUnnamedPm) modulesToInstall.add('unnamed-pm');
 
+  const roleUpdate = await preflightRoles({ modules: [...modulesToInstall], tools: resolvedTools,
+    projectRoot, isGlobal, homes, platform,
+    flags: { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra } });
+
+  // Publish incomplete state before replacing any module or native role assets.
+  // Keep the previous choices intact so a subsequent update can resume safely.
+  await writeManifest(isGlobal ? path.join(homes.linux, '.arcwright') : arcwrightDir,
+    { ...existingManifest, roleMigration: 'pending' });
+
   const newFileEntries = [];
   const preservedConfigPaths = new Set();
   const managedSettings = [];
@@ -2482,20 +2578,17 @@ async function install(opts) {
 
     const destMod = resolveWithin(effectiveArwDir, mod);
 
-    // Preserve config.yaml on update
+    // Never replace existing configuration, even temporarily: an interrupted
+    // copy must not depend on restoring user settings from process memory.
     const configDest = path.join(destMod, 'config.yaml');
-    let existingConfig = null;
-    if (isUpdate && await fs.pathExists(configDest)) {
-      existingConfig = await fs.readFile(configDest, 'utf8');
-      preservedConfigPaths.add(configDest);
-    }
+    const preserveConfig = isUpdate && await fs.pathExists(configDest);
+    if (preserveConfig) preservedConfigPaths.add(configDest);
 
     await fs.ensureDir(destMod);
-    await fs.copy(srcMod, destMod, { overwrite: true });
-
-    if (existingConfig) {
-      await fs.writeFile(configDest, existingConfig, 'utf8');
-    }
+    await fs.copy(srcMod, destMod, {
+      overwrite: true,
+      filter: (_source, destination) => !preserveConfig || destination !== configDest,
+    });
 
     const files = await glob('**/*', { cwd: srcMod, nodir: true });
     for (const rel of files) {
@@ -2732,6 +2825,7 @@ async function install(opts) {
   // ── Manifest write ────────────────────────────────────────────────────────
   const now = new Date().toISOString();
   const manifest = {
+    roleMigration: 'pending',
     version: require('../package.json').version,
     installDate: existingManifest?.installDate || now,
     lastUpdated: now,
@@ -2771,6 +2865,9 @@ async function install(opts) {
     : effectiveArwDir;
   await writeManifest(manifestDir, manifest);
   await writeFilesManifest(manifestDir, newFileEntries);
+  await roleUpdate.complete();
+  manifest.roleMigration = 'complete';
+  await writeManifest(manifestDir, manifest);
   if (isGlobal && preparedSharing && (opts.sharing !== undefined || !sharingWasOffered && !yes)) await signInWalkthrough(preparedSharing, opts);
 
   console.log(`\n${chalk.bold.green('✓ Done!')} ${installedCount} files ${isUpdate ? 'updated' : 'installed'}.`);
@@ -2850,7 +2947,8 @@ function printSkillPrerequisites(chalk) {
 async function status(opts) {
   const { directory = process.cwd() } = opts;
   const projectRoot = path.resolve(directory);
-  const arcwrightDir = path.join(projectRoot, '_arcwright');
+  const homes = opts.homes || getHomes(detectPlatform());
+  const arcwrightDir = opts.global ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright');
   const chalk = (await import('chalk')).default;
 
   if (!await fs.pathExists(arcwrightDir)) {
@@ -2860,6 +2958,7 @@ async function status(opts) {
   }
 
   const manifest = await readManifest(arcwrightDir);
+  await assertRoleUpdateComplete(arcwrightDir, manifest);
   console.log(chalk.bold.blue('Arcwright Status'));
   if (manifest) {
     console.log(`  Version:   ${chalk.cyan(manifest.version || '?')}`);
@@ -3994,7 +4093,7 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
   const manifestEntries = [];
   let written = 0;
 
-  await fs.ensureDir(agentDest);
+  if (!options.preview) await fs.ensureDir(agentDest);
 
   for (const mod of selectedStubModules) {
     const agentsSrc = path.join(srcDir, mod, 'agents');
@@ -4043,15 +4142,15 @@ async function writeClaudeAgentStubs(srcDir, agentDest, chalk, modules, options 
         '',
       ].join('\n');
 
-      await fs.writeFile(stubPath, stub, 'utf8');
+      if (!options.preview) await fs.writeFile(stubPath, stub, 'utf8');
       written++;
 
       const relManifestPath = `${relPrefix}/${stubName}`;
-      manifestEntries.push({ relPath: relManifestPath, hash: sha256(stub) });
+      manifestEntries.push({ relPath: relManifestPath, hash: sha256(stub), ...(options.preview ? { full: stubPath, content: Buffer.from(stub) } : {}) });
     }
   }
 
-  if (written > 0) {
+  if (written > 0 && !options.preview) {
     console.log(chalk.green(`  ✓ ${written} agent stubs → ${logLabel}`));
   }
 

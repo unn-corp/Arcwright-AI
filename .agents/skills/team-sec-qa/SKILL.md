@@ -11,7 +11,7 @@ Execute the [shared team procedure](../subagent-protocol/references/team-executi
 
 | Role | Profile / native alias | Responsibility |
 | --- | --- | --- |
-| Security | `review-orchestrator` (`arcwright-review-orchestrator`), security lens | Vulnerability findings and final read-only sign-off |
+| Security | `security` (`arcwright-security`) | Vulnerability findings and final read-only sign-off |
 | Dev | `dev` (`arcwright-dev`) | Security remediation source changes |
 | QA | `qa` (`arcwright-qa`) | Independent live exploit-path verification and evidence |
 

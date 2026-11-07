@@ -21,32 +21,22 @@ Identify exploitable security vulnerabilities in code. Report only **HIGH CONFID
 | **Diff review** (this file) | "Is this changed code exploitable?" | `/security-review`, `/sec-loop` |
 | **Posture scan** | "Does this repo implement each control correctly?" | `posture/posture-scan.md` → `/security-scan` |
 
-The **posture scan** walks 12 application-security domains (auth & authz, password hashing,
-input validation, SQLi/XSS/CSRF, JWT, rate limiting, secret/env management, API routes,
-HTTPS, dependency CVEs, file uploads, logging), an optional 13th — **AWS IaC posture**
-(`posture/aws-cdk.md`: CDK/CloudFormation/Terraform IAM, S3, encryption, security groups,
-WAF/API-throttling, secrets, CloudTrail) when infrastructure code is present, and a 14th —
-**API token & credential scoping** (`posture/token-scoping.md`: least privilege for tokens
-the app holds and issues), a 15th — **API inventory, versioning & shadow/zombie
-endpoints** (`posture/api-inventory.md`), and a 16th — **database server hardening**
-(`posture/database-hardening.md`: pg_hba/`trust`, PUBLIC grants, app-as-superuser,
-`SECURITY DEFINER` search_path, `sslmode`) when DB config/migrations are present, and a 17th —
-**browser & client-side security** (`posture/browser-security.md`: CSP, security headers,
-Subresource Integrity, clickjacking, Trusted Types) when the app serves HTML, and an 18th —
-**error & exception handling / fail-closed** (`posture/error-handling.md`, OWASP A10:2025),
-and topics 19–22 — **multi-tenancy isolation & business logic**
-(`posture/multitenancy-logic.md`), **SSRF & insecure deserialization**
-(`posture/ssrf-deserialization.md`), **container & image hardening**
-(`posture/container-hardening.md`), **AI/LLM & WebSocket security**
-(`posture/ai-websocket.md`), a 23rd — **user input & form field security**
-(`posture/input-fields.md`: client-vs-server validation, rich-text sanitization, Unicode
-normalization, ReDoS, sensitive-field hygiene), and a 24th — **data classification & field-level
-encryption** (`posture/data-encryption.md`: classify/minimize PII, column-level encryption of
-restricted fields, card tokenization, KMS key management). The whole set is mapped to both the **OWASP Top 10:2025** (web)
-and the **OWASP API Security Top 10**. It emits a report card and is
-hybrid: runs real tools (npm audit, gitleaks, trivy, pip-audit, govulncheck, semgrep,
-cdk-nag, checkov, cfn-lint) where installed and falls back to LLM analysis. It reuses the
-same confidence rules, severity table, and references below.
+Posture scanning is a separate conditional procedure in posture/posture-scan.md.
+Select only relevant domains and actually available tools; retain its scoped
+confidence and evidence rules. A scoped diff review is not a posture certification.
+
+## Unavailable conditional guidance
+
+Resolve the relevant guide before claiming its coverage. The following conditional
+paths may be absent: languages/go.md, languages/rust.md, languages/java.md,
+infrastructure/kubernetes.md, infrastructure/terraform.md,
+infrastructure/ci-cd.md and infrastructure/cloud.md. Name the missing path and
+check, mark affected coverage INCOMPLETE and block dependent sign-off. Continue
+separately supported investigation, but do not claim a global pass, fetch a guide
+or silently substitute a generic checklist. An authorized traceable alternative
+requires the responsible security owner to confirm its procedure/evidence before
+substitution. Conditional posture or cloud reading grants no scan/cloud authority.
+Planning risk assessment is distinct from confirmed exploitable findings.
 
 ## Scope: Research vs. Reporting
 

@@ -322,24 +322,8 @@
             "test",
             "tests",
             "testing",
-            "regression"
-          ]
-        },
-        {
-          "name": "playwright-cli",
-          "when": [
-            "browser",
-            "playwright",
-            "web ui",
-            "e2e"
-          ]
-        },
-        {
-          "name": "security-review",
-          "when": [
-            "security",
-            "auth",
-            "permissions"
+            "coverage",
+            "mock"
           ]
         }
       ]
@@ -348,12 +332,7 @@
       "profile": "_arcwright/awm/agents/review-orchestrator.md",
       "skills": [
         {
-          "name": "goal-backward-verify",
-          "when": [
-            "acceptance",
-            "complete",
-            "readiness"
-          ]
+          "name": "goal-backward-verify"
         },
         {
           "name": "test-quality",
@@ -363,37 +342,6 @@
             "testing",
             "coverage",
             "mock"
-          ]
-        },
-        {
-          "name": "security-review",
-          "when": [
-            "security",
-            "auth",
-            "permissions",
-            "threat"
-          ]
-        },
-        {
-          "name": "clean-code-standards",
-          "when": [
-            "architecture",
-            "maintainability",
-            "refactor"
-          ]
-        },
-        {
-          "name": "ux-audit",
-          "when": [
-            "ux",
-            "accessibility",
-            "usability"
-          ]
-        },
-        {
-          "name": "rust-review-auditor",
-          "when": [
-            "rust"
           ]
         }
       ]
@@ -593,6 +541,18 @@
           ]
         }
       ]
+    },
+    "security": {
+      "profile": "_arcwright/awm/agents/security.md",
+      "skills": [
+        {
+          "name": "security-review"
+        }
+      ]
+    },
+    "research": {
+      "profile": "_arcwright/awm/agents/research.md",
+      "skills": []
     }
   }
 }

@@ -1,6 +1,9 @@
 # Agent runtime contract
 
 Read once per task and reuse. This contract overrides legacy activation examples.
+For planning, implementation and delivery gates read the relative companion
+[delivery-workflow.md](delivery-workflow.md) once when relevant. Preserve supplied
+revision-bound evidence and report missing required inputs as incomplete.
 
 - Execute a supplied user/orchestrator/model task directly. Show a menu only when
   requested or no actionable task exists. Ask only for consequential missing facts.
@@ -8,7 +11,9 @@ Read once per task and reuse. This contract overrides legacy activation examples
   to that profile in the active module tree. Read it for help/navigation, explicit
   menu commands, or needed workflow routing. Its handlers and command IDs remain
   available; ordinary task execution does not preload it.
-- Read applicable `AGENTS.md` and relevant config once, preserving host precedence.
+- Read applicable root and nested `AGENTS.md` and required host instruction files
+  and relevant config once, preserving host precedence. Reuse unchanged context;
+  reread after context loss or changed/missing references.
   Shared rules belong there; required host files import them. Select
   skills from catalog metadata; load only the entrypoint and references needed now.
   Avoid duplicate project/global copies and unrelated skill loads.

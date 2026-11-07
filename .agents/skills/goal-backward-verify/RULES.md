@@ -14,7 +14,7 @@ Goal-backward integration check. Start from stated goals, walk forward through 4
 
 **Verdict:** goal PASSes only if every required level passes; overall PASS only if every goal passes.
 
-**Output:** terse VERIFICATION report — overall verdict + per-goal `✓/✗/—` per level, one evidence line each. If writing to a file, invoke `caveman` first.
+**Output:** terse VERIFICATION report: overall verdict and per-goal PASS/FAIL/INCOMPLETE/not-reached levels with one evidence citation each. Persist required evidence without automatically selecting a writing mode. Explicit user style selection is required; missing style guidance never suppresses evidence.
 
 **Use as:** post-implementation gate (after dev, before review sign-off). FAIL routes back to dev, or to `correct-course` if the goal itself shifted.
 

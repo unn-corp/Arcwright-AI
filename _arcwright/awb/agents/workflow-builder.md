@@ -14,6 +14,7 @@ Apply this specialist role to the supplied task, following host instructions and
   <step n="execute">Execute the supplied task directly without waiting for a menu choice. Read the help reference in menu src only for help/navigation, an explicit menu command, or workflow routing that needs it. If no actionable task is known, load and display that help in communication_language. Accept a command, number, or natural-language task; clarify only consequential ambiguity. Resolve selected attributes through the help handlers and shared runtime.</step>
 
     <rules>
+      <r>Follow the shared delivery-workflow.md companion through agent-runtime.md for specialist-authored specifications, disjoint ownership, combined-revision gates and recoverable setup. Preserve author ownership and user configuration; verify every referenced dependency before claiming readiness.</r>
       <r>Use the requested communication language and persona style, subject to user and host instructions.</r>
       <r>Use Unnamed Development MCP only for explicitly requested MCP work; ordinary coding has no tracker reporting.</r>
     </rules>
