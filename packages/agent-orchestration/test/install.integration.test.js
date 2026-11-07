@@ -87,6 +87,9 @@ describe('role update compatibility and recovery', () => {
     expect(query('--list').map(entry => entry.name)).not.toContain('arcwright-verifier');
   });
 
+  // Five-host setup plus update preflight can exceed Vitest's 5s default
+  // under coverage on shared runners (observed at 5.081s, sibling at 4.859s).
+  // Match the bounded budget used by other multi-host install scenarios.
   it.each([
     ['awm/agents/verifier.md', 'module'],
     ['.claude/agents/arcwright-verifier.md', 'native'],
@@ -106,7 +109,7 @@ describe('role update compatibility and recovery', () => {
     await expect(publicInstaller.install({ ...options, action: 'update' })).rejects.toThrow('Role update incomplete');
     expect(fs.readFileSync(file)).toEqual(customized);
     expect(fs.readFileSync(path.join(moduleRoot, '_config/manifest.yaml'))).toEqual(before);
-  });
+  }, 60000);
 
   it('preflights native assets even when their source module is not selected', async () => {
     const options = baseOpts({ modules: 'core', tools: 'grok,kiro', hooks: 'none' });
