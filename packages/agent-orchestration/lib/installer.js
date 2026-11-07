@@ -28,7 +28,7 @@ const { detectPlatform } = require('./platform');
 const { upsertManagedBlock, cleanupManagedBlocks } = require('./managed-md');
 const { listClaudeProfileDirs } = require('./herdrAssets');
 const { loadCustomization } = require('./customization');
-const { prepareRoleUpdate } = require('./role-update');
+const { prepareRoleUpdate, assertRoleUpdateComplete } = require('./role-update');
 const { adaptKiroContent } = require('./kiro-adapter');
 const { SKILL_POLICY } = require('./skill-policy');
 const { prepareGlobalSharing, runGlobalSharing, signInWalkthrough } = require('./account-prompts');
@@ -2554,6 +2554,11 @@ async function install(opts) {
     projectRoot, isGlobal, homes, platform,
     flags: { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra } });
 
+  // Publish incomplete state before replacing any module or native role assets.
+  // Keep the previous choices intact so a subsequent update can resume safely.
+  await writeManifest(isGlobal ? path.join(homes.linux, '.arcwright') : arcwrightDir,
+    { ...existingManifest, roleMigration: 'pending' });
+
   const newFileEntries = [];
   const preservedConfigPaths = new Set();
   const managedSettings = [];
@@ -2945,7 +2950,8 @@ function printSkillPrerequisites(chalk) {
 async function status(opts) {
   const { directory = process.cwd() } = opts;
   const projectRoot = path.resolve(directory);
-  const arcwrightDir = path.join(projectRoot, '_arcwright');
+  const homes = opts.homes || getHomes(detectPlatform());
+  const arcwrightDir = opts.global ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright');
   const chalk = (await import('chalk')).default;
 
   if (!await fs.pathExists(arcwrightDir)) {
@@ -2955,10 +2961,8 @@ async function status(opts) {
   }
 
   const manifest = await readManifest(arcwrightDir);
+  await assertRoleUpdateComplete(arcwrightDir, manifest);
   console.log(chalk.bold.blue('Arcwright Status'));
-  if (manifest?.roleMigration === 'pending') {
-    throw new Error('Role migration incomplete; retain recovery copies and retry the supported update after resolving the failure.');
-  }
   if (manifest) {
     console.log(`  Version:   ${chalk.cyan(manifest.version || '?')}`);
     console.log(`  Installed: ${chalk.dim(manifest.installDate || '?')}`);

@@ -88,4 +88,21 @@ async function prepareRoleUpdate({ candidates, owned, root }) {
   return { complete: () => save('complete') };
 }
 
-module.exports = { prepareRoleUpdate };
+// The receipt precedes asset writes, including updates interrupted before the
+// manifest checkpoint. Treat unreadable or invalid recovery state as incomplete.
+async function assertRoleUpdateComplete(root, manifest) {
+  const incomplete = () => new Error('Role migration incomplete; retain recovery copies and retry the supported update after resolving the failure.');
+  if (manifest?.roleMigration === 'pending') throw incomplete();
+  let receipt;
+  try {
+    const saved = await state(path.join(root, 'backups', 'role-update', 'receipt.json'));
+    if (saved.missing) return;
+    if (saved.conflict) throw incomplete();
+    receipt = JSON.parse(saved.bytes.toString('utf8'));
+  } catch {
+    throw incomplete();
+  }
+  if (receipt?.schemaVersion !== 1 || receipt.status !== 'complete') throw incomplete();
+}
+
+module.exports = { prepareRoleUpdate, assertRoleUpdateComplete };

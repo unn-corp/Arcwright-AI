@@ -35,6 +35,26 @@ function createResolver({ skillRoot = path.resolve(__dirname, '..'), cwd = proce
     }
     if (current === path.dirname(current)) break;
   }
+  // Installed discovery must not recommend mixed role assets during recovery.
+  // Native clients that read files directly must check installation status first.
+  if (!sourceFallback) {
+    const root = projectRoot && fs.existsSync(path.join(projectRoot, '_arcwright'))
+      ? path.join(projectRoot, '_arcwright') : path.join(home, '.arcwright');
+    try {
+      const manifest = path.join(root, '_config/manifest.yaml');
+      // This scalar is emitted unquoted by the installer's manifest writer.
+      if (fs.existsSync(manifest) && /^roleMigration:\s*pending\s*$/m.test(fs.readFileSync(manifest, 'utf8'))) {
+        throw new Error('pending');
+      }
+      const receipt = path.join(root, 'backups/role-update/receipt.json');
+      if (fs.existsSync(receipt)) {
+        const record = JSON.parse(fs.readFileSync(receipt, 'utf8'));
+        if (record?.schemaVersion !== 1 || record.status !== 'complete') throw new Error('pending');
+      }
+    } catch {
+      throw new Error('Role migration incomplete; retain recovery copies and retry the supported update after resolving the failure.');
+    }
+  }
   const skillsRoots = [...new Set([...projectSkills, siblingSkills])];
   const installed = skillsRoots.flatMap(root => fs.existsSync(root) ? fs.readdirSync(root) : []);
   const gateEnabled = gate => metadata.gateEnabled(gate, installed);

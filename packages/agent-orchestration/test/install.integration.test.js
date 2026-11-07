@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vite
 import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync, execSync, spawnSync } from 'node:child_process';
 import installer, { publicInstaller } from './organization-fixture.js';
 import baseInstaller from '../lib/installer.js';
 
@@ -54,6 +54,14 @@ const baseOpts = (over = {}) => ({
 });
 
 describe('role update compatibility and recovery', () => {
+  it('reports unreadable recovery metadata as incomplete instead of normal status', async () => {
+    const options = baseOpts({ hooks: 'none' });
+    await publicInstaller.install(options);
+    const receipt = path.join(projectDir, '_arcwright/backups/role-update/receipt.json');
+    fs.outputFileSync(receipt, '{invalid');
+    await expect(publicInstaller.status(options)).rejects.toThrow('Role migration incomplete');
+  });
+
   it('keeps legacy native invocation while excluding it from canonical catalog and crew', async () => {
     await publicInstaller.install(baseOpts({ global: true, tools: 'claude-code,codex,hermes,kiro,opencode,grok,cursor', hooks: 'none' }));
     for (const host of ['.claude', '.grok']) {
@@ -166,10 +174,10 @@ Read agent-runtime.md and verify the assigned goals.
     expect(fs.readFileSync(path.join(moduleRoot, 'awm/agents/verifier.md'), 'utf8')).toContain('verification-only mode');
   });
 
-  it('retains recovery bytes after interrupted replacement and retries idempotently', async () => {
-    const options = baseOpts({ hooks: 'none' });
+  it.each([false, true])('reports interrupted replacement before retry and recovers (global=%s)', async global => {
+    const options = baseOpts({ hooks: 'none', global });
     await publicInstaller.install(options);
-    const moduleRoot = path.join(projectDir, '_arcwright');
+    const moduleRoot = global ? path.join(homeDir, '.arcwright') : path.join(projectDir, '_arcwright');
     const file = path.join(moduleRoot, 'awm/agents/verifier.md');
     const previous = 'Previously shipped verification role\n';
     fs.writeFileSync(file, previous);
@@ -189,9 +197,32 @@ Read agent-runtime.md and verify the assigned goals.
     expect(pending.status).toBe('pending');
     const saved = pending.backups.find(entry => entry.path === file);
     expect(fs.readFileSync(path.join(moduleRoot, 'backups/role-update', saved.backup), 'utf8')).toBe(previous);
-    expect(fs.readFileSync(path.join(moduleRoot, '_config/manifest.yaml'))).toEqual(beforeManifest);
+    await expect(publicInstaller.status(options)).rejects.toThrow('Role migration incomplete');
+    const cliStatus = () => spawnSync(process.execPath, [path.join(PKG_ROOT, 'bin/arcwright.js'),
+      'status', '--directory', projectDir, ...(global ? ['--global'] : [])], {
+      env: { ...process.env, HOME: homeDir }, encoding: 'utf8',
+    });
+    const finder = path.join(global ? homeDir : projectDir, global ? '.claude/skills' : '.agents/skills', 'arcwright/scripts/find-entrypoint.cjs');
+    const discover = () => spawnSync(process.execPath, [finder, 'arcwright-verifier'], {
+      cwd: projectDir, env: { ...process.env, HOME: homeDir }, encoding: 'utf8',
+    });
+    expect(discover().status).toBe(1);
+    expect(discover().stderr).toContain('Role migration incomplete');
+    const interrupted = cliStatus();
+    expect(interrupted.status).toBe(1);
+    expect(interrupted.stderr).toContain('Role migration incomplete');
+    expect(interrupted.stdout).not.toContain('Version:');
+    const pendingManifest = fs.readFileSync(path.join(moduleRoot, '_config/manifest.yaml'));
+    // Also detect an interruption left by an older updater with stale metadata.
+    fs.writeFileSync(path.join(moduleRoot, '_config/manifest.yaml'), beforeManifest);
+    await expect(publicInstaller.status(options)).rejects.toThrow('Role migration incomplete');
+    fs.writeFileSync(path.join(moduleRoot, '_config/manifest.yaml'), pendingManifest);
+    expect(await publicInstaller._internal.readManifest(moduleRoot)).toMatchObject({ ...((await import('yaml')).parse(beforeManifest.toString())), roleMigration: 'pending' });
     await publicInstaller.install({ ...options, action: 'update' });
     expect(JSON.parse(fs.readFileSync(receiptPath)).status).toBe('complete');
+    await expect(publicInstaller.status(options)).resolves.toBeUndefined();
+    expect(cliStatus().status).toBe(0);
+    expect(discover().status).toBe(0);
     expect(fs.readFileSync(file, 'utf8')).toContain('verification-only');
     await publicInstaller.install({ ...options, action: 'update' });
     expect(fs.readFileSync(path.join(moduleRoot, 'backups/role-update', saved.backup), 'utf8')).toBe(previous);
