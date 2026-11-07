@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, execSync } from 'node:child_process';
 import installer, { publicInstaller } from './organization-fixture.js';
+import baseInstaller from '../lib/installer.js';
 
 const { install, uninstall } = installer;
 const { readManifest, writeManifest } = installer._internal;
@@ -50,6 +51,154 @@ const baseOpts = (over = {}) => ({
   tmux: false,
   modelLaunchers: false,
   ...over,
+});
+
+describe('role update compatibility and recovery', () => {
+  it('keeps legacy native invocation while excluding it from canonical catalog and crew', async () => {
+    await publicInstaller.install(baseOpts({ global: true, tools: 'claude-code,codex,hermes,kiro,opencode,grok,cursor', hooks: 'none' }));
+    for (const host of ['.claude', '.grok']) {
+      const stub = fs.readFileSync(path.join(homeDir, host, 'agents/arcwright-verifier.md'), 'utf8');
+      expect(stub).toContain('awm/agents/verifier.md');
+      expect(fs.existsSync(path.join(homeDir, host, 'agents/arcwright-security.md'))).toBe(true);
+      expect(fs.existsSync(path.join(homeDir, host, 'agents/arcwright-research.md'))).toBe(true);
+    }
+    const native = JSON.parse(fs.readFileSync(path.join(homeDir, '.kiro/agents/arcwright-verifier.json')));
+    expect(native.prompt).toBe('file://_arcwright/awm/agents/verifier.md');
+    expect(fs.readFileSync(path.join(homeDir, '.arcwright/awm/agents/verifier.md'), 'utf8')).toContain('verification-only mode');
+    const crew = JSON.parse(fs.readFileSync(path.join(homeDir, '.kiro/agents/team.json'))).toolsSettings.crew.availableAgents;
+    expect(crew).toEqual(expect.arrayContaining(['arcwright-security', 'arcwright-research', 'arcwright-review-orchestrator']));
+    expect(crew).not.toContain('arcwright-verifier');
+    const catalog = JSON.parse(fs.readFileSync(path.join(homeDir, '.agents/skills/arcwright/catalog.json')));
+    expect(catalog.entries.map(entry => entry.name)).not.toContain('arcwright-verifier');
+    expect(catalog.compatibility.map(entry => entry.name)).toContain('arcwright-verifier');
+    const finder = path.join(homeDir, '.agents/skills/arcwright/scripts/find-entrypoint.cjs');
+    const query = input => JSON.parse(execFileSync(process.execPath, [finder, input], {
+      cwd: projectDir, env: { ...process.env, HOME: homeDir }, encoding: 'utf8',
+    }));
+    expect(query('arcwright-verifier')[0].resolvedPath).toBe(path.join(homeDir, '.arcwright/awm/agents/verifier.md'));
+    expect(query('--list').map(entry => entry.name)).not.toContain('arcwright-verifier');
+  });
+
+  it.each([
+    ['awm/agents/verifier.md', 'module'],
+    ['.claude/agents/arcwright-verifier.md', 'native'],
+    ['.kiro/agents/arcwright-verifier.json', 'native'],
+    ['.cursor/commands/verifier.md', 'native'],
+    ['.grok/agents/arcwright-verifier.md', 'native'],
+    ['.opencode/commands/verifier.md', 'native'],
+    ['.agents/skills/arcwright/agent-capabilities.json', 'native'],
+  ])('preserves a customized %s and old manifests before any role replacement', async (relative, kind) => {
+    const options = baseOpts({ tools: 'claude-code,kiro,cursor,grok,opencode', hooks: 'none' });
+    await publicInstaller.install(options);
+    const moduleRoot = path.join(projectDir, '_arcwright');
+    const file = path.join(kind === 'module' ? moduleRoot : projectDir, relative);
+    const before = fs.readFileSync(path.join(moduleRoot, '_config/manifest.yaml'));
+    fs.appendFileSync(file, '\nPersonal role override\n');
+    const customized = fs.readFileSync(file);
+    await expect(publicInstaller.install({ ...options, action: 'update' })).rejects.toThrow('Role update incomplete');
+    expect(fs.readFileSync(file)).toEqual(customized);
+    expect(fs.readFileSync(path.join(moduleRoot, '_config/manifest.yaml'))).toEqual(before);
+  });
+
+  it('preflights native assets even when their source module is not selected', async () => {
+    const options = baseOpts({ modules: 'core', tools: 'grok,kiro', hooks: 'none' });
+    await publicInstaller.install(options);
+    const native = path.join(projectDir, '.grok/agents/arcwright-verifier.md');
+    fs.appendFileSync(native, '\nPersonal native override\n');
+    const original = fs.readFileSync(native);
+    await expect(publicInstaller.install({ ...options, action: 'update' })).rejects.toThrow('Role update incomplete');
+    expect(fs.readFileSync(native)).toEqual(original);
+  });
+
+  it('rejects a redirected legacy launcher without changing its target', async () => {
+    const options = baseOpts({ hooks: 'none' });
+    await publicInstaller.install(options);
+    const stub = path.join(projectDir, '.claude/agents/arcwright-verifier.md');
+    const personal = path.join(homeDir, 'personal.md');
+    fs.writeFileSync(personal, 'Personal instructions\n');
+    fs.removeSync(stub);
+    fs.symlinkSync(personal, stub);
+    await expect(publicInstaller.install({ ...options, action: 'update' })).rejects.toThrow();
+    expect(fs.readFileSync(personal, 'utf8')).toBe('Personal instructions\n');
+    expect(fs.lstatSync(stub).isSymbolicLink()).toBe(true);
+  });
+
+  it('reports an incomplete checkpoint when final ownership recording fails, then retries', async () => {
+    const options = baseOpts({ hooks: 'none' });
+    await publicInstaller.install(options);
+    const writeFile = fs.writeFile;
+    const fault = vi.spyOn(fs, 'writeFile').mockImplementation(async (file, ...args) => {
+      if (String(file).endsWith('files-manifest.csv')) throw new Error('ownership checkpoint unavailable');
+      return writeFile(file, ...args);
+    });
+    await expect(publicInstaller.install({ ...options, action: 'update' })).rejects.toThrow('ownership checkpoint unavailable');
+    fault.mockRestore();
+    const manifest = await publicInstaller._internal.readManifest(path.join(projectDir, '_arcwright'));
+    expect(manifest.roleMigration).toBe('pending');
+    await publicInstaller.install({ ...options, action: 'update' });
+    expect((await publicInstaller._internal.readManifest(path.join(projectDir, '_arcwright'))).roleMigration).toBe('complete');
+  });
+
+  it('reverses role assets through an explicitly selected trusted prior-bundle fixture', async () => {
+    const options = baseOpts({ hooks: 'none', teams: false, channel: 'next' });
+    await publicInstaller.install(options);
+    const moduleRoot = path.join(projectDir, '_arcwright');
+    const config = path.join(moduleRoot, 'awm/config.yaml');
+    fs.appendFileSync(config, '\n# Project override survives reversal\n');
+    const prior = path.join(homeDir, 'trusted-prior-source');
+    fs.copySync(path.join(PKG_ROOT, 'src'), prior);
+    const previousProfile = `---
+name: verifier
+description: Previous verification fixture
+---
+<agent id="verifier" title="Previous verifier"><activation>
+Read agent-runtime.md and verify the assigned goals.
+</activation><menu src="../resources/agent-menus/verifier.md"/></agent>
+`;
+    fs.writeFileSync(path.join(prior, 'awm/agents/verifier.md'), previousProfile);
+    const selected = baseInstaller.createInstaller({ sourceDir: prior });
+    await selected.install({ ...options, action: 'update' });
+    expect(fs.readFileSync(path.join(moduleRoot, 'awm/agents/verifier.md'), 'utf8')).toBe(previousProfile);
+    expect(fs.readFileSync(path.join(projectDir, '.claude/agents/arcwright-verifier.md'), 'utf8')).toContain('Previous verification fixture');
+    expect(fs.readFileSync(config, 'utf8')).toContain('Project override survives reversal');
+    expect(await selected._internal.readManifest(moduleRoot)).toMatchObject({ channel: 'next', teams: false, hooks: 'none', roleMigration: 'complete' });
+    await publicInstaller.install({ ...options, action: 'update' });
+    expect(fs.readFileSync(path.join(moduleRoot, 'awm/agents/verifier.md'), 'utf8')).toContain('verification-only mode');
+  });
+
+  it('retains recovery bytes after interrupted replacement and retries idempotently', async () => {
+    const options = baseOpts({ hooks: 'none' });
+    await publicInstaller.install(options);
+    const moduleRoot = path.join(projectDir, '_arcwright');
+    const file = path.join(moduleRoot, 'awm/agents/verifier.md');
+    const previous = 'Previously shipped verification role\n';
+    fs.writeFileSync(file, previous);
+    const csvPath = path.join(moduleRoot, '_config/files-manifest.csv');
+    const hash = (await import('node:crypto')).createHash('sha256').update(previous).digest('hex');
+    fs.writeFileSync(csvPath, fs.readFileSync(csvPath, 'utf8').replace(/^awm\/agents\/verifier\.md,[^\n]+/m, `awm/agents/verifier.md,${hash}`));
+    const beforeManifest = fs.readFileSync(path.join(moduleRoot, '_config/manifest.yaml'));
+    const originalCopy = fs.copy;
+    const copy = vi.spyOn(fs, 'copy').mockImplementation(async (from, to, ...args) => {
+      await originalCopy(from, to, ...args);
+      if (to === path.join(moduleRoot, 'awm')) throw new Error('interrupted role copy');
+    });
+    await expect(publicInstaller.install({ ...options, action: 'update' })).rejects.toThrow('interrupted role copy');
+    copy.mockRestore();
+    const receiptPath = path.join(moduleRoot, 'backups/role-update/receipt.json');
+    const pending = JSON.parse(fs.readFileSync(receiptPath));
+    expect(pending.status).toBe('pending');
+    const saved = pending.backups.find(entry => entry.path === file);
+    expect(fs.readFileSync(path.join(moduleRoot, 'backups/role-update', saved.backup), 'utf8')).toBe(previous);
+    expect(fs.readFileSync(path.join(moduleRoot, '_config/manifest.yaml'))).toEqual(beforeManifest);
+    await publicInstaller.install({ ...options, action: 'update' });
+    expect(JSON.parse(fs.readFileSync(receiptPath)).status).toBe('complete');
+    expect(fs.readFileSync(file, 'utf8')).toContain('verification-only');
+    await publicInstaller.install({ ...options, action: 'update' });
+    expect(fs.readFileSync(path.join(moduleRoot, 'backups/role-update', saved.backup), 'utf8')).toBe(previous);
+    // Recovery restores the preserved prior asset; it never treats update-to-latest as rollback.
+    fs.copyFileSync(path.join(moduleRoot, 'backups/role-update', saved.backup), file);
+    expect(fs.readFileSync(file, 'utf8')).toBe(previous);
+  });
 });
 
 describe('install() — fresh project install', () => {

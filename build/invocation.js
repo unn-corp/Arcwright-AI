@@ -140,7 +140,11 @@ function buildInvocationCatalog(root, { source = false, write = true } = {}) {
     }
   }
   entries.sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name));
-  const catalog = { schemaVersion: 1, entries };
+  // Compatibility procedures remain exact-query callable, outside canonical lists.
+  const compatibility = entries.filter(entry => /^(?:arcwright-)?verifier$/.test(entry.name)
+    && ['agent', 'command'].includes(entry.kind));
+  const catalog = { schemaVersion: 1,
+    entries: entries.filter(entry => !compatibility.includes(entry)), compatibility };
   put('catalog.json', `${JSON.stringify(catalog, null, 2)}\n`);
   return catalog;
 }

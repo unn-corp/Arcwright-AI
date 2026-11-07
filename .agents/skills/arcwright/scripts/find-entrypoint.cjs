@@ -18,7 +18,8 @@ function createResolver({ skillRoot = path.resolve(__dirname, '..'), cwd = proce
   const catalog = sourceFallback
     ? require(sourceHelper).buildInvocationCatalog(sourceRoot, { source: true, write: false })
     : fs.existsSync(catalogFile) ? JSON.parse(fs.readFileSync(catalogFile, 'utf8')) : { schemaVersion: 1, entries: [] };
-  if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.entries)) throw new Error('Unsupported Arcwright invocation catalog.');
+  if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.entries)
+    || (catalog.compatibility !== undefined && !Array.isArray(catalog.compatibility))) throw new Error('Unsupported Arcwright invocation catalog.');
   const siblingSkills = path.dirname(skillRoot);
   const projectSkills = [];
   let projectRoot = null;
@@ -90,11 +91,12 @@ function createResolver({ skillRoot = path.resolve(__dirname, '..'), cwd = proce
     const direct = skillPath(`.agents/skills/${name}/SKILL.md`);
     return direct ? { name, kind: 'skill', executionKind: 'skill', resolvedPath: direct } : null;
   };
-  return { catalog, catalogFile: fs.existsSync(catalogFile) ? catalogFile : null, sourceFallback,
+  return { catalog, catalogAvailable: Boolean(sourceFallback || fs.existsSync(catalogFile)), catalogFile: fs.existsSync(catalogFile) ? catalogFile : null, sourceFallback,
     skillRoot, projectRoot, skillsRoots, gateEnabled, skillPath, agentPath, resolve, skillByName };
 }
 
 function findEntrypoints(resolver, input) {
+  if (resolver.catalogAvailable === false) throw new Error('Arcwright catalog discovery unavailable: no installed catalog or source fallback.');
   const query = input.replace(/^[/\$]/, '').toLowerCase();
   const words = query.split(/[^a-z0-9]+/).filter(word => word.length > 1);
   const list = input === '--list';
@@ -106,7 +108,8 @@ function findEntrypoints(resolver, input) {
     return words.reduce((score, word) => score + (title.has(word) ? 10 : 0) + (description.has(word) ? 1 : 0), 0);
   };
   const routes = new Map();
-  for (const entry of resolver.catalog.entries.map(resolver.resolve).filter(Boolean).sort((a, b) => priority[a.kind] - priority[b.kind])) {
+  const compatibility = list ? [] : (resolver.catalog.compatibility || []).filter(entry => entry.name === query);
+  for (const entry of [...resolver.catalog.entries, ...compatibility].map(resolver.resolve).filter(Boolean).sort((a, b) => priority[a.kind] - priority[b.kind])) {
     const score = list ? 1 : rank(entry);
     if (!routes.has(entry.name)) routes.set(entry.name, { ...entry, score });
     else routes.get(entry.name).score = Math.max(routes.get(entry.name).score, score);

@@ -691,7 +691,8 @@ function bundleKiroAgents() {
     'arcwright-qa', 'arcwright-quick-flow-solo-dev', 'arcwright-review-orchestrator',
     'arcwright-sm', 'arcwright-tech-writer', 'arcwright-ux-designer',
     'arcwright-aws-infra', 'arcwright-unnamed-pm', 'arcwright-verifier',
-  ];
+    'arcwright-security', 'arcwright-research',
+  ].filter(name => name !== 'arcwright-verifier');
 
   /** Kiro CLI addendum appended to team/team-style agent prompts. */
   // Default is the in-process `subagent` tool (DAG pipeline with `stages` and

@@ -131,7 +131,14 @@ describe('model invocation routes and context audit', () => {
     }
     const catalog = buildInvocationCatalog(f.root, { source: true });
     const agents = catalog.entries.filter(entry => entry.kind === 'agent');
-    expect(agents).toHaveLength(16);
+    expect(agents).toHaveLength(17);
+    expect(agents.map(agent => agent.name)).toEqual(expect.arrayContaining([
+      'arcwright-security', 'arcwright-research', 'arcwright-review-orchestrator',
+    ]));
+    expect(agents.map(agent => agent.name)).not.toContain('arcwright-verifier');
+    expect(catalog.compatibility).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'arcwright-verifier', path: '_arcwright/awm/agents/verifier.md' }),
+    ]));
     expect(agents.map(agent => agent.name)).toContain('arcwright-master');
     for (const agent of agents) {
       const text = fs.readFileSync(path.join(f.root, agent.path), 'utf8');
