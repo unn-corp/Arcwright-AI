@@ -179,6 +179,10 @@ Read agent-runtime.md and verify the assigned goals.
     await publicInstaller.install(options);
     const moduleRoot = global ? path.join(homeDir, '.arcwright') : path.join(projectDir, '_arcwright');
     const file = path.join(moduleRoot, 'awm/agents/verifier.md');
+    const config = path.join(moduleRoot, 'awm/config.yaml');
+    fs.writeFileSync(config, fs.readFileSync(config, 'utf8').replace(/^project_name:.*$/m, 'project_name: QA_CUSTOM_PRESERVE'));
+    const customConfig = fs.readFileSync(config);
+    expect(customConfig.toString()).toContain('project_name: QA_CUSTOM_PRESERVE');
     const previous = 'Previously shipped verification role\n';
     fs.writeFileSync(file, previous);
     const csvPath = path.join(moduleRoot, '_config/files-manifest.csv');
@@ -192,6 +196,7 @@ Read agent-runtime.md and verify the assigned goals.
     });
     await expect(publicInstaller.install({ ...options, action: 'update' })).rejects.toThrow('interrupted role copy');
     copy.mockRestore();
+    expect(fs.readFileSync(config)).toEqual(customConfig);
     const receiptPath = path.join(moduleRoot, 'backups/role-update/receipt.json');
     const pending = JSON.parse(fs.readFileSync(receiptPath));
     expect(pending.status).toBe('pending');
@@ -223,9 +228,11 @@ Read agent-runtime.md and verify the assigned goals.
     await expect(publicInstaller.status(options)).resolves.toBeUndefined();
     expect(cliStatus().status).toBe(0);
     expect(discover().status).toBe(0);
+    expect(fs.readFileSync(config)).toEqual(customConfig);
     expect(fs.readFileSync(file, 'utf8')).toContain('verification-only');
     await publicInstaller.install({ ...options, action: 'update' });
     expect(fs.readFileSync(path.join(moduleRoot, 'backups/role-update', saved.backup), 'utf8')).toBe(previous);
+    expect(fs.readFileSync(config)).toEqual(customConfig);
     // Recovery restores the preserved prior asset; it never treats update-to-latest as rollback.
     fs.copyFileSync(path.join(moduleRoot, 'backups/role-update', saved.backup), file);
     expect(fs.readFileSync(file, 'utf8')).toBe(previous);

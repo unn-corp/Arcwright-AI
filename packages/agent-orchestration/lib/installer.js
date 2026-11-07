@@ -2578,20 +2578,17 @@ async function install(opts) {
 
     const destMod = resolveWithin(effectiveArwDir, mod);
 
-    // Preserve config.yaml on update
+    // Never replace existing configuration, even temporarily: an interrupted
+    // copy must not depend on restoring user settings from process memory.
     const configDest = path.join(destMod, 'config.yaml');
-    let existingConfig = null;
-    if (isUpdate && await fs.pathExists(configDest)) {
-      existingConfig = await fs.readFile(configDest, 'utf8');
-      preservedConfigPaths.add(configDest);
-    }
+    const preserveConfig = isUpdate && await fs.pathExists(configDest);
+    if (preserveConfig) preservedConfigPaths.add(configDest);
 
     await fs.ensureDir(destMod);
-    await fs.copy(srcMod, destMod, { overwrite: true });
-
-    if (existingConfig) {
-      await fs.writeFile(configDest, existingConfig, 'utf8');
-    }
+    await fs.copy(srcMod, destMod, {
+      overwrite: true,
+      filter: (_source, destination) => !preserveConfig || destination !== configDest,
+    });
 
     const files = await glob('**/*', { cwd: srcMod, nodir: true });
     for (const rel of files) {
