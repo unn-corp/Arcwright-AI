@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import invocation from '../../../build/invocation.js';
 import efficiency from '../../../build/skill-efficiency.js';
 import hostCommands from '../../../build/host-commands.js';
+import finder from '../../../.agents/skills/arcwright/scripts/find-entrypoint.cjs';
 
 const { auditContext, buildInvocationCatalog, description, resolveAliases } = invocation;
 const { auditEfficiency, auditScopes, refreshBaseline } = efficiency;
@@ -90,6 +91,84 @@ describe('local host command adapters', () => {
     expect(() => syncHostCommands(f.root)).toThrow('Invalid command manifest');
     expect(fs.readFileSync(path.join(outside, 'sentinel.md'), 'utf8')).toBe('Outside data.\n');
     expect(fs.readdirSync(outside)).toEqual(['sentinel.md']);
+  });
+});
+
+describe('mixed-scope recovery discovery', () => {
+  const mixed = () => {
+    const f = fixture();
+    const project = path.join(f.root, 'project');
+    const home = path.join(f.root, 'home');
+    const skillRoot = path.join(home, '.agents/skills/arcwright');
+    const entries = [
+      { kind: 'agent', name: 'arcwright-dev', description: 'Develop', path: '_arcwright/awm/agents/dev.md' },
+      { kind: 'agent', name: 'arcwright-security', description: 'Review security', path: '_arcwright/awm/agents/security.md' },
+      { kind: 'skill', name: 'local-skill', description: 'Local procedure', path: '.agents/skills/local-skill/SKILL.md' },
+      { kind: 'skill', name: 'global-skill', description: 'Global procedure', path: '.agents/skills/global-skill/SKILL.md' },
+      { kind: 'command', name: 'check', description: 'Check', path: 'commands/check.md' },
+    ];
+    put(home, '.agents/skills/arcwright/catalog.json', JSON.stringify({ schemaVersion: 1, entries }));
+    put(home, '.agents/skills/arcwright/commands/check.md', 'Global check');
+    put(home, '.arcwright/_config/manifest.yaml', 'roleMigration: complete\n');
+    put(home, '.arcwright/awm/agents/security.md', 'Global security role');
+    put(home, '.agents/skills/global-skill/SKILL.md', 'Global skill');
+    put(project, '_arcwright/_config/manifest.yaml', 'roleMigration: complete\n');
+    put(project, '_arcwright/awm/agents/dev.md', 'Local development role');
+    put(project, '.agents/skills/local-skill/SKILL.md', 'Local skill');
+    return { project, home, skillRoot };
+  };
+
+  it.each(['manifest', 'receipt'])('blocks the actual global role fallback with pending %s, preserving a ready local role', marker => {
+    const f = mixed();
+    const resolver = finder.createResolver({ ...f, cwd: f.project });
+    if (marker === 'manifest') put(f.home, '.arcwright/_config/manifest.yaml', 'roleMigration: pending\n');
+    else put(f.home, '.arcwright/backups/role-update/receipt.json', JSON.stringify({ schemaVersion: 1, status: 'pending' }));
+    expect(finder.findEntrypoints(resolver, 'arcwright-dev')[0].resolvedPath)
+      .toBe(path.join(f.project, '_arcwright/awm/agents/dev.md'));
+    expect(() => finder.findEntrypoints(resolver, 'arcwright-security')).toThrow('Role migration incomplete');
+    put(f.home, '.arcwright/_config/manifest.yaml', 'roleMigration: complete\n');
+    put(f.home, '.arcwright/backups/role-update/receipt.json', JSON.stringify({ schemaVersion: 1, status: 'complete' }));
+    expect(finder.findEntrypoints(resolver, 'arcwright-security')[0].resolvedPath)
+      .toBe(path.join(f.home, '.arcwright/awm/agents/security.md'));
+    put(f.project, '_arcwright/_config/manifest.yaml', 'roleMigration: pending\n');
+    expect(finder.findEntrypoints(resolver, 'arcwright-security')[0].resolvedPath)
+      .toBe(path.join(f.home, '.arcwright/awm/agents/security.md'));
+    expect(() => finder.findEntrypoints(resolver, 'arcwright-dev')).toThrow('Role migration incomplete');
+  });
+
+  it('checks selected skill and command owners while retaining independent local procedures', () => {
+    const f = mixed();
+    put(f.home, '.arcwright/_config/manifest.yaml', 'roleMigration: pending\n');
+    put(f.project, '.agents/skills/custom-local/SKILL.md', 'Custom local skill');
+    put(f.home, '.agents/skills/custom-global/SKILL.md', 'Custom global skill');
+    const resolver = finder.createResolver({ ...f, cwd: f.project });
+    expect(resolver.skillByName('local-skill').resolvedPath).toBe(path.join(f.project, '.agents/skills/local-skill/SKILL.md'));
+    expect(resolver.skillByName('custom-local').resolvedPath).toBe(path.join(f.project, '.agents/skills/custom-local/SKILL.md'));
+    expect(() => resolver.skillByName('global-skill')).toThrow('Role migration incomplete');
+    expect(() => resolver.skillByName('custom-global')).toThrow('Role migration incomplete');
+    const linked = path.join(f.project, '.agents/skills/custom-local/SKILL.md');
+    fs.unlinkSync(linked);
+    fs.symlinkSync(path.join(f.home, '.agents/skills/global-skill/SKILL.md'), linked);
+    expect(() => resolver.skillByName('custom-local')).toThrow('Role migration incomplete');
+    expect(() => finder.findEntrypoints(resolver, 'check')).toThrow('Role migration incomplete');
+    const localRouter = path.join(f.project, '.agents/skills/arcwright');
+    put(f.project, '.agents/skills/arcwright/catalog.json', JSON.stringify({ schemaVersion: 1, entries: [
+      { kind: 'command', name: 'check', description: 'Check', path: 'commands/check.md' },
+    ] }));
+    put(f.project, '.agents/skills/arcwright/commands/check.md', 'Local check');
+    const local = finder.createResolver({ skillRoot: localRouter, cwd: f.project, home: f.home });
+    expect(finder.findEntrypoints(local, 'check')[0].resolvedPath).toBe(path.join(localRouter, 'commands/check.md'));
+    fs.symlinkSync(path.join(f.home, '.agents/skills/global-skill'), path.join(f.project, '.agents/skills/global-skill'), 'junction');
+    const command = { kind: 'command', name: 'check', description: 'Check', path: 'commands/check.md', redirect: {
+      name: 'global-skill', path: '.agents/skills/global-skill/SKILL.md',
+      commandHash: crypto.createHash('sha256').update('Local check').digest('hex'),
+      sources: [{ path: '.agents/skills/global-skill/SKILL.md', hash: crypto.createHash('sha256').update('Global skill').digest('hex') }],
+    } };
+    expect(() => local.resolve(command)).toThrow('Role migration incomplete');
+    put(f.project, '.agents/skills/arcwright/commands/check.md', 'Customized local check');
+    expect(local.resolve(command)).toMatchObject({ executionKind: 'command', resolvedPath: path.join(localRouter, 'commands/check.md') });
+    put(f.project, '_arcwright/_config/manifest.yaml', 'roleMigration: pending\n');
+    expect(() => finder.findEntrypoints(local, 'check')).toThrow('Role migration incomplete');
   });
 });
 
