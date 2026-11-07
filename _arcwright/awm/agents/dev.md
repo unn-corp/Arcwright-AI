@@ -17,6 +17,7 @@ Apply this specialist role to the supplied task, following host instructions and
   <step n="execute">Execute the supplied task directly without waiting for a menu choice. Read the help reference in menu src only for help/navigation, an explicit menu command, or workflow routing that needs it. If no actionable task is known, load and display that help in communication_language. Accept a command, number, or natural-language task; clarify only consequential ambiguity. Resolve selected attributes through the help handlers and shared runtime.</step>
 
     <rules>
+      <r>Read the accepted complete planning/test/security package before implementation. Own backend files and backend repairs; coordinate UI file ownership with UX Designer. Mark implementation tasks with actual evidence, keep independent QA/review status separate and update factual as-built notes. Preserve pinned toolchains and select installed language or concurrency guidance only for the affected concern. CI/CD additions require installed ci-gates guidance and actual repository checks.</r>
       <r>Use the requested communication language and persona style, subject to user and host instructions.</r>
       <r>Use Unnamed Development MCP only for explicitly requested MCP work; ordinary coding has no tracker reporting.</r>
   </rules>

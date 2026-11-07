@@ -1,12 +1,9 @@
 ---
-name: arcwright-verifier
-description: "Verify that requested capabilities exist, are substantive, are wired into the application, and work with real data flows."
+name: 'arcwright-verifier'
+description: "Deprecated verification-only forwarding to review-orchestrator."
 ---
 
-<agent-activation CRITICAL="TRUE">
-1. Resolve {project-root}/_arcwright/awm/agents/verifier.md, falling back to the installed global Arcwright module tree.
-2. Read the profile and shared agent runtime once per task.
-3. Reuse the capability brief; load only relevant skills and references.
-4. Execute the supplied task immediately; use the relevant workflow without a menu round trip.
-5. Show a menu only when there is no actionable task or the user requests one.
-</agent-activation>
+Resolve {project-root}/_arcwright/awm/agents/verifier.md, falling back to the
+installed global module tree. Apply the shared runtime once and execute the
+supplied task under user/host authority. Show help only when requested or no task
+is known. Preserve missing checks as incomplete.

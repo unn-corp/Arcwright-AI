@@ -15,6 +15,7 @@ in force.
             2. Process the complete file and follow all instructions within it
           </handler>
           <handler type="cmd">
+            VF: Directly verify stated goals through L1-L4; missing proof is incomplete.
             RO-FULL: Execute the requested full or concurrent review cycle below.
             RO-AR: Obtain an independent architecture/adversarial review with the agreed lens.
             RO-PMR: Obtain the selected party-mode/UX review; use a UX lens only for relevant UI scope.
@@ -27,10 +28,11 @@ in force.
       </menu-handlers>
 
 <menu>
-      <item n="1" cmd="RO-FULL">Run full review cycle: AR → fix if needed → PMR → emit verdict</item>
-      <item n="2" cmd="RO-AR">Spawn AR sub-agent (architect lens) for code/spec review only</item>
-      <item n="3" cmd="RO-PMR">Spawn PMR sub-agent (party mode / ux lens) for review only</item>
-      <item n="4" cmd="RO-FIX">Spawn fix sub-agent (dev) to apply findings from last AR pass</item>
+      <item cmd="VF">Verify goals directly through existence, substance, wiring and real data flow</item>
+      <item n="1" cmd="RO-FULL">Run full review cycle: direct review, required verification and selected lanes</item>
+      <item n="2" cmd="RO-AR">Perform assigned architecture/adversarial review; add independent lenses only when authorized</item>
+      <item n="3" cmd="RO-PMR">Perform the selected review lens; delegate only when authorized</item>
+      <item n="4" cmd="RO-FIX">Route confirmed fixes to the owned backend or UI slice</item>
       <item n="5" cmd="RO-STATUS">Show current cycle state and sub-agent results</item>
       <item n="6" cmd="RO-VERDICT">Emit final verdict block to spawner and write to review-verdict-{step}.md</item>
       <item n="7" cmd="EXIT">Exit Review Orchestrator</item>

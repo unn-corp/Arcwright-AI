@@ -170,13 +170,20 @@ Development MCP.
 |-------|------|
 | Analyst | Requirements elicitation, business analysis |
 | Architect | System design, technical decisions |
-| Developer | Implementation |
+| Developer | Backend implementation and owned repairs |
 | PM | Product management, PRDs |
 | QA | Testing, validation, Playwright |
 | Scrum Master | Sprint management, team coordination |
 | Tech Writer | Documentation |
-| UX Designer | Interface design, accessibility |
-| Verifier | Goal-backward verification (exists → substantive → wired → real data flows) before sign-off |
+| UX Designer | Interface design, UI implementation and owned repairs |
+| Code Review (`review-orchestrator`) | Direct source review and goal-backward verification before sign-off |
+| Security | Planning risk assessment and independent post-QA security review |
+| Research | Primary-source evidence, dated sources and uncertainty |
+
+Legacy `verifier` entrypoints forward to `review-orchestrator` in verification-only
+mode; they are not a separate canonical role. See the shared
+[delivery workflow](_arcwright/core/resources/delivery-workflow.md) for planning,
+independent gates, evidence and reusable setup.
 
 Plus meta-agents for building new agents, workflows, and modules (Arcwright Builder).
 

@@ -102,7 +102,7 @@ An optional private organization pack adds its own capability entries during ins
 | `dev` | Relevant context, regression tests, debugging, CI, installed platform testing |
 | `quick-flow-solo-dev` | Scope discipline, focused tests, debugging |
 | `qa` | Useful tests, relevant runner, failure diagnosis |
-| `verifier` | Acceptance evidence, tests, browser or security checks |
+| `verifier` (deprecated) | Verification-only forwarding; not a canonical specialist |
 | `review-orchestrator` | Relevant acceptance, testing, security, architecture, UX, or Rust lens |
 | `ux-designer` | UI design, frontend taste, visual verification, usability |
 | `tech-writer` | Relevant context, agent documentation, design documentation, handoff |
@@ -113,8 +113,9 @@ An optional private organization pack adds its own capability entries during ins
 
 Selecting a role or hint preserves existing authorization. In particular,
 optional organization packs do not authorize ordinary coding to access a tracker.
-Security team presets use `review-orchestrator` with the security
-lens in the task, rather than an invented security profile.
+Security team presets use the dedicated `security` profile for an independent
+security lane. `research` owns primary-source evidence; Analyst retains business
+framing. The review-orchestrator directly reviews code and verifies L1-L4.
 
 ## Resolution and local customizations
 
@@ -144,3 +145,14 @@ policy, argument safety, and drift detection. These tests verify discovery and
 instruction wiring; they do not establish that every delegated model will always
 select the right skill. Host catalog behavior, runtime tools, and actual task
 results still require observation when those surfaces change.
+
+## Catalog availability
+
+Installed discovery uses the generated catalog in the effective arcwright skill
+root. Read-only source fallback uses build/invocation.js only in a real source
+workshop with canonical commands. Missing both is unavailable discovery, not a
+validated empty roster. Report malformed data and missing Node explicitly. Known
+profile reads may continue under authority, but missing validation is incomplete.
+Deprecated callable entries may remain visible in native pickers while canonical
+catalogs, crew lists and presets exclude them. Host registration/update support
+must be verified from actual generated and installed output.

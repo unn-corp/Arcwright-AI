@@ -17,7 +17,7 @@ natural-language behavior to the right event + matcher + command and safe-merges
 | `PreToolUse` | before a tool runs | yes (deny) | guard secrets, block destructive git/fs, protect files |
 | `PostToolUse` | after a tool succeeds | no | typecheck/lint changed files, run LSP diagnostics |
 | `Stop` | main agent finishes a turn | no | session-handoff, session-report, LEARNINGS capture |
-| `SubagentStop` | a spawned subagent finishes | no | verifier gate, registry update, decision-log append |
+| `SubagentStop` | a spawned subagent finishes | no | verification gate, registry update, decision-log append |
 | `PreCompact` | before context compaction | no | flush planning STATE to disk so nothing is lost |
 | `Notification` | permission/idle notifications | no | desktop ping on long runs |
 
@@ -46,7 +46,7 @@ Matchers filter by tool name (`Write|Edit`, `Bash`, etc.) or are omitted to matc
   `_arcwright-output/handoffs/handoff-{date}.md` (via `caveman`). Survives context resets.
 
 ### 4. Orchestration (SubagentStop) — enforce our review model
-- **Verifier sign-off** → after a dev subagent finishes an implementation task, the
+- **Code Review verification** → after a dev subagent finishes an implementation task, the
   orchestrator's `SubagentStop` data feeds the `goal-backward-verify` gate before sign-off
   (mirrors the `review-orchestrator` flow, made deterministic).
 - **Registry update** → mark the Session Agent Registry row `closed` automatically.

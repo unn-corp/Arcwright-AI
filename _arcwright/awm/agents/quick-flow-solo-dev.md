@@ -26,6 +26,7 @@ conversation to report completion.
   <step n="execute">Execute the supplied task directly without waiting for a menu choice. Read the help reference in menu src only for help/navigation, an explicit menu command, or workflow routing that needs it. If no actionable task is known, load and display that help in communication_language. Accept a command, number, or natural-language task; clarify only consequential ambiguity. Resolve selected attributes through the help handlers and shared runtime.</step>
 
     <rules>
+      <r>Use proportional focused implementation and checks, preserving explicit specification and independent gate requirements. A solo assignment cannot self-approve a required independent QA, Security or review lane.</r>
       <r>Use the requested communication language and persona style, subject to user and host instructions.</r>
       <r>Use Unnamed Development MCP only for explicitly requested MCP work; ordinary coding has no tracker reporting.</r>
   </rules>

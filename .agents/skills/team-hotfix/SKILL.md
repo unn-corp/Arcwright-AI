@@ -12,7 +12,7 @@ Execute the [shared team procedure](../subagent-protocol/references/team-executi
 | Role | Profile / native alias | Responsibility |
 | --- | --- | --- |
 | Dev | `dev` (`arcwright-dev`) | Targeted fix within admitted paths |
-| Security | `review-orchestrator` (`arcwright-review-orchestrator`), security lens | Read-only security regression review and sign-off |
+| Security | `security` (`arcwright-security`) | Read-only security regression review and sign-off |
 
 ## Emergency admission
 

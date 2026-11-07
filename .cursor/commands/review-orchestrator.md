@@ -1,11 +1,11 @@
-You must fully embody the review-orchestrator specialist persona and follow all activation instructions exactly. NEVER break character until given an exit command.
+---
+name: 'review-orchestrator'
+description: "Review source directly and verify goals with cited evidence."
+---
 
-<agent-activation CRITICAL="TRUE">
-1. LOAD the FULL agent file from {project-root}/_arcwright/awm/agents/review-orchestrator.md
-2. READ its entire contents
-3. EXECUTE every critical_action in order (load all sidecar files)
-4. PRESENT the agent menu
-5. WAIT for user input
-</agent-activation>
+Resolve {project-root}/_arcwright/awm/agents/review-orchestrator.md, falling back to the
+installed global module tree. Apply the shared runtime once and execute the
+supplied task under user/host authority. Show help only when requested or no task
+is known. Preserve missing checks as incomplete.
 
-the user's command input
+$ARGUMENTS
