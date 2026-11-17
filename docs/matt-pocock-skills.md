@@ -27,7 +27,7 @@ The workshop already contains the skills and command wrappers. Invoke `/matt-poc
 
 Scripts, templates, references, and host metadata are maintained alongside each skill. Experimental and miscellaneous upstream skills are excluded. Namespaced references prevent collisions with existing Arcwright skills such as `grill-me` and `triage`.
 
-Model invocation is enabled. The shared `INTEGRATION.md` loads once per task and covers native/Arcwright Code/T3 tools, existing authorization, read-only installed bundles, project-scoped output, and private secret input. Installation does not run setup, change trackers, or grant authority for external operations. Generated deliverables have no AI/model bylines, notices, or coauthor trailers; required source, copyright, and license notices remain.
+Model invocation is enabled. The shared `INTEGRATION.md` loads once per task and covers T3 Code tools, existing authorization, read-only installed bundles, project-scoped output, and private secret input. Installation does not run setup, change trackers, or grant authority for external operations. Generated deliverables have no AI/model bylines, notices, or coauthor trailers; required source, copyright, and license notices remain.
 
 ## Maintain our versions
 

@@ -59,7 +59,7 @@ Report per-goal L1-L4 proof, findings, actual lane results and missing coverage.
 
   Collect actual results, merge duplicate findings, and route confirmed defects
   to their assigned owner. Check the affected fixes before another review; a
-  fresh Arcwright Code round receives the original scope, prior findings,
+  fresh T3 Code round receives the original scope, prior findings,
   responses, and unresolved objections. Preserve a required gate when a reviewer
   is unavailable and report it as incomplete rather than silently substituting
   a pass. Do not continue an unresolved debate beyond the supplied budget.

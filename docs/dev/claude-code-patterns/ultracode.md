@@ -187,7 +187,7 @@ several in sequence and read each result before deciding the next phase.
 [Triage](../../../.agents/skills/triage/SKILL.md) can recommend this runtime
 only on a host that actually provides it. Follow the shared
 [subagent protocol](../../../.agents/skills/subagent-protocol/SKILL.md) for
-provider/model inheritance, permissions, and task lifecycle. Arcwright Code
+provider/model inheritance, permissions, and task lifecycle. T3 Code
 review rounds use fresh app-owned delegated tasks; this Claude-specific API does
 not override that rule. Goal workflows are conditional on the installed host.
 

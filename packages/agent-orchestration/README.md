@@ -20,10 +20,9 @@ arcwright update --global --sharing none
 
 Instructions live in `~/.arcwright/AGENTS.md`; adopted personal bundles live in
 `~/.arcwright/skills/`. Credentials, settings, history, sessions and daemon state
-remain private. Arcwright Code retains ownership of shadow links. Existing
-installations stay unenrolled until selected, and omitted flags preserve saved
-choices. Opt-out restores matching installer preimages while preserving later edits,
+remain private. Existing installations stay unenrolled until selected, and
+omitted flags preserve saved choices. Opt-out restores matching installer preimages while preserving later edits,
 canonical content and backups.
 
 See [global sharing and accounts](docs/global-sharing.md) for the selection schema,
-backups, unsupported providers, Code dependencies and health policy flags.
+backups, unsupported providers, and health policy flags.

@@ -19,7 +19,7 @@ Use only fields that host accepts. Omit a model override to inherit the selected
 model where supported. Native follow-up uses that host's supported messaging tool
 and a verified live ID.
 
-For Arcwright Code/T3 Code, discover a compatible target first. Its delegated task
+For T3 Code, discover a compatible target first. Its delegated task
 shape is:
 
 ```json

@@ -1,4 +1,4 @@
-# Arcwright Code / T3 Code MCP operations
+# T3 Code MCP operations
 
 Use the exposed schemas for exact arguments; names can have a harness prefix such as `mcp__t3_code__`. These app-owned operations are part of all three workflows. They are separate from the Unnamed Development MCP, which requires its own explicit request.
 
@@ -51,7 +51,7 @@ After bounded recovery is exhausted, retain resource IDs, acceptance state, and 
 
 - Immediately call `link_pull_request({url})` when creating a PR or beginning work on an existing one. Register every worked-on layer of a stack. Before handoff, call `list_thread_pull_requests({})` and link missing relevant PRs. Surface registration failures accurately.
 - Use the repository's source-control tools or authenticated `gh` for PR creation, checks, review threads, and merging. Linking and watching do not create, approve, or merge a PR.
-- Handle existing comments/check failures, then call `watch_pull_request({url})` when waiting. Persist the delivery mode, head, open items, and next action, then **end the turn**. Arcwright wakes the parent on relevant changes. Do not poll, sleep, or create another watcher process, because the native watcher already owns continuation. Child reviewers cannot watch; their parent owns this step.
+- Handle existing comments/check failures, then call `watch_pull_request({url})` when waiting. Persist the delivery mode, head, open items, and next action, then **end the turn**. The host wakes the parent on relevant changes. Do not poll, sleep, or create another watcher process, because the native watcher already owns continuation. Child reviewers cannot watch; their parent owns this step.
 - On wake, reread actual PR state and the current head before continuing. The notification is news, not merge authorization. Reconcile `list_thread_pull_requests` after interruption so an existing subscription or PR is not duplicated.
 - Call `unwatch_pull_request({url})` when handing work back, including a ready `full-stop` PR or a blocked workflow needing the user. Leaving a watch active would keep the thread in Working rather than the user's inbox. Successful watches end automatically on merge/close. If watching still fails after bounded recovery, report the failure and the remaining next action; do not claim background monitoring exists.
 

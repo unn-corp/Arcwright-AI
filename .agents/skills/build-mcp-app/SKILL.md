@@ -23,7 +23,7 @@ and the widget's real user action before scaffolding.
    every example package.
 5. Verify tool invocation, resource loading, initialization, user interaction,
    error/empty/loading states, and the actual round trip to the server. Prefer native
-   Arcwright Code/T3 Code preview tools where supported; distinguish browser-only
+   T3 Code preview tools where supported; distinguish browser-only
    rendering from a real MCP-host integration check.
 6. Report the result, observed checks, and host/deployment limitations. Do not publish,
    deploy, provision, or add AI attribution merely because a widget was created.

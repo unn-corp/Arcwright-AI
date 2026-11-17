@@ -107,7 +107,7 @@ For important exceptions, state the observable condition and what to do then.
 
 Use the host's available file, task, delegation, browser, and evidence tools.
 Discover callable names and capabilities; do not assume a Claude-only todo or
-subagent API. Arcwright Code/T3 review rounds use a fresh `delegate_task` with the
+subagent API. T3 Code review rounds use a fresh `delegate_task` with the
 prior findings and current evidence, without `childThreadId` continuation. Keep
 returned task IDs so resumed work can reconcile existing tasks before starting
 new ones. Follow the host's orchestration and model-selection policy.

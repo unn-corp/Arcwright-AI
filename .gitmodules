@@ -1,7 +1,3 @@
-[submodule "t3code"]
-	path = t3code
-	url = https://github.com/unn-corp/Arcwright-Code.git
-	branch = main
 [submodule "vendor/unnamed-dev-skills"]
 	path = vendor/unnamed-dev-skills
 	url = https://github.com/unn-corp/unnamed-dev-skills.git

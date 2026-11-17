@@ -46,7 +46,7 @@ new submodule commits before pushing parent pointers.
 
 Create or update a PR only when requested or authorized by the enclosing workflow.
 Reuse an existing PR. For multiline bodies, use a structured API or `gh pr create
---body-file` with the exact text. In Arcwright Code/T3 Code, register every worked-on
+--body-file` with the exact text. In T3 Code, register every worked-on
 PR with `link_pull_request` and check `list_thread_pull_requests` before handoff.
 
 ## Prune gone local branches

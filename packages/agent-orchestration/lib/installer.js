@@ -3941,7 +3941,7 @@ function buildTmuxEntry() {
     '',
     '## Agent orchestration',
     '',
-    'Delegate when the task or invoked workflow calls for it, following host policy and the user\'s chosen provider/model. Read `subagent-protocol` for task IDs, focused handoffs, concurrency, and verification. Use native tools for compatible same-provider agents and Arcwright Code/T3 delegation when required; each T3 review round is a fresh task.',
+    'Delegate when the task or invoked workflow calls for it, following host policy and the user\'s chosen provider/model. Read `subagent-protocol` for task IDs, focused handoffs, concurrency, and verification. Use native tools for compatible same-provider agents and T3 Code delegation when required; each T3 review round is a fresh task.',
     '',
     'Host panes are optional visibility when the user requests them and supported viewing tools are available. Preserve the active host\'s privileges, approvals, and concurrency limits; no fixed model or extra agent is implied by skill selection.',
     '',

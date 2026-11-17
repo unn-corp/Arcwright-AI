@@ -16,7 +16,7 @@ Use this reference when the request calls for risk-based planning, coverage gate
 | Evaluate | Use `agent-evaluation` and its baseline/variant/quality/trigger cases | Behavioral evidence and an explicit scored rubric |
 | Teach Me Testing | Work from the learner's goal and current test stack; use small exercises with a stated rubric and observed answers | Learner feedback and an optional session summary |
 
-Select only needed capabilities. Work may be performed here or through available native Arcwright Code / T3 Code tools, subject to host policy and capacity. Do not invent tool names, force model changes, or start a second tracker. Persist ongoing state only where project instructions designate it; test evidence may live in the existing implementation/test artifact folder.
+Select only needed capabilities. Work may be performed here or through available native T3 Code tools, subject to host policy and capacity. Do not invent tool names, force model changes, or start a second tracker. Persist ongoing state only where project instructions designate it; test evidence may live in the existing implementation/test artifact folder.
 
 ## Evidence that supports a gate
 

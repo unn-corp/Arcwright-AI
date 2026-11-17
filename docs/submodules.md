@@ -8,16 +8,15 @@ cd Arcwright-AI
 node build/build.js
 ```
 
-Only these repositories remain registered as submodules:
-
-| Path | Purpose |
-| --- | --- |
-| `t3code/` | Arcwright Code application fork |
-| `vendor/unnamed-dev-skills/` | Optional private [organization pack](organization-packs.md) |
-
-Initialize only the repository you intend to work on, for example `git submodule update --init t3code`. Neither is a dependency of public skill packaging. Follow Arcwright Code's own instructions for build and release work, including [the workspace rules](../AGENTS.md) and [its release procedure](../t3code/docs/operations/fork-releases.md#default-agent-delivery). The private organization pack has its own authorized [setup procedure](organization-packs.md).
+`vendor/unnamed-dev-skills/` is the only registered submodule. Follow the
+[organization pack setup procedure](organization-packs.md) when you need it.
+Public skill packaging does not require the private pack.
 
 ## Separate applications
+
+The Arcwright Code fork has been retired from this workshop. Existing workspaces
+may retain an ignored `t3code/` checkout with Git metadata in `.git/modules/t3code/`.
+Preserve those files while any local branches or linked worktrees still need them.
 
 [Ungate](https://github.com/unn-corp/ungate) and [Hermes](https://github.com/unn-corp/hermes-agent) are maintained in their own repositories. They are no longer submodules or downloads in new Arcwright workshop clones. Follow each application's own instructions for build and release work.
 

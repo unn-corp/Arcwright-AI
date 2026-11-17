@@ -179,7 +179,7 @@ function formatCodexHomeHealth(result) {
     if (statuses.has('pending-ownership')) lines.push(`${home.label}: Arcwright Code ownership is unknown because settings are unreadable; daemon health pending, no change made.`);
     if (statuses.has('repaired')) lines.push(`${home.label}: Codex daemon state is now account-local.`);
     if (statuses.has('would-repair')) lines.push(`${home.label}: would make Codex daemon state account-local (dry run).`);
-    if (statuses.has('pending-arcwright-code')) lines.push(`${home.label}: Arcwright Code links this home's daemon state. Install an Arcwright Code build with per-account daemon state; no change made.`);
+    if (statuses.has('pending-arcwright-code')) lines.push(`${home.label}: This home uses daemon links managed by a legacy Arcwright Code installation. The installer left them in place.`);
     for (const [field, entry] of Object.entries(DAEMON_ENTRIES)) {
       if (home[field] === 'conflict') lines.push(`${home.label}: ${entry} is not a directory or link; left unchanged.`);
     }

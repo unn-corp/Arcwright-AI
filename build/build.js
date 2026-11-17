@@ -562,7 +562,7 @@ without a Skill tool. Reuse context and briefs instead of preloading catalogs.
 
 Inherit the user's provider, model, effort, permissions, and budget. Discover
 actual host tools and live model IDs when an override is needed. Reuse native
-agents only when supported and live. In Arcwright Code/T3, each review round uses
+agents only when supported and live. In T3 Code, each review round uses
 a fresh delegate_task with prior findings and current evidence; retain taskId and
 use task_status/task_cancel. Separate worktrees start from the parent local
 commit without uncommitted edits. Do not create top-level threads or recurring
@@ -709,7 +709,7 @@ Give every stage a small capability brief, scope, source identity, and evidence
 requirements. Sequence dependent stages and keep conditional consultation and
 review loops in the coordinator when a static DAG cannot express them.
 
-For Arcwright Code/T3 delegated work, discover live targets, retain task IDs,
+For T3 Code delegated work, discover live targets, retain task IDs,
 and create a fresh delegated task per review round with prior findings. Do not
 substitute a top-level thread or childThreadId messaging. Use host completion
 and status tools, actual concurrency limits, and proportionate verification.

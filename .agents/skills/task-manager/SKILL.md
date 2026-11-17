@@ -74,7 +74,7 @@ Keep blocked and skipped work distinct from done.
 4. Dispatch through supported host tools. Native follow-up applies only to a live
    compatible agent; every T3 delegated review round is fresh and carries prior
    findings. Retain task IDs. `--worktree` requests supported checkout isolation;
-   in Arcwright Code use `delegate_task` with `isolation: "worktree"`. It starts
+   in T3 Code use `delegate_task` with `isolation: "worktree"`. It starts
    from the parent local commit without copying uncommitted edits. Do not invent
    native `baseRef` fields or commit somebody else's changes for isolation.
 5. Inspect returned changes and public behavior. For test work use `test-quality`,

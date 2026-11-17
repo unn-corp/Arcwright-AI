@@ -3,7 +3,7 @@
 Use the shared [delegation protocol](../../subagent-protocol/SKILL.md). These
 workflow adapters do not imply a tool, role, provider, or model is installed.
 
-## Arcwright Code / T3
+## T3 Code
 
 - Use native delegation/status tools. Keep skill-owned ledgers, reports, and
   snapshots under the active project’s `_arcwright/_memory/skill-runs/` run.

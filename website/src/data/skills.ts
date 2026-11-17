@@ -224,13 +224,13 @@ export const skills: Skill[] = [
   {
     name: 'Full Send',
     slug: 'full-send',
-    description: 'Explicitly authorized delivery through implementation, verification, review, and a protected PR merge in Arcwright Code or T3 Code.',
+    description: 'Explicitly authorized delivery through implementation, verification, review, and a protected PR merge in T3 Code.',
     category: 'workflow',
   },
   {
     name: 'Full Stop',
     slug: 'full-stop',
-    description: 'Complete implementation, verification, and review in Arcwright Code or T3 Code, leaving the PR ready for the user to merge.',
+    description: 'Complete implementation, verification, and review in T3 Code, leaving the PR ready for the user to merge.',
     category: 'workflow',
   },
   {

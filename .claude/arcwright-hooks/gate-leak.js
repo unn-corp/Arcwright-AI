@@ -10,8 +10,8 @@
  *
  * Scoped to the project root on purpose (same fix guard-src.js already carries):
  * the path test is applied to the path RELATIVE to $CLAUDE_PROJECT_DIR, so a
- * submodule that happens to have its own `.agents/skills/` tree (t3code does)
- * is not flagged. Only content that this repo actually publishes is checked.
+ * nested checkout with its own `.agents/skills/` tree is not flagged.
+ * Only content that this repo actually publishes is checked.
  *
  * Marker: contains the literal "arcwright-hooks" via its install path so the
  * settings.json merge can find and replace it idempotently.

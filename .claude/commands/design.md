@@ -19,7 +19,7 @@ Load only the selected mode's detail. Use `ui-ux-pro-custom` for database querie
 skills only when their guidance is needed. Do not add an interview when the brief
 already gives the answer, or a dependency for a simple styling change.
 
-For implementation or cloning, use native Arcwright Code/T3 Code preview tools
+For implementation or cloning, use native T3 Code preview tools
 first. Inspect desktop and phone screenshots, real controls, focus, and reduced
 motion; correct substantive mismatches within scope. Keep working captures and
 notes in host evidence storage or the project's Arcwright run, never an installed

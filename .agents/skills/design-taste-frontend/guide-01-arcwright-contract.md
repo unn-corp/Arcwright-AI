@@ -22,7 +22,7 @@ These rules take precedence over examples and references in this bundle.
   Helpers reject installed skill directories, path escapes, and symlinked outputs.
   Promote selected media into the app's normal asset folder as part of implementation,
   carrying its credits and updating the page's asset URLs.
-- In Arcwright Code/T3 Code, prefer the native collaborative browser. Read
+- In T3 Code, prefer the native collaborative browser. Read
   [the browser procedure](references/arcwright-browser.md) for exact calls, tab ownership,
   viewport checks, evidence storage, and the standalone inspector fallback. Do not start
   another browser just because the native preview is initially closed.

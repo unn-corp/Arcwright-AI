@@ -16,7 +16,7 @@ Editing this skill does not start a review or authorize publication or merging.
 Before the first review, ask the user **which model to use** through the host's
 question tool, or an ordinary question when no such tool exists. Offer a short
 list from the live catalog, including custom models when available; the current
-model may be an option, never an automatic selection. In Arcwright Code/T3 Code,
+model may be an option, never an automatic selection. In T3 Code,
 use `orchestrator_capabilities` for advertised provider/model IDs and options.
 Other hosts use their actual native catalog and supported delegation tools.
 
@@ -72,7 +72,7 @@ selected SKILL.md files directly when no native Skill tool exists.
    evidence, and unresolved objections. Reference accessible immutable ledger/history
    details instead of retransmitting closed discussions. Include required facts
    directly when the reviewer cannot access those artifacts. Follow the shared protocol for fresh review tasks,
-   request-ID idempotency, status, and bounded recovery. In Arcwright Code/T3 Code,
+   request-ID idempotency, status, and bounded recovery. In T3 Code,
    read [MCP operations](references/arcwright-mcp.md) for exact native calls; each
    review round is a new `delegate_task`, never a child-thread continuation.
 

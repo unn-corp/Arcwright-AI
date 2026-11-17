@@ -2,11 +2,11 @@
 /**
  * Arcwright PreToolUse(Write|Edit) guard. BLOCKS writes to this repo's
  * packages/*\/src/, which is generated build output wiped on every
- * `node build/build.js` run (see CLAUDE.md "Never edit src/ directories").
+ * `node build/build.js` run (see AGENTS.md).
  * Edits belong in lib/ or the source skill/command trees. Exits 2 to block; 0 to allow.
  *
- * Scoped to the project root on purpose: submodules (herdr, collie, t3code)
- * carry their own packages/*\/src/ trees that are real, hand-written source.
+ * Scoped to the project root on purpose: nested checkouts may carry their own
+ * packages/*\/src/ trees with hand-written source.
  * Matching the pattern anywhere in the path blocked legitimate edits there.
  *
  * Marker: contains the literal "arcwright-hooks" via its install path so the

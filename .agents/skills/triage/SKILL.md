@@ -43,7 +43,7 @@ proof of completion. State the actual verification evidence.
 ## Adapt to the host
 
 Discover callable capabilities before recommending exact commands. Native tools are
-appropriate when they support the chosen provider/model. For Arcwright Code/T3
+appropriate when they support the chosen provider/model. For T3 Code
 cross-provider, chosen-model or worktree child tasks, use supported delegation and
 retain task IDs. Every delegated review round is a fresh `delegate_task` with prior
 findings and unresolved objections; a backing child thread is not a continuation API.

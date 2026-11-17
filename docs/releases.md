@@ -74,14 +74,14 @@ into the source workshop or the real home directory.
 
 ## Scheduled publication
 
-The release workflow follows the T3 fork's cadence on `main`:
+The skills package release workflow runs on `main`:
 
 | Channel | Schedule (UTC) | Selection |
 | --- | --- | --- |
 | Nightly (`next`) | Daily at 07:23 | Publish the current main commit only when it has not already been released |
 | Stable | Sunday at 08:23 | Promote the newest eligible nightly that has been published for at least 24 hours |
 
-Both jobs require `[self-hosted, linux, x64, unn, unn-isolated, t3-ci]`.
+Both jobs require `[self-hosted, linux, x64, unn, unn-isolated]`.
 They use the organization's isolated workers, never hosted-runner fallbacks.
 GitHub schedules run from the default branch and may start late during load;
 see [scheduled workflow behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
@@ -102,8 +102,8 @@ Every publication runs source/provenance checks, package coverage gates, and
 isolated Codex/Claude install and repeat-update verification. Assets are uploaded
 to a draft, downloaded and checked against `SHA256SUMS`, then published. Nightlies
 are prereleases and never move GitHub's stable `latest` pointer. Stable installs
-remain stable; `--channel next` opts into nightlies. Schedules publish packages,
-not unattended fleet updates.
+remain stable; `--channel next` opts into nightlies. For device rollouts, follow
+the [skills fleet guide](fleet-management.md).
 
 For an authorized manual nightly or stable promotion, dispatch `release.yml` on
 `main` and select `nightly` or `stable`. A failed draft can be retried only for the

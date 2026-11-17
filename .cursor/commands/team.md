@@ -9,8 +9,8 @@ Use `$ARGUMENTS` or the current task. If a team code was supplied, load
 `.agents/skills/triage/compositions.md` and state that choice briefly. Ask only when
 there is no actionable goal or a consequential ambiguity prevents choosing.
 
-Execute the selected team's workflow using the host's native or Arcwright Code/T3
-Code delegation tools. Follow the current provider/model choices, authorization,
+Execute the selected team's workflow using the host's native or T3 Code
+delegation tools. Follow the current provider/model choices, authorization,
 concurrency limits, and workspace requirements. Load the compact
 `subagent-protocol` entrypoint for a multi-step orchestration; load only the
 host-specific examples needed. Retain task IDs and acceptance evidence, sequence

@@ -5,7 +5,7 @@ support spawning, messages, status, and shutdown; names and lifecycle differ by
 host. Reuse a native agent only when it is live and supports the selected model.
 Persisted profile memory does not make an old task ID resumable.
 
-In Arcwright Code/T3 Code, call `orchestrator_capabilities` for live provider and
+In T3 Code, call `orchestrator_capabilities` for live provider and
 model IDs, including configured custom models. Use native delegation for compatible
 same-provider work; use `delegate_task` when native tools cannot select the model,
 for cross-provider or T3-owned work, and for `isolation: "worktree"`. Record the

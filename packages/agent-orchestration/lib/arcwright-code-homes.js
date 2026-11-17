@@ -12,7 +12,7 @@ function resolveHome(value, homeDir, fallback) {
   return path.resolve(homeDir, expanded);
 }
 
-/** Read only provider home fields; never expose settings or parse errors. */
+/** Read legacy provider ownership so installer operations preserve existing account homes. */
 function readArcwrightCodeHomes({ homeDir, settingsPaths = [path.join(homeDir, '.t3', 'userdata', 'settings.json')] }) {
   const result = { status: 'missing', codex: [], claude: [] };
   const unreadable = () => ({ status: 'unreadable', codex: [], claude: [] });

@@ -65,7 +65,7 @@ orchestration defaults. The shared [subagent protocol](../../../.agents/skills/s
 owns task lifecycle, provider/model inheritance, discovery, and host adaptation.
 Use [triage](../../../.agents/skills/triage/SKILL.md) to select installed workflows.
 Claude's native `Agent` and `SendMessage` shapes apply only where supported;
-Arcwright Code delegated review rounds always use fresh tasks. No role implies
+T3 Code delegated review rounds always use fresh tasks. No role implies
 a fixed model family. Herdr provides optional viewing; see its
 [documentation](https://herdr.dev). Retired tmux signal/polling protocols are not runtime guidance.
 

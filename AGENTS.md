@@ -28,40 +28,33 @@ project instructions here and follow the applicable instruction hierarchy.
 - Do not add AI/model attribution, generated-by notices, or coauthor trailers.
   Preserve required copyright, license, and source credits.
 
-## Fleet management
+## Skills package fleet management
 
-- This checkout also supports operating the user's connected fleet. For fleet
-  work, read [the fleet guide](docs/fleet-management.md) and run `npm run fleet:init`
-  if `.fleet/` is missing or incomplete. Setup is local and preserves existing files.
-- Keep device inventory, private runbooks, rollout plans, receipts, downloads, and
-  recovery notes in Git-ignored `.fleet/`. Keep reusable, sanitized procedures in
-  `docs/`. Never stage fleet records or require a commit, clean worktree, source
-  pull, or submodule-pointer update for routine fleet operations.
-- Use existing verified releases and pinned skill packages for install-only work.
-  Source changes and release commissioning are separate work under the applicable
-  app/package rules. Personal skill updates default to global installs; do not
+- Use this checkout to manage installations of the Arcwright skills package.
+  Read [the fleet guide](docs/fleet-management.md) and run `npm run fleet:init`
+  when starting a skills rollout if `.fleet/` is missing or incomplete.
+- Keep skills installation records, rollout plans, receipts, verified packages,
+  and rollback notes in Git-ignored `.fleet/`. Keep reusable, sanitized procedures
+  in `docs/`. Never stage fleet records or require a commit, clean worktree, source
+  pull, or submodule-pointer update for routine skills operations.
+- Use verified published skill packages for install-only work. Source changes
+  and release commissioning follow the workshop package rules.
+  Personal skill updates default to global installs; do not
   run the installer over this source workshop to refresh its own skills.
-- Discover only within the user's requested fleet through available Arcwright
-  Connect, Tailscale, or configured remote tools. Verify live identity,
-  permissions, platform, and install scope; network visibility grants no authority.
+- Discover only within the user's requested fleet through available Tailscale
+  or configured remote tools. Verify live identity, permissions, platform,
+  and install scope. Network visibility grants no authority.
   Reconcile routes to avoid updating the same installation twice.
-- Codex accounts: sign in on each device and in each home; never copy `auth.json`
-  (refresh tokens are single-use, so copies sign each other out). Never run
-  `codex login` or `codex logout` over a copy: both revoke the shared session, so
-  move the copied `auth.json` out of the home first. Shadow homes share skills,
-  sessions, config, and memory but keep `auth.json` and
-  `app-server-daemon`/`app-server-control` per account. See
-  [Codex accounts on devices](docs/fleet-management.md#codex-accounts-on-devices).
-- Apply updates to a representative device first, then bounded batches. Preserve
-  channels, pins, customizations, active work, and required platform update checks.
-  Record and resume per-device outcomes; offline, blocked, or unverified devices
-  remain pending. Use the app's supported recovery flow and retain recovery assets.
+- Follow the [account sharing guide](packages/agent-orchestration/docs/global-sharing.md)
+  when a skills rollout also involves global sharing or provider sign-in.
+- Apply skill updates to a representative device first, then bounded batches.
+  Preserve channels, pins, customizations, and active work. Record and resume
+  per-device outcomes and keep offline, blocked, or unverified devices pending.
 
 ## Frontend and website
 
 - Never add eyebrow/kicker/overline text above headings.
-- Never use em dashes in user-facing copy. The required Arcwright Code nightly
-  product name below is an explicit exception.
+- Never use em dashes in user-facing copy.
 - Website design/component changes belong in `website/src/`. For workflow, team,
   or agent roster changes, update the corresponding `website/src/data/` content.
   Keep website documentation aligned with meaningful README structure changes;
@@ -114,11 +107,3 @@ To modify gitignore behavior on next update: add `--gitignore full|skills|output
 For global installs: add `--global` to any command. Update a global install with `arcwright update --global`.
 
 <!-- arcwright-agent-end -->
-
-## Arcwright Code application work
-
-Before planning or changing `t3code`, or building, packaging, installing, or updating
-Arcwright Code, read [the app instructions](t3code/AGENTS.md). They own the mandatory
-delivery, nightly identity, retention, maintenance, version-alignment, and launcher
-rules, including scheduled publication and the explicit request required for extra
-manual builds. Fleet installation work reuses verified published releases.

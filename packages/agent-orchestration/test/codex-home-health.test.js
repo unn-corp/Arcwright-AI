@@ -136,7 +136,7 @@ describe('daemon state', () => {
     expect(fs.lstatSync(path.join(shadow, 'app-server-daemon')).isSymbolicLink()).toBe(true);
     expect(fs.existsSync(backupRoot)).toBe(false);
     expect(result.counts.pending).toBe(1);
-    expect(formatCodexHomeHealth(result)[0]).toBe(".codex-shadow: Arcwright Code links this home's daemon state. Install an Arcwright Code build with per-account daemon state; no change made.");
+    expect(formatCodexHomeHealth(result)[0]).toBe('.codex-shadow: This home uses daemon links managed by a legacy Arcwright Code installation. The installer left them in place.');
   });
 
   it('preserves real files and leaves symlinks alone when self-heal is disabled', () => {

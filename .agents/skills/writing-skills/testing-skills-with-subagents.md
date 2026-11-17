@@ -24,7 +24,7 @@ revised skill on the same task and constraints.
 Discover the native delegation, status, and evidence interfaces. Keep returned
 task IDs. Supply the request, skill location, raw artifacts, allowed side effects,
 and report path without revealing the intended answer. Use fresh context for
-independent evaluation. Arcwright Code/T3 starts each review round with a fresh
+independent evaluation. T3 Code starts each review round with a fresh
 `delegate_task`, including previous findings and the repaired source identity;
 do not continue it with `childThreadId`.
 

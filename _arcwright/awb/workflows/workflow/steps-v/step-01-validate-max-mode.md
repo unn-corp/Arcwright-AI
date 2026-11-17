@@ -78,7 +78,7 @@ Save the file (without the handlebars output of course) before proceeding.
 
 ### 2. Launch Mass Parallelization and consolidate results!
 
-Use available native Arcwright Code / T3 Code or agent task tools for each check in {parallel-steps}, in waves fitting host capacity. Each worker stops after its assigned check rather than following nextStep. Without delegation, complete the same checks here. The structure check uses the same canonical `data/workflow-limits.json` and read-only size checker as serial validation.
+Use available native T3 Code or agent task tools for each check in {parallel-steps}, in waves fitting host capacity. Each worker stops after its assigned check rather than following nextStep. Without delegation, complete the same checks here. The structure check uses the same canonical `data/workflow-limits.json` and read-only size checker as serial validation.
 
 Critically - instruct that instructions to write out or return results within each subprocess for a step file in the array MUST ensure that it writes it to {partialValidationFragmentFile} file name even though the step file it loads might indicate otherwise!
 

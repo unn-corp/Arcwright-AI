@@ -15,4 +15,4 @@ For pane-based agent visibility (opt-in, not the default orchestration mechanism
 
 Arcwright uses the host-neutral `subagent-protocol` for authorized delegation.
 Herdr panes, like tmux panes before them, are optional viewing surfaces; the host's
-native or Arcwright Code task tools retain lifecycle ownership.
+native or T3 Code task tools retain lifecycle ownership.

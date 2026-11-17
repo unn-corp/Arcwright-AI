@@ -1,6 +1,7 @@
 node_modules/
 packages/*/src/
 # Detached application and retired skill-source checkouts may remain locally.
+/t3code/
 /ungate/
 /hermes-agent/
 /herdr/
@@ -13,7 +14,7 @@ output/
 .DS_Store
 t3.json
 
-# Private fleet inventory, rollout records, downloaded artifacts, and recovery notes
+# Private skills fleet inventory, rollout receipts, verified packages, and rollback notes
 /.fleet/
 
 # Accidental installs into this workshop repo (run tests with HOME= override or a /tmp dir)
@@ -37,8 +38,6 @@ packages/*/package-lock.json
 *.png
 *.jpg
 *.jpeg
-!/favicon.png
-!/t3.json
 .playwright-cli/
 website/.playwright-cli/
 

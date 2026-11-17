@@ -1,6 +1,6 @@
 # Arcwright browser and evidence procedure
 
-Use native Arcwright Code/T3 Code tools when exposed. Tool identifiers may have a
+Use native T3 Code tools when exposed. Tool identifiers may have a
 harness prefix such as `mcp__t3_code__`; discover the callable names.
 
 1. Call `preview_status`. If there is no automation-capable tab, call `preview_open`

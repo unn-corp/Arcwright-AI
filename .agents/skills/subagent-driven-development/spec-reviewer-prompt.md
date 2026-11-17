@@ -1,6 +1,6 @@
 # Spec Compliance Reviewer Prompt Template
 
-Use a fresh reviewer for this gate and each later round. On Arcwright Code/T3,
+Use a fresh reviewer for this gate and each later round. On T3 Code,
 create a new `delegate_task`; do not continue with `childThreadId`.
 
 Treat the installed skill/template directory as read-only. Save all briefs, reports,

@@ -44,8 +44,8 @@
         ".agents/skills/edge-case-hunter/SKILL.md": "d752ef36581d728a7cba04359ee32e3640f945dc31a787904f5ad226f3a0c6ed",
         ".agents/skills/edge-case-hunter/UPSTREAM-LICENSE": "0aa79baf6328b4a1e694ce10a12ffc36d7666554da128dff0e8fcda0fc536a66",
         ".agents/skills/pr-review-panel/references/verification-gaps.md": "74a459e5e1e89f5d71aa6d9aba5b2c00257c4d1984438c88c127aafd09ef5616",
-        ".agents/skills/pr-review-panel/RULES.md": "bc4bf20a4a8239350fd2d3893adda56e816f5108e3e8b6997db047ca345c8088",
-        ".agents/skills/pr-review-panel/SKILL.md": "0f9afdf747bfac340d955428588000091d5d2d70a163484f78cec5afb5064b21",
+        ".agents/skills/pr-review-panel/RULES.md": "0f7a668dbbe5b46efba1b4fb9d37549234bec10f5cbd42efc24b74986cad2409",
+        ".agents/skills/pr-review-panel/SKILL.md": "eba832f16d7dcc70552479bf3f1dcbe197890f9690a932106f05a9af0ee97ff4",
         ".agents/skills/pr-review-panel/UPSTREAM-LICENSE": "0aa79baf6328b4a1e694ce10a12ffc36d7666554da128dff0e8fcda0fc536a66"
       }
     },
@@ -108,7 +108,7 @@
         "_arcwright/awb/workflows/workflow/steps-e/step-e-05-apply-edit.md": "e104e51dbe0365af389d769c4ff23bc5a2ba5aa4bf4044db5ebb6b37105de953",
         "_arcwright/awb/workflows/workflow/steps-e/step-e-06-validate-after.md": "03928a278d2362e372a4d87fab15bf6e2499818a6b1cc44282fe3c5c276ee631",
         "_arcwright/awb/workflows/workflow/steps-e/step-e-07-complete.md": "09977fa6a92c248a4f17ed5155e80862f6a23e017301c7b27d70fb4558d84b0f",
-        "_arcwright/awb/workflows/workflow/steps-v/step-01-validate-max-mode.md": "6bcc3a3f753b95d5f09eb9813dbf76b75bed3f4afce07d7b833c739b0ba36148",
+        "_arcwright/awb/workflows/workflow/steps-v/step-01-validate-max-mode.md": "685bd127e43a2f3b2c13ae66a2f39b447a990909a7f1933ab3ef0e6bfde20961",
         "_arcwright/awb/workflows/workflow/steps-v/step-01-validate.md": "fd30d5ef8b7fad6a18598d671e14a4e319bdc79716aa2cb39271c5416cf8b20a",
         "_arcwright/awb/workflows/workflow/steps-v/step-01b-structure.md": "b30906cdb6c599ef4136ecf16b2cd34301c1fdc6e259e7f2a00b270bbc07b8f1",
         "_arcwright/awb/workflows/workflow/steps-v/step-02-frontmatter-validation.md": "86fede3dd8b992eeeeb962bd217dcb9d002aad2def3acbf0b8f3ea4f089bf1d4",
@@ -134,7 +134,7 @@
         "_arcwright/awb/workflows/workflow/workflow-rework-workflow.md": "7c3426c24f135211f3fccd440b20c69518c610ac0de304f0a3918720d7809a6a",
         "_arcwright/awb/workflows/workflow/workflow-validate-max-parallel-workflow.md": "7721204f0962795daf8235b37a636e0df0c32ec1bf22ccba51bbac890a8d972c",
         "_arcwright/awb/workflows/workflow/workflow-validate-workflow.md": "6b49d6eb6cdf2521154125fcaddb06c67af9f0d2da9cbee555ec049f48558170",
-        ".agents/skills/agent-evaluation/references/skill-comparisons.md": "92d484b66aca9eb8417f7f4e145070d8eebc753558804c66f86d598198426b88",
+        ".agents/skills/agent-evaluation/references/skill-comparisons.md": "0e35c04a2fd5fd0d39768e4a53bbeb56b56118f610fcbe2249a7c2c0e75cafc1",
         ".agents/skills/agent-evaluation/SKILL.md": "c642e0121f662742822546c4cd9ae1b07f9df7b7a30bd9b465f2352bec4ec1de",
         ".agents/skills/agent-evaluation/UPSTREAM-LICENSE": "0aa79baf6328b4a1e694ce10a12ffc36d7666554da128dff0e8fcda0fc536a66"
       }
@@ -158,7 +158,7 @@
       "localFiles": {
         "_arcwright/awm/workflows/qa-generate-e2e-tests/checklist.md": "e9efe3762ea15306e521a580f2771c7ce55cc5cb016b85435844a3153923925c",
         "_arcwright/awm/workflows/qa-generate-e2e-tests/instructions.md": "cb32353afdb384cfd42a31e49c736f70c49f90f6c9884a3fbea9e90b7b358de3",
-        "_arcwright/awm/workflows/qa-generate-e2e-tests/tea-capabilities.md": "d430ae53295002dbcffef21e9266512086f6d184e558ab57bcf49b24706988c8",
+        "_arcwright/awm/workflows/qa-generate-e2e-tests/tea-capabilities.md": "407e2dae2c02b186db8b6d48e1da954bc917a1035ced513949014701baaa109b",
         "_arcwright/awm/workflows/qa-generate-e2e-tests/UPSTREAM-LICENSE": "d63b6198ba078d9494407eb94e2d86adf6350195301bb5ded4ba24e36bce8b55",
         "_arcwright/awm/workflows/qa-generate-e2e-tests/workflow.yaml": "ae11b20a9c2a42d941e416e3ee17bf7630ea9c66230da53e31349e025bbaaabd"
       }
@@ -214,9 +214,9 @@
         ".agents/skills/subagent-driven-development/implementer-prompt.md": "dedf76c19174e6312a36cb4eea90ddedb51baa7bdd98a75e06052f025c367e30",
         ".agents/skills/subagent-driven-development/LICENSE": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
         ".agents/skills/subagent-driven-development/re-review-prompt.md": "ca264ecb830f6568788645adb6965db11d5b8b5bbee62accd98bdabafea3b364",
-        ".agents/skills/subagent-driven-development/references/host-adapters.md": "b89700f9f07cff6844e812846d05590f7edd4745d3913e0fc083ff615987916e",
+        ".agents/skills/subagent-driven-development/references/host-adapters.md": "d3b2b3087d8d9773f732aff3c66358d46d4aaa0b2bfee5072f991764887e4e73",
         ".agents/skills/subagent-driven-development/SKILL.md": "7f14f64f42b3a03138dd03a2afe53b13e396a258fe900dbdd97f7dd1857f0440",
-        ".agents/skills/subagent-driven-development/spec-reviewer-prompt.md": "f60dcb55e75a583963b8fb13760eef307e04f9097b579416c9252f119a46f64f",
+        ".agents/skills/subagent-driven-development/spec-reviewer-prompt.md": "60971c3ff013a6c56456f752fc072c41635c33ab97b94cc4e0569d18bf0cb641",
         ".agents/skills/systematic-debugging/condition-based-waiting-example.ts": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
         ".agents/skills/systematic-debugging/condition-based-waiting.md": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
         ".agents/skills/systematic-debugging/CREATION-LOG.md": "b482ef9a918fbfc6c369729e8160633ddfa2332466dd362ee73f1527c239ef8b",
@@ -236,8 +236,8 @@
         ".agents/skills/writing-skills/LICENSE": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
         ".agents/skills/writing-skills/persuasion-principles.md": "a51bc9bf75189ea73a27b3fb504a2fdfdb966fb1f7f1cdf03203230a216ccc03",
         ".agents/skills/writing-skills/render-graphs.js": "21b44852f46e7c5203ae384b5a812f4052dd59d0a616af5d614b3c6b6856670d",
-        ".agents/skills/writing-skills/SKILL.md": "6ded2335c60f8cc010f05210cf4cedff0bfbe829adda0889f5e96dd34771e07d",
-        ".agents/skills/writing-skills/testing-skills-with-subagents.md": "68f49d1486ce622dc427bf2d6f3addf4abe452ae86e58226eceb107be5c6eb13"
+        ".agents/skills/writing-skills/SKILL.md": "23e1e425c27f09ec59f675058bd57f3252213c63adbc83c752a1363a6d065b6e",
+        ".agents/skills/writing-skills/testing-skills-with-subagents.md": "b205ec357eb83dc1c6ccc66e3da18b82e6cddb8e72634cda96432d12163d9176"
       }
     },
     {
@@ -387,7 +387,7 @@
         ".agents/skills/build-mcp-app/references/iframe-sandbox.md": "d4c4a303f6e63840b3e4c1b0d943b24555efc88cc944261ec43c94bd9fd018ba",
         ".agents/skills/build-mcp-app/references/payload-budgeting.md": "260a441394f0bcb2e27401483e35b85c57322c13b78fc21725929c65e61918e7",
         ".agents/skills/build-mcp-app/references/widget-templates.md": "363b5477f32fe07c274f6e36af92d22ae0062344a215768a1154b5ab9e82331f",
-        ".agents/skills/build-mcp-app/SKILL.md": "0749d173805a5d1735cdc4e99950b7ebf5b8906451b4df80499c0676a244e0e0",
+        ".agents/skills/build-mcp-app/SKILL.md": "5c3e1d3e96d6b6d728bb79502e4be84db5405bde46bc097cc4d26ed98ed25d4a",
         ".agents/skills/build-mcp-server/references/auth.md": "e28ace47198ecbf1661fc548c2ba8e92c0e333841e0a0d50b43c69febc7894dd",
         ".agents/skills/build-mcp-server/references/claude-connector.md": "80d2bc28d68061d48a137caef6be76840cdc94fcb1befb5a34d9f7cd80bde18a",
         ".agents/skills/build-mcp-server/references/deploy-cloudflare-workers.md": "98c1160180c0c4c8f517cf4500b7ef1fe4ad1eea56e1e86d5c3e7219821bd1bc",
@@ -1362,7 +1362,7 @@
       "localFiles": {
         ".agents/skills/playwright-cli/references/element-attributes.md": "bf19aa4671e0a50a0fefa9c790f39124e803060eefe395042b723c29fcb7faa2",
         ".agents/skills/playwright-cli/references/playwright-tests.md": "e99c399176591a80ca5d330b8e9637b254ff650849a39340db416e114b004e23",
-        ".agents/skills/playwright-cli/references/pr-attachments.md": "da894f7d8cad1d19c6cfea94f34a55083000de0b6652f256262b88da2091db2f",
+        ".agents/skills/playwright-cli/references/pr-attachments.md": "bb00f190fab6ac09f511eaf7bc6173b127d48bbf3d2eaca6588735d0cafdb97d",
         ".agents/skills/playwright-cli/references/request-mocking.md": "54e801c9663fc2b6d68ceb058cb1c360724c2499f42acc7852a68e83e5b5f37c",
         ".agents/skills/playwright-cli/references/running-code.md": "6273b0f5d984f9c65617aef721a3747dec16a3b4a701ed5f1da244243e45d026",
         ".agents/skills/playwright-cli/references/session-management.md": "a4f16271f95d3eec7bc56e659d8adbb8f6ad7d603a6fa15efdcdd071a50c6ce3",
@@ -1370,8 +1370,8 @@
         ".agents/skills/playwright-cli/references/test-generation.md": "27ecb11ef647999bd7486695bb1aacc3682097e6bb5742804cb6c8769c2b5364",
         ".agents/skills/playwright-cli/references/tracing.md": "ef73e71bee792e341df9cd4f60529c929ade48b538ac76e033f4f20843e8dbda",
         ".agents/skills/playwright-cli/references/video-recording.md": "8d9b476593684f4ded7eebab630b6cb1ee706207cfdc8a0d4021a028bd243011",
-        ".agents/skills/playwright-cli/references/workflow-guide.md": "72cf850ea2d2f19747494aea8f83b50a832b2a550506533a254d3ded38e8ab26",
-        ".agents/skills/playwright-cli/SKILL.md": "0b663e2835a5200d8706431a37ad746e628fb5af99267eef107dc45968d32616",
+        ".agents/skills/playwright-cli/references/workflow-guide.md": "d5a12c2ea3af8f19adcd3d16c857486e5ff1b9ebddd3e6a311a378b3de136ee9",
+        ".agents/skills/playwright-cli/SKILL.md": "92c114775770ec5af0e40bb125c86e0b1004b9f07895632de85d0175c7224bc5",
         ".agents/skills/playwright-cli/UPSTREAM-LICENSE": "9a7110fc2d2f964038e5dc49128f908f29f47a574c961cba16085914e879cbda"
       }
     },
@@ -1431,7 +1431,7 @@
         ".agents/skills/audit-website/UPSTREAM-LICENSE": "09b3405b605f592cf1d8f055b5b73dfb6816791a470aeb8870166d0b9785a8ee",
         ".agents/skills/squirrelscan/references/entity-map-fixes.md": "6081d206b927996294b93bd827135bcc41e98f831791811b5788806f9b01e47b",
         ".agents/skills/squirrelscan/RULES.md": "540ffd70bb5c868374d7352cea193e2e11413475d009fb83d82ce9ccafdf2bc5",
-        ".agents/skills/squirrelscan/SKILL.md": "130df85d354a57f55d26eaeca830df4e2fb86bdc8cc32d3ca941305581e66b31",
+        ".agents/skills/squirrelscan/SKILL.md": "690427e987d835b8c3fc6150868bb735a8d6b952998b63a25b955056e6eddbe0",
         ".agents/skills/squirrelscan/UPSTREAM-LICENSE": "09b3405b605f592cf1d8f055b5b73dfb6816791a470aeb8870166d0b9785a8ee"
       }
     },
@@ -2401,7 +2401,7 @@
         ".agents/skills/matt-pocock-writing-for-agents/SKILL.md": "ce70abd66cc4793c7e5598775e54df34110b6384de2531dbb0d5294405a4464c",
         ".agents/skills/matt-pocock/agents/openai.yaml": "8619a54e8c098122a7f3881394f84ca89b684366e848233a29ad18b6ec363935",
         ".agents/skills/matt-pocock/CATALOG.md": "7511bb1e5d1f316e78576a7a75403c019334242af2a62ad03f53b22f01f7b54e",
-        ".agents/skills/matt-pocock/INTEGRATION.md": "4a54b05be060c0f8ce858b26a4812050365da4dc1e891e0c616f8d3ad62b5899",
+        ".agents/skills/matt-pocock/INTEGRATION.md": "f65795300f626995a2c16c44ab026f91fc93d8d8a169f151997869b4a8a95391",
         ".agents/skills/matt-pocock/LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
         ".agents/skills/matt-pocock/SKILL.md": "f1ed0ce7817ac3863c5f99f7b789f13098d28824bc3911a9c235c352ec08f6f5",
         ".agents/skills/matt-pocock/SOURCE.json": "8e2d862b78ca7ac71a4513ec4864067ddbfbb99d92347c7a01f2fb8b2370b624"
@@ -2458,7 +2458,7 @@
         ".agents/skills/design-taste-frontend/assets/base.js": "8d50416125596b84c0083d5d5ffba09add57db4b06cbf0eedac2d4999b7653bc",
         ".agents/skills/design-taste-frontend/evals/evals.json": "07856fb030058f3dc5ab17f9ac25f5609bf0021b7f050587801823b6d31e9d68",
         ".agents/skills/design-taste-frontend/guide-00-taste-v2-for-arcwright.md": "93e88ea7ab61678b71df7296fbe05f660e4dc636634a977670d96c153402c179",
-        ".agents/skills/design-taste-frontend/guide-01-arcwright-contract.md": "175749fe4334968b85939c8cd6c62a0d599d4fa3f139e3b5f35a4cfa266a86d6",
+        ".agents/skills/design-taste-frontend/guide-01-arcwright-contract.md": "b2ece8f5ee86c6f92e0ab374e2d95e52d80ad4316d176410ff193cc879052679",
         ".agents/skills/design-taste-frontend/guide-02-the-run.md": "e8f525d1fe07eeabd8802c28c9e4fb34a99baf4a43e76b202d7e7a5406b88eca",
         ".agents/skills/design-taste-frontend/guide-03-house-rules.md": "60318bdec0f1eb040271f820cec9d2fe44da720db3bff920939d12203a032951",
         ".agents/skills/design-taste-frontend/guide-04-laws-of-the-craft.md": "e7cf99ad4b5f92d395583c9a819cf286325a49f95742b65a921e26397464060d",
@@ -2474,7 +2474,7 @@
         ".agents/skills/design-taste-frontend/library/type.json": "01a36c53c4398f48ff945b0f31a256281c1c0c1075729747c11bec70867b6232",
         ".agents/skills/design-taste-frontend/LICENSE": "4575a543ab88dad12ccea7d97e563d0bce5b448b06072e65d3264497dad326df",
         ".agents/skills/design-taste-frontend/README.md": "dd2ea2f3be30c56696fc5a7ddb3f25e5de36bf1fdaf6acbaec0597f947e6e91c",
-        ".agents/skills/design-taste-frontend/references/arcwright-browser.md": "f534e2e77c2f432d29bbc32b0ee7e21cd1ab1b0329b22e642a1fc8af7a46e2e8",
+        ".agents/skills/design-taste-frontend/references/arcwright-browser.md": "0554f1218fcca4a44b6efa07ec68e8f21966d7c491d02beac2340b23c4053f9c",
         ".agents/skills/design-taste-frontend/references/colour.md": "6556bcc7eed48b7bc2d0d281c28bf57c1b75e94d7ca0bde49f5d9df8c6a09351",
         ".agents/skills/design-taste-frontend/references/copy.md": "676edbe75d5f3cfd8a793010ea9f730525ae074b231a674c2426264d3398262e",
         ".agents/skills/design-taste-frontend/references/critique.md": "5943ea74ebe015cf33de3f8e2116f4fb990a126ae47fa56b4e6e8932d748f5b8",
@@ -2484,7 +2484,7 @@
         ".agents/skills/design-taste-frontend/references/research.md": "016d908b429099f49c665fb0ef649932f79dc35832e2e5689eceefdb1a0ec5c7",
         ".agents/skills/design-taste-frontend/references/tells.md": "31a759a787afdde60ec052086b7c2345d881b6cfadd3188af40df38eef404709",
         ".agents/skills/design-taste-frontend/references/type.md": "6353ff1d0ce2f9913628c88fbcb7dad3cc3877e61196848bce99e33a17d20611",
-        ".agents/skills/design-taste-frontend/RULES.md": "326d27a442f5a61ba7fd2cdaccfaaac77278578d84110367a6b5a8f61fbaf641",
+        ".agents/skills/design-taste-frontend/RULES.md": "67e2ee3cab21bc7a599ed8dd2f13e02ffaa851c19e05c464689d91a59418de8c",
         ".agents/skills/design-taste-frontend/scripts/assets.mjs": "f6118d99f6163cb6c2528bc80ff51806d49767c51c84129796d64937fd02e8e3",
         ".agents/skills/design-taste-frontend/scripts/draw.mjs": "27ceb6f68b17892f84dc793fb96148c2b9bc1aa81b4388a558438b0f80a6aaca",
         ".agents/skills/design-taste-frontend/scripts/inspect.mjs": "afb5b0342491815ffa24a7967530355ded5c9f7d2313855f542798e25ea12eca",
@@ -2493,7 +2493,7 @@
         ".agents/skills/design-taste-frontend/scripts/lib/rules.mjs": "bf8a83119687826f132a31ae081f3e89b33d05451698e8093caa88745d4a2ec1",
         ".agents/skills/design-taste-frontend/scripts/lib/runtime.mjs": "8aa04eee0361522a744e66ca32f1f5d4bda9d0621041ef5f403569c42083e44e",
         ".agents/skills/design-taste-frontend/scripts/lint.mjs": "4cd3f190e267d6a20fd39372a415553c1efe03955e3a86eb5e7628baa58a6a1b",
-        ".agents/skills/design-taste-frontend/SKILL.md": "bd8e0fafa9debe9f13256eac936a414bec5939b0e107ac090669eccd938dfd76",
+        ".agents/skills/design-taste-frontend/SKILL.md": "ea899538363452657b70a6fbd7829953ecd52368a38a6938e367331f80194abe",
         ".agents/skills/design-taste-frontend/UPSTREAM.md": "e19df4222bd5c2951348d5eeb877b12a9f5590b2adf69aba50a7c1e2fd01f891"
       }
     },

@@ -12,7 +12,7 @@ task does not remove dependencies. Shared checkout writers own disjoint paths an
 avoid shared build/install/lockfile operations. Parallel readers need a stable
 source snapshot or must report source movement.
 
-Arcwright Code worktrees start from the parent local commit. Either establish an
+T3 Code worktrees start from the parent local commit. Either establish an
 authorized stable commit, provide accessible patch evidence for read-only review,
 or use bounded shared-checkout work. Never claim uncommitted files were copied.
 

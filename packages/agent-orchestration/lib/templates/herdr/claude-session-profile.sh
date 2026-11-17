@@ -6,7 +6,7 @@ set -eu
 # herdr-agent-state.sh via its own identical guard -- so bail before spending a
 # mktemp, a cat, and an exec on a payload that would only be discarded. This
 # runs on EVERY Claude Code session start, including ones hosted by other tools
-# (t3code, plain terminals), where herdr is installed but not driving.
+# (for example, standalone terminals), where herdr is installed but not driving.
 # Drain stdin first so the caller never sees EPIPE on the hook payload.
 if [ "${HERDR_ENV:-}" != "1" ]; then
   cat >/dev/null 2>&1 || true

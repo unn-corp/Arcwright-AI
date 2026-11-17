@@ -11,7 +11,7 @@ adapted for Arcwright. Preserve `UPSTREAM-LICENSE`.
 
 ## Pick the available browser
 
-In Arcwright Code/T3 prefer the shared `preview_*` browser. Call `preview_status`,
+In T3 Code, prefer the shared `preview_*` browser. Call `preview_status`,
 then `preview_open` if no automation-capable preview is attached. Retry actionable
 errors with corrected arguments. Use this CLI when preview tools are absent,
 explicitly unsupported, fail twice at the same step, or the user/invoked workflow

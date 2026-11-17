@@ -9,6 +9,6 @@ Read `SKILL.md` for the selected operation.
 - Use `<type>(<scope>): <subject>`, imperative, lowercase, at most 72 characters.
 - Use a message/body file for multiline text. No model/harness credits or coauthor trailers.
 - Keep hooks and branch protections. No published-history rewrite without explicit authority.
-- Push submodule commits before their parent pointers. Link worked-on PRs in Arcwright Code.
+- Push submodule commits before their parent pointers. Link worked-on PRs in T3 Code.
 - Prune selected merged local branches with `git branch -d`; unmerged or remote deletion
   requires its own authorization.

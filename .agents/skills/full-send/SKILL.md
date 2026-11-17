@@ -1,6 +1,6 @@
 ---
 name: full-send
-description: Use when the user explicitly requests full send or invokes full-send for autonomous delivery through a merged PR in Arcwright Code or T3 Code. Discussing or authoring the skill is not an invocation.
+description: Use when the user explicitly requests full send or invokes full-send for autonomous delivery through a merged PR in T3 Code. Discussing or authoring the skill is not an invocation.
 ---
 
 # Full Send

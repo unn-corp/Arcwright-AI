@@ -13,6 +13,6 @@ One coordinator writes a shared ledger. Children return findings or use separate
 artifact paths; append-only text is not sufficient protection against concurrent
 writes. Reconcile every task result before declaring a stage complete.
 
-For separate checkouts, use the host's supported isolation mechanism. Arcwright
+For separate checkouts, use the host's supported isolation mechanism. T3
 Code `delegate_task` worktrees start from the parent local commit, without copying
 uncommitted edits. Plan dependency commits or accessible patch evidence explicitly.

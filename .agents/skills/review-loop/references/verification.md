@@ -16,7 +16,7 @@ Choose checks appropriate to the change and repository requirements:
 
 - For a bug, reproduce the original failure when practical, apply the fix, and observe the same case pass. If the original failure cannot be reproduced, state that limitation and obtain the strongest available direct evidence.
 - Run applicable repository checks, including required CI, type checking, linting, and tests. Add a focused regression test when it establishes behavior meaningfully and the project supports it. Reversible low-impact changes do not require new tests that merely mirror the implementation.
-- For UI and runtime changes, run the app and inspect the affected behavior directly. Mocked tests alone do not prove the user experience. Use available native browser/evidence tools; in Arcwright Code/T3 Code, use `preview_*` and save useful captures as described in [MCP operations](arcwright-mcp.md).
+- For UI and runtime changes, run the app and inspect the affected behavior directly. Mocked tests alone do not prove the user experience. Use available native browser/evidence tools; in T3 Code, use `preview_*` and save useful captures as described in [MCP operations](arcwright-mcp.md).
 - Resolve environmental or flaky failures where possible. Record unrelated pre-existing failures accurately; they do not make a required failed check green or authorize bypassing it.
 
 - When public APIs, schemas, persisted configuration, stored data, or serialization formats change, apply [compatibility and recovery checks](compatibility.md). Skip that assessment for changes that do not affect those contracts.

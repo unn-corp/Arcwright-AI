@@ -11,7 +11,7 @@ Use this when deciding whether a skill or prompt edit earns its complexity. It e
 | Quality | One configuration vs a declared rubric | Whether the requested outcome met the bar |
 | Trigger | Should-load and should-not-load requests sharing terms | Discovery boundaries and name collisions |
 
-Keep input, fixture bytes, model/provider/version, host instructions, tools, permissions, and inference settings equivalent between arms. Record unavoidable differences and narrow the claim. A bare-model arm still obeys system/user policy; omit only the skill being tested. Use callable native Arcwright Code / T3 Code or host tools and actual model IDs. Do not bypass authorization or limits for an experiment. When delegation is prohibited, perform bounded paper cases and mark them as such rather than claiming independent live results.
+Keep input, fixture bytes, model/provider/version, host instructions, tools, permissions, and inference settings equivalent between arms. Record unavoidable differences and narrow the claim. A bare-model arm still obeys system/user policy; omit only the skill being tested. Use callable native T3 Code or host tools and actual model IDs. Do not bypass authorization or limits for an experiment. When delegation is prohibited, perform bounded paper cases and mark them as such rather than claiming independent live results.
 
 ## Cases and evidence
 

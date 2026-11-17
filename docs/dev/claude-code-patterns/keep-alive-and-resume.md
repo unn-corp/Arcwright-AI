@@ -9,7 +9,7 @@ pick up where they left off.
 On a compatible Claude host, native `Agent`/`SendMessage` reuse can preserve a
 specialist's context. Follow Arcwright's shared
 [subagent protocol](../../../.agents/skills/subagent-protocol/SKILL.md) for the actual
-host and user-selected provider/model. Arcwright Code review rounds require fresh
+host and user-selected provider/model. T3 Code review rounds require fresh
 delegated tasks. Herdr is optional visibility, not persistence. These conditional
 mechanisms complement that protocol; see [orchestration.md](orchestration.md)
 and [subagents.md](subagents.md).

@@ -5,7 +5,7 @@ unless the task explicitly chooses an override or a supported workflow needs one
 A role title does not imply a particular provider or model. Do not ask again for
 an already authorized choice or upgrade models as routine activation ceremony.
 
-When an override is needed in Arcwright Code/T3 Code, discover available targets
+When an override is needed in T3 Code, discover available targets
 with `orchestrator_capabilities`; use its current provider instance and model IDs,
 including configured custom models. Native delegation is suitable only when it
 supports that chosen model. Otherwise use `delegate_task`, even for the same

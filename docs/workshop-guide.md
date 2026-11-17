@@ -27,12 +27,12 @@ The retired npm organization is `@arcwright-ai`; the repository is
 | `packages/agent-orchestration/src/` | Generated package output; never edit directly |
 | `packages/tmux-setup/lib/`, `bin/`, `src/tmux/` | Legacy standalone package sources |
 | `website/` | Vite + React + TypeScript site for arcwright.space |
-| `.fleet/` | Git-ignored device inventory, rollout records, artifacts, and recovery notes |
+| `.fleet/` | Git-ignored skills installation inventory, rollout receipts, verified packages, and rollback notes |
 | `vendor/unnamed-dev-skills/` | Optional private organization pack; excluded from public core builds |
 
-For operating devices from this checkout, follow [fleet management](fleet-management.md).
-Run `npm run fleet:init` once to prepare local storage. Routine device updates use
-verified published artifacts without committing or changing the workshop's source.
+For skills package rollouts, follow the [skills fleet guide](fleet-management.md).
+Run `npm run fleet:init` to prepare local storage. Routine updates use verified
+published packages and can run independently of workshop source changes.
 
 `npm run commands:sync` refreshes the workshop's Grok/OpenCode command adapters;
 the normal build also runs it. A local hash manifest updates or retires only owned,

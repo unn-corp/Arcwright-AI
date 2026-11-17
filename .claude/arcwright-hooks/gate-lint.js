@@ -13,9 +13,8 @@
  *
  * RESOLUTION RULES (this is what keeps it both fast and correct):
  *   1. Walk up from the edited file to the nearest package/config root and run
- *      the linter THERE. This is a monorepo with submodules (herdr, t3code,
- *      hermes-agent, collie, ungate) and a nested `website/` app, each with its
- *      own toolchain — linting a website file with repo-root config is noise.
+ *      the linter there. The nested `website/` app and separate checkouts can
+ *      have their own toolchains and config.
  *   2. Only run a linter when that root actually has a config for it. No config
  *      means the project does not use that tool; running it anyway produces
  *      false findings (e.g. `website/` has eslint but no prettier).

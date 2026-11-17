@@ -31,9 +31,9 @@ export const workflows: Workflow[] = [
     slug: 'in-process',
     name: 'Plain In-Process Agent',
     category: 'runtime',
-    trigger: 'Native subagent or Arcwright Code delegated task',
+    trigger: 'Native subagent or T3 Code delegated task',
     description:
-      'Delegate authorized specialist work through the shared subagent protocol. Reuse supported native agents; Arcwright Code review rounds use fresh delegated tasks with prior findings and evidence. Keep each task within its assigned scope.',
+      'Delegate authorized specialist work through the shared subagent protocol. Reuse supported native agents; T3 Code review rounds use fresh delegated tasks with prior findings and evidence. Keep each task within its assigned scope.',
     bestFor:
       '1-10 files, single role or 2-3 disjoint roles, clear deliverable, no unknown-size discovery.',
     icon: 'cpu',

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Provision local records only. Device discovery and updates are separate tasks.
+// Provision records for Arcwright skills package installations.
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -10,7 +10,7 @@ const fleet = path.join(root, '.fleet');
 const args = process.argv.slice(2);
 
 if (args.length === 1 && ['--help', '-h'].includes(args[0])) {
-  console.log('Usage: npm run fleet:init\nCreates a private .fleet/ workspace in this checkout; preserves existing files.');
+  console.log('Usage: npm run fleet:init\nCreates a private .fleet/ workspace for Arcwright skills package rollouts and preserves existing files.');
   process.exit(0);
 }
 if (args.length) {
@@ -55,18 +55,17 @@ try {
     ensureDirectory(path.join(fleet, name));
   }
   createFile('README.md', [
-    '# Local fleet workspace',
+    '# Arcwright skills fleet',
     '',
     'This directory is Git-ignored and private to this checkout. Keep your device',
-    'inventory, operational notes, and rollout history here. It is not synchronized',
-    'to other devices or backed up by Git.',
+    'installation inventory, rollout history, verified packages, and rollback notes here.',
     '',
     'Follow [the fleet guide](../docs/fleet-management.md) and [AGENTS.md](../AGENTS.md).',
     '',
-    '- `inventory.json`: device identities, routes, install scopes, and observed versions.',
-    '- `runs/<UTC>-<name>/`: plans, per-device receipts, and redacted logs.',
-    '- `artifacts/`: verified downloads, grouped by version and platform.',
-    '- `recovery/`: recovery references and private notes; retain native restore assets.',
+    '- `inventory.json`: device identities, verified routes, install scopes, and installed package versions.',
+    '- `runs/<UTC>-<name>/`: skills rollout plans, per-installation receipts, and redacted logs.',
+    '- `artifacts/<version>/`: verified skills package archives and release metadata.',
+    '- `recovery/`: prior package versions and references to managed-file backups.',
     '',
     'The inventory starts empty. Add only devices verified within your authorized',
     "scope. Keep credentials in the host's credential store, never in these records.",
@@ -74,7 +73,7 @@ try {
     '',
   ].join('\n'));
   createFile('inventory.json', JSON.stringify({ schemaVersion: 1, devices: [] }, null, 2) + '\n');
-  console.log(`Fleet workspace: ${fleet}\nCreated ${created} entries; preserved ${preserved} existing files.\nSee docs/fleet-management.md before device operations.`);
+  console.log(`Skills fleet workspace: ${fleet}\nCreated ${created} entries; preserved ${preserved} existing files.\nSee docs/fleet-management.md before a skills rollout.`);
 } catch (error) {
   console.error(`Fleet setup failed: ${error.message}`);
   process.exitCode = 1;

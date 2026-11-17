@@ -84,7 +84,7 @@ login checks are off by default; enable them explicitly during enrollment. Self-
 once enabled, runs on every global install/update even when Codex is not selected.
 Health backups use `~/.arcwright/backups/codex-home-health/`.
 
-## Restore and Arcwright Code coexistence
+## Restore and existing account homes
 
 Every replacement has a preimage backup and JSON receipt under
 `~/.arcwright/backups/sharing/<runId>/`, with private directory permissions. Typed
@@ -100,12 +100,10 @@ rules. Canonical user content, backups and records survive opt-out and uninstall
 An account directory that acquired private state is retained. Inspect an abandoned
 `sharing.lock` before removing it and retrying.
 
-Arcwright Code owns its shadow homes and their content links. The installer writes
-only the selected shared home, shows shadow dependencies, and requires matching
-shadow/shared-home choices. It never changes Code settings or materializes links in
-a shadow. Unreadable ownership settings block sharing writes. Separate Code
-instances pointing at the same shared home cannot independently opt out of content
-that Code links from that home.
+For existing installations of the retired Arcwright Code fork, the installer
+reads provider home settings to protect account data and links the fork owns.
+It leaves shadow homes and app settings intact and checks for inherited changes
+before writing to a shared home. Unreadable ownership settings block sharing writes.
 
 Codex, Grok and OpenCode also discover the same neutral skills root. Excluding an
 account stops installer sharing operations there; it cannot hide skills loaded
@@ -114,6 +112,4 @@ through another shared root. Strong account isolation is not promised.
 Hermes, Cursor and native Windows sharing are reported as not yet supported. This
 version does not add instruction projections, Windows link fallbacks, provider
 loader probes, live account verification or OpenCode auth/data isolation. Existing
-Hermes/Cursor installer adapters remain separate from sharing. The health and Code
-settings reader placeholders must be replaced by their companion implementation
-before certifying health repair or settings-based ownership discovery.
+Hermes/Cursor installer adapters remain separate from sharing.

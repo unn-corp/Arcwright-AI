@@ -26,7 +26,7 @@ scope. Ask only for missing choices that materially change the result.
    commands to the installed tool versions and project stack.
 5. Verify on desktop and phone: scrolling, seams, loading, sizing, controls,
    keyboard access, reduced motion, and a readable non-video fallback. Prefer
-   native Arcwright Code/T3 Code preview tools. Fix observed problems within scope.
+   native T3 Code preview tools. Fix observed problems within scope.
 
 Keep installed files read-only. Store prompts, frames, clips, encoding experiments,
 and review notes under `_arcwright/_memory/skill-runs/scroll-world-<run>/`;

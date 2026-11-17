@@ -10,7 +10,7 @@ Use the installed matt-pocock-* skill names. If a Skill tool is unavailable, rea
 
 Use `AGENTS.md` for shared project instructions; required host entrypoints import it. Preserve applicable host precedence and user-owned content.
 
-Use available Arcwright Code / T3 Code MCP or native tools for questions, browser work, evidence, and PR watching. For delegation, follow [subagent-protocol](../subagent-protocol/SKILL.md), including fresh review tasks, model discovery, task IDs, and the user's workspace assignment. Load it only when delegating.
+Use available T3 Code MCP or native tools for questions, browser work, evidence, and PR watching. For delegation, follow [subagent-protocol](../subagent-protocol/SKILL.md), including fresh review tasks, model discovery, task IDs, and the user's workspace assignment. Load it only when delegating.
 
 Existing user authorization and project instructions govern all actions. Installing this pack does not authorize publishing, merging, deploying, provisioning, or contacting others. Use the Unnamed Development MCP only when explicitly requested. Use the host's private secret-input tool for credentials. Save temporary evidence in the conversation evidence directory when available.
 

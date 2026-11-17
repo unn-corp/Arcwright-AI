@@ -2,7 +2,7 @@
 
 > AI-native agile workflow orchestration for Claude Code, Kiro, Cursor, and more coding agents.
 
-Arcwright installs specialist agents, model-invocable skills, and workflows into projects across supported coding hosts. The orchestrator routes work through spec, research, UX, implementation, review, and QA using the available native or Arcwright Code task tools. Host pane visibility is opt-in.
+Arcwright installs specialist agents, model-invocable skills, and workflows into projects across supported coding hosts. The orchestrator routes work through spec, research, UX, implementation, review, and QA using the available native or T3 Code task tools. Host pane visibility is opt-in.
 
 ---
 
@@ -115,7 +115,7 @@ and apply only where available. See [triage](.agents/skills/triage/SKILL.md).
 
 Use `/team arch-dev` to select a preset directly; `/team` without a selection offers the 17-team picker.
 
-Teams use the shared [subagent protocol](.agents/skills/subagent-protocol/SKILL.md). Inherit the user's provider/model choices, discover live capabilities, and use compatible native tasks or Arcwright Code delegation. Reuse native specialists only where supported; every Arcwright Code review round is a fresh delegated task.
+Teams use the shared [subagent protocol](.agents/skills/subagent-protocol/SKILL.md). Inherit the user's provider/model choices, discover live capabilities, and use compatible native tasks or T3 Code delegation. Reuse native specialists only where supported; every T3 Code review round is a fresh delegated task.
 
 **Host pane visibility is opt-in.** Use supported viewing tools when requested. The shared subagent protocol owns delegation.
 
@@ -142,7 +142,7 @@ See the full team catalog below.
 | `/pr-review` | Parallel 6-lens PR review with 0–100 confidence scoring and a ranked merge verdict. |
 | `/review-loop` | Ask which model to use, then find, fix, verify, and re-review substantive issues in bounded rounds. |
 | `/ponytail` | Use the smallest complete solution. Includes `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-help`, and `/ponytail-gain`. |
-| `/full-send` | Explicitly authorize implementation, verification, review, and a protected PR merge through Arcwright Code/T3 Code. |
+| `/full-send` | Explicitly authorize implementation, verification, review, and a protected PR merge through T3 Code. |
 | `/full-stop` | Complete the same delivery checks, then leave an open PR ready for your merge. Never merges or enables automatic merging. |
 | `/code-graph` | Local symbol-dependency graph — query change blast radius without loading whole files. |
 | `/lsp` | Validate edits against `tsc`/`pyright` in a fix loop. |
@@ -152,9 +152,9 @@ See the full team catalog below.
 | `/caveman` | Concise-output mode — cut output tokens while keeping technical accuracy. |
 | `/explain-mode` | Verbose teaching dial — explain the "why" or leave learning checkpoints. |
 
-Review Loop uses the selected model through supported native or Arcwright Code/T3
-Code delegation. Full Send and Full Stop retain Arcwright Code/T3 Code PR
-registration, watching, and evidence operations. Codex invokes them as
+Review Loop uses the selected model through supported native or T3 Code
+delegation. Full Send and Full Stop use T3 Code PR registration, watching, and
+evidence tools where available. Codex invokes them as
 `$review-loop`, `$full-send`, and `$full-stop`. The delivery skills require an
 explicit request and use Review Loop for review and repair; an explicit reviewer
 choice is reused for that run.
@@ -337,7 +337,6 @@ On Linux and WSL, run `arcwright accounts configure --global` to choose all, som
 or none across Claude Code, Codex and Grok accounts. OpenCode supports instructions
 and skills without multi-account setup. Personal sections and whole skill bundles
 require individual review. Credentials, settings, history and sessions stay private.
-Arcwright Code owns its shadow links; the installer maintains selected shared targets.
 
 ```sh
 arcwright accounts status --global --json
@@ -447,10 +446,10 @@ Workshop instructions live in [AGENTS.md](AGENTS.md). Root and nested workshop
 `CLAUDE.md` imports are retired; do not recreate them. The shared file records the
 retirement policy honored by the installer. See the [workshop guide](docs/workshop-guide.md#installer).
 
-To manage Arcwright Code and skills across connected devices from this checkout,
-run `npm run fleet:init`. Inventory, rollout records, artifacts, and recovery notes
-stay in Git-ignored `.fleet/`; routine updates need no repository commits. See
-[fleet setup and update standards](docs/fleet-management.md).
+To manage Arcwright skills package installations across devices, run
+`npm run fleet:init`. Installation records, verified packages, rollout receipts,
+and rollback notes stay in Git-ignored `.fleet/`. See the
+[skills fleet guide](docs/fleet-management.md).
 
 Unnamed Development's MCP, PM, and UFL skills live in an optional private
 organization repository. Public core builds and installs require no access to it.
@@ -465,7 +464,7 @@ Enable the optional pack with `--matt-pocock` during installation or update. Use
 
 ### Taste frontend skill
 
-The default library includes [Taste v2](.agents/skills/design-taste-frontend/SKILL.md) from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill). Use `$design-taste-frontend` in Codex or `/design-taste-frontend` in hosts with generated skill commands for landing pages, marketing sites, portfolios, and public product pages. It includes the direction libraries, imagery discovery, source checks, and a three-round visual critique loop, while preserving the project's `DESIGN.md` and preferring native Arcwright Code/T3 Code preview tools.
+The default library includes [Taste v2](.agents/skills/design-taste-frontend/SKILL.md) from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill). Use `$design-taste-frontend` in Codex or `/design-taste-frontend` in hosts with generated skill commands for landing pages, marketing sites, portfolios, and public product pages. It includes the direction libraries, imagery discovery, source checks, and a three-round visual critique loop, while preserving the project's `DESIGN.md` and preferring native T3 Code preview tools.
 
 Working files and standalone browser profiles stay under the active project's `_arcwright/_memory/skill-runs/taste-<run>/`; host-managed screenshots use conversation evidence storage. The helpers enforce project output boundaries. Source checks and drawing need Node 18+; the optional standalone browser inspector needs Node 22+ and Chrome, Edge, or Chromium. See the [source, license, and adaptation notes](.agents/skills/design-taste-frontend/UPSTREAM.md).
 

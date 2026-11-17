@@ -48,7 +48,7 @@ Promote final assets to the app's normal asset folder with their credits.
 
 Drawing, lint, and asset discovery need Node 18+; asset discovery needs network
 access. The optional standalone inspector needs Node 22+ and Chrome/Edge/Chromium.
-Prefer native Arcwright Code/T3 Code preview tools. Do not add features, dependencies,
+Prefer native T3 Code preview tools. Do not add features, dependencies,
 extra imagery, or motion merely to satisfy an aesthetic quota. Established design,
 accessibility, and user requirements take precedence over optional style preferences.
 No publication, deployment, or tracker work is implied.

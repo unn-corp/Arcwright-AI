@@ -2,7 +2,7 @@
 
 > Load full `SKILL.md` for the procedure and the R4 reference for verification-gap review.
 
-- Discover native host / Arcwright Code / T3 Code tools and real task IDs; retain the authorized model/provider.
+- Discover native host / T3 Code tools and real task IDs; retain the authorized model/provider.
 - Run selected lenses in waves within available live-agent capacity, including the coordinator. Without delegation, disclose sequential review.
 - A complete empty finding list is clean; timeout, absent output, or partial scope is not.
 - Verify every reported claim against code, callers, guards, or actual tests before filtering/grouping.

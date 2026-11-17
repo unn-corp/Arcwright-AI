@@ -42,7 +42,7 @@ on a host-specific Skill tool or a project-only skills path.
    role suggestions are a starting point, not a whitelist.
 4. Follow the host's provider/model and isolation rules. Retain real returned
    task IDs and reconcile active work before retrying. Native reusable agents
-   may retain context; Arcwright Code review rounds use a fresh `delegate_task`
+   may retain context; T3 Code review rounds use a fresh `delegate_task`
    with prior findings and evidence, never a child-thread message.
 5. Collect observed results, verify material claims, and resolve confirmed
    findings within the selected budget. Preserve blocking review gates; report

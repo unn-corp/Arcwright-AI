@@ -25,7 +25,7 @@ rather than asking the user to send the same request as a special trigger phrase
 - **Native agents:** use the actual native tools when they support the chosen model.
   Scoped prompts should identify inputs, owned files, expected result and evidence.
   Reuse a native child only where the host supports it and there is unresolved work.
-- **Arcwright Code/T3:** discover the live provider/model catalog. Use child-task
+- **T3 Code:** discover the live provider/model catalog. Use child-task
   delegation for explicit T3 work, cross-provider/chosen-model work unsupported by
   native tools, and worktree isolation. Track `taskId`; a new review round gets a new
   delegation with previous findings, responses and remaining objections.

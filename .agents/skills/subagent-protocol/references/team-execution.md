@@ -67,7 +67,7 @@ returned identifiers and reuse compatible live native agents for related work
 only when that host supports continuation. A message to an idle agent is not a
 completed task. On a stale identifier, reconcile status before replacing it.
 
-For Arcwright Code/T3, discover provider/model IDs with
+For T3 Code, discover provider/model IDs with
 `orchestrator_capabilities` and use `delegate_task` for T3-owned, cross-provider,
 or otherwise unsupported native delegation. Use `isolation: "worktree"` when a
 separate checkout is needed; it starts from the parent's local commit and does

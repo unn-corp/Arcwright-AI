@@ -1,6 +1,6 @@
 ---
 name: full-stop
-description: Use when the user explicitly requests full stop or invokes full-stop to have a PR prepared for their own merge in Arcwright Code or T3 Code. A request to stop working does not invoke this skill.
+description: Use when the user explicitly requests full stop or invokes full-stop to have a PR prepared for their own merge in T3 Code. A request to stop working does not invoke this skill.
 ---
 
 # Full Stop

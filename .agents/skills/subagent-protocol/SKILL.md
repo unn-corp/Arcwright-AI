@@ -1,6 +1,6 @@
 ---
 name: subagent-protocol
-description: Coordinate authorized specialist work using native or Arcwright Code/T3 Code delegation, task IDs, focused handoffs, bounded concurrency, and verified results.
+description: Coordinate authorized specialist work using native or T3 Code delegation, task IDs, focused handoffs, bounded concurrency, and verified results.
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash, Agent, SendMessage, mcp__t3_code__orchestrator_capabilities, mcp__t3_code__delegate_task, mcp__t3_code__task_status, mcp__t3_code__task_cancel
 ---
 
@@ -19,7 +19,7 @@ and review gates, not competing dispatch rules.
 1. Check the host's available task tools and existing work. Reuse a relevant live
    native agent when supported; record its ID, role, scope, workspace, and status.
    Do not duplicate an active task or treat a previous session's ID as live.
-2. In Arcwright Code/T3 Code, discover provider/model IDs with
+2. In T3 Code, discover provider/model IDs with
    `orchestrator_capabilities`. Use native subagent tools for a compatible chosen
    model; use `delegate_task` for cross-provider work, T3-owned child tasks, or worktree
    isolation. Top-level thread creation is only for an explicit request for new conversations.

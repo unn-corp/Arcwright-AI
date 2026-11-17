@@ -184,7 +184,7 @@ describe('Herdr standards', () => {
         },
       });
 
-    // Not driven by herdr (t3code, a plain terminal, …): nothing to record, and
+    // Not driven by herdr (for example, a standalone terminal): nothing to record, and
     // the hook must not pay for a mktemp/cat/exec on a discarded payload.
     runHook('');
     expect(fs.existsSync(recorded)).toBe(false);
