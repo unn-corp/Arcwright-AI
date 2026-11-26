@@ -12,4 +12,5 @@ export const ides: IDE[] = [
   { id: 'hermes', name: 'Hermes', flag: 'hermes' },
   { id: 'opencode', name: 'OpenCode', flag: 'opencode' },
   { id: 'grok', name: 'Grok', flag: 'grok' },
+  { id: 'antigravity', name: 'Antigravity (Gemini)', flag: 'antigravity' },
 ];

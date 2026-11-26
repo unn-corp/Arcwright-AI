@@ -371,7 +371,7 @@ const FILES_MANIFEST_FILE = '_config/files-manifest.csv';
  * `summary` feeds `arcwright platforms` (agent stubs / skills column).
  * Order here is the installer option order.
  *
- * codex/hermes/opencode/grok/cursor are NOT dispatched through writeIdeConfig (see
+ * codex/hermes/opencode/grok/antigravity/cursor are NOT dispatched through writeIdeConfig (see
  * the `continue` in the IDE-integration loop) — their own write*Config
  * helpers handle AGENTS.md + skills (and commands/agents where relevant)
  * with upsertManagedBlock and manifest entries. PLATFORMS entries still
@@ -445,6 +445,18 @@ const PLATFORMS = {
     rulesFile: 'AGENTS.md / ~/.grok/AGENTS.md',
     rulesMarker: '## Arcwright',
   },
+  'antigravity': {
+    label: 'Antigravity / Gemini',
+    hint: 'GEMINI.md, ~/.gemini/config/skills/',
+    summary: '~/.gemini/config/skills/ (global); .agents/skills/ (project)',
+    agentDir: null,
+    skillsDir: null,
+    steeringDir: null,
+    hooksDir: null,
+    // Project uses root GEMINI.md; global uses ~/.gemini/GEMINI.md (see GLOBAL_PATHS).
+    rulesFile: 'GEMINI.md / ~/.gemini/GEMINI.md',
+    rulesMarker: '## Arcwright',
+  },
   'cursor': {
     label: 'Cursor (IDE + Agent CLI)',
     hint: '.cursor/rules/, commands, native hooks',
@@ -472,15 +484,19 @@ function getToolPromptOptions() {
   }));
 }
 
+/** Alternate --tools spellings mapped to their PLATFORMS id. */
+const TOOL_ALIASES = { gemini: 'antigravity' };
+
 /**
- * Parse a comma-separated --tools string. Drops empty/`none` tokens.
- * Throws if any remaining id is not in PLATFORMS.
+ * Parse a comma-separated --tools string. Drops empty/`none` tokens and
+ * resolves TOOL_ALIASES. Throws if any remaining id is not in PLATFORMS.
  */
 function parseToolIds(toolsCsv) {
-  const parsed = (toolsCsv || '')
+  const parsed = [...new Set((toolsCsv || '')
     .split(',')
     .map((t) => t.trim())
-    .filter((t) => t && t !== 'none');
+    .filter((t) => t && t !== 'none')
+    .map((t) => TOOL_ALIASES[t] || t))];
   const known = new Set(getSupportedToolIds());
   const unknown = parsed.filter((t) => !known.has(t));
   if (unknown.length) {
@@ -525,7 +541,7 @@ function getHomes(platform) {
  * Terminal-based tools use Linux home (even on WSL).
  * GUI IDE tools use Windows home when on WSL.
  */
-const TERMINAL_TOOLS = ['claude-code', 'codex', 'hermes', 'opencode', 'grok'];
+const TERMINAL_TOOLS = ['claude-code', 'codex', 'hermes', 'opencode', 'grok', 'antigravity'];
 
 function resolveToolPath(tool, relativePath, isGlobal, homes, platform) {
   if (!isGlobal) return null; // caller handles project paths
@@ -580,6 +596,16 @@ const GLOBAL_PATHS = {
     commands: '.grok/commands',
     agents: '.grok/agents',
     hooks: '.grok/hooks',
+  },
+  'antigravity': {
+    // Antigravity (Gemini) discovers:
+    //   - global rules in ~/.gemini/GEMINI.md and ~/.gemini/AGENTS.md; project
+    //     rules in GEMINI.md / AGENTS.md (Gemini CLI reads only GEMINI.md by default)
+    //   - user skills in ~/.gemini/config/skills/ (plus ~/.gemini/antigravity-cli/skills/
+    //     and any paths listed in ~/.gemini/config/skills.json)
+    //   - project skills in .agents/skills/, .agent/skills/ and .gemini/skills/
+    claudeMd: '.gemini/GEMINI.md',
+    skills: '.gemini/config/skills',
   },
   'cursor': {
     // Cursor project rules and commands are intentionally project-scoped.
@@ -662,7 +688,7 @@ async function preflightProjectManagedPaths(projectRoot, outputFolder = '_arcwri
   const realRoot = await fs.realpath(projectRoot);
   const managedRoots = [
     '_arcwright', outputFolder, '.agents', '.claude', '.kiro', '.codex',
-    '.opencode', '.grok', '.cursor', 'AGENTS.md', 'CLAUDE.md', '.gitignore',
+    '.opencode', '.grok', '.cursor', 'AGENTS.md', 'CLAUDE.md', 'GEMINI.md', '.gitignore',
   ];
   const visited = new Set();
   const errors = [];
@@ -797,6 +823,9 @@ function resolveInstalledPath(relPath, { isGlobal, projectRoot, effectiveArwDir,
   if (rel.startsWith('.grok/hooks/')) {
     return joinGlobal('grok', GLOBAL_PATHS.grok.hooks, rel.slice('.grok/hooks/'.length));
   }
+  if (rel.startsWith('.gemini/')) {
+    return resolveToolPath('antigravity', rel, true, homes, platform);
+  }
   if (rel.startsWith('.kiro/')) {
     return resolveToolPath('kiro', rel, true, homes, platform);
   }
@@ -842,7 +871,7 @@ async function removeTrackedEntry(entry, context) {
 // empty (a removed skill's SKILL.md + RULES.md go, the dir stays). Walk up from
 // the removed file and rmdir empty parents, stopping at a non-empty dir or at a
 // known container root (never remove the skills/commands/agents roots themselves).
-const DIR_CLEANUP_STOP = new Set(['skills', 'commands', 'agents', 'plugins', 'skill-bundles', 'steering', 'hooks', 'agent-hooks', '.claude', '.codex', '.hermes', '.kiro', '.config', 'opencode', '.grok', '.cursor']);
+const DIR_CLEANUP_STOP = new Set(['skills', 'commands', 'agents', 'plugins', 'skill-bundles', 'steering', 'hooks', 'agent-hooks', '.claude', '.codex', '.hermes', '.kiro', '.config', 'opencode', '.grok', '.cursor', '.gemini']);
 async function removeEmptyDirsUpward(removedFile) {
   let dir = path.dirname(removedFile);
   for (let depth = 0; depth < 5; depth++) {
@@ -1431,6 +1460,46 @@ async function writeGrokConfig(projectRoot, modules, chalk, isGlobal, homes, pla
   return entries;
 }
 
+// ─── Antigravity / Gemini config writer ───────────────────────────────────────
+// Antigravity (Gemini) reads GEMINI.md and AGENTS.md rules plus SKILL.md skills
+// (see GLOBAL_PATHS.antigravity). Rules go in GEMINI.md because Gemini CLI reads
+// only GEMINI.md by default while Antigravity reads both. Global skills go to
+// ~/.gemini/config/skills/; project skills share .agents/skills/ with
+// Codex/OpenCode/Grok so multi-tool installs do not duplicate the tree.
+//
+// Returns Array<{relPath, hash}> for every file written.
+async function writeAntigravityConfig(projectRoot, modules, chalk, isGlobal, homes, platform, resolvedTeams = true, resolvedDockerCheck = false, resolvedAwsInfra = false, resolvedUnnamedPm = false, resolvedDotnet = false, resolvedElectron = false, resolvedTauri = false, resolvedStrands = false, resolvedMattPocock = false) {
+  const entries = [];
+  const flags = { resolvedTeams, resolvedDockerCheck, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedAwsInfra, resolvedUnnamedPm };
+
+  // ── GEMINI.md ── managed block only (not manifest-tracked, same rationale as Codex).
+  const rulesPath = isGlobal
+    ? resolveToolPath('antigravity', GLOBAL_PATHS.antigravity.claudeMd, true, homes, platform)
+    : path.join(projectRoot, 'GEMINI.md');
+  const label = isGlobal ? '~/.gemini/GEMINI.md' : 'GEMINI.md';
+  const result = await upsertManagedBlock(rulesPath, '<!-- arcwright-agent-start -->', '<!-- arcwright-agent-end -->', buildArcwrightRulesEntry(modules, resolvedUnnamedPm));
+  if (result === 'created') console.log(chalk.green(`  ✓ ${label} created`));
+  else if (result !== 'noop') console.log(chalk.green(`  ✓ ${label} updated`));
+  else console.log(chalk.gray(`  ○ ${label} already up to date`));
+
+  // ── Skills ── global entries use their real home-relative path as the
+  // manifest prefix, so resolveInstalledPath maps them back directly.
+  await copySkillTree({
+    manifestDir: isGlobal ? path.join(homes.linux, '.arcwright') : path.join(projectRoot, '_arcwright'),
+    skillsSrc: path.join(SRC_DIR, '.agents', 'skills'),
+    skillsDest: isGlobal
+      ? resolveToolPath('antigravity', GLOBAL_PATHS.antigravity.skills, true, homes, platform)
+      : path.join(projectRoot, '.agents', 'skills'),
+    flags,
+    entries,
+    relPrefix: isGlobal ? GLOBAL_PATHS.antigravity.skills : '.agents/skills',
+    chalk,
+    logLabel: isGlobal ? '~/.gemini/config/skills/' : '.agents/skills/',
+  });
+
+  return entries;
+}
+
 // ─── Cursor config writer ───────────────────────────────────────────────────
 // Cursor's native project integration is MDC rules plus Markdown commands. Its
 // Agent CLI also reads root AGENTS.md, so Arcwright writes both surfaces. Cursor
@@ -2011,6 +2080,7 @@ async function preflightRoles({ modules, tools, projectRoot, isGlobal, homes, pl
       codex: [isGlobal ? '.codex/skills' : '.agents/skills', '.agents/skills'],
       opencode: [isGlobal ? '.opencode/skills' : '.agents/skills', '.agents/skills'],
       grok: [isGlobal ? '.grok/skills' : '.agents/skills', isGlobal ? '.grok/skills' : '.agents/skills'],
+      antigravity: [isGlobal ? '.gemini/config/skills' : '.agents/skills', isGlobal ? '.gemini/config/skills' : '.agents/skills'],
       kiro: ['.kiro/skills', '.kiro/skills'],
       hermes: isGlobal ? ['.hermes/skills', '.hermes/skills'] : null,
     };
@@ -2691,7 +2761,7 @@ async function install(opts) {
 
   // ── IDE integration ───────────────────────────────────────────────────────
   for (const tool of resolvedTools) {
-    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode' || tool === 'grok' || tool === 'cursor') continue; // handled separately below
+    if (tool === 'kiro' || tool === 'codex' || tool === 'hermes' || tool === 'opencode' || tool === 'grok' || tool === 'antigravity' || tool === 'cursor') continue; // handled separately below
     const ideResult = await writeIdeConfig(tool, projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedHooks, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock, resolvedOutputFolder);
     if (ideResult?.entries?.length > 0) {
       newFileEntries.push(...ideResult.entries);
@@ -2751,6 +2821,14 @@ async function install(opts) {
     const grokEntries = await writeGrokConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
     if (grokEntries && grokEntries.length > 0) {
       newFileEntries.push(...grokEntries);
+    }
+  }
+
+  // ── Antigravity / Gemini integration ─────────────────────────────────────
+  if (resolvedTools.includes('antigravity')) {
+    const antigravityEntries = await writeAntigravityConfig(projectRoot, selectedModules, chalk, isGlobal, homes, platform, resolvedTeams, resolvedDockerCheck, resolvedAwsInfra, resolvedUnnamedPm, resolvedDotnet, resolvedElectron, resolvedTauri, resolvedStrands, resolvedMattPocock);
+    if (antigravityEntries && antigravityEntries.length > 0) {
+      newFileEntries.push(...antigravityEntries);
     }
   }
 
@@ -4179,6 +4257,7 @@ function getClaudeMdLocations(projectRoot, isGlobal, platform, homes) {
       resolveToolPath('codex', GLOBAL_PATHS.codex.claudeMd, true, homes, platform),
       resolveToolPath('opencode', GLOBAL_PATHS.opencode.claudeMd, true, homes, platform),
       resolveToolPath('grok', GLOBAL_PATHS.grok.claudeMd, true, homes, platform),
+      resolveToolPath('antigravity', GLOBAL_PATHS.antigravity.claudeMd, true, homes, platform),
     ].filter(Boolean);
   }
   return [
@@ -4188,6 +4267,8 @@ function getClaudeMdLocations(projectRoot, isGlobal, platform, homes) {
     path.join(projectRoot, '.claude', 'CLAUDE.md'),
     path.join(projectRoot, 'CLAUDE.md'),
     path.join(projectRoot, 'AGENTS.md'),
+    // Antigravity / Gemini carries its block in GEMINI.md.
+    path.join(projectRoot, 'GEMINI.md'),
   ];
 }
 
@@ -4553,7 +4634,7 @@ return {
     cleanupManagedBlocks, upsertManagedBlock, migrateOldClaudeMd,
     writeClaudeSettings, stripInstallerSettingsKeys, removeArcwrightHookFiles,
     buildArcwrightRulesEntry, buildTmuxEntry, buildProactiveEntry, writeClaudeInstructions,
-    writeKiroConfig, writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig, writeCursorConfig, copySkillTree,
+    writeKiroConfig, writeCodexConfig, writeHermesConfig, writeOpenCodeConfig, writeGrokConfig, writeAntigravityConfig, writeCursorConfig, copySkillTree,
     removeCursorUnnamedDevHooks,
     buildCursorRule, adaptCursorCommand, filterCommandNames,
     commandExists, ensureHermesCliInstalled, setupHermesModelSurface,

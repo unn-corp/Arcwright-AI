@@ -122,7 +122,9 @@ instructions. The workshop uses this policy. With a host that does not discover
 - Cursor global User Rules remain app-managed: stage
   `~/.cursor/arcwright-user-rules.md` for Settings rather than inventing a config
   path. Hermes global skills do not imply a global `AGENTS.md` loader; preserve
-  `~/.hermes/SOUL.md`. Grok merges rather than replacing bundled skills.
+  `~/.hermes/SOUL.md`. Grok merges rather than replacing bundled skills. Antigravity / Gemini receives a
+  managed block in `GEMINI.md` and skills in `~/.gemini/config/skills/` (global) or the
+  shared `.agents/skills/` (project); it leaves `~/.gemini/config/skills.json` alone.
 
 Native tool/command formats are adapters. They do not create separate delegation
 protocols: use `subagent-protocol`; workflows provide role and review topology.
