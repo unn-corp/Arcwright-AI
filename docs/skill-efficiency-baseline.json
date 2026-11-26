@@ -58,6 +58,11 @@
       "entrypointBytes": 3144,
       "descriptionBytes": 282
     },
+    ".agents/skills/bug-hunt-loop/SKILL.md": {
+      "name": "bug-hunt-loop",
+      "entrypointBytes": 13035,
+      "descriptionBytes": 273
+    },
     ".agents/skills/build-mcp-app/SKILL.md": {
       "name": "build-mcp-app",
       "entrypointBytes": 3434,
@@ -222,6 +227,11 @@
       "name": "drift",
       "entrypointBytes": 6992,
       "descriptionBytes": 121
+    },
+    ".agents/skills/dry-fix-loop/SKILL.md": {
+      "name": "dry-fix-loop",
+      "entrypointBytes": 12648,
+      "descriptionBytes": 251
     },
     ".agents/skills/dynamodb-best-practices/SKILL.md": {
       "name": "dynamodb-best-practices",
