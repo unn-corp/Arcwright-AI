@@ -34,7 +34,7 @@ afterEach(() => {
 describe('supported tools (installer options)', () => {
   it('includes Cursor alongside the other first-class targets', () => {
     const ids = getSupportedToolIds();
-    expect(ids).toEqual(['claude-code', 'kiro', 'codex', 'hermes', 'opencode', 'grok', 'cursor']);
+    expect(ids).toEqual(['claude-code', 'kiro', 'codex', 'hermes', 'opencode', 'grok', 'antigravity', 'cursor']);
   });
 
   it('exposes grok in the interactive multiselect options', () => {
@@ -50,6 +50,11 @@ describe('supported tools (installer options)', () => {
     expect(parseToolIds('claude-code,grok')).toEqual(['claude-code', 'grok']);
     expect(parseToolIds('cursor')).toEqual(['cursor']);
     expect(() => parseToolIds('grok,not-a-tool')).toThrow(/Unknown --tools id/);
+  });
+
+  it('parseToolIds resolves the gemini alias to antigravity without duplicates', () => {
+    expect(parseToolIds('gemini')).toEqual(['antigravity']);
+    expect(parseToolIds('claude-code,gemini,antigravity')).toEqual(['claude-code', 'antigravity']);
   });
   it('does not trust unknown tool IDs from an installation manifest', () => {
     expect(hasOnlySupportedToolIds(['claude-code', 'kiro'])).toBe(true);
@@ -305,6 +310,8 @@ describe('getClaudeMdLocations', () => {
       path.join('/proj', 'CLAUDE.md'),
       // Codex, OpenCode, Grok, Hermes and Cursor all write their block here.
       path.join('/proj', 'AGENTS.md'),
+      // Antigravity / Gemini writes its block here.
+      path.join('/proj', 'GEMINI.md'),
     ]);
   });
   it('global install covers every per-tool global rules file', () => {
@@ -314,6 +321,7 @@ describe('getClaudeMdLocations', () => {
     expect(locs).toContain('/h/.codex/AGENTS.md');
     expect(locs).toContain('/h/.config/opencode/AGENTS.md');
     expect(locs).toContain('/h/.grok/AGENTS.md');
+    expect(locs).toContain('/h/.gemini/GEMINI.md');
   });
 });
 

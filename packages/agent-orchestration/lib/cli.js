@@ -79,6 +79,9 @@ Examples:
   arcwright --tools grok --yes
   arcwright --tools grok --global --yes
 
+  # Install for Antigravity / Gemini (--tools gemini also works)
+  arcwright --tools antigravity --global --yes
+
   # Install into a specific directory
   arcwright --directory /path/to/project --yes
 

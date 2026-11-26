@@ -243,7 +243,7 @@ Use `/triage <task>` when the task needs help selecting a team or execution appr
 
 ## Supported IDEs
 
-Claude Code, Kiro (IDE + CLI), Cursor (IDE + Agent CLI), Codex, Hermes, OpenCode, Grok (xAI CLI)
+Claude Code, Kiro (IDE + CLI), Cursor (IDE + Agent CLI), Codex, Hermes, OpenCode, Grok (xAI CLI), Antigravity (Gemini)
 
 ```bash
 # Install for specific IDEs
@@ -264,7 +264,7 @@ WSL2 dual-home aware — terminal tools (Claude Code, Codex, Hermes, OpenCode) u
 | `--yes`, `-y` | false | Skip interactive prompts, accept all defaults |
 | `--global`, `-g` | false | Install to `~/.arcwright` / `~/.claude/` / `~/.kiro/` |
 | `--directory <path>`, `-d` | cwd | Target project root |
-| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,cursor,codex,hermes,opencode,grok` |
+| `--tools <ids>` | `claude-code` | Comma-sep: `claude-code,kiro,cursor,codex,hermes,opencode,grok,antigravity` (`gemini` is an alias for `antigravity`) |
 | `--modules <ids>` | `awm,awb,core,_memory` | Which modules to install |
 | `--user-name <name>` | prompted | Your name (written into config.yaml) |
 | `--output-folder <path>` | `_arcwright-output` | Where Arcwright writes output artifacts |
@@ -312,6 +312,7 @@ Global installs write to user-level config dirs instead of a project:
 | Hermes assets | `~/.hermes/skills/`, `~/.hermes/skill-bundles/` | same, WSL Linux home |
 | OpenCode assets | `~/.config/opencode/AGENTS.md`, `~/.agents/skills/`, `~/.config/opencode/commands/` | same, WSL Linux home |
 | Grok assets | `~/.grok/AGENTS.md`, `~/.grok/skills/`, `~/.grok/commands/`, `~/.grok/agents/` | same, WSL Linux home |
+| Antigravity / Gemini assets | `~/.gemini/GEMINI.md`, `~/.gemini/config/skills/` | same, WSL Linux home |
 | Kiro assets | `~/.kiro/` | `/mnt/c/Users/<name>/.kiro/` (Windows home) |
 | Cursor assets | Project: `AGENTS.md`, `.cursor/rules/arcwright.mdc`, `.cursor/commands/` | same; global install stages `~/.cursor/arcwright-user-rules.md` for Cursor Settings → Rules → User Rules |
 
